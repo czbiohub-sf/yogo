@@ -91,8 +91,7 @@ class YOGO(nn.Module):
         x = self.head(x)
         bs, preds, sx, sy = x.shape
         # TODO: this is a sanity check, should be redundant
-        # assert preds / self.num_anchors == preds // self.num_anchors
-        return x
+        assert preds / self.num_anchors == preds // self.num_anchors
         return x.view(bs, self.num_anchors, preds // self.num_anchors, sx, sy)
 
 
