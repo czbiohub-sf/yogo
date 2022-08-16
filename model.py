@@ -95,10 +95,9 @@ class YOGO(nn.Module):
         return x.view(bs, self.num_anchors, preds // self.num_anchors, sx, sy)
 
 
-
 if __name__ == "__main__":
     Y = YOGO(1)
-    x = torch.randn(5,1,150,200)
+    x = torch.randn(5, 1, 150, 200)
     import time
 
     t0 = time.perf_counter()

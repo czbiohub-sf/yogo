@@ -3,7 +3,13 @@
 import unittest
 import numpy as np
 
-from cluster_anchors import Box, area, iou, xc_yc_w_h_to_corners, corners_to_xc_yc_w_h
+from cluster_anchors import (
+    Box,
+    area,
+    iou,
+    xc_yc_w_h_to_corners,
+    corners_to_xc_yc_w_h,
+)
 
 
 class TestClustering(unittest.TestCase):
@@ -27,12 +33,13 @@ class TestClustering(unittest.TestCase):
         self.assertEqual(iou(b2, b1), 4 / (4 * 4 + 4 * 4 - 4))
 
     def test_box_definition_conversions(self):
-        for _ in range(100):
+        for i in range(100):
             corners = np.random.rand(4)
             self.assertTrue(
                 np.allclose(
                     corners, xc_yc_w_h_to_corners(*corners_to_xc_yc_w_h(*corners))
-                )
+                ),
+                f"failed on {i}",
             )
 
 
