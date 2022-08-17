@@ -3,5 +3,5 @@
 
 ## Next steps
 
-[ ] dataloader + training loop
-[ ] network finetuning for speed / results
+- dataloader + training loop
+- network finetuning for speed / results
