@@ -15,26 +15,30 @@ from matplotlib.patches import Rectangle
 Box = npt.NDArray[np.float64]
 
 
-def xc_yc_w_h_to_corners(xc, yc, w, h):
-    return (
-        xc - w / 2,
-        xc + w / 2,
-        yc - h / 2,
-        yc + h / 2,
-    )
+def xc_yc_w_h_to_corners(b: Box):
+    return np.array(
+        (
+            b[..., 0] - b[..., 2] / 2,
+            b[..., 0] + b[..., 2] / 2,
+            b[..., 1] - b[..., 3] / 2,
+            b[..., 1] + b[..., 3] / 2,
+        )
+    ).T
 
 
-def corners_to_xc_yc_w_h(xmin, xmax, ymin, ymax):
-    return (
-        (xmax + xmin) / 2,
-        (ymax + ymin) / 2,
-        (xmax - xmin),
-        (ymax - ymin),
-    )
+def corners_to_xc_yc_w_h(b: Box):
+    return np.array(
+        (
+            (b[..., 1] + b[..., 0]) / 2,
+            (b[..., 3] + b[..., 2]) / 2,
+            (b[..., 1] - b[..., 0]),
+            (b[..., 3] - b[..., 2]),
+        )
+    ).T
 
 
-def area(b1: Box):
-    return np.abs((b1[..., 1] - b1[..., 0]) * (b1[..., 3] - b1[..., 2]))
+def area(b: Box):
+    return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
 
 
 def iou(b1: Box, b2: Box):
@@ -53,7 +57,7 @@ def get_all_bounding_boxes(bb_dir):
         with open(fname, "r") as f:
             for line in f:
                 vs = [float(v) for v in line.split(",")]
-                bbs.append(xc_yc_w_h_to_corners(*vs[1:]))
+                bbs.append(xc_yc_w_h_to_corners(vs[1:]))
     return np.array(bbs)
 
 
@@ -75,7 +79,7 @@ def plot_boxes(boxes, color_period=0):
     current_axis = plt.gca()
     for i, box in enumerate(boxes):
         color = colors[i % color_period if color_period > 0 else 0]
-        _, _, w, h = corners_to_xc_yc_w_h(*box)
+        _, _, w, h = corners_to_xc_yc_w_h(box)
         current_axis.add_patch(
             Rectangle(
                 (box[0], box[2]),
@@ -105,7 +109,7 @@ def k_means(data, k=3, plot=False):
     means = np.concatenate([gen_random_box() for _ in range(k)], axis=0)
 
     boxes = []
-    for _ in range(100):
+    for _ in range(50):
         boxes.append(means.copy())
         mean_groups = get_closest_mean(data, means)
 
@@ -131,4 +135,4 @@ if __name__ == "__main__":
     # sanity checks for our data
     assert np.all(data[:, 0] < data[:, 1])
     assert np.all(data[:, 2] < data[:, 3])
-    k_means(data, k=6, plot=True)
+    print(k_means(data, k=6, plot=True))
