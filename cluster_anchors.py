@@ -6,21 +6,13 @@
 import glob
 import numpy as np
 import numpy.typing as npt
+
 import matplotlib.pyplot as plt
-
 from matplotlib.patches import Rectangle
-
-from collections import namedtuple
-
-
-np.random.seed(0)
 
 
 # [xmin, xmax, ymin, ymax]
 Box = npt.NDArray[np.float64]
-
-# [xc, yc, w, h]
-CenterBox = npt.NDArray[np.float64]
 
 
 def xc_yc_w_h_to_corners(xc, yc, w, h):
@@ -125,14 +117,18 @@ def k_means(data, k=3, plot=False):
     if plot:
         plot_boxes(np.array(boxes).reshape(-1, 4), color_period=k)
 
-    return means
+    return corners_to_xc_yc_w_h(means)
 
 
 if __name__ == "__main__":
     import sys
 
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} <path to labels>")
+        sys.exit(1)
+
     data = get_all_bounding_boxes(sys.argv[1])
+    # sanity checks for our data
     assert np.all(data[:, 0] < data[:, 1])
     assert np.all(data[:, 2] < data[:, 3])
-    print(data.shape)
-    means = k_means(data, k=6, plot=True)
+    k_means(data, k=6, plot=True)
