@@ -11,11 +11,11 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 
-# [xmin, xmax, ymin, ymax]
+# [..., xmin, xmax, ymin, ymax]
 Box = npt.NDArray[np.float64]
 
 
-def xc_yc_w_h_to_corners(b: Box):
+def xc_yc_w_h_to_corners(b: Box) -> Box:
     return np.array(
         (
             b[..., 0] - b[..., 2] / 2,
@@ -26,7 +26,7 @@ def xc_yc_w_h_to_corners(b: Box):
     ).T
 
 
-def corners_to_xc_yc_w_h(b: Box):
+def corners_to_xc_yc_w_h(b: Box) -> Box:
     return np.array(
         (
             (b[..., 1] + b[..., 0]) / 2,
@@ -37,11 +37,11 @@ def corners_to_xc_yc_w_h(b: Box):
     ).T
 
 
-def area(b: Box):
+def area(b: Box) -> npt.NDArray[np.float64]:
     return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
 
 
-def iou(b1: Box, b2: Box):
+def iou(b1: Box, b2: Box) -> npt.NDArray[np.float64]:
     """b1, b2 of shape [1,d]"""
     intersection = np.maximum(
         np.minimum(b1[..., [1, 3]], b2[..., [1, 3]])
@@ -51,7 +51,7 @@ def iou(b1: Box, b2: Box):
     return intersection / (area(b1) + area(b2) - intersection)
 
 
-def get_all_bounding_boxes(bb_dir):
+def get_all_bounding_boxes(bb_dir) -> npt.NDArray[np.float64]:
     bbs = []
     for fname in glob.glob(f"{bb_dir}/*.csv"):
         with open(fname, "r") as f:
@@ -61,7 +61,7 @@ def get_all_bounding_boxes(bb_dir):
     return np.array(bbs)
 
 
-def gen_random_box():
+def gen_random_box() -> Box:
     xmin = np.random.rand() / 2
     xmax = np.random.rand() / 2 + xmin
     ymin = np.random.rand() / 2
@@ -69,7 +69,7 @@ def gen_random_box():
     return np.array((xmin, xmax, ymin, ymax)).reshape(1, -1)
 
 
-def plot_boxes(boxes, color_period=0):
+def plot_boxes(boxes, color_period=0) -> None:
     colors = ["r", "g", "b", "c", "m", "y", "k"]
     assert (
         0 <= color_period < len(colors)
@@ -92,7 +92,7 @@ def plot_boxes(boxes, color_period=0):
     plt.show()
 
 
-def k_means(data, k=3, plot=False):
+def k_means(data, k=3, plot=False) -> npt.NDArray[np.float64]:
     """
     https://blog.paperspace.com/speed-up-kmeans-numpy-vectorization-broadcasting-profiling/
     assumptions:

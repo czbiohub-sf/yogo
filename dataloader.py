@@ -71,7 +71,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         if extensions is not None:
 
             def is_valid_file(x: str) -> bool:
-                return datasets.folder.has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
+                return datasets.folder.has_file_allowed_extension(x, extensions)
 
         is_valid_file = cast(Callable[[str], bool], is_valid_file)
 
@@ -222,4 +222,4 @@ def get_dataloader(
 
 if __name__ == "__main__":
     ODL = get_datasets("healthy_cell_dataset.yml", batch_size=128)
-    print({k: len(d) for k,d in ODL.items()})
+    print({k: len(d) for k, d in ODL.items()})

@@ -2,12 +2,6 @@ import torch
 from torch import nn
 
 
-class PrintLayer(nn.Module):
-    def forward(self, x):
-        print(x.shape)
-        return x
-
-
 class YOGO(nn.Module):
     def __init__(self, num_anchors: int):
         super().__init__()
@@ -17,7 +11,7 @@ class YOGO(nn.Module):
             num_channels=1024, num_classes=4, num_anchors=num_anchors, Sx=13, Sy=13
         )
 
-    def num_params(self):
+    def num_params(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def gen_backbone(self) -> nn.Module:
@@ -85,7 +79,7 @@ class YOGO(nn.Module):
         conv_block_3 = nn.Conv2d(num_channels, (5 + num_classes) * num_anchors, 1)
         return nn.Sequential(conv_block_1, conv_block_2, conv_block_3)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.float()
         x = self.backbone(x)
         x = self.head(x)
