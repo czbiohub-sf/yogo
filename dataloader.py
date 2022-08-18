@@ -15,102 +15,38 @@ from torchvision.transforms import (
     RandomVerticalFlip,
 )
 
-from typing import List, Dict, Union, Tuple, Optional, Callable, cast
+from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 
 
-class ObjectDetectionDataset(datasets.DatasetFolder):
-    """TODO FIXME
-
-    I think the abstractions are wrong here. Subclassing DatasetFolder
-    is definitely wrong (we do too much hacky stuff to work around it,
-    we should just subclass DatasetFolders superclass), and the format
-    of labels is most likely wrong.
-
-    TLDR i made some bad decisions, but by working through them I think
-    that I know the right way to go about this.
-    """
-
-    def __init__(self, dataset_description, *args, **kwargs):
+class ObjectDetectionDataset(datasets.VisionDataset):
+    def __init__(
+        self,
+        dataset_description_file: str,
+        loader: Callable,
+        extensions: Optional[Tuple[str]] = ("png",),
+        is_valid_file: Optional[Callable[[str], bool]] = None,
+        *args,
+        **kwargs,
+    ):
         (
             classes,
             image_path,
             label_path,
             split_fractions,
-        ) = self.load_dataset_description(dataset_description)
+        ) = self.load_dataset_description(dataset_description_file)
+
+        super().__init__(image_path, *args, **kwargs)
+
         self.classes = classes
         self.image_folder_path = image_path
         self.label_folder_path = label_path
         self.split_fractions = split_fractions
-        super().__init__(
-            image_path, loader=datasets.folder.default_loader, *args, **kwargs
+
+        self.loader = loader
+
+        self.samples = self.make_dataset(
+            is_valid_file=is_valid_file, extensions=extensions
         )
-
-    def make_dataset(
-        self,
-        directory: str,
-        class_to_idx: Dict[str, int] = None,
-        extensions: Optional[Union[str, Tuple[str, ...]]] = None,
-        is_valid_file: Optional[Callable[[str], bool]] = None,
-    ) -> List[Tuple[str, List[List[float]]]]:
-        """
-        torchvision.datasets.folder.make_dataset doc string states:
-            "Generates a list of samples of a form (path_to_sample, class)"
-
-        This is designed for a dataset for classficiation (that is, mapping
-        image to class), where we have a dataset for object detection (image
-        to list of bounding boxes). datasets.DatasetFolder has an image loader
-        by default that I would like to use, but if it is all too awkward,
-        I'll have to rewrite this subclassing VisionDataset.
-
-        Mostly copied from Pytorch's implementation[0], with changes on how we
-        collect labels and images
-
-        [0] https://pytorch.org/vision/stable/_modules/torchvision/datasets/folder.html
-        """
-
-        both_none = extensions is None and is_valid_file is None
-        both_something = extensions is not None and is_valid_file is not None
-        if both_none or both_something:
-            raise ValueError(
-                "Both extensions and is_valid_file cannot be None or not None at the same time"
-            )
-
-        if extensions is not None:
-
-            def is_valid_file(x: str) -> bool:
-                return datasets.folder.has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
-
-        is_valid_file = cast(Callable[[str], bool], is_valid_file)
-
-        # maps file name to a list of tuples of bounding boxes + classes
-        instances: List[Tuple[str, List[List[float]]]] = []
-        for img_file_path in self.images.glob("*"):
-            if is_valid_file(str(img_file_path)):
-                labels = self.load_labels_from_image_name(img_file_path)
-                instances.append((str(img_file_path), labels))
-        return instances
-
-    def load_labels_from_image_name(self, image_path: Path) -> List[List[float]]:
-        """
-        loads labels from label file, given by image path
-        """
-        labels = []
-        label_filename = str(image_path).replace(image_path.suffix, "csv")
-
-        with open(self.label_folder_path / label_filename, "r") as f:
-            reader = csv.reader(f)
-            has_header = csv.Sniffer().has_header(f.read(1024))
-            f.seek(0)
-            if has_header:
-                next(reader, None)
-
-            for row in reader:
-                assert (
-                    len(row) == 5
-                ), "should have [class,xc,yc,w,h] - got length {len(row)}"
-                labels.append([float(v) for v in row])
-
-        return labels
 
     def load_dataset_description(
         self, dataset_description
@@ -137,9 +73,92 @@ class ObjectDetectionDataset(datasets.DatasetFolder):
 
             return classes, image_path, label_path, split_fractions
 
+    def make_dataset(
+        self,
+        extensions: Optional[Union[str, Tuple[str, ...]]] = None,
+        is_valid_file: Optional[Callable[[str], bool]] = None,
+    ) -> List[Tuple[str, List[List[float]]]]:
+        """
+        torchvision.datasets.folder.make_dataset doc string states:
+            "Generates a list of samples of a form (path_to_sample, class)"
+
+        This is designed for a dataset for classficiation (that is, mapping
+        image to class), where we have a dataset for object detection (image
+        to list of bounding boxes).
+
+        Copied Pytorch's implementation of input handling[0], with changes on how we
+        collect labels and images
+
+        [0] https://pytorch.org/vision/stable/_modules/torchvision/datasets/folder.html
+        """
+        both_none = extensions is None and is_valid_file is None
+        both_something = extensions is not None and is_valid_file is not None
+        if both_none or both_something:
+            raise ValueError(
+                "Both extensions and is_valid_file cannot be None or not None at the same time"
+            )
+
+        if extensions is not None:
+
+            def is_valid_file(x: str) -> bool:
+                return datasets.folder.has_file_allowed_extension(x, extensions)  # type: ignore[arg-type]
+
+        is_valid_file = cast(Callable[[str], bool], is_valid_file)
+
+        # maps file name to a list of tuples of bounding boxes + classes
+        samples: List[Tuple[str, List[List[float]]]] = []
+        for img_file_path in self.image_folder_path.glob("*"):
+            if is_valid_file(str(img_file_path)):
+                labels = self.load_labels_from_image_name(img_file_path)
+                samples.append((str(img_file_path), labels))
+        return samples
+
+    def load_labels_from_image_name(self, image_path: Path) -> List[List[float]]:
+        "loads labels from label file, given by image path"
+        labels = []
+        label_filename = image_path.name.replace(image_path.suffix, ".csv")
+
+        with open(self.label_folder_path / label_filename, "r") as f:
+            # yuck! checking for headers is not super easy
+            reader = csv.reader(f)
+            has_header = csv.Sniffer().has_header(f.read(1024))
+            f.seek(0)
+            if has_header:
+                next(reader, None)
+
+            for row in reader:
+                assert (
+                    len(row) == 5
+                ), "should have [class,xc,yc,w,h] - got length {len(row)}"
+                labels.append([float(v) for v in row])
+
+        return labels
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """From torchvision.datasets.folder.DatasetFolder
+
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        path, target = self.samples[index]
+        sample = self.loader(path)
+        if self.transform is not None:
+            sample = self.transform(sample)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return sample, target
+
+    def __len__(self) -> int:
+        "From torchvision.datasets.folder.DatasetFolder"
+        return len(self.samples)
+
 
 def get_dataset(
-    dataset_description: str,
+    dataset_description_file: str,
     batch_size: int,
     split_percentages: List[float] = [1],
     exclude_classes: List[str] = [],
@@ -154,9 +173,9 @@ def get_dataset(
     )
     transforms = Compose([Resize([150, 200]), *augmentations])
     full_dataset = ObjectDetectionDataset(
-        dataset_description=dataset_description,
-        transform=transforms,
+        dataset_description_file=dataset_description_file,
         loader=read_image,
+        transform=transforms,
         exclude_classes=exclude_classes,
     )
 
@@ -190,6 +209,6 @@ def get_dataloader(
 
 
 if __name__ == "__main__":
-    ODL = ObjectDetectionDataset("healthy_cell_dataset.yml")
-    for data in ODL:
-        print(data)
+    ODL = ObjectDetectionDataset("healthy_cell_dataset.yml", loader=read_image)
+    for img, label in ODL:
+        print(type(img), type(label))
