@@ -56,7 +56,7 @@ def get_all_bounding_boxes(bb_dir):
     for fname in glob.glob(f"{bb_dir}/*.csv"):
         with open(fname, "r") as f:
             for line in f:
-                vs = [float(v) for v in line.split(",")]
+                vs = np.array([float(v) for v in line.split(",")])
                 bbs.append(xc_yc_w_h_to_corners(vs[1:]))
     return np.array(bbs)
 
