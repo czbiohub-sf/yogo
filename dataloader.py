@@ -21,57 +21,27 @@ from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
-        dataset_description_file: str,
-        loader: Callable,
+        classes: List[str],
+        image_path: Path,
+        label_path: Path,
+        loader: Callable = read_image,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,
         **kwargs,
     ):
-        (
-            classes,
-            image_path,
-            label_path,
-            split_fractions,
-        ) = self.load_dataset_description(dataset_description_file)
-
-        super().__init__(image_path, *args, **kwargs)
+        # the super().__init__ just sets transforms
+        # the image_path is just for repr essentially
+        super().__init__(str(image_path), *args, **kwargs)
 
         self.classes = classes
         self.image_folder_path = image_path
         self.label_folder_path = label_path
-        self.split_fractions = split_fractions
-
         self.loader = loader
 
         self.samples = self.make_dataset(
             is_valid_file=is_valid_file, extensions=extensions
         )
-
-    def load_dataset_description(
-        self, dataset_description
-    ) -> Tuple[List[str], Path, Path, Dict[str, float]]:
-        with open(dataset_description, "r") as desc:
-            yaml_data = yaml.safe_load(desc)
-
-            classes = yaml_data["class_names"]
-            image_path = Path(yaml_data["image_path"])
-            label_path = Path(yaml_data["label_path"])
-            split_fractions = {
-                k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
-            }
-
-            if not sum(split_fractions.values()) == 1:
-                raise ValueError(
-                    f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
-                )
-
-            if not (image_path.is_dir() and label_path.is_dir()):
-                raise FileNotFoundError(
-                    f"image_path or label_path do not lead to a directory\n{image_path=}\n{label_path=}"
-                )
-
-            return classes, image_path, label_path, split_fractions
 
     def make_dataset(
         self,
@@ -157,58 +127,99 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return len(self.samples)
 
 
-def get_dataset(
+def load_dataset_description(
+    dataset_description,
+) -> Tuple[List[str], Path, Path, Dict[str, float]]:
+    with open(dataset_description, "r") as desc:
+        yaml_data = yaml.safe_load(desc)
+
+        classes = yaml_data["class_names"]
+        image_path = Path(yaml_data["image_path"])
+        label_path = Path(yaml_data["label_path"])
+        split_fractions = {
+            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
+        }
+
+        if not sum(split_fractions.values()) == 1:
+            raise ValueError(
+                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
+            )
+
+        if not (image_path.is_dir() and label_path.is_dir()):
+            raise FileNotFoundError(
+                f"image_path or label_path do not lead to a directory\n{image_path=}\n{label_path=}"
+            )
+
+        return classes, image_path, label_path, split_fractions
+
+
+def get_datasets(
     dataset_description_file: str,
     batch_size: int,
-    split_percentages: List[float] = [1],
-    exclude_classes: List[str] = [],
     training: bool = True,
-):
-    assert (
-        sum(split_percentages) == 1
-    ), f"split_percentages must add to 1 - got {split_percentages}"
+) -> Dict[str, Any]:
+    # TODO: Figure out typehint above
+    (
+        classes,
+        image_path,
+        label_path,
+        split_fractions,
+    ) = load_dataset_description(dataset_description_file)
 
     augmentations = (
         [RandomHorizontalFlip(0.5), RandomVerticalFlip(0.5)] if training else []
     )
     transforms = Compose([Resize([150, 200]), *augmentations])
+
     full_dataset = ObjectDetectionDataset(
-        dataset_description_file=dataset_description_file,
-        loader=read_image,
+        classes,
+        image_path,
+        label_path,
         transform=transforms,
-        exclude_classes=exclude_classes,
     )
 
-    first_split_sizes = [
-        int(rel_size * len(full_dataset)) for rel_size in split_percentages[:-1]
-    ]
-    final_split_size = [len(full_dataset) - sum(first_split_sizes)]
-    split_sizes = first_split_sizes + final_split_size
+    dataset_sizes = {
+        designation: int(split_fractions[designation] * len(full_dataset))
+        for designation in ["train", "val"]
+    }
+    test_dataset_size = {"test": len(full_dataset) - sum(dataset_sizes.values())}
+    split_sizes = {**dataset_sizes, **test_dataset_size}
 
-    assert all([sz > 0 for sz in split_sizes]) and sum(split_sizes) == len(
+    assert all([sz > 0 for sz in split_sizes.values()]) and sum(
+        split_sizes.values()
+    ) == len(
         full_dataset
     ), f"could not create valid dataset split sizes: {split_sizes}, full dataset size is {len(full_dataset)}"
 
-    return random_split(full_dataset, split_sizes)
+    # YUCK! Want a map from the dataset designation to teh set itself, but "random_split" takes a list
+    # of lengths of dataset. So we do this verbose rigamarol.
+    return dict(
+        zip(
+            ["train", "val", "test"],
+            random_split(
+                full_dataset,
+                [split_sizes["train"], split_sizes["val"], split_sizes["test"]],
+            ),
+        )
+    )
 
 
 def get_dataloader(
     root_dir: str,
     batch_size: int,
     split_percentages: List[float] = [1],
-    exclude_classes: List[str] = [],
     training: bool = True,
 ):
-    split_datasets = get_dataset(
-        root_dir, batch_size, split_percentages, exclude_classes, training=training
-    )
-    return [
-        DataLoader(split_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-        for split_dataset in split_datasets
-    ]
+    split_datasets = get_datasets(root_dir, batch_size, training=training)
+    print(split_datasets)
+    return {
+        designation: DataLoader(
+            dataset, batch_size=batch_size, shuffle=True, drop_last=True
+        )
+        for designation, dataset in split_datasets.items()
+    }
 
 
 if __name__ == "__main__":
-    ODL = ObjectDetectionDataset("healthy_cell_dataset.yml", loader=read_image)
-    for img, label in ODL:
-        print(type(img), type(label))
+    ODL = get_datasets("healthy_cell_dataset.yml", batch_size=128)
+    print({k: len(d) for k,d in ODL.items()})
