@@ -20,10 +20,8 @@ BATCH_SIZE = 512
 VALIDATION_PERIOD = 100
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-DATA_DIRS = "/tmp/training_data"
-
 test_dataloader, validate_dataloader, train_dataloader = get_dataloader(
-    DATA_DIRS,
+    "dataset.yml",
     BATCH_SIZE,
 )
 

@@ -80,12 +80,15 @@ class YOGO(nn.Module):
         return nn.Sequential(conv_block_1, conv_block_2, conv_block_3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # TODO: do output transformations for inference
+        # TODO: better to use "output transformation" inference or raw preds, and
+        # backprop on raw network outputs?
         x = x.float()
         x = self.backbone(x)
         x = self.head(x)
         bs, preds, sx, sy = x.shape
         # TODO: this is a sanity check, should be redundant
-        assert preds / self.num_anchors == preds // self.num_anchors
+        assert preds % self.num_anchors == 0
         return x.view(bs, self.num_anchors, preds // self.num_anchors, sx, sy)
 
 
