@@ -3,13 +3,25 @@ from torch import nn
 
 
 class YOGO(nn.Module):
-    def __init__(self, num_anchors: int):
+    """
+    Restricting assumptions:
+        - all objects being detected are roughly the same size (K-Means Clustering anchor
+        boxes across the dataset verifies this), meaning that it does not make sense to
+        have more than 1 anchor box
+        - grayscale
+
+    TODO:
+        - Figure out conv layer sizing to properly reduce size of input to desired Sx, Sy
+        - Add residuals?
+    """
+
+    def __init__(self, anchor_w, anchor_h):
         super().__init__()
-        self.num_anchors = num_anchors
+        self.num_anchors = 1
+        self.anchor_w = anchor_w
+        self.anchor_h = anchor_h
         self.backbone = self.gen_backbone()
-        self.head = self.gen_head(
-            num_channels=1024, num_classes=4, num_anchors=num_anchors, Sx=13, Sy=13
-        )
+        self.head = self.gen_head(num_channels=1024, num_classes=4)
 
     def num_params(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -63,9 +75,7 @@ class YOGO(nn.Module):
             conv_block_7,
         )
 
-    def gen_head(
-        self, num_channels: int, num_classes: int, num_anchors: int, Sx: int, Sy: int
-    ) -> nn.Module:
+    def gen_head(self, num_channels: int, num_classes: int) -> nn.Module:
         conv_block_1 = nn.Sequential(
             nn.Conv2d(num_channels, num_channels, 3, padding=1),
             nn.BatchNorm2d(num_channels),
@@ -76,7 +86,7 @@ class YOGO(nn.Module):
             nn.BatchNorm2d(num_channels),
             nn.LeakyReLU(),
         )
-        conv_block_3 = nn.Conv2d(num_channels, (5 + num_classes) * num_anchors, 1)
+        conv_block_3 = nn.Conv2d(num_channels, (5 + num_classes), 1)
         return nn.Sequential(conv_block_1, conv_block_2, conv_block_3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -86,15 +96,38 @@ class YOGO(nn.Module):
         x = x.float()
         x = self.backbone(x)
         x = self.head(x)
-        bs, preds, sx, sy = x.shape
-        # TODO: this is a sanity check, should be redundant
-        assert preds % self.num_anchors == 0
-        return x.view(bs, self.num_anchors, preds // self.num_anchors, sx, sy)
+
+        bs, preds, sy, sx = x.shape
+
+        Cxs = torch.arange(sx).expand(sy, -1)
+        Cys = torch.arange(sy).expand(1, -1).T.expand(-1, sx)
+        assert Cxs.shape == (sy, sx), f"{Cxs.shape=}, {(sy, sx)=}"
+        assert Cys.shape == (sy, sx), f"{Cys.shape=}, {(sy, sx)=}"
+
+        # implementation of "Direct Location Prediction" from YOLO9000 paper
+        # Order of meanings:
+        #  center of bounding box in x
+        #  center of bounding box in y
+        #  width of bounding box
+        #  height of bounding box
+        #  'objectness' score
+        x[:, 0, :, :] = torch.sigmoid(x[:, 0, :, :]) + Cxs
+        x[:, 1, :, :] = torch.sigmoid(x[:, 1, :, :]) + Cys
+        x[:, 2, :, :] = self.anchor_w * torch.exp(x[:, 2, :, :])
+        x[:, 3, :, :] = self.anchor_h * torch.exp(x[:, 3, :, :])
+        x[:, 4, :, :] = torch.sigmoid(x[:, 4, :, :])
+        if not self.training:
+            # TODO: If using cross entropy loss, I *think* that we
+            # avoid applying any softmax / logsoftmax
+            x[:, 5:, :, :] = torch.log_softmax(x[:, 5:, :, :], dim=1)
+
+        return x
 
 
 if __name__ == "__main__":
-    Y = YOGO(1)
-    x = torch.randn(5, 1, 150, 200)
+    Y = YOGO(0.0455, 0.059)
+    Y.eval()
+    x = torch.randn(1, 1, 416, 416)
     import time
 
     t0 = time.perf_counter()
@@ -102,4 +135,4 @@ if __name__ == "__main__":
     for _ in range(N):
         Y(x)
     print((time.perf_counter() - t0) / N)
-    print(Y(x).shape, torch.prod(torch.tensor(Y(x).shape)))
+    print(Y(x).shape, Y(x)[0, :, 0, 0])

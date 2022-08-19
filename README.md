@@ -46,4 +46,5 @@ dataset_split_fractions:
 ## Next steps
 
 - ~~dataloader~~ + training loop
+  - DATALOADER: transform labels
 - network finetuning for speed / results

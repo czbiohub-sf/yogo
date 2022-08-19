@@ -166,6 +166,8 @@ def get_datasets(
         split_fractions,
     ) = load_dataset_description(dataset_description_file)
 
+    # TODO: How do transforms map labels? until we fix,
+    training = False
     augmentations = (
         [RandomHorizontalFlip(0.5), RandomVerticalFlip(0.5)] if training else []
     )
@@ -211,7 +213,6 @@ def get_dataloader(
     training: bool = True,
 ):
     split_datasets = get_datasets(root_dir, batch_size, training=training)
-    print(split_datasets)
     return {
         designation: DataLoader(
             dataset, batch_size=batch_size, shuffle=True, drop_last=True
