@@ -3,19 +3,70 @@ import csv
 import yaml
 import torch
 
+
 from pathlib import Path
 
 from torchvision import datasets
-from torchvision.io import read_image
+from torchvision.io import read_image, ImageReadMode
+import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader, random_split
-from torchvision.transforms import (
-    Compose,
-    Resize,
-    RandomHorizontalFlip,
-    RandomVerticalFlip,
-)
+from torchvision.transforms import Compose, Resize, RandomVerticalFlip
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
+
+
+class RandomHorizontalFlipYOGO(torch.nn.Module):
+    """Random HFLIP that will flip the labels if the image is flipped!"""
+
+    def __init__(self, p=0.5):
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self, img: torch.Tensor, labels: List[List[float]]
+    ) -> Tuple[torch.Tensor, List[List[float]]]:
+        """
+        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        """
+        if torch.rand(1) < self.p:
+            return F.hflip(img), [
+                [
+                    l[0],
+                    1 - l[1],
+                    l[2],
+                    l[3],
+                    l[4],
+                ]
+                for l in labels
+            ]
+        return img, labels
+
+
+class RandomVerticalFlipYOGO(torch.nn.Module):
+    """Random VFLIP that will flip the labels if the image is flipped!"""
+
+    def __init__(self, p=0.5):
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self, img: torch.Tensor, labels: List[List[float]]
+    ) -> Tuple[torch.Tensor, List[List[float]]]:
+        """
+        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        """
+        if torch.rand(1) < self.p:
+            return F.vflip(img), [
+                [
+                    l[0],
+                    l[1],
+                    1 - l[2],
+                    l[3],
+                    l[4],
+                ]
+                for l in labels
+            ]
+        return img, labels
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -24,7 +75,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         classes: List[str],
         image_path: Path,
         label_path: Path,
-        loader: Callable = read_image,
+        loader: Callable = lambda img: read_image(img, ImageReadMode.GRAY),
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,
@@ -116,7 +167,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         path, target = self.samples[index]
         sample = self.loader(path)
         if self.transform is not None:
-            sample = self.transform(sample)
+            for t in self.transform:
+                try:
+                    sample, target = t(sample, target)
+                except TypeError:
+                    sample = t(sample)
         if self.target_transform is not None:
             target = self.target_transform(target)
 
@@ -166,12 +221,10 @@ def get_datasets(
         split_fractions,
     ) = load_dataset_description(dataset_description_file)
 
-    # TODO: How do transforms map labels? until we fix,
-    training = False
     augmentations = (
-        [RandomHorizontalFlip(0.5), RandomVerticalFlip(0.5)] if training else []
+        [RandomHorizontalFlipYOGO(0.5), RandomVerticalFlipYOGO(0.5)] if training else []
     )
-    transforms = Compose([Resize([150, 200]), *augmentations])
+    transforms = [Resize([150, 200]), *augmentations]
 
     full_dataset = ObjectDetectionDataset(
         classes,
@@ -212,6 +265,7 @@ def get_dataloader(
     split_percentages: List[float] = [1],
     training: bool = True,
 ):
+    # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
     split_datasets = get_datasets(root_dir, batch_size, training=training)
     return {
         designation: DataLoader(
@@ -222,5 +276,35 @@ def get_dataloader(
 
 
 if __name__ == "__main__":
+    # FIXME: this is quick and dirty code to plot some results
+    import sys
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+
+    if len(sys.argv) == 3:
+        num_imgs = abs(int(sys.argv[2]))
+    else:
+        num_imgs = 4
+
     ODL = get_datasets("healthy_cell_dataset.yml", batch_size=128)
     print({k: len(d) for k, d in ODL.items()})
+
+    for img, labels in ODL["test"]:
+        fig, ax = plt.subplots()
+        _, img_h, img_w = img.shape
+        ax.imshow(img[0, ...])
+        for l in labels:
+            [_, xc, yc, w, h] = l
+            rect = Rectangle(
+                (img_w * (xc - w / 2), img_h * (yc - h / 2)),
+                img_w * w,
+                img_h * h,
+                facecolor="none",
+                edgecolor="black",
+            )
+            ax.add_patch(rect)
+        plt.show()
+
+        num_imgs -= 1
+        if num_imgs == 0:
+            break
