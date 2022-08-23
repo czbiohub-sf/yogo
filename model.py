@@ -119,7 +119,7 @@ class YOGO(nn.Module):
         if not self.training:
             # TODO: If using cross entropy loss, I *think* that we
             # avoid applying any softmax / logsoftmax
-            x[:, 5:, :, :] = torch.log_softmax(x[:, 5:, :, :], dim=1)
+            x[:, 5:, :, :] = torch.softmax(x[:, 5:, :, :], dim=1)
 
         return x
 
