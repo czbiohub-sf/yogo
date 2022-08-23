@@ -18,6 +18,19 @@ EPOCHS = 256
 ADAM_LR = 3e-4
 BATCH_SIZE = 512
 VALIDATION_PERIOD = 100
+
+
+# TODO find sync points - wandb may be it, unfortunately :(
+# https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
+
+# TODO
+# measure forward / backward pass timing w/
+# https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
+
+# TODO test! seems like potentially large improvement on the table
+# https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
+torch.backends.cuda.matmul.allow_tf32 = True
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 test_dataloader, validate_dataloader, train_dataloader = get_dataloader(
