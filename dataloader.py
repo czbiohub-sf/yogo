@@ -5,6 +5,7 @@ import torch
 
 
 from pathlib import Path
+from operator import itemgetter
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
@@ -29,7 +30,11 @@ class RandomHorizontalFlipYOGO(torch.nn.Module):
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
         """
         if torch.rand(1) < self.p:
-            return F.hflip(img), [
+            # this math op reverses the labels.
+            # flip them back to make sorting in loss function quick.
+            # labels is ordered via itemgetter(1,2), so all we have to
+            # do here is reverse in x.
+            flipped_labels = [
                 [
                     l[0],
                     1 - l[1],
@@ -39,6 +44,7 @@ class RandomHorizontalFlipYOGO(torch.nn.Module):
                 ]
                 for l in labels
             ]
+            return F.hflip(img), flipped_labels[::-1]
         return img, labels
 
 
@@ -56,7 +62,12 @@ class RandomVerticalFlipYOGO(torch.nn.Module):
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
         """
         if torch.rand(1) < self.p:
-            return F.vflip(img), [
+            # this math op reverses the labels.
+            # flip them back to make sorting in loss function quick.
+            # labels is ordered via itemgetter(1,2), so we have to sort
+            # in x and then in y to maintain proper order. "x" should
+            # already be ordered, so this should be relatively quick.
+            flipped_labels = [
                 [
                     l[0],
                     l[1],
@@ -66,6 +77,7 @@ class RandomVerticalFlipYOGO(torch.nn.Module):
                 ]
                 for l in labels
             ]
+            return F.vflip(img), sorted(flipped_labels, key=itemgetter(1, 2))
         return img, labels
 
 
@@ -153,7 +165,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 ), "should have [class,xc,yc,w,h] - got length {len(row)}"
                 labels.append([float(v) for v in row])
 
-        return sorted(labels, key=lambda row: (row[1], row[2]))
+        return sorted(labels, key=itemgetter(1, 2))
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
@@ -259,7 +271,6 @@ def get_datasets(
     )
 
 
-
 def collate_batch(batch):
     # TODO: any benefit to putting labels in a tensor?
     # max_num_labels = max(len(x) for x in labels)
@@ -281,7 +292,11 @@ def get_dataloader(
     split_datasets = get_datasets(root_dir, batch_size, training=training)
     return {
         designation: DataLoader(
-            dataset, batch_size=batch_size, collate_fn=collate_batch, shuffle=True, drop_last=True
+            dataset,
+            batch_size=batch_size,
+            collate_fn=collate_batch,
+            shuffle=True,
+            drop_last=True,
         )
         for designation, dataset in split_datasets.items()
     }
