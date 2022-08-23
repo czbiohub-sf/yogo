@@ -153,7 +153,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 ), "should have [class,xc,yc,w,h] - got length {len(row)}"
                 labels.append([float(v) for v in row])
 
-        return labels
+        return sorted(labels, key=lambda row: (row[1], row[2]))
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
@@ -259,6 +259,18 @@ def get_datasets(
     )
 
 
+
+def collate_batch(batch):
+    # TODO: any benefit to putting labels in a tensor?
+    # max_num_labels = max(len(x) for x in labels)
+    # for x in labels:
+    #     torch.pad(x, (0, 0, 0, max_num_labels - len(x)))
+    # batched_labels = torch.stack([])
+    inputs, labels = zip(*batch)
+    batched_inputs = torch.stack(inputs)
+    return batched_inputs, labels
+
+
 def get_dataloader(
     root_dir: str,
     batch_size: int,
@@ -269,7 +281,7 @@ def get_dataloader(
     split_datasets = get_datasets(root_dir, batch_size, training=training)
     return {
         designation: DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, drop_last=True
+            dataset, batch_size=batch_size, collate_fn=collate_batch, shuffle=True, drop_last=True
         )
         for designation, dataset in split_datasets.items()
     }
@@ -281,8 +293,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
 
-    if len(sys.argv) == 3:
-        num_imgs = abs(int(sys.argv[2]))
+    if len(sys.argv) == 2:
+        num_imgs = abs(int(sys.argv[1]))
     else:
         num_imgs = 4
 
