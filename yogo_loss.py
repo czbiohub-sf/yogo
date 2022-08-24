@@ -61,12 +61,13 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
             for (j, k), Ls in bins.items():
                 if len(Ls) == 0:
-                    loss += self.no_obj_weight * self.mse(
-                        pred_batch[i, 4, j, k], torch.tensor(0)
+                    objectness = self.no_obj_weight * self.mse(
+                        pred_batch[i, 4, j, k], torch.tensor(0.)
                     )
-                elif len(Ls) == 1:
+                    loss += objectness
+                elif len(Ls) >= 1:
                     [cls, xc, yc, w, h] = Ls.pop()
-                    loss += self.coord_weight * (
+                    localization = self.coord_weight * (
                         self.mse(pred_batch[i, 0, j, k], torch.tensor(xc))
                         + self.mse(pred_batch[i, 1, j, k], torch.tensor(yc))
                         + self.mse(
@@ -78,13 +79,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                             torch.sqrt(torch.tensor(h)),
                         )
                     )
-                    loss += self.mse(pred_batch[i, 4, j, k], torch.tensor(1))
-                    loss += self.cel(
+                    objectness = self.mse(pred_batch[i, 4, j, k], torch.tensor(1.))
+                    classification = self.cel(
                         pred_batch[i, 5:, j, k],
                         F.one_hot(torch.tensor(int(cls)), num_classes=4).float(),
                     )
+                    loss += localization
+                    loss += objectness
+                    loss += classification
                 else:
-                    # TODO: choose max IOU, and pick again
+                    # TODO: impl!
                     pass
         return loss
 
@@ -158,8 +162,8 @@ if __name__ == "__main__":
     ii = 5
     for data, labels in ODL["test"]:
         for l in labels:
-            print(loss(m(data), labels))
             plot(data, l)
+            print(m(data).shape)
 
         ii -= 1
         if ii < 0:

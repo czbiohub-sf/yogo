@@ -7,6 +7,7 @@ from torch.optim import AdamW
 
 import wandb
 from model import YOGO
+from yogo_loss import YOGOLoss
 from dataloader import get_dataloader
 
 from pathlib import Path
@@ -16,7 +17,7 @@ from typing import List
 
 EPOCHS = 256
 ADAM_LR = 3e-4
-BATCH_SIZE = 512
+BATCH_SIZE = 16
 VALIDATION_PERIOD = 100
 
 
@@ -33,10 +34,13 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-test_dataloader, validate_dataloader, train_dataloader = get_dataloader(
-    "dataset.yml",
+dataloaders = get_dataloader(
+    "healthy_cell_dataset.yml",
     BATCH_SIZE,
 )
+train_dataloader = dataloaders["train"]
+validate_dataloader = dataloaders["val"]
+test_dataloader = dataloaders["test"]
 
 wandb.init(
     "yogo",
@@ -46,14 +50,13 @@ wandb.init(
         "batch_size": BATCH_SIZE,
         "training_set_size": len(train_dataloader),
         "device": str(device),
-        "classes": train_dataloader.dataset.dataset.classes,
     },
 )
 
 
 def train(dev):
-    net = YOGO().to(dev)
-    L2 = nn.MSELoss().to(dev)
+    net = YOGO(anchor_w = 17, anchor_h = 17).to(dev)
+    Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
 
     if wandb.run.name is not None:
@@ -62,16 +65,15 @@ def train(dev):
 
     global_step = 0
     for epoch in range(EPOCHS):
-        for i, data in enumerate(train_dataloader, 1):
+        for i, (imgs, labels) in enumerate(train_dataloader, 1):
             global_step += 1
-            imgs, labels = data
             imgs = imgs.to(dev)
-            labels = labels.to(dev)
+            # labels = labels.to(dev)  # TODO: does this have meaning?!?!
 
             optimizer.zero_grad()  # possible set_to_none=True to get "modest" speedup
 
-            outputs = net(imgs).reshape(-1)
-            loss = L2(outputs, labels.float())
+            outputs = net(imgs)
+            loss = Y_loss(outputs, labels)
             loss.backward()
             optimizer.step()
 
@@ -92,7 +94,7 @@ def train(dev):
 
                     with torch.no_grad():
                         outputs = net(imgs).reshape(-1)
-                        loss = L2(outputs, labels.float())
+                        loss = Y_loss(outputs, labels.float())
                         val_loss += loss.item()
 
                 wandb.log(
@@ -119,7 +121,7 @@ def train(dev):
 
         with torch.no_grad(), torch.autocast(str(dev)):
             outputs = net(imgs).reshape(-1)
-            loss = L2(outputs, labels.half())
+            loss = Y_loss(outputs, labels.half())
             test_loss += loss.item()
 
     wandb.log(

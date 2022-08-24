@@ -236,7 +236,7 @@ def get_datasets(
     augmentations = (
         [RandomHorizontalFlipYOGO(0.5), RandomVerticalFlipYOGO(0.5)] if training else []
     )
-    transforms = [Resize([150, 200]), *augmentations]
+    transforms = [Resize([300, 400]), *augmentations]
 
     full_dataset = ObjectDetectionDataset(
         classes,
