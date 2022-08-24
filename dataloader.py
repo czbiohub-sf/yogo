@@ -11,7 +11,7 @@ from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
 import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader, random_split
-from torchvision.transforms import Compose, Resize, RandomVerticalFlip
+from torchvision.transforms import Resize
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 

@@ -14,7 +14,7 @@ class YOGO(nn.Module):
         - Figure out conv layer sizing to properly reduce size of input to desired Sx, Sy
         - Add residuals?
     """
-    def __init__(self, anchor_w, anchor_h, device):
+    def __init__(self, anchor_w, anchor_h):
         super().__init__()
         self.num_anchors = 1
         self.anchor_w = anchor_w
@@ -105,10 +105,8 @@ class YOGO(nn.Module):
 
         bs, preds, sy, sx = x.shape
 
-        Cxs = torch.arange(sx).expand(sy, -1).to(self.device)
-        Cys = torch.arange(sy).expand(1, -1).T.expand(-1, sx).to(self.device)
-        assert Cxs.shape == (sy, sx), f"Cxs.shape={Cxs.shape}, (sy, sx)={(sy, sx)}"
-        assert Cys.shape == (sy, sx), f"Cys.shape={Cys.shape}, (sy, sx)={(sy, sx)}"
+        Cxs = torch.linspace(0, 1 - 1/sx, sx).expand(sy, -1).to(self.device)
+        Cys = torch.linspace(0, 1 - 1/sy, sy).expand(1,-1).T.expand(sy,sx).to(self.device)
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:
