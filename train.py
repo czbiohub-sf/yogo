@@ -90,11 +90,10 @@ def train(dev):
                 for data in validate_dataloader:
                     imgs, labels = data
                     imgs = imgs.to(dev)
-                    labels = labels.to(dev)
 
                     with torch.no_grad():
-                        outputs = net(imgs).reshape(-1)
-                        loss = Y_loss(outputs, labels.float())
+                        outputs = net(imgs)
+                        loss = Y_loss(outputs, labels)
                         val_loss += loss.item()
 
                 wandb.log(
@@ -117,11 +116,10 @@ def train(dev):
     for data in test_dataloader:
         imgs, labels = data
         imgs = imgs.to(dev)
-        labels = labels.to(dev)
 
-        with torch.no_grad(), torch.autocast(str(dev)):
-            outputs = net(imgs).reshape(-1)
-            loss = Y_loss(outputs, labels.half())
+        with torch.no_grad():
+            outputs = net(imgs)
+            loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
     wandb.log(

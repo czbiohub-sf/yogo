@@ -97,7 +97,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 else:
                     # TODO: impl!
                     pass
-        return loss
+        return loss / batch_size
 
 
 def _split_labels_into_bins(labels, Sx, Sy) -> Dict[Tuple[int, int], List[List[float]]]:
