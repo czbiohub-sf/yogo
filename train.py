@@ -85,6 +85,10 @@ def train(dev):
                 commit=False,
                 step=global_step,
             )
+            wandb.log(
+                {"training_img": wandb.Image(imgs[0,...].detach().numpy())},
+                commit=global_step % VALIDATION_PERIOD == 0
+            )
 
             if global_step % VALIDATION_PERIOD == 0:
                 val_loss = 0.0
