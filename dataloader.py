@@ -214,7 +214,7 @@ def load_dataset_description(
 
         if not (image_path.is_dir() and label_path.is_dir()):
             raise FileNotFoundError(
-                f"image_path or label_path do not lead to a directory\n{image_path=}\n{label_path=}"
+                f"image_path or label_path do not lead to a directory\nimage_path={image_path}\nlabel_path={label_path}"
             )
 
         return classes, image_path, label_path, split_fractions

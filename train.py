@@ -55,7 +55,7 @@ wandb.init(
 
 
 def train(dev):
-    net = YOGO(anchor_w = 17, anchor_h = 17).to(dev)
+    net = YOGO(anchor_w = 17, anchor_h = 17, device=dev).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
 

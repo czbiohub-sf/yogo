@@ -14,14 +14,20 @@ class YOGO(nn.Module):
         - Figure out conv layer sizing to properly reduce size of input to desired Sx, Sy
         - Add residuals?
     """
-
-    def __init__(self, anchor_w, anchor_h):
+    def __init__(self, anchor_w, anchor_h, device):
         super().__init__()
         self.num_anchors = 1
         self.anchor_w = anchor_w
         self.anchor_h = anchor_h
         self.backbone = self.gen_backbone()
         self.head = self.gen_head(num_channels=1024, num_classes=4)
+        self.device = 'cpu'
+
+    def to(self, device):
+        # FIXME: hack?
+        self.device = device
+        super().to(device)
+        return self
 
     def num_params(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -99,10 +105,10 @@ class YOGO(nn.Module):
 
         bs, preds, sy, sx = x.shape
 
-        Cxs = torch.arange(sx).expand(sy, -1)
-        Cys = torch.arange(sy).expand(1, -1).T.expand(-1, sx)
-        assert Cxs.shape == (sy, sx), f"{Cxs.shape=}, {(sy, sx)=}"
-        assert Cys.shape == (sy, sx), f"{Cys.shape=}, {(sy, sx)=}"
+        Cxs = torch.arange(sx).expand(sy, -1).to(self.device)
+        Cys = torch.arange(sy).expand(1, -1).T.expand(-1, sx).to(self.device)
+        assert Cxs.shape == (sy, sx), f"Cxs.shape={Cxs.shape}, (sy, sx)={(sy, sx)}"
+        assert Cys.shape == (sy, sx), f"Cys.shape={Cys.shape}, (sy, sx)={(sy, sx)}"
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:

@@ -32,6 +32,13 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss()
         self.cel = torch.nn.CrossEntropyLoss()
+        self.device = 'cpu'
+
+    def to(self, device):
+        # FIXME: hack?
+        self.device = device
+        super().to(device)
+        return self
 
     def forward(
         self, pred_batch: torch.Tensor, label_batch: List[List[List[float]]]
@@ -55,34 +62,34 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         batch_size, preds_size, Sx, Sy = pred_batch.shape
         assert batch_size == len(label_batch)
 
-        loss = torch.tensor(0, dtype=torch.float32)
+        loss = torch.tensor(0, dtype=torch.float32, device=self.device)
         for i in range(batch_size):
             bins = _split_labels_into_bins(label_batch[i], Sx, Sy)
 
             for (j, k), Ls in bins.items():
                 if len(Ls) == 0:
                     objectness = self.no_obj_weight * self.mse(
-                        pred_batch[i, 4, j, k], torch.tensor(0.)
+                        pred_batch[i, 4, j, k], torch.tensor(0., device=self.device)
                     )
                     loss += objectness
                 elif len(Ls) >= 1:
                     [cls, xc, yc, w, h] = Ls.pop()
                     localization = self.coord_weight * (
-                        self.mse(pred_batch[i, 0, j, k], torch.tensor(xc))
-                        + self.mse(pred_batch[i, 1, j, k], torch.tensor(yc))
+                        self.mse(pred_batch[i, 0, j, k], torch.tensor(xc, device=self.device))
+                        + self.mse(pred_batch[i, 1, j, k], torch.tensor(yc, device=self.device))
                         + self.mse(
                             torch.sqrt(pred_batch[i, 2, j, k]),
-                            torch.sqrt(torch.tensor(w)),
+                            torch.sqrt(torch.tensor(w, device=self.device)),
                         )
                         + self.mse(
                             torch.sqrt(pred_batch[i, 3, j, k]),
-                            torch.sqrt(torch.tensor(h)),
+                            torch.sqrt(torch.tensor(h, device=self.device)),
                         )
                     )
-                    objectness = self.mse(pred_batch[i, 4, j, k], torch.tensor(1.))
+                    objectness = self.mse(pred_batch[i, 4, j, k], torch.tensor(1., device=self.device))
                     classification = self.cel(
                         pred_batch[i, 5:, j, k],
-                        F.one_hot(torch.tensor(int(cls)), num_classes=4).float(),
+                        torch.tensor(cls, dtype=torch.long, device=self.device),
                     )
                     loss += localization
                     loss += objectness
