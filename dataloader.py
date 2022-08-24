@@ -3,19 +3,82 @@ import csv
 import yaml
 import torch
 
+
 from pathlib import Path
+from operator import itemgetter
 
 from torchvision import datasets
-from torchvision.io import read_image
+from torchvision.io import read_image, ImageReadMode
+import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader, random_split
-from torchvision.transforms import (
-    Compose,
-    Resize,
-    RandomHorizontalFlip,
-    RandomVerticalFlip,
-)
+from torchvision.transforms import Compose, Resize, RandomVerticalFlip
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
+
+
+class RandomHorizontalFlipYOGO(torch.nn.Module):
+    """Random HFLIP that will flip the labels if the image is flipped!"""
+
+    def __init__(self, p=0.5):
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self, img: torch.Tensor, labels: List[List[float]]
+    ) -> Tuple[torch.Tensor, List[List[float]]]:
+        """
+        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        """
+        if torch.rand(1) < self.p:
+            # this math op reverses the labels.
+            # flip them back to make sorting in loss function quick.
+            # labels is ordered via itemgetter(1,2), so all we have to
+            # do here is reverse in x.
+            flipped_labels = [
+                [
+                    l[0],
+                    1 - l[1],
+                    l[2],
+                    l[3],
+                    l[4],
+                ]
+                for l in labels
+            ]
+            return F.hflip(img), flipped_labels[::-1]
+        return img, labels
+
+
+class RandomVerticalFlipYOGO(torch.nn.Module):
+    """Random VFLIP that will flip the labels if the image is flipped!"""
+
+    def __init__(self, p=0.5):
+        super().__init__()
+        self.p = p
+
+    def forward(
+        self, img: torch.Tensor, labels: List[List[float]]
+    ) -> Tuple[torch.Tensor, List[List[float]]]:
+        """
+        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        """
+        if torch.rand(1) < self.p:
+            # this math op reverses the labels.
+            # flip them back to make sorting in loss function quick.
+            # labels is ordered via itemgetter(1,2), so we have to sort
+            # in x and then in y to maintain proper order. "x" should
+            # already be ordered, so this should be relatively quick.
+            flipped_labels = [
+                [
+                    l[0],
+                    l[1],
+                    1 - l[2],
+                    l[3],
+                    l[4],
+                ]
+                for l in labels
+            ]
+            return F.vflip(img), sorted(flipped_labels, key=itemgetter(1, 2))
+        return img, labels
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -24,7 +87,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         classes: List[str],
         image_path: Path,
         label_path: Path,
-        loader: Callable = read_image,
+        loader: Callable = lambda img: read_image(img, ImageReadMode.GRAY),
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,
@@ -102,7 +165,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 ), "should have [class,xc,yc,w,h] - got length {len(row)}"
                 labels.append([float(v) for v in row])
 
-        return labels
+        return sorted(labels, key=itemgetter(1, 2))
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
@@ -116,7 +179,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         path, target = self.samples[index]
         sample = self.loader(path)
         if self.transform is not None:
-            sample = self.transform(sample)
+            for t in self.transform:
+                try:
+                    sample, target = t(sample, target)
+                except TypeError:
+                    sample = t(sample)
         if self.target_transform is not None:
             target = self.target_transform(target)
 
@@ -147,7 +214,7 @@ def load_dataset_description(
 
         if not (image_path.is_dir() and label_path.is_dir()):
             raise FileNotFoundError(
-                f"image_path or label_path do not lead to a directory\n{image_path=}\n{label_path=}"
+                f"image_path or label_path do not lead to a directory\nimage_path={image_path}\nlabel_path={label_path}"
             )
 
         return classes, image_path, label_path, split_fractions
@@ -167,9 +234,9 @@ def get_datasets(
     ) = load_dataset_description(dataset_description_file)
 
     augmentations = (
-        [RandomHorizontalFlip(0.5), RandomVerticalFlip(0.5)] if training else []
+        [RandomHorizontalFlipYOGO(0.5), RandomVerticalFlipYOGO(0.5)] if training else []
     )
-    transforms = Compose([Resize([150, 200]), *augmentations])
+    transforms = [Resize([300, 400]), *augmentations]
 
     full_dataset = ObjectDetectionDataset(
         classes,
@@ -204,22 +271,67 @@ def get_datasets(
     )
 
 
+def collate_batch(batch):
+    # TODO: any benefit to putting labels in a tensor?
+    # max_num_labels = max(len(x) for x in labels)
+    # for x in labels:
+    #     torch.pad(x, (0, 0, 0, max_num_labels - len(x)))
+    # batched_labels = torch.stack([])
+    inputs, labels = zip(*batch)
+    batched_inputs = torch.stack(inputs)
+    return batched_inputs, labels
+
+
 def get_dataloader(
     root_dir: str,
     batch_size: int,
     split_percentages: List[float] = [1],
     training: bool = True,
 ):
+    # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
     split_datasets = get_datasets(root_dir, batch_size, training=training)
-    print(split_datasets)
     return {
         designation: DataLoader(
-            dataset, batch_size=batch_size, shuffle=True, drop_last=True
+            dataset,
+            batch_size=batch_size,
+            collate_fn=collate_batch,
+            shuffle=True,
+            drop_last=True,
         )
         for designation, dataset in split_datasets.items()
     }
 
 
 if __name__ == "__main__":
+    # FIXME: this is quick and dirty code to plot some results
+    import sys
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+
+    if len(sys.argv) == 2:
+        num_imgs = abs(int(sys.argv[1]))
+    else:
+        num_imgs = 4
+
     ODL = get_datasets("healthy_cell_dataset.yml", batch_size=128)
     print({k: len(d) for k, d in ODL.items()})
+
+    for img, labels in ODL["test"]:
+        fig, ax = plt.subplots()
+        _, img_h, img_w = img.shape
+        ax.imshow(img[0, ...])
+        for l in labels:
+            [_, xc, yc, w, h] = l
+            rect = Rectangle(
+                (img_w * (xc - w / 2), img_h * (yc - h / 2)),
+                img_w * w,
+                img_h * h,
+                facecolor="none",
+                edgecolor="black",
+            )
+            ax.add_patch(rect)
+        plt.show()
+
+        num_imgs -= 1
+        if num_imgs == 0:
+            break
