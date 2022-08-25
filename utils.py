@@ -4,14 +4,16 @@ import torch
 import torchvision.transforms as T
 
 from PIL import Image, ImageDraw
-from typing import Optional,Union, List
+from typing import Optional, Union, List
 
 
-def draw_rects(img: torch.Tensor, rects: Union[torch.Tensor, List], thresh:Optional[float]=None) -> Image:
+def draw_rects(
+    img: torch.Tensor, rects: Union[torch.Tensor, List], thresh: Optional[float] = None
+) -> Image:
     """
     img is the torch tensor representing an image
     rects is either
-        - a torch.tensor of shape (1, pred, Sy, Sx), where pred = (xc, yc, w, h, confidence, ...)
+        - a torch.tensor of shape (pred, Sy, Sx), where pred = (xc, yc, w, h, confidence, ...)
         - a list of (class, xc, yc, w, h)
     thresh is a threshold for confidence when rects is a torch.Tensor
     """
@@ -21,9 +23,10 @@ def draw_rects(img: torch.Tensor, rects: Union[torch.Tensor, List], thresh:Optio
     h, w = img.shape
 
     if isinstance(rects, torch.Tensor):
-        _, pred_dim, Sy, Sx = img.shape
-        if thresh is None: thresh = 0.
-        rects = [r for r in img[0, ...].reshape(Sy * Sx, pred_dim) if r[4] > thresh]
+        pred_dim, Sy, Sx = rects.shape
+        if thresh is None:
+            thresh = 0.0
+        rects = [r for r in rects.reshape(pred_dim, Sx * Sy).T if r[4] > thresh]
     elif isinstance(rects, list):
         if thresh is not None:
             raise ValueError("threshold only valid for tensor (i.e. prediction) input")
@@ -48,3 +51,12 @@ def draw_rects(img: torch.Tensor, rects: Union[torch.Tensor, List], thresh:Optio
         draw.rectangle(r, outline="red")
 
     return rgb
+
+
+if __name__ == "__main__":
+    from model import YOGO
+
+    Y = YOGO(17 / 300, 17 / 400)
+    x = torch.rand(1, 1, 300, 400)
+    out = Y(x)
+    draw_rects(x[0, 0, ...], out[0, ...])

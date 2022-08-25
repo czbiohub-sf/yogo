@@ -89,8 +89,11 @@ def train(dev):
 
             if global_step % VALIDATION_PERIOD == 0:
                 wandb.log(
-                    {"example_bbs": draw_rects(imgs[0,0,...], outputs[0,...])},
-                    commit=False
+                    {
+                        "training_bbs": wandb.Image(
+                            draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
+                        )
+                    },
                 )
 
                 val_loss = 0.0

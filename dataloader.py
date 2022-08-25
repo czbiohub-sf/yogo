@@ -319,8 +319,6 @@ if __name__ == "__main__":
     print({k: len(d) for k, d in ODL.items()})
 
     for img, labels in ODL["test"]:
-        draw_rects(img[0, ...], labels).show()
-
         fig, ax = plt.subplots()
         _, img_h, img_w = img.shape
         ax.imshow(img[0, ...])
