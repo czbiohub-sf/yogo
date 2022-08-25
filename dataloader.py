@@ -306,6 +306,8 @@ if __name__ == "__main__":
     # FIXME: this is quick and dirty code to plot some results
     import sys
     import matplotlib.pyplot as plt
+
+    from utils import draw_rects
     from matplotlib.patches import Rectangle
 
     if len(sys.argv) == 2:

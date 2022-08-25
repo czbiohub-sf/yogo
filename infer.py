@@ -50,17 +50,16 @@ if __name__ == "__main__":
         _, pred_dim, Sy, Sx = res.shape
         for pred in torch.permute(res.reshape(1, pred_dim, Sx * Sy)[0, :, :], (1, 0)):
             assert len(pred) == 9
-            xc, yc, w, h = pred[:4]
-            xc, yc, w, h = xc.item(), yc.item(), w.item(), h.item()
-            print(xc, yc, w, h, pred[4].item())
-            ax.add_patch(
-                Rectangle(
-                    (img_w * (xc - w / 2), img_h * (yc - h / 2)),
-                    img_w * w,
-                    img_h * h,
-                    facecolor="none",
-                    edgecolor="black",
+            xc, yc, w, h = pred[:4].detach()
+            if pred[4].item() > 0.5:
+                ax.add_patch(
+                    Rectangle(
+                        (img_w * (xc - w / 2), img_h * (yc - h / 2)),
+                        img_w * w,
+                        img_h * h,
+                        facecolor="none",
+                        edgecolor="black",
+                    )
                 )
-            )
 
         plt.show()

@@ -66,7 +66,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         for i in range(batch_size):
             bins = _split_labels_into_bins(label_batch[i], Sx, Sy)
 
-            for (j, k), Ls in bins.items():
+            for (k, j), Ls in bins.items():
                 if len(Ls) == 0:
                     objectness = self.no_obj_weight * self.mse(
                         pred_batch[i, 4, j, k], torch.tensor(0.0, device=self.device)
