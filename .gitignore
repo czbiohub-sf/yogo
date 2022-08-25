@@ -5,4 +5,4 @@
 wandb
 trained_models
 __pycache__
-slurm-631828.out
+slurm*
