@@ -306,6 +306,8 @@ if __name__ == "__main__":
     # FIXME: this is quick and dirty code to plot some results
     import sys
     import matplotlib.pyplot as plt
+
+    from utils import draw_rects
     from matplotlib.patches import Rectangle
 
     if len(sys.argv) == 2:
@@ -317,6 +319,10 @@ if __name__ == "__main__":
     print({k: len(d) for k, d in ODL.items()})
 
     for img, labels in ODL["test"]:
+        plt.imshow(draw_rects(img[0,0,...], labels))
+        plt.title("draw_rects")
+        plt.show()
+
         fig, ax = plt.subplots()
         _, img_h, img_w = img.shape
         ax.imshow(img[0, ...])
