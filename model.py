@@ -106,11 +106,7 @@ class YOGO(nn.Module):
 
         bs, preds, sy, sx = x.shape
         print(f"{sy=}, {sx=}")
-        Cxs = (
-            torch.linspace(0, 1 - 1 / sx, sx)
-            .expand(sy, -1)
-            .to(self.device)
-        )
+        Cxs = torch.linspace(0, 1 - 1 / sx, sx).expand(sy, -1).to(self.device)
         Cys = (
             torch.linspace(0, 1 - 1 / sy, sy)
             .expand(1, -1)
