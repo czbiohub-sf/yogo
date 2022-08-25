@@ -19,8 +19,8 @@ EPOCHS = 256
 ADAM_LR = 3e-4
 BATCH_SIZE = 16
 VALIDATION_PERIOD = 100
-anchor_h = 17
-anchor_w = 17
+anchor_h = 17 / 300
+anchor_w = 17 / 400
 
 # TODO find sync points - wandb may be it, unfortunately :(
 # https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
@@ -51,14 +51,14 @@ wandb.init(
         "batch_size": BATCH_SIZE,
         "training_set_size": len(train_dataloader),
         "device": str(device),
-        "anchor_w" : anchor_w,
-        "anchor_h" : anchor_h
+        "anchor_w": anchor_w,
+        "anchor_h": anchor_h,
     },
 )
 
 
 def train(dev):
-    net = YOGO(anchor_w = anchor_w, anchor_h = anchor_h).to(dev)
+    net = YOGO(anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
 
@@ -86,8 +86,8 @@ def train(dev):
                 step=global_step,
             )
             wandb.log(
-                {"training_img": wandb.Image(imgs[0,...].detach().numpy())},
-                commit=global_step % VALIDATION_PERIOD == 0
+                {"training_img": wandb.Image(imgs[0, ...].detach().numpy())},
+                commit=global_step % VALIDATION_PERIOD == 0,
             )
 
             if global_step % VALIDATION_PERIOD == 0:

@@ -32,7 +32,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss()
         self.cel = torch.nn.CrossEntropyLoss()
-        self.device = 'cpu'
+        self.device = "cpu"
 
     def to(self, device):
         # FIXME: hack?
@@ -59,7 +59,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # TODO - need the lables to be formatted correctly! See following link for loss impl.
         # https://jonathan-hui.medium.com/real-time-object-detection-with-yolo-yolov2-28b1b93e2088
         # IOU may need to be rewritten - used in `t_o` preds
-        batch_size, preds_size, Sx, Sy = pred_batch.shape
+        batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
@@ -69,14 +69,18 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             for (j, k), Ls in bins.items():
                 if len(Ls) == 0:
                     objectness = self.no_obj_weight * self.mse(
-                        pred_batch[i, 4, j, k], torch.tensor(0., device=self.device)
+                        pred_batch[i, 4, j, k], torch.tensor(0.0, device=self.device)
                     )
                     loss += objectness
                 elif len(Ls) >= 1:
                     [cls, xc, yc, w, h] = Ls.pop()
                     localization = self.coord_weight * (
-                        self.mse(pred_batch[i, 0, j, k], torch.tensor(xc, device=self.device))
-                        + self.mse(pred_batch[i, 1, j, k], torch.tensor(yc, device=self.device))
+                        self.mse(
+                            pred_batch[i, 0, j, k], torch.tensor(xc, device=self.device)
+                        )
+                        + self.mse(
+                            pred_batch[i, 1, j, k], torch.tensor(yc, device=self.device)
+                        )
                         + self.mse(
                             torch.sqrt(pred_batch[i, 2, j, k]),
                             torch.sqrt(torch.tensor(w, device=self.device)),
@@ -86,10 +90,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                             torch.sqrt(torch.tensor(h, device=self.device)),
                         )
                     )
-                    objectness = self.mse(pred_batch[i, 4, j, k], torch.tensor(1., device=self.device))
+                    objectness = self.mse(
+                        pred_batch[i, 4, j, k], torch.tensor(1.0, device=self.device)
+                    )
                     classification = self.cel(
                         pred_batch[i, 5:, j, k],
-                        torch.tensor(cls, dtype=torch.long, device=self.device),
+                        torch.tensor(int(cls), dtype=torch.long, device=self.device),
                     )
                     loss += localization
                     loss += objectness
@@ -137,7 +143,7 @@ if __name__ == "__main__":
         from matplotlib.patches import Rectangle
 
         "quick and hacky way to debug some split label jazz"
-        LS = _split_labels_into_bins(l, 4, 4)
+        LS = _split_labels_into_bins(l, 9, 12)
         _, ax = plt.subplots()
         ax.imshow(data[0, 0, :, :])
 

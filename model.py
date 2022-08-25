@@ -14,6 +14,7 @@ class YOGO(nn.Module):
         - Figure out conv layer sizing to properly reduce size of input to desired Sx, Sy
         - Add residuals?
     """
+
     def __init__(self, anchor_w, anchor_h):
         super().__init__()
         self.num_anchors = 1
@@ -21,7 +22,7 @@ class YOGO(nn.Module):
         self.anchor_h = anchor_h
         self.backbone = self.gen_backbone()
         self.head = self.gen_head(num_channels=1024, num_classes=4)
-        self.device = 'cpu'
+        self.device = "cpu"
 
     def to(self, device):
         # FIXME: hack?
@@ -104,9 +105,18 @@ class YOGO(nn.Module):
         x = self.head(x)
 
         bs, preds, sy, sx = x.shape
-
-        Cxs = torch.linspace(0, 1 - 1/sx, sx).expand(sy, -1).to(self.device)
-        Cys = torch.linspace(0, 1 - 1/sy, sy).expand(1,-1).T.expand(sy,sx).to(self.device)
+        print(f"{sy=}, {sx=}")
+        Cxs = (
+            torch.linspace(0, 1 - 1 / sx, sx)
+            .expand(sy, -1)
+            .to(self.device)
+        )
+        Cys = (
+            torch.linspace(0, 1 - 1 / sy, sy)
+            .expand(1, -1)
+            .T.expand(sy, sx)
+            .to(self.device)
+        )
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:
@@ -115,8 +125,8 @@ class YOGO(nn.Module):
         #  width of bounding box
         #  height of bounding box
         #  'objectness' score
-        x[:, 0, :, :] = torch.sigmoid(x[:, 0, :, :]) + Cxs
-        x[:, 1, :, :] = torch.sigmoid(x[:, 1, :, :]) + Cys
+        x[:, 0, :, :] = (1 / sx) * torch.sigmoid(x[:, 0, :, :]) + Cxs
+        x[:, 1, :, :] = (1 / sy) * torch.sigmoid(x[:, 1, :, :]) + Cys
         x[:, 2, :, :] = self.anchor_w * torch.exp(x[:, 2, :, :])
         x[:, 3, :, :] = self.anchor_h * torch.exp(x[:, 3, :, :])
         x[:, 4, :, :] = torch.sigmoid(x[:, 4, :, :])
