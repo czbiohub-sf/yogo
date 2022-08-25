@@ -109,7 +109,8 @@ class YOGO(nn.Module):
         Cys = (
             torch.linspace(0, 1 - 1 / sy, sy)
             .expand(1, -1)
-            .T.expand(sy, sx)
+            .transpose(0, 1)
+            .expand(sy, sx)
             .to(self.device)
         )
 
