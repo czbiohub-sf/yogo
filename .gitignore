@@ -6,3 +6,6 @@ wandb
 trained_models
 __pycache__
 slurm*
+
+*.bin
+*.xml
