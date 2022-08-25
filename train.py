@@ -7,6 +7,7 @@ from torch.optim import AdamW
 
 import wandb
 from model import YOGO
+from utils import draw_rects
 from yogo_loss import YOGOLoss
 from dataloader import get_dataloader
 
@@ -87,6 +88,11 @@ def train(dev):
             )
 
             if global_step % VALIDATION_PERIOD == 0:
+                wandb.log(
+                    {"example_bbs": draw_rects(imgs[0,0,...], outputs[0,...])},
+                    commit=False
+                )
+
                 val_loss = 0.0
 
                 net.eval()
