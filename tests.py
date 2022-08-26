@@ -36,5 +36,10 @@ class TestClustering(unittest.TestCase):
             )
 
 
+class TestLossUtilities(unittest.TestCase):
+    def test_labels_into_bins(self):
+            pass
+
+
 if __name__ == "__main__":
     unittest.main()
