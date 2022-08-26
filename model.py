@@ -114,6 +114,11 @@ class YOGO(nn.Module):
             .to(self.device)
         )
 
+        if self.training:
+            classification = x[:, 5:, :, :]
+        else:
+            classification = torch.softmax(x[:, 5:, :, :], axis=1)
+
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:
         #  center of bounding box in x
@@ -121,23 +126,23 @@ class YOGO(nn.Module):
         #  width of bounding box
         #  height of bounding box
         #  'objectness' score
-        x[:, 0, :, :] = (1 / sx) * torch.sigmoid(x[:, 0, :, :]) + Cxs
-        x[:, 1, :, :] = (1 / sy) * torch.sigmoid(x[:, 1, :, :]) + Cys
-        x[:, 2, :, :] = self.anchor_w * torch.exp(x[:, 2, :, :])
-        x[:, 3, :, :] = self.anchor_h * torch.exp(x[:, 3, :, :])
-        x[:, 4, :, :] = torch.sigmoid(x[:, 4, :, :])
-        if not self.training:
-            # TODO: If using cross entropy loss, I *think* that we
-            # avoid applying any softmax / logsoftmax
-            x[:, 5:, :, :] = torch.softmax(x[:, 5:, :, :], dim=1)
-
-        return x
+        return torch.cat(
+            (
+                ((1 / sx) * torch.sigmoid(x[:, 0, :, :]) + Cxs)[:, None, :, :],
+                ((1 / sy) * torch.sigmoid(x[:, 1, :, :]) + Cys)[:, None, :, :],
+                (self.anchor_w * torch.exp(x[:, 2, :, :]))[:, None, :, :],
+                (self.anchor_h * torch.exp(x[:, 3, :, :]))[:, None, :, :],
+                (torch.sigmoid(x[:, 4, :, :]))[:, None, :, :],
+                *torch.split(classification, 1, dim=1),
+            ),
+            dim=1,
+        )
 
 
 if __name__ == "__main__":
     Y = YOGO(0.0455, 0.059)
     Y.eval()
-    x = torch.randn(1, 1, 416, 416)
+    x = torch.randn(3, 1, 416, 416)
     import time
 
     t0 = time.perf_counter()
@@ -146,3 +151,4 @@ if __name__ == "__main__":
         Y(x)
     print((time.perf_counter() - t0) / N)
     print(Y(x).shape, Y(x)[0, :, 0, 0])
+    torch.save({"model_state_dict": Y.state_dict()}, "convert_me.pth")

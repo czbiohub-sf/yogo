@@ -20,6 +20,8 @@ from model import YOGO
 Learning from https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html
 """
 
+# TODO: onnxsim to simplify models?
+
 
 def to_numpy(tensor):
     return (
@@ -32,10 +34,12 @@ if __name__ == "__main__":
         print("usage: ./to_onxx.py <your_file.pth> [<output_file_name.onnx>]")
         sys.exit(1)
 
-    pth_filename  = sys.argv[1]
-    onnx_filename = sys.argv[2] if len(sys.argv) == 3 else pth_filename.replace("pth", "onnx")
+    pth_filename = sys.argv[1]
+    onnx_filename = (
+        sys.argv[2] if len(sys.argv) == 3 else pth_filename.replace("pth", "onnx")
+    )
 
-    net = YOGO(17/300, 17/400)
+    net = YOGO(17 / 300, 17 / 400)
     net.eval()
 
     # TODO CPU vs GPU vs whatever else?
@@ -67,6 +71,16 @@ if __name__ == "__main__":
     )
 
     # export to IR
-    subprocess.run(["mo", "--input_model", onnx_filename, "--output_dir", Path(onnx_filename).resolve().parents[0]])
+    subprocess.run(
+        [
+            "mo",
+            "--input_model",
+            onnx_filename,
+            "--output_dir",
+            Path(onnx_filename).resolve().parents[0],
+        ]
+    )
 
-    print(f"\nexported to {onnx_filename}, {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}")
+    print(
+        f"\nexported to {onnx_filename}, {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
+    )
