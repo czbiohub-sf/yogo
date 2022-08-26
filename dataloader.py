@@ -44,7 +44,7 @@ class RandomHorizontalFlipYOGO(torch.nn.Module):
                 ]
                 for l in labels
             ]
-            return F.hflip(img), flipped_labels[::-1]
+            return F.hflip(img), flipped_labels
         return img, labels
 
 
@@ -77,7 +77,7 @@ class RandomVerticalFlipYOGO(torch.nn.Module):
                 ]
                 for l in labels
             ]
-            return F.vflip(img), sorted(flipped_labels, key=itemgetter(1, 2))
+            return F.vflip(img), flipped_labels
         return img, labels
 
 
@@ -164,8 +164,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     len(row) == 5
                 ), "should have [class,xc,yc,w,h] - got length {len(row)}"
                 labels.append([float(v) for v in row])
-
-        return sorted(labels, key=itemgetter(1, 2))
+        return labels
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
