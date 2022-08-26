@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 
 from cluster_anchors import *
+from yogo_loss import split_labels_into_bins
 
 
 class TestClustering(unittest.TestCase):
@@ -37,8 +38,63 @@ class TestClustering(unittest.TestCase):
 
 
 class TestLossUtilities(unittest.TestCase):
-    def test_labels_into_bins(self):
-            pass
+    def test_labels_into_bins_1(self):
+        labels = [
+            [0.0, 0.1, 0.1, 0.0, 0.0],
+            [0.0, 0.9, 0.1, 0.0, 0.0],
+        ]
+        Sx, Sy = 2, 1
+        d = split_labels_into_bins(labels, Sx, Sy)
+        self.assertEqual(d[0, 0], [[0.0, 0.1, 0.1, 0.0, 0.0]])
+        self.assertEqual(d[1, 0], [[0.0, 0.9, 0.1, 0.0, 0.0]])
+
+    def test_labels_into_bins_2(self):
+        labels = [
+            [0.0, 0.1, 0.1, 0.0, 0.0],
+            [0.0, 0.9, 0.1, 0.0, 0.0],
+            [0.0, 0.1, 0.9, 0.0, 0.0],
+            [0.0, 0.9, 0.9, 0.0, 0.0],
+        ]
+        Sx, Sy = 2, 2
+        d = split_labels_into_bins(labels, Sx, Sy)
+        self.assertEqual(d[0, 0], [[0.0, 0.1, 0.1, 0.0, 0.0]])
+        self.assertEqual(d[1, 0], [[0.0, 0.9, 0.1, 0.0, 0.0]])
+        self.assertEqual(d[0, 1], [[0.0, 0.1, 0.9, 0.0, 0.0]])
+        self.assertEqual(d[1, 1], [[0.0, 0.9, 0.9, 0.0, 0.0]])
+
+    def test_labels_into_bins_3(self):
+        sq0 = [
+            [0.0, 0.1, 0.1, 0.0, 0.0],
+            [0.0, 0.2, 0.2, 0.0, 0.0],
+        ]
+        sq1 = [
+            [0.0, 0.8, 0.2, 0.0, 0.0],
+            [0.0, 0.9, 0.1, 0.0, 0.0],
+        ]
+        sq2 = [
+            [0.0, 0.1, 0.9, 0.0, 0.0],
+            [0.0, 0.2, 0.8, 0.0, 0.0],
+        ]
+        sq3 = [
+            [0.0, 0.8, 0.8, 0.0, 0.0],
+            [0.0, 0.9, 0.9, 0.0, 0.0],
+        ]
+        Sx, Sy, labels = 2, 2, [el for sq in [sq0, sq1, sq2, sq3] for el in sq]
+        d = split_labels_into_bins(labels, Sx, Sy)
+        for el in d[0, 0]:
+            self.assertIn(el, sq0)
+        for el in d[1, 0]:
+            self.assertIn(el, sq1)
+        for el in d[0, 1]:
+            self.assertIn(el, sq2)
+        for el in d[1, 1]:
+            self.assertIn(el, sq3)
+
+    def test_labels_into_bins_empty(self):
+        Sx, Sy, labels = 2, 2, []
+        d = split_labels_into_bins(labels, Sx, Sy)
+        for coord, sorted_labels in d.items():
+            self.assertEqual(sorted_labels, [])
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ import torch.nn.functional as F
 
 from operator import itemgetter
 from typing import Any, List, Dict, Tuple, Callable
+from collections import defaultdict
 
 """
 Original YOLO paper did not mention IOU?
@@ -64,7 +65,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
         for i in range(batch_size):
-            bins = _split_labels_into_bins(label_batch[i], Sx, Sy)
+            bins = split_labels_into_bins(label_batch[i], Sx, Sy)
 
             for (k, j), Ls in bins.items():
                 if len(Ls) == 0:
@@ -106,31 +107,11 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         return loss / batch_size
 
 
-def _split_labels_into_bins(labels, Sx, Sy) -> Dict[Tuple[int, int], List[List[float]]]:
-    bins: Dict[Tuple[int, int], List[List[float]]] = dict()
-    labels_x_sorted = sorted(labels, key=itemgetter(1))
-    x_bins = _get_bin_sorted_list_idxs(labels_x_sorted, Sx, key=itemgetter(1))
-    for i, x_bin in enumerate(x_bins):
-        labels_slice_y_sorted = sorted(labels_x_sorted[x_bin], key=itemgetter(2))
-        y_bins = _get_bin_sorted_list_idxs(labels_slice_y_sorted, Sy, key=itemgetter(2))
-        for j, y_bin in enumerate(y_bins):
-            bins[(i, j)] = labels_slice_y_sorted[y_bin]
-
-    return bins
-
-
-def _get_bin_sorted_list_idxs(
-    arr: List[Any], max_num_bins: int, key: Callable = lambda a: a
-) -> List[slice]:
-    lo = 0
-    l: List[slice] = []
-    bin_width = 1 / max_num_bins
-    keys = [key(v) for v in arr]
-    for i in range(1, max_num_bins + 1):
-        boundary = bisect.bisect(keys, i * bin_width, lo=lo)
-        l.append(slice(lo, boundary))
-        lo = boundary
-    return l
+def split_labels_into_bins(labels, Sx, Sy) -> Dict[Tuple[int, int], List[List[float]]]:
+    d: Dict[Tuple[int, int], List[List[float]]] = defaultdict(list)
+    for label in labels:
+        d[(label[1] // (1 / Sx), label[2] // (1 / Sy))].append(label)
+    return d
 
 
 if __name__ == "__main__":
@@ -138,12 +119,12 @@ if __name__ == "__main__":
     from model import YOGO
     from dataloader import get_dataloader
 
-    def plot(data, l):
-        import matplotlib.pyplot as plt
-        from matplotlib.patches import Rectangle
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
 
+    def plot(data, l):
         "quick and hacky way to debug some split label jazz"
-        LS = _split_labels_into_bins(l, 9, 12)
+        LS = split_labels_into_bins(l, 9, 12)
         _, ax = plt.subplots()
         ax.imshow(data[0, 0, :, :])
 
