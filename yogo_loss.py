@@ -55,6 +55,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         TODO:
             - "bag of freebies" for free +5% mAP https://arxiv.org/pdf/1902.04103.pdf
+            - Sigmoid + L2 loss -> BCE with logits for "Objectness"
+            - See YoloV3 Sec 2.1
+
+        How to speed it up? High level:
+            - turn labels into a tensor and do tensor ops so we can do this on the GPU easier
+            - collect the operations into tensor ops so we can batch things together, go faster, make CG simpler
+
+        Problem:
+            - Labels is a list of list of floats
+            - needs to be able to rapidly pick the correct label
         """
         # TODO - this will be halariously slow! must speed up shortly
         # TODO - need the lables to be formatted correctly! See following link for loss impl.
@@ -74,6 +84,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     )
                     loss += objectness
                 elif len(Ls) >= 1:
+                    # take a random label per square :(
                     [cls, xc, yc, w, h] = Ls.pop()
                     localization = self.coord_weight * (
                         self.mse(
@@ -101,17 +112,23 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     loss += localization
                     loss += objectness
                     loss += classification
-                else:
-                    # TODO: impl!
-                    pass
         return loss / batch_size
 
+    def set_labels(
+        self, pred_batch: torch.Tensor, label_batch: List[List[List[float]]]
+    ) -> torch.Tensor:
+        batch_size, preds_size, Sy, Sx = pred_batch.shape
+        label_bins = split_labels_into_bins(labels, Sx, Sy)
 
-def split_labels_into_bins(labels, Sx, Sy) -> Dict[Tuple[int, int], List[List[float]]]:
-    d: Dict[Tuple[int, int], List[List[float]]] = defaultdict(list)
-    for label in labels:
-        d[(label[1] // (1 / Sx), label[2] // (1 / Sy))].append(label)
-    return d
+        formed_labels = torch.zeros(4)
+        return formed_labels
+
+
+def split_labels_into_bins(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
+    """Takes a 2d tensor of shape (total num labels, 5) (5 == class + xc yc w h)"""
+    xbin = torch.div(labels[..., 1:2], 1 / Sx, rounding_mode="trunc").type(torch.long)
+    ybin = torch.div(labels[..., 2:3], 1 / Sy, rounding_mode="trunc").type(torch.long)
+    return torch.cat((xbin, ybin), dim=-1)
 
 
 if __name__ == "__main__":

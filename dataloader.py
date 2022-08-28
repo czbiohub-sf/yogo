@@ -271,14 +271,9 @@ def get_datasets(
 
 
 def collate_batch(batch):
-    # TODO: any benefit to putting labels in a tensor?
-    # max_num_labels = max(len(x) for x in labels)
-    # for x in labels:
-    #     torch.pad(x, (0, 0, 0, max_num_labels - len(x)))
-    # batched_labels = torch.stack([])
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
-    return batched_inputs, labels
+    return batched_inputs, torch.tensor(labels)
 
 
 def get_dataloader(
