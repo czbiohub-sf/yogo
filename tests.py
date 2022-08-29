@@ -48,7 +48,7 @@ class TestClustering(unittest.TestCase):
             corners = np.random.rand(6, 4)
             self.assertTrue(
                 np.allclose(
-                    corners, xc_yc_w_h_to_corners(corners_to_xc_yc_w_h(corners))
+                    corners, centers_to_corners(corners_to_centers(corners))
                 )
             )
 
@@ -57,7 +57,7 @@ class TestClustering(unittest.TestCase):
             corners = torch.rand(6, 4)
             self.assertTrue(
                 np.allclose(
-                    corners, xc_yc_w_h_to_corners(corners_to_xc_yc_w_h(corners))
+                    corners, centers_to_corners(corners_to_centers(corners))
                 )
             )
 
