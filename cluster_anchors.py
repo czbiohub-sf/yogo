@@ -11,7 +11,7 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from typing import cast, Union
+from typing import cast, Union, Tuple
 
 # [dims, xmin, xmax, ymin, ymax]
 CornerBox = Union[npt.NDArray[np.float64], torch.Tensor]
@@ -20,7 +20,7 @@ CenterBox = Union[npt.NDArray[np.float64], torch.Tensor]
 Box = Union[CornerBox, CenterBox]
 
 
-def xc_yc_w_h_to_corners(b: CenterBox) -> CornerBox:
+def centers_to_corners(b: CenterBox) -> CornerBox:
     if isinstance(b, np.ndarray):
         return np.array(
             (
@@ -45,7 +45,7 @@ def xc_yc_w_h_to_corners(b: CenterBox) -> CornerBox:
         )
 
 
-def corners_to_xc_yc_w_h(b: CornerBox) -> CenterBox:
+def corners_to_centers(b: CornerBox) -> CenterBox:
     if isinstance(b, np.ndarray):
         return np.array(
             (
@@ -100,15 +100,15 @@ def torch_iou(b1: CornerBox, b2: CornerBox) -> torch.Tensor:
     return intersection / (area(b1) + area(b2) - intersection)
 
 
-def gen_random_box(corner_box=True) -> CornerBox:
-    xmin = np.random.rand() / 2
-    xmax = np.random.rand() / 2 + xmin
-    ymin = np.random.rand() / 2
-    ymax = np.random.rand() / 2 + ymin
-    cb = np.array((xmin, xmax, ymin, ymax)).reshape(1, -1)
-    if corner_box:
-        return cb
-    return corners_to_xc_yc_w_h(cb)
+def gen_random_box(n = 1, center_box=False) -> CornerBox:
+    xmin = np.random.rand(n, 1) / 2
+    xmax = np.random.rand(n, 1) / 2 + xmin
+    ymin = np.random.rand(n, 1) / 2
+    ymax = np.random.rand(n, 1) / 2 + ymin
+    cb = np.hstack((xmin, xmax, ymin, ymax))
+    if center_box:
+        return corners_to_centers(cb)
+    return cb
 
 
 def plot_boxes(boxes, color_period=0) -> None:
@@ -121,7 +121,7 @@ def plot_boxes(boxes, color_period=0) -> None:
     current_axis = plt.gca()
     for i, box in enumerate(boxes):
         color = colors[i % color_period if color_period > 0 else 0]
-        _, _, w, h = corners_to_xc_yc_w_h(box)
+        _, _, w, h = corners_to_centers(box)
         current_axis.add_patch(
             Rectangle(
                 (box[0], box[2]),
@@ -135,13 +135,13 @@ def plot_boxes(boxes, color_period=0) -> None:
 
 
 def get_all_bounding_boxes(bb_dir, conv_to_corners=True) -> npt.NDArray[np.float64]:
-    conv_func = xc_yc_w_h_to_corners if conv_to_corners else lambda x: x
+    conv_func = centers_to_corners if conv_to_corners else lambda x: x
     bbs = []
     for fname in glob.glob(f"{bb_dir}/*.csv"):
         with open(fname, "r") as f:
             for line in f:
                 vs = np.array([float(v) for v in line.split(",")])
-                bbs.append(xc_yc_w_h_to_corners(vs[1:]))
+                bbs.append(centers_to_corners(vs[1:]))
     return np.array(bbs)
 
 
@@ -174,13 +174,37 @@ def k_means(data, k=3, plot=False) -> CornerBox:
     if plot:
         plot_boxes(np.array(boxes).reshape(-1, 4), color_period=k)
 
-    return cast(CornerBox, corners_to_xc_yc_w_h(means))
+    return cast(CornerBox, corners_to_centers(means))
 
 
-# def best_anchor(data) -> CornerBox:
-#     """ Optimization for k_means(data, k=1)
-#     """
-#     from scipy import optimize
+def best_anchor(data: CenterBox) -> Tuple[float,float]:
+    """Optimization for k_means(data, k=1)"""
+    from scipy import optimize
+
+    def centered_wh_iou(b1: CenterBox, b2: CenterBox):
+        "get iou, assuming b1 and b2 are centerd on eachother"
+        intr = np.minimum(b1[..., 2], b2[..., 2]) * np.minimum(b1[..., 3], b2[..., 3])
+        area1 = b1[..., 2] * b1[..., 3]
+        area2 = b2[..., 2] * b2[..., 3]
+        res = intr / (area1 + area2 - intr)
+        return res
+
+    def f(x: CenterBox):
+        return (1 - centered_wh_iou(x, data)).sum()
+
+    res = optimize.minimize(f, method="Nelder-Mead", x0=gen_random_box(center_box=True))
+    if res.success:
+        return res.x[2], res.x[2]
+    else:
+        # FIXME: Logging?
+        print(
+            f"scipy could not optimize to ideal solution: '{res.message}'\n"
+            f"defaulting to k_mean(data, k=1)"
+        )
+        corners = k_means(centers_to_corners(data), k=1)[0]
+        centers = centers_to_corners(corners)
+        return cast(Tuple[float,float], (centers[2], centers[3]))
+
 
 if __name__ == "__main__":
     import sys
@@ -193,4 +217,4 @@ if __name__ == "__main__":
     # sanity checks for our data
     assert np.all(data[:, 0] < data[:, 1])
     assert np.all(data[:, 2] < data[:, 3])
-    print(k_means(data, k=6, plot=True))
+    print(k_means(data, k=1, plot=True))
