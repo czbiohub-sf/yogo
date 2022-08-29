@@ -11,13 +11,16 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from typing import Union
+from typing import cast, Union
 
 # [dims, xmin, xmax, ymin, ymax]
-Box = npt.NDArray[np.float64]
+CornerBox = Union[npt.NDArray[np.float64], torch.Tensor]
+# [dims, xc, yc, w, h]
+CenterBox = Union[npt.NDArray[np.float64], torch.Tensor]
+Box = Union[CornerBox, CenterBox]
 
 
-def xc_yc_w_h_to_corners(b: Union[Box, torch.Tensor]) -> Union[Box, torch.Tensor]:
+def xc_yc_w_h_to_corners(b: CenterBox) -> CornerBox:
     if isinstance(b, np.ndarray):
         return np.array(
             (
@@ -42,7 +45,7 @@ def xc_yc_w_h_to_corners(b: Union[Box, torch.Tensor]) -> Union[Box, torch.Tensor
         )
 
 
-def corners_to_xc_yc_w_h(b: Union[Box, torch.Tensor]) -> Union[Box, torch.Tensor]:
+def corners_to_xc_yc_w_h(b: CornerBox) -> CenterBox:
     if isinstance(b, np.ndarray):
         return np.array(
             (
@@ -67,10 +70,10 @@ def corners_to_xc_yc_w_h(b: Union[Box, torch.Tensor]) -> Union[Box, torch.Tensor
         )
 
 
-def iou(b1: Box, b2: Box) -> npt.NDArray[np.float64]:
+def iou(b1: CornerBox, b2: CornerBox) -> npt.NDArray[np.float64]:
     """b1, b2 of shape [1,d]"""
 
-    def area(b: Box) -> npt.NDArray[np.float64]:
+    def area(b: CornerBox) -> npt.NDArray[np.float64]:
         return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
 
     intersection = np.maximum(
@@ -81,7 +84,7 @@ def iou(b1: Box, b2: Box) -> npt.NDArray[np.float64]:
     return intersection / (area(b1) + area(b2) - intersection)
 
 
-def torch_iou(b1: torch.Tensor, b2: torch.Tensor) -> torch.Tensor:
+def torch_iou(b1: CornerBox, b2: CornerBox) -> torch.Tensor:
     """
     b1, b2 of shape [1,d]
     """
@@ -97,22 +100,15 @@ def torch_iou(b1: torch.Tensor, b2: torch.Tensor) -> torch.Tensor:
     return intersection / (area(b1) + area(b2) - intersection)
 
 
-def get_all_bounding_boxes(bb_dir) -> npt.NDArray[np.float64]:
-    bbs = []
-    for fname in glob.glob(f"{bb_dir}/*.csv"):
-        with open(fname, "r") as f:
-            for line in f:
-                vs = np.array([float(v) for v in line.split(",")])
-                bbs.append(xc_yc_w_h_to_corners(vs[1:]))
-    return np.array(bbs)
-
-
-def gen_random_box() -> Box:
+def gen_random_box(corner_box=True) -> CornerBox:
     xmin = np.random.rand() / 2
     xmax = np.random.rand() / 2 + xmin
     ymin = np.random.rand() / 2
     ymax = np.random.rand() / 2 + ymin
-    return np.array((xmin, xmax, ymin, ymax)).reshape(1, -1)
+    cb = np.array((xmin, xmax, ymin, ymax)).reshape(1, -1)
+    if corner_box:
+        return cb
+    return corners_to_xc_yc_w_h(cb)
 
 
 def plot_boxes(boxes, color_period=0) -> None:
@@ -138,7 +134,18 @@ def plot_boxes(boxes, color_period=0) -> None:
     plt.show()
 
 
-def k_means(data, k=3, plot=False) -> npt.NDArray[np.float64]:
+def get_all_bounding_boxes(bb_dir, conv_to_corners=True) -> npt.NDArray[np.float64]:
+    conv_func = xc_yc_w_h_to_corners if conv_to_corners else lambda x: x
+    bbs = []
+    for fname in glob.glob(f"{bb_dir}/*.csv"):
+        with open(fname, "r") as f:
+            for line in f:
+                vs = np.array([float(v) for v in line.split(",")])
+                bbs.append(xc_yc_w_h_to_corners(vs[1:]))
+    return np.array(bbs)
+
+
+def k_means(data, k=3, plot=False) -> CornerBox:
     """
     https://blog.paperspace.com/speed-up-kmeans-numpy-vectorization-broadcasting-profiling/
     assumptions:
@@ -146,7 +153,7 @@ def k_means(data, k=3, plot=False) -> npt.NDArray[np.float64]:
         - data is normalized to [0,1]
     """
 
-    def dist(b1: Box, b2: Box):
+    def dist(b1: CornerBox, b2: CornerBox):
         return 1 - iou(b1[:, np.newaxis, :], b2[np.newaxis, :, :])
 
     def get_closest_mean(data, means):
@@ -167,8 +174,13 @@ def k_means(data, k=3, plot=False) -> npt.NDArray[np.float64]:
     if plot:
         plot_boxes(np.array(boxes).reshape(-1, 4), color_period=k)
 
-    return corners_to_xc_yc_w_h(means)
+    return cast(CornerBox, corners_to_xc_yc_w_h(means))
 
+
+# def best_anchor(data) -> CornerBox:
+#     """ Optimization for k_means(data, k=1)
+#     """
+#     from scipy import optimize
 
 if __name__ == "__main__":
     import sys
