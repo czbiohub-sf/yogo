@@ -28,9 +28,33 @@ class TestClustering(unittest.TestCase):
         self.assertEqual(iou(b1, b2), 4 / (4 * 4 + 4 * 4 - 4))
         self.assertEqual(iou(b2, b1), 4 / (4 * 4 + 4 * 4 - 4))
 
+    def test_IOU_sanity_checks_tensor(self) -> None:
+        b1 = torch.tensor([0, 1, 0, 1])
+        b2 = torch.tensor([1, 2, 1, 2])
+        b3 = torch.tensor([10, 11, 10, 11])
+        self.assertEqual(torch_iou(b1, b1), torch.tensor(1.0))
+        self.assertEqual(torch_iou(b2, b2), torch.tensor(1.0))
+        self.assertEqual(torch_iou(b1, b2), torch.tensor(0))
+        self.assertEqual(torch_iou(b1, b3), torch.tensor(0))
+
+    def test_IOU_basic_tensor(self) -> None:
+        b1 = torch.tensor([0, 4, 2, 6])
+        b2 = torch.tensor([2, 6, 0, 4])
+        self.assertEqual(torch_iou(b1, b2), torch.tensor(4 / (4 * 4 + 4 * 4 - 4)))
+        self.assertEqual(torch_iou(b2, b1), torch.tensor(4 / (4 * 4 + 4 * 4 - 4)))
+
     def test_box_definition_conversions(self) -> None:
         for i in range(100):
             corners = np.random.rand(6, 4)
+            self.assertTrue(
+                np.allclose(
+                    corners, xc_yc_w_h_to_corners(corners_to_xc_yc_w_h(corners))
+                )
+            )
+
+    def test_box_torch_definition_conversion(self) -> None:
+        for i in range(100):
+            corners = torch.rand(6, 4)
             self.assertTrue(
                 np.allclose(
                     corners, xc_yc_w_h_to_corners(corners_to_xc_yc_w_h(corners))

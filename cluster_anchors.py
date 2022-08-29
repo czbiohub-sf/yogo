@@ -4,49 +4,95 @@
 """
 
 import glob
+import torch
 import numpy as np
 import numpy.typing as npt
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
+from typing import Union
 
-# [..., xmin, xmax, ymin, ymax]
+# [dims, xmin, xmax, ymin, ymax]
 Box = npt.NDArray[np.float64]
 
 
-def xc_yc_w_h_to_corners(b: Box) -> Box:
-    return np.array(
-        (
-            b[..., 0] - b[..., 2] / 2,
-            b[..., 0] + b[..., 2] / 2,
-            b[..., 1] - b[..., 3] / 2,
-            b[..., 1] + b[..., 3] / 2,
+def xc_yc_w_h_to_corners(b: Union[Box, torch.Tensor]) -> Union[Box, torch.Tensor]:
+    if isinstance(b, np.ndarray):
+        return np.array(
+            (
+                b[..., 0] - b[..., 2] / 2,
+                b[..., 0] + b[..., 2] / 2,
+                b[..., 1] - b[..., 3] / 2,
+                b[..., 1] + b[..., 3] / 2,
+            )
+        ).T
+    elif isinstance(b, torch.Tensor):
+        return torch.vstack(
+            (
+                b[..., 0] - b[..., 2] / 2,
+                b[..., 0] + b[..., 2] / 2,
+                b[..., 1] - b[..., 3] / 2,
+                b[..., 1] + b[..., 3] / 2,
+            )
+        ).T
+    else:
+        raise ValueError(
+            f"b must be of type npt.NDArray or torch.Tensor: Got {type(b)}"
         )
-    ).T
 
 
-def corners_to_xc_yc_w_h(b: Box) -> Box:
-    return np.array(
-        (
-            (b[..., 1] + b[..., 0]) / 2,
-            (b[..., 3] + b[..., 2]) / 2,
-            (b[..., 1] - b[..., 0]),
-            (b[..., 3] - b[..., 2]),
+def corners_to_xc_yc_w_h(b: Union[Box, torch.Tensor]) -> Union[Box, torch.Tensor]:
+    if isinstance(b, np.ndarray):
+        return np.array(
+            (
+                (b[..., 1] + b[..., 0]) / 2,
+                (b[..., 3] + b[..., 2]) / 2,
+                (b[..., 1] - b[..., 0]),
+                (b[..., 3] - b[..., 2]),
+            )
+        ).T
+    elif isinstance(b, torch.Tensor):
+        return torch.vstack(
+            (
+                (b[..., 1] + b[..., 0]) / 2,
+                (b[..., 3] + b[..., 2]) / 2,
+                (b[..., 1] - b[..., 0]),
+                (b[..., 3] - b[..., 2]),
+            ),
+        ).T
+    else:
+        raise ValueError(
+            f"b must be of type npt.NDArray or torch.Tensor: Got {type(b)}"
         )
-    ).T
-
-
-def area(b: Box) -> npt.NDArray[np.float64]:
-    return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
 
 
 def iou(b1: Box, b2: Box) -> npt.NDArray[np.float64]:
     """b1, b2 of shape [1,d]"""
+
+    def area(b: Box) -> npt.NDArray[np.float64]:
+        return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
+
     intersection = np.maximum(
         np.minimum(b1[..., [1, 3]], b2[..., [1, 3]])
         - np.maximum(b1[..., [0, 2]], b2[..., [0, 2]]),
         0,
+    ).prod(-1)
+    return intersection / (area(b1) + area(b2) - intersection)
+
+
+def torch_iou(b1: torch.Tensor, b2: torch.Tensor) -> torch.Tensor:
+    """
+    b1, b2 of shape [1,d]
+    """
+
+    def area(b):
+        return torch.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
+
+    intersection = torch.clamp(
+        torch.minimum(b1[..., [1, 3]], b2[..., [1, 3]])
+        - torch.maximum(b1[..., [0, 2]], b2[..., [0, 2]]),
+        min=0,
     ).prod(-1)
     return intersection / (area(b1) + area(b2) - intersection)
 
