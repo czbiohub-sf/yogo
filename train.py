@@ -1,15 +1,18 @@
 #! /usr/bin/env python3
 
 
+import wandb
 import torch
+import logging
+
 from torch import nn
 from torch.optim import AdamW
 
-import wandb
 from model import YOGO
 from utils import draw_rects
 from yogo_loss import YOGOLoss
-from dataloader import get_dataloader
+from dataloader import load_dataset_description, get_dataloader
+from cluster_anchors import best_anchor, get_all_bounding_boxes
 
 from pathlib import Path
 from copy import deepcopy
@@ -20,8 +23,6 @@ EPOCHS = 256
 ADAM_LR = 3e-4
 BATCH_SIZE = 16
 VALIDATION_PERIOD = 100
-anchor_h = 17 / 300
-anchor_w = 17 / 400
 
 # TODO find sync points - wandb may be it, unfortunately :(
 # https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
@@ -35,6 +36,12 @@ anchor_w = 17 / 400
 torch.backends.cuda.matmul.allow_tf32 = True
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+_, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
+anchor_w, anchor_h = best_anchor(
+    get_all_bounding_boxes(str(label_path), center_box=True)
+)
+logging.info(f"anchor w,h calculated to be {anchor_w,anchor_h}")
 
 dataloaders = get_dataloader(
     "healthy_cell_dataset.yml",
@@ -122,7 +129,7 @@ def train(dev):
                 )
                 net.train()
 
-    print("done training")
+    logging.info("done training")
     net.eval()
     test_loss = 0.0
     for data in test_dataloader:
@@ -151,5 +158,5 @@ def train(dev):
 
 
 if __name__ == "__main__":
-    print(f"using device {device}")
+    logging.info(f"using device {device}")
     train(device)

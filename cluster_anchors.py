@@ -5,6 +5,7 @@
 
 import glob
 import torch
+import logging
 import numpy as np
 import numpy.typing as npt
 
@@ -88,10 +89,16 @@ def torch_iou(b1: CornerBox, b2: CornerBox) -> torch.Tensor:
     """
     b1, b2 of shape [1,d]
     """
+    if not isinstance(b1, torch.Tensor) or not isinstance(b2, torch.Tensor):
+        raise ValueError(
+            f"b1 and b2 must be torch.Tensor, but are {type(b1)} {type(b2)}"
+        )
 
     def area(b):
         return torch.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
 
+    b1 = cast(torch.Tensor, b1)
+    b2 = cast(torch.Tensor, b2)
     intersection = torch.clamp(
         torch.minimum(b1[..., [1, 3]], b2[..., [1, 3]])
         - torch.maximum(b1[..., [0, 2]], b2[..., [0, 2]]),
@@ -100,7 +107,7 @@ def torch_iou(b1: CornerBox, b2: CornerBox) -> torch.Tensor:
     return intersection / (area(b1) + area(b2) - intersection)
 
 
-def gen_random_box(n = 1, center_box=False) -> CornerBox:
+def gen_random_box(n=1, center_box=False) -> CornerBox:
     xmin = np.random.rand(n, 1) / 2
     xmax = np.random.rand(n, 1) / 2 + xmin
     ymin = np.random.rand(n, 1) / 2
@@ -134,8 +141,8 @@ def plot_boxes(boxes, color_period=0) -> None:
     plt.show()
 
 
-def get_all_bounding_boxes(bb_dir, conv_to_corners=True) -> npt.NDArray[np.float64]:
-    conv_func = centers_to_corners if conv_to_corners else lambda x: x
+def get_all_bounding_boxes(bb_dir, center_box=False) -> npt.NDArray[np.float64]:
+    conv_func = lambda x: x if center_box else centers_to_corners
     bbs = []
     for fname in glob.glob(f"{bb_dir}/*.csv"):
         with open(fname, "r") as f:
@@ -177,7 +184,7 @@ def k_means(data, k=3, plot=False) -> CornerBox:
     return cast(CornerBox, corners_to_centers(means))
 
 
-def best_anchor(data: CenterBox) -> Tuple[float,float]:
+def best_anchor(data: CenterBox) -> Tuple[float, float]:
     """Optimization for k_means(data, k=1)"""
     from scipy import optimize
 
@@ -196,14 +203,13 @@ def best_anchor(data: CenterBox) -> Tuple[float,float]:
     if res.success:
         return res.x[2], res.x[2]
     else:
-        # FIXME: Logging?
-        print(
+        logging.warning(
             f"scipy could not optimize to ideal solution: '{res.message}'\n"
             f"defaulting to k_mean(data, k=1)"
         )
         corners = k_means(centers_to_corners(data), k=1)[0]
         centers = centers_to_corners(corners)
-        return cast(Tuple[float,float], (centers[2], centers[3]))
+        return cast(Tuple[float, float], (centers[2], centers[3]))
 
 
 if __name__ == "__main__":

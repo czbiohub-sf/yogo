@@ -47,18 +47,14 @@ class TestClustering(unittest.TestCase):
         for i in range(100):
             corners = np.random.rand(6, 4)
             self.assertTrue(
-                np.allclose(
-                    corners, centers_to_corners(corners_to_centers(corners))
-                )
+                np.allclose(corners, centers_to_corners(corners_to_centers(corners)))
             )
 
     def test_box_torch_definition_conversion(self) -> None:
         for i in range(100):
             corners = torch.rand(6, 4)
             self.assertTrue(
-                np.allclose(
-                    corners, centers_to_corners(corners_to_centers(corners))
-                )
+                np.allclose(corners, centers_to_corners(corners_to_centers(corners)))
             )
 
 
