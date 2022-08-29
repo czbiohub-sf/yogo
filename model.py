@@ -117,7 +117,7 @@ class YOGO(nn.Module):
         if self.training:
             classification = x[:, 5:, :, :]
         else:
-            classification = torch.softmax(x[:, 5:, :, :], axis=1)
+            classification = torch.softmax(x[:, 5:, :, :], dim=1)
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:
