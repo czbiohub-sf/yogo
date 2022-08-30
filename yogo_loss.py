@@ -3,13 +3,13 @@ Implement YOLO loss function here
 """
 
 import torch
-import bisect
 
 import torch.nn.functional as F
 
-from operator import itemgetter
-from typing import Any, List, Dict, Tuple, Callable
+from cluster_anchors import torch_iou, centers_to_corners
+
 from collections import defaultdict
+from typing import Any, List, Dict, Tuple
 
 """
 Original YOLO paper did not mention IOU?
@@ -31,18 +31,21 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         super().__init__()
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
-        self.mse = torch.nn.MSELoss()
+        self.mse = torch.nn.MSELoss(reduction="none")
         self.cel = torch.nn.CrossEntropyLoss()
         self.device = "cpu"
 
     def to(self, device):
-        # FIXME: hack?
+        # FIXME: hack? not a hack?
+        # ive seen self.device = (self.parameters[0]).device
+        # which I dislike, lets be specific
+        # actually, if you use cuda() instead of to(cuda) it no work
         self.device = device
         super().to(device)
         return self
 
     def forward(
-        self, pred_batch: torch.Tensor, label_batch: List[List[List[float]]]
+        self, pred_batch: torch.Tensor, label_batch: List[torch.Tensor]
     ) -> torch.Tensor:
         """
         pred and label are both 4d. pred_batch has shape
@@ -69,62 +72,113 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # TODO - this will be halariously slow! must speed up shortly
         # TODO - need the lables to be formatted correctly! See following link for loss impl.
         # https://jonathan-hui.medium.com/real-time-object-detection-with-yolo-yolov2-28b1b93e2088
-        # IOU may need to be rewritten - used in `t_o` preds
+        # very interesting https://pytorch.org/functorch/stable/generated/functorch.vmap.html
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
 
-        loss = torch.tensor(0, dtype=torch.float32, device=self.device)
-        for i in range(batch_size):
-            bins = split_labels_into_bins(label_batch[i], Sx, Sy)
+        label_tensor = self.set_labels(pred_batch, label_batch)
 
-            for (k, j), Ls in bins.items():
-                if len(Ls) == 0:
-                    objectness = self.no_obj_weight * self.mse(
-                        pred_batch[i, 4, j, k], torch.tensor(0.0, device=self.device)
-                    )
-                    loss += objectness
-                elif len(Ls) >= 1:
-                    # take a random label per square :(
-                    [cls, xc, yc, w, h] = Ls.pop()
-                    localization = self.coord_weight * (
-                        self.mse(
-                            pred_batch[i, 0, j, k], torch.tensor(xc, device=self.device)
-                        )
-                        + self.mse(
-                            pred_batch[i, 1, j, k], torch.tensor(yc, device=self.device)
-                        )
-                        + self.mse(
-                            torch.sqrt(pred_batch[i, 2, j, k]),
-                            torch.sqrt(torch.tensor(w, device=self.device)),
-                        )
-                        + self.mse(
-                            torch.sqrt(pred_batch[i, 3, j, k]),
-                            torch.sqrt(torch.tensor(h, device=self.device)),
-                        )
-                    )
-                    objectness = self.mse(
-                        pred_batch[i, 4, j, k], torch.tensor(1.0, device=self.device)
-                    )
-                    classification = self.cel(
-                        pred_batch[i, 5:, j, k],
-                        torch.tensor(int(cls), dtype=torch.long, device=self.device),
-                    )
-                    loss += localization
-                    loss += objectness
-                    loss += classification
-        return loss / batch_size
+        # TODO: Implement batched loss
+
+        loss = torch.tensor(0, dtype=torch.float32, device=self.device)
+
+        # objectness loss when there is no obj
+        loss += (
+            (1 - label_tensor[:, 0, :, :])
+            * self.no_obj_weight
+            * self.mse(pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]))
+        ).mean()
+
+        # objectness loss when there is an obj
+        loss += (
+            label_tensor[:, 0, :, :]
+            * self.no_obj_weight
+            * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]))
+        ).mean()
+
+        # localization (i.e. xc, yc, w, h) loss
+        loss += (
+            label_tensor[:, 0, :, :]
+            * self.coord_weight
+            * (
+                self.mse(
+                    pred_batch[:, 0, :, :],
+                    label_tensor[:, 1, :, :],
+                )
+                + self.mse(
+                    pred_batch[:, 1, :, :],
+                    label_tensor[:, 2, :, :],
+                )
+                + self.mse(
+                    torch.sqrt(pred_batch[:, 2, :, :]),
+                    torch.sqrt(label_tensor[:, 3, :, :]),
+                )
+                + self.mse(
+                    torch.sqrt(pred_batch[:, 3, :, :]),
+                    torch.sqrt(label_tensor[:, 4, :, :]),
+                )
+            )
+        ).mean()
+
+        # classification loss
+        loss += (
+            label_tensor[:, 0, :, :]
+            * self.cel(pred_batch[:, 5:, :, :], label_tensor[:, 5, :, :].long())
+        ).mean()
+
+        return loss
 
     def set_labels(
-        self, pred_batch: torch.Tensor, label_batch: List[List[List[float]]]
+        self, pred_batch: torch.Tensor, label_batch: List[torch.Tensor]
     ) -> torch.Tensor:
+        # TODO: Does this even make sense? Reduce size of computational graph! How?
+        """
+        input:
+            pred_batch: shape (batch_size, preds_size, Sy, Sx)
+            label_batch: List[torch.Tensor], and len(label_batch) == batch_size
+        output:
+            torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)
+
+        dimension masked_label is [mask, xc, yc, w, h, *classes], where mask == 1
+        if there is a label associated with (Sy,Sx) at the given batch, else 0. If
+        mask is 0, then the rest of the label values are "don't care" values (just
+        setting to 0 is fine).
+        """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
-        label_bins = split_labels_into_bins(labels, Sx, Sy)
+        with torch.no_grad():
+            output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx)
+            for i, label_layer in enumerate(label_batch):
+                label_cells = split_labels_into_bins(label_layer, Sx, Sy)
 
-        formed_labels = torch.zeros(4)
-        return formed_labels
+                for (k, j), labels in label_cells.items():
+                    if len(labels) > 0:
+                        # select best label by best IOU!
+                        IoU = torch_iou(
+                            centers_to_corners(pred_batch[i, :4, j, k]),
+                            centers_to_corners(labels[:, 1:]),
+                        )
+                        pred_square_idx = torch.argmax(IoU)
+                        output[i, 0, j, k] = 1
+                        output[i, 1:5, j, k] = labels[pred_square_idx][1:]
+                        output[i, 5, j, k] = labels[pred_square_idx][0]
+
+            return output
 
 
-def split_labels_into_bins(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
+def split_labels_into_bins(
+    labels: torch.Tensor, Sx, Sy
+) -> Dict[Tuple[int, int], torch.Tensor]:
+    d: Dict[Tuple[int, int], List[torch.Tensor]] = defaultdict(list)
+    for label in labels:
+        i = int(label[1].item() // (1 / Sx))
+        j = int(label[2].item() // (1 / Sy))
+        d[(i, j)].append(label)
+    return {k: torch.vstack(vs) for k, vs in d.items()}
+
+
+def split_labels_into_bins_tensor(
+    labels: torch.Tensor, Sx: int, Sy: int
+) -> torch.Tensor:
     """Takes a 2d tensor of shape (total num labels, 5) (5 == class + xc yc w h)"""
     xbin = torch.div(labels[..., 1:2], 1 / Sx, rounding_mode="trunc").type(torch.long)
     ybin = torch.div(labels[..., 2:3], 1 / Sy, rounding_mode="trunc").type(torch.long)
