@@ -19,6 +19,7 @@ from typing import Optional
 if __name__ == "__main__":
     if len(sys.argv) not in [2, 3]:
         print(f"usage: {sys.argv[0]} [<path_to_pth>] <path_to_image_or_images>")
+        sys.exit(1)
 
     m = YOGO(17 / 400, 17 / 300)
     m.eval()
