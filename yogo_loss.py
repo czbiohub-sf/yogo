@@ -35,10 +35,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.device = "cpu"
 
     def to(self, device):
-        # FIXME: hack? not a hack?
-        # ive seen self.device = (self.parameters[0]).device
-        # which I dislike, lets be specific
-        # actually, if you use cuda() instead of to(cuda) it no work
         self.device = device
         super().to(device)
         return self

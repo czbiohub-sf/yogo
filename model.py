@@ -26,7 +26,6 @@ class YOGO(nn.Module):
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
 
     def to(self, device):
-        # FIXME: hack?
         self.device = device
         super().to(device)
         return self
@@ -98,9 +97,6 @@ class YOGO(nn.Module):
         return nn.Sequential(conv_block_1, conv_block_2, conv_block_3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # TODO: do output transformations for inference
-        # TODO: better to use "output transformation" inference or raw preds, and
-        # backprop on raw network outputs?
         x = x.float()
         x = self.backbone(x)
         x = self.head(x)

@@ -10,7 +10,7 @@ from operator import itemgetter
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
 import torchvision.transforms.functional as F
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Subset
 from torchvision.transforms import Resize
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
@@ -229,8 +229,7 @@ def get_datasets(
     dataset_description_file: str,
     batch_size: int,
     training: bool = True,
-) -> Dict[str, Any]:
-    # TODO: Figure out typehint above
+) -> Dict[str, Subset]:
     (
         classes,
         image_path,
