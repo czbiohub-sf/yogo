@@ -20,7 +20,7 @@ class YOGO(nn.Module):
         self.device = "cpu"
 
         self.backbone = self.gen_backbone()
-        self.head = self.gen_head(num_channels=1024, num_classes=4)
+        self.head = self.gen_head(num_channels=256, num_classes=4)
 
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
@@ -60,17 +60,6 @@ class YOGO(nn.Module):
         )
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 256, 3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
-        )
-        conv_block_6 = nn.Sequential(
-            nn.Conv2d(256, 512, 3, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(),
-        )
-        conv_block_7 = nn.Sequential(
-            nn.Conv2d(512, 1024, 3, padding=1),
         )
         return nn.Sequential(
             conv_block_1,
@@ -78,8 +67,6 @@ class YOGO(nn.Module):
             conv_block_3,
             conv_block_4,
             conv_block_5,
-            conv_block_6,
-            conv_block_7,
         )
 
     def gen_head(self, num_channels: int, num_classes: int) -> nn.Module:
@@ -93,7 +80,7 @@ class YOGO(nn.Module):
             nn.BatchNorm2d(num_channels),
             nn.LeakyReLU(),
         )
-        conv_block_3 = nn.Conv2d(num_channels, (5 + num_classes), 1)
+        conv_block_3 = nn.Conv2d(num_channels, 5 + num_classes, 1)
         return nn.Sequential(conv_block_1, conv_block_2, conv_block_3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
