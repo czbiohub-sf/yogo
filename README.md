@@ -1,5 +1,7 @@
 # you only glance once
 
+[Follow along here!](https://wandb.ai/bioengineering/yogo)
+
 ## What
 
 A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for malaria detection on the ULC-Malaria-Scope.
