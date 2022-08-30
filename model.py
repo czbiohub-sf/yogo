@@ -17,12 +17,13 @@ class YOGO(nn.Module):
 
     def __init__(self, anchor_w, anchor_h):
         super().__init__()
-        self.num_anchors = 1
-        self.anchor_w = anchor_w
-        self.anchor_h = anchor_h
+        self.device = "cpu"
+
         self.backbone = self.gen_backbone()
         self.head = self.gen_head(num_channels=1024, num_classes=4)
-        self.device = "cpu"
+
+        self.register_buffer("anchor_w", torch.tensor(anchor_w))
+        self.register_buffer("anchor_h", torch.tensor(anchor_w))
 
     def to(self, device):
         # FIXME: hack?
@@ -117,7 +118,7 @@ class YOGO(nn.Module):
         if self.training:
             classification = x[:, 5:, :, :]
         else:
-            classification = torch.softmax(x[:, 5:, :, :], axis=1)
+            classification = torch.softmax(x[:, 5:, :, :], dim=1)
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:
@@ -140,15 +141,21 @@ class YOGO(nn.Module):
 
 
 if __name__ == "__main__":
-    Y = YOGO(0.0455, 0.059)
-    Y.eval()
-    x = torch.randn(3, 1, 416, 416)
     import time
 
-    t0 = time.perf_counter()
+    Y = YOGO(0.0455, 0.059)
+    Y.eval()
+
+    x = torch.randn(3, 1, 416, 416)
     N = 10
+
+    t0 = time.perf_counter()
     for _ in range(N):
         Y(x)
-    print((time.perf_counter() - t0) / N)
+    t1 = time.perf_counter()
+
+    print((t1 - t0) / N)
     print(Y(x).shape, Y(x)[0, :, 0, 0])
-    torch.save({"model_state_dict": Y.state_dict()}, "convert_me.pth")
+
+    for k, v in Y.state_dict().items():
+        print(k)

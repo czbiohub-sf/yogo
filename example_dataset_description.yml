@@ -1,0 +1,7 @@
+class_names: ["healthy", "ring", "schitzont", "troph"]
+image_path: <path to images>
+label_path: <path to labels>
+dataset_split_fractions:
+  train: 0.7
+  test:  0.25
+  val:   0.05

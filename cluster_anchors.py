@@ -4,45 +4,78 @@
 """
 
 import glob
+import torch
 import numpy as np
 import numpy.typing as npt
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
+from typing import cast, Union, Tuple
 
-# [..., xmin, xmax, ymin, ymax]
-Box = npt.NDArray[np.float64]
+# [dims, xmin, xmax, ymin, ymax]
+CornerBox = Union[npt.NDArray[np.float64], torch.Tensor]
+# [dims, xc, yc, w, h]
+CenterBox = Union[npt.NDArray[np.float64], torch.Tensor]
+Box = Union[CornerBox, CenterBox]
 
 
-def xc_yc_w_h_to_corners(b: Box) -> Box:
-    return np.array(
-        (
-            b[..., 0] - b[..., 2] / 2,
-            b[..., 0] + b[..., 2] / 2,
-            b[..., 1] - b[..., 3] / 2,
-            b[..., 1] + b[..., 3] / 2,
+def centers_to_corners(b: CenterBox) -> CornerBox:
+    if isinstance(b, np.ndarray):
+        return np.array(
+            (
+                b[..., 0] - b[..., 2] / 2,
+                b[..., 0] + b[..., 2] / 2,
+                b[..., 1] - b[..., 3] / 2,
+                b[..., 1] + b[..., 3] / 2,
+            )
+        ).T
+    elif isinstance(b, torch.Tensor):
+        return torch.vstack(
+            (
+                b[..., 0] - b[..., 2] / 2,
+                b[..., 0] + b[..., 2] / 2,
+                b[..., 1] - b[..., 3] / 2,
+                b[..., 1] + b[..., 3] / 2,
+            )
+        ).T
+    else:
+        raise ValueError(
+            f"b must be of type npt.NDArray or torch.Tensor: Got {type(b)}"
         )
-    ).T
 
 
-def corners_to_xc_yc_w_h(b: Box) -> Box:
-    return np.array(
-        (
-            (b[..., 1] + b[..., 0]) / 2,
-            (b[..., 3] + b[..., 2]) / 2,
-            (b[..., 1] - b[..., 0]),
-            (b[..., 3] - b[..., 2]),
+def corners_to_centers(b: CornerBox) -> CenterBox:
+    if isinstance(b, np.ndarray):
+        return np.array(
+            (
+                (b[..., 1] + b[..., 0]) / 2,
+                (b[..., 3] + b[..., 2]) / 2,
+                (b[..., 1] - b[..., 0]),
+                (b[..., 3] - b[..., 2]),
+            )
+        ).T
+    elif isinstance(b, torch.Tensor):
+        return torch.vstack(
+            (
+                (b[..., 1] + b[..., 0]) / 2,
+                (b[..., 3] + b[..., 2]) / 2,
+                (b[..., 1] - b[..., 0]),
+                (b[..., 3] - b[..., 2]),
+            ),
+        ).T
+    else:
+        raise ValueError(
+            f"b must be of type npt.NDArray or torch.Tensor: Got {type(b)}"
         )
-    ).T
 
 
-def area(b: Box) -> npt.NDArray[np.float64]:
-    return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
-
-
-def iou(b1: Box, b2: Box) -> npt.NDArray[np.float64]:
+def iou(b1: CornerBox, b2: CornerBox) -> npt.NDArray[np.float64]:
     """b1, b2 of shape [1,d]"""
+
+    def area(b: CornerBox) -> npt.NDArray[np.float64]:
+        return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
+
     intersection = np.maximum(
         np.minimum(b1[..., [1, 3]], b2[..., [1, 3]])
         - np.maximum(b1[..., [0, 2]], b2[..., [0, 2]]),
@@ -51,22 +84,37 @@ def iou(b1: Box, b2: Box) -> npt.NDArray[np.float64]:
     return intersection / (area(b1) + area(b2) - intersection)
 
 
-def get_all_bounding_boxes(bb_dir) -> npt.NDArray[np.float64]:
-    bbs = []
-    for fname in glob.glob(f"{bb_dir}/*.csv"):
-        with open(fname, "r") as f:
-            for line in f:
-                vs = np.array([float(v) for v in line.split(",")])
-                bbs.append(xc_yc_w_h_to_corners(vs[1:]))
-    return np.array(bbs)
+def torch_iou(b1: CornerBox, b2: CornerBox) -> torch.Tensor:
+    """
+    b1, b2 of shape [1,d]
+    """
+    if not isinstance(b1, torch.Tensor) or not isinstance(b2, torch.Tensor):
+        raise ValueError(
+            f"b1 and b2 must be torch.Tensor, but are {type(b1)} {type(b2)}"
+        )
+
+    def area(b):
+        return torch.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
+
+    b1 = cast(torch.Tensor, b1)
+    b2 = cast(torch.Tensor, b2)
+    intersection = torch.clamp(
+        torch.minimum(b1[..., [1, 3]], b2[..., [1, 3]])
+        - torch.maximum(b1[..., [0, 2]], b2[..., [0, 2]]),
+        min=0,
+    ).prod(-1)
+    return intersection / (area(b1) + area(b2) - intersection)
 
 
-def gen_random_box() -> Box:
-    xmin = np.random.rand() / 2
-    xmax = np.random.rand() / 2 + xmin
-    ymin = np.random.rand() / 2
-    ymax = np.random.rand() / 2 + ymin
-    return np.array((xmin, xmax, ymin, ymax)).reshape(1, -1)
+def gen_random_box(n=1, center_box=False) -> CornerBox:
+    xmin = np.random.rand(n, 1) / 2
+    xmax = np.random.rand(n, 1) / 2 + xmin
+    ymin = np.random.rand(n, 1) / 2
+    ymax = np.random.rand(n, 1) / 2 + ymin
+    cb = np.hstack((xmin, xmax, ymin, ymax))
+    if center_box:
+        return corners_to_centers(cb)
+    return cb
 
 
 def plot_boxes(boxes, color_period=0) -> None:
@@ -79,7 +127,7 @@ def plot_boxes(boxes, color_period=0) -> None:
     current_axis = plt.gca()
     for i, box in enumerate(boxes):
         color = colors[i % color_period if color_period > 0 else 0]
-        _, _, w, h = corners_to_xc_yc_w_h(box)
+        _, _, w, h = corners_to_centers(box)
         current_axis.add_patch(
             Rectangle(
                 (box[0], box[2]),
@@ -92,7 +140,18 @@ def plot_boxes(boxes, color_period=0) -> None:
     plt.show()
 
 
-def k_means(data, k=3, plot=False) -> npt.NDArray[np.float64]:
+def get_all_bounding_boxes(bb_dir, center_box=False) -> npt.NDArray[np.float64]:
+    conv_func = lambda x: x if center_box else centers_to_corners
+    bbs = []
+    for fname in glob.glob(f"{bb_dir}/*.csv"):
+        with open(fname, "r") as f:
+            for line in f:
+                vs = np.array([float(v) for v in line.split(",")])
+                bbs.append(centers_to_corners(vs[1:]))
+    return np.array(bbs)
+
+
+def k_means(data, k=3, plot=False) -> CornerBox:
     """
     https://blog.paperspace.com/speed-up-kmeans-numpy-vectorization-broadcasting-profiling/
     assumptions:
@@ -100,7 +159,7 @@ def k_means(data, k=3, plot=False) -> npt.NDArray[np.float64]:
         - data is normalized to [0,1]
     """
 
-    def dist(b1: Box, b2: Box):
+    def dist(b1: CornerBox, b2: CornerBox):
         return 1 - iou(b1[:, np.newaxis, :], b2[np.newaxis, :, :])
 
     def get_closest_mean(data, means):
@@ -121,7 +180,35 @@ def k_means(data, k=3, plot=False) -> npt.NDArray[np.float64]:
     if plot:
         plot_boxes(np.array(boxes).reshape(-1, 4), color_period=k)
 
-    return corners_to_xc_yc_w_h(means)
+    return cast(CornerBox, corners_to_centers(means))
+
+
+def best_anchor(data: CenterBox) -> Tuple[float, float]:
+    """Optimization for k_means(data, k=1)"""
+    from scipy import optimize
+
+    def centered_wh_iou(b1: CenterBox, b2: CenterBox):
+        "get iou, assuming b1 and b2 are centerd on eachother"
+        intr = np.minimum(b1[..., 2], b2[..., 2]) * np.minimum(b1[..., 3], b2[..., 3])
+        area1 = b1[..., 2] * b1[..., 3]
+        area2 = b2[..., 2] * b2[..., 3]
+        res = intr / (area1 + area2 - intr)
+        return res
+
+    def f(x: CenterBox):
+        return (1 - centered_wh_iou(x, data)).sum()
+
+    res = optimize.minimize(f, method="Nelder-Mead", x0=gen_random_box(center_box=True))
+    if res.success:
+        return res.x[2], res.x[3]
+    else:
+        logging.warning(
+            f"scipy could not optimize to ideal solution: '{res.message}'\n"
+            f"defaulting to k_mean(data, k=1)"
+        )
+        corners = k_means(centers_to_corners(data), k=1)[0]
+        centers = centers_to_corners(corners)
+        return cast(Tuple[float, float], (centers[2], centers[3]))
 
 
 if __name__ == "__main__":
@@ -135,4 +222,4 @@ if __name__ == "__main__":
     # sanity checks for our data
     assert np.all(data[:, 0] < data[:, 1])
     assert np.all(data[:, 2] < data[:, 3])
-    print(k_means(data, k=6, plot=True))
+    print(k_means(data, k=1, plot=True))
