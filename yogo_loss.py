@@ -146,7 +146,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
-            output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx)
+            output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx, device=self.device)
             for i, label_layer in enumerate(label_batch):
                 label_cells = split_labels_into_bins(label_layer, Sx, Sy)
 

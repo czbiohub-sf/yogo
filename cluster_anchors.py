@@ -201,7 +201,7 @@ def best_anchor(data: CenterBox) -> Tuple[float, float]:
 
     res = optimize.minimize(f, method="Nelder-Mead", x0=gen_random_box(center_box=True))
     if res.success:
-        return res.x[2], res.x[2]
+        return res.x[2], res.x[3]
     else:
         logging.warning(
             f"scipy could not optimize to ideal solution: '{res.message}'\n"
