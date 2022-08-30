@@ -157,5 +157,5 @@ if __name__ == "__main__":
     print((t1 - t0) / N)
     print(Y(x).shape, Y(x)[0, :, 0, 0])
 
-    for k,v in Y.state_dict().items():
+    for k, v in Y.state_dict().items():
         print(k)

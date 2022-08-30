@@ -3,7 +3,6 @@
 
 import wandb
 import torch
-import logging
 
 from torch import nn
 from torch.optim import AdamW
@@ -19,7 +18,7 @@ from copy import deepcopy
 from typing import List
 
 
-EPOCHS = 256
+EPOCHS = 64
 ADAM_LR = 3e-4
 BATCH_SIZE = 16
 VALIDATION_PERIOD = 100
@@ -41,7 +40,6 @@ _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
 anchor_w, anchor_h = best_anchor(
     get_all_bounding_boxes(str(label_path), center_box=True)
 )
-logging.info(f"anchor w,h calculated to be {anchor_w,anchor_h}")
 
 dataloaders = get_dataloader(
     "healthy_cell_dataset.yml",
@@ -72,14 +70,17 @@ def train(dev):
 
     if wandb.run.name is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
-        model_save_dir.mkdir(exist_ok=True, parents=True)
+    else:
+        model_save_dir = Path(
+            f"trained_models/unamed_run_{torch.randint(100, size=(1,)).item()}"
+        )
+    model_save_dir.mkdir(exist_ok=True, parents=True)
 
     global_step = 0
     for epoch in range(EPOCHS):
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
             global_step += 1
             imgs = imgs.to(dev)
-            # labels = labels.to(dev)  # TODO: does this have meaning?!?!
 
             optimizer.zero_grad()  # possible set_to_none=True to get "modest" speedup
 
@@ -129,7 +130,6 @@ def train(dev):
                 )
                 net.train()
 
-    logging.info("done training")
     net.eval()
     test_loss = 0.0
     for data in test_dataloader:
@@ -158,5 +158,4 @@ def train(dev):
 
 
 if __name__ == "__main__":
-    logging.info(f"using device {device}")
     train(device)

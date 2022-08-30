@@ -18,7 +18,7 @@ IOU Loss?
 
 
 class YOGOLoss(torch.nn.modules.loss._Loss):
-    __constants__ = ["coord_weight", "no_obj_weight", "reduction"]
+    __constants__ = ["coord_weight", "no_obj_weight"]
     coord_weight: float
     no_obj_weight: float
 
@@ -26,7 +26,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self,
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
-        reduction: str = "mean",
     ) -> None:
         super().__init__()
         self.coord_weight = coord_weight
@@ -51,7 +50,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         pred and label are both 4d. pred_batch has shape
         (
              batch size,
-             pred_dim, (tx, ty, tw, th, to, c1, c2, c3, c4)
+             pred_dim,      (tx, ty, tw, th, to, c1, c2, c3, c4)
              Sx,
              Sy
         )
@@ -61,24 +60,11 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             - Sigmoid + L2 loss -> BCE with logits for "Objectness"
             - See YoloV3 Sec 2.1
 
-        How to speed it up? High level:
-            - turn labels into a tensor and do tensor ops so we can do this on the GPU easier
-            - collect the operations into tensor ops so we can batch things together, go faster, make CG simpler
-
-        Problem:
-            - Labels is a list of list of floats
-            - needs to be able to rapidly pick the correct label
         """
-        # TODO - this will be halariously slow! must speed up shortly
-        # TODO - need the lables to be formatted correctly! See following link for loss impl.
-        # https://jonathan-hui.medium.com/real-time-object-detection-with-yolo-yolov2-28b1b93e2088
-        # very interesting https://pytorch.org/functorch/stable/generated/functorch.vmap.html
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
 
         label_tensor = self.set_labels(pred_batch, label_batch)
-
-        # TODO: Implement batched loss
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -131,7 +117,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
     def set_labels(
         self, pred_batch: torch.Tensor, label_batch: List[torch.Tensor]
     ) -> torch.Tensor:
-        # TODO: Does this even make sense? Reduce size of computational graph! How?
         """
         input:
             pred_batch: shape (batch_size, preds_size, Sy, Sx)
@@ -174,15 +159,6 @@ def split_labels_into_bins(
         j = int(label[2].item() // (1 / Sy))
         d[(i, j)].append(label)
     return {k: torch.vstack(vs) for k, vs in d.items()}
-
-
-def split_labels_into_bins_tensor(
-    labels: torch.Tensor, Sx: int, Sy: int
-) -> torch.Tensor:
-    """Takes a 2d tensor of shape (total num labels, 5) (5 == class + xc yc w h)"""
-    xbin = torch.div(labels[..., 1:2], 1 / Sx, rounding_mode="trunc").type(torch.long)
-    ybin = torch.div(labels[..., 2:3], 1 / Sy, rounding_mode="trunc").type(torch.long)
-    return torch.cat((xbin, ybin), dim=-1)
 
 
 if __name__ == "__main__":

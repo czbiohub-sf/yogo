@@ -5,7 +5,6 @@
 
 import glob
 import torch
-import logging
 import numpy as np
 import numpy.typing as npt
 

@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from cluster_anchors import *
-from yogo_loss import split_labels_into_bins, split_labels_into_bins_tensor
+from yogo_loss import split_labels_into_bins
 
 
 class TestClustering(unittest.TestCase):
@@ -152,94 +152,6 @@ class TestLossUtilities(unittest.TestCase):
         d = split_labels_into_bins(labels, Sx, Sy)
         for coord, sorted_labels in d.items():
             self.assertEqual(sorted_labels, [])
-
-    def test_labels_into_bins_tensor_1(self):
-        labels = torch.tensor(
-            [
-                [0.0, 0.1, 0.1, 0.0, 0.0],
-                [0.0, 0.9, 0.1, 0.0, 0.0],
-            ]
-        )
-        Sx, Sy = 2, 1
-        d = split_labels_into_bins_tensor(labels, Sx, Sy)
-        self.assertTensorEq(d[0], torch.tensor([0, 0]))
-        self.assertTensorEq(d[1], torch.tensor([1, 0]))
-
-    def test_labels_into_bins_tensor_2(self):
-        Sx, Sy, labels = (
-            2,
-            2,
-            torch.tensor(
-                [
-                    [0.0, 0.1, 0.1, 0.0, 0.0],
-                    [0.0, 0.9, 0.1, 0.0, 0.0],
-                    [0.0, 0.1, 0.9, 0.0, 0.0],
-                    [0.0, 0.9, 0.9, 0.0, 0.0],
-                ]
-            ),
-        )
-        d = split_labels_into_bins_tensor(labels, Sx, Sy)
-        self.assertTensorEq(d[0], torch.tensor([0, 0]))
-        self.assertTensorEq(d[1], torch.tensor([1, 0]))
-        self.assertTensorEq(d[2], torch.tensor([0, 1]))
-        self.assertTensorEq(d[3], torch.tensor([1, 1]))
-
-    def test_labels_into_bins_tensor_3(self):
-        labels = torch.tensor(
-            [
-                [0.0, 0.1, 0.1, 0.0, 0.0],
-                [0.0, 0.2, 0.2, 0.0, 0.0],
-                [0.0, 0.8, 0.2, 0.0, 0.0],
-                [0.0, 0.9, 0.1, 0.0, 0.0],
-                [0.0, 0.1, 0.9, 0.0, 0.0],
-                [0.0, 0.2, 0.8, 0.0, 0.0],
-                [0.0, 0.8, 0.8, 0.0, 0.0],
-                [0.0, 0.9, 0.9, 0.0, 0.0],
-            ]
-        )
-        Sx, Sy = 2, 2
-        self.assertTensorEq(
-            split_labels_into_bins_tensor(labels, Sx, Sy),
-            torch.tensor(
-                [
-                    [0, 0],
-                    [0, 0],
-                    [1, 0],
-                    [1, 0],
-                    [0, 1],
-                    [0, 1],
-                    [1, 1],
-                    [1, 1],
-                ]
-            ),
-        )
-
-    def test_labels_into_bins_tensors(self):
-        label_batch = torch.tensor(
-            [
-                [
-                    [0.0, 0.1, 0.1, 0.0, 0.0],
-                    [0.0, 0.9, 0.1, 0.0, 0.0],
-                    [0.0, 0.1, 0.9, 0.0, 0.0],
-                    [0.0, 0.9, 0.9, 0.0, 0.0],
-                ],
-                [
-                    [0.0, 0.1, 0.1, 0.0, 0.0],
-                    [0.0, 0.9, 0.1, 0.0, 0.0],
-                    [0.0, 0.1, 0.9, 0.0, 0.0],
-                    [0.0, 0.9, 0.9, 0.0, 0.0],
-                ],
-            ]
-        )
-        d = split_labels_into_bins_tensor(label_batch, 2, 2)
-        self.assertTensorEq(d[0, 0], torch.tensor([0, 0]))
-        self.assertTensorEq(d[0, 1], torch.tensor([1, 0]))
-        self.assertTensorEq(d[0, 2], torch.tensor([0, 1]))
-        self.assertTensorEq(d[0, 3], torch.tensor([1, 1]))
-        self.assertTensorEq(d[1, 0], torch.tensor([0, 0]))
-        self.assertTensorEq(d[1, 1], torch.tensor([1, 0]))
-        self.assertTensorEq(d[1, 2], torch.tensor([0, 1]))
-        self.assertTensorEq(d[1, 3], torch.tensor([1, 1]))
 
 
 if __name__ == "__main__":
