@@ -151,19 +151,25 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         labels = []
         label_filename = image_path.name.replace(image_path.suffix, ".csv")
 
-        with open(self.label_folder_path / label_filename, "r") as f:
-            # yuck! checking for headers is not super easy
-            reader = csv.reader(f)
-            has_header = csv.Sniffer().has_header(f.read(1024))
-            f.seek(0)
-            if has_header:
-                next(reader, None)
+        # just ignore images without labels - is a missing label file
+        # the best way to do this?
+        try:
+            with open(self.label_folder_path / label_filename, "r") as f:
+                # yuck! checking for headers is not super easy
+                reader = csv.reader(f)
+                has_header = csv.Sniffer().has_header(f.read(1024))
+                f.seek(0)
+                if has_header:
+                    next(reader, None)
 
-            for row in reader:
-                assert (
-                    len(row) == 5
-                ), "should have [class,xc,yc,w,h] - got length {len(row)}"
-                labels.append([float(v) for v in row])
+                for row in reader:
+                    assert (
+                        len(row) == 5
+                    ), "should have [class,xc,yc,w,h] - got length {len(row)}"
+                    labels.append([float(v) for v in row])
+        except FileNotFoundError:
+            pass
+
         return labels
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
@@ -273,7 +279,7 @@ def get_datasets(
 def collate_batch(batch):
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
-    return batched_inputs, torch.tensor(labels)
+    return batched_inputs, [torch.tensor(l) for l in labels]
 
 
 def get_dataloader(
