@@ -27,7 +27,7 @@ class YOGO(nn.Module):
 
     def to(self, device):
         self.device = device
-        super().to(device)
+        super().to(device, dtype=torch.float32)
         return self
 
     def num_params(self) -> int:

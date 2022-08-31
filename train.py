@@ -34,17 +34,20 @@ VALIDATION_PERIOD = 100
 # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
 torch.backends.cuda.matmul.allow_tf32 = True
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.set_default_dtype(torch.float32)
+
+device = torch.device(
+    "cuda"
+    if torch.cuda.is_available()
+    else ("mps" if torch.backends.mps.is_available() else "cpu")
+)
 
 _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
 anchor_w, anchor_h = best_anchor(
     get_all_bounding_boxes(str(label_path), center_box=True)
 )
 
-dataloaders = get_dataloader(
-    "healthy_cell_dataset.yml",
-    BATCH_SIZE,
-)
+dataloaders = get_dataloader("healthy_cell_dataset.yml", BATCH_SIZE, device=device)
 train_dataloader = dataloaders["train"]
 validate_dataloader = dataloaders["val"]
 test_dataloader = dataloaders["test"]

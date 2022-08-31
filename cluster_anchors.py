@@ -203,6 +203,7 @@ def best_anchor(data: CenterBox) -> Tuple[float, float]:
         return res.x[2], res.x[3]
     else:
         import logging
+
         logging.warning(
             f"scipy could not optimize to ideal solution: '{res.message}'\n"
             f"defaulting to k_mean(data, k=1)"

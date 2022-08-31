@@ -5,11 +5,13 @@ import torch
 
 
 from pathlib import Path
+from functools import partial
 from operator import itemgetter
+
+import torchvision.transforms.functional as F
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
-import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader, random_split, Subset
 from torchvision.transforms import Resize
 
@@ -275,10 +277,10 @@ def get_datasets(
     )
 
 
-def collate_batch(batch):
+def collate_batch(batch, device):
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
-    return batched_inputs, [torch.tensor(l) for l in labels]
+    return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
 
 
 def get_dataloader(
@@ -286,6 +288,7 @@ def get_dataloader(
     batch_size: int,
     split_percentages: List[float] = [1],
     training: bool = True,
+    device: Union[str, torch.device] = "cpu",
 ):
     # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
     split_datasets = get_datasets(root_dir, batch_size, training=training)
@@ -293,7 +296,7 @@ def get_dataloader(
         designation: DataLoader(
             dataset,
             batch_size=batch_size,
-            collate_fn=collate_batch,
+            collate_fn=partial(collate_batch, device=device),
             shuffle=True,
             drop_last=True,
         )
