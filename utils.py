@@ -6,6 +6,45 @@ import torchvision.transforms as T
 from PIL import Image, ImageDraw
 from typing import Optional, Union, List
 
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
+
+from typing import List, Dict
+
+
+def format_preds_for_torchmetrics(batch_preds) -> List[Dict[str, torch.Tensor]]:
+    batch_size, pred_shape, Sy, Sx = batch_preds.shape
+    return [
+        {
+            "boxes": img_preds[:4, ...].view(4, Sy * Sx).T,
+            "scores": img_preds[4, ...].view(Sy * Sx),
+            "labels": torch.argmax(img_preds[5:, ...], dim=0).view(Sy * Sx),
+        }
+        for img_preds in batch_preds
+    ]
+
+def format_labels_for_torchmetrics(batch_labels) -> List[Dict[str, torch.Tensor]]:
+    batch_size, label_shape, Sy, Sx = batch_labels.shape
+    l = []
+    for b, img_labels in enumerate(batch_labels):
+        if torch.all(img_labels[0, ...] == 0).item():
+            # mask says there are no labels!
+            l.append({"boxes": torch.tensor([[]]), "labels": torch.tensor([])})
+        else:
+            # view -> T keeps tensor as a view, and no copies?
+            row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
+            # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
+            masked = row_ordered_img_labels[row_ordered_img_labels[..., 0] == 1, ...]
+            l.append({ "boxes": masked[:, 1:5], "labels": masked[:, 5], })
+    return l
+
+
+def batch_mAP(self, batch_preds, batch_labels):
+    formatted_batch_preds = format_preds_for_torchmetrics(batch_preds)
+    formatted_batch_labels = format_labels_for_torchmetrics(batch_labels)
+    metric = MeanAveragePrecision(box_format='xywh')
+    metric.update(formatted_batch_preds, formatted_batch_labels)
+    return metric.compute()
+
 
 def draw_rects(
     img: torch.Tensor, rects: Union[torch.Tensor, List], thresh: Optional[float] = None
@@ -55,8 +94,23 @@ def draw_rects(
 
 if __name__ == "__main__":
     from model import YOGO
+    from yogo_loss import YOGOLoss
+    from cluster_anchors import best_anchor, get_all_bounding_boxes
+    from dataloader import get_dataloader, load_dataset_description
 
-    Y = YOGO(17 / 300, 17 / 400)
-    x = torch.rand(1, 1, 300, 400)
-    out = Y(x)
-    draw_rects(x[0, 0, ...], out[0, ...])
+    _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
+    anchor_w, anchor_h = best_anchor(
+        get_all_bounding_boxes(str(label_path), center_box=True)
+    )
+
+    dataloaders = get_dataloader("healthy_cell_dataset.yml", 16)
+    DL = dataloaders["val"]
+    Y = YOGO(anchor_w, anchor_h)
+    Y.eval()
+
+    for img_batch, label_batch in DL:
+        out = Y(img_batch)
+        formatted_label_batch = YOGOLoss.format_label_batch(out, label_batch)
+        format_preds_for_torchmetrics(out)
+        format_labels_for_torchmetrics(formatted_label_batch)
+        print("SUCCESS WOO")
