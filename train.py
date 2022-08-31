@@ -10,6 +10,7 @@ from torch.optim import AdamW
 from model import YOGO
 from utils import draw_rects
 from yogo_loss import YOGOLoss
+from argparser import parse
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_all_bounding_boxes
 
@@ -34,39 +35,10 @@ VALIDATION_PERIOD = 100
 # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
 torch.backends.cuda.matmul.allow_tf32 = True
 
-torch.set_default_dtype(torch.float32)
 
-device = torch.device(
-    "cuda"
-    if torch.cuda.is_available()
-    else ("mps" if torch.backends.mps.is_available() else "cpu")
-)
-
-_, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
-anchor_w, anchor_h = best_anchor(
-    get_all_bounding_boxes(str(label_path), center_box=True)
-)
-
-dataloaders = get_dataloader("healthy_cell_dataset.yml", BATCH_SIZE, device=device)
-train_dataloader = dataloaders["train"]
-validate_dataloader = dataloaders["val"]
-test_dataloader = dataloaders["test"]
-
-wandb.init(
-    "yogo",
-    config={
-        "learning_rate": ADAM_LR,
-        "epochs": EPOCHS,
-        "batch_size": BATCH_SIZE,
-        "training_set_size": len(train_dataloader),
-        "device": str(device),
-        "anchor_w": anchor_w,
-        "anchor_h": anchor_h,
-    },
-)
-
-
-def train(dev):
+def train(
+    dev, train_dataloader, validate_dataloader, test_dataloader, anchor_w, anchor_h
+):
     net = YOGO(anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
@@ -161,4 +133,39 @@ def train(dev):
 
 
 if __name__ == "__main__":
-    train(device)
+    args = parse()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
+    anchor_w, anchor_h = best_anchor(
+        get_all_bounding_boxes(str(label_path), center_box=True)
+    )
+
+    dataloaders = get_dataloader("healthy_cell_dataset.yml", BATCH_SIZE, device=device)
+    train_dataloader = dataloaders["train"]
+    validate_dataloader = dataloaders["val"]
+    test_dataloader = dataloaders["test"]
+
+    wandb.init(
+        "yogo",
+        config={
+            "learning_rate": ADAM_LR,
+            "epochs": EPOCHS,
+            "batch_size": BATCH_SIZE,
+            "training_set_size": len(train_dataloader),
+            "device": str(device),
+            "anchor_w": anchor_w,
+            "anchor_h": anchor_h,
+        },
+        notes=args.note,
+    )
+
+    train(
+        device,
+        train_dataloader,
+        validate_dataloader,
+        test_dataloader,
+        anchor_w,
+        anchor_h,
+    )
