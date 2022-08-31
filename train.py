@@ -8,8 +8,8 @@ from torch import nn
 from torch.optim import AdamW
 
 from model import YOGO
-from utils import draw_rects
 from yogo_loss import YOGOLoss
+from utils import draw_rects, batch_mAP
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_all_bounding_boxes
 
@@ -20,7 +20,7 @@ from typing import List
 
 EPOCHS = 64
 ADAM_LR = 3e-4
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 VALIDATION_PERIOD = 100
 
 # TODO find sync points - wandb may be it, unfortunately :(
@@ -83,7 +83,6 @@ def train(dev):
     for epoch in range(EPOCHS):
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
             global_step += 1
-            imgs = imgs.to(dev)
 
             optimizer.zero_grad()  # possible set_to_none=True to get "modest" speedup
 
@@ -112,15 +111,22 @@ def train(dev):
                 net.eval()
                 for data in validate_dataloader:
                     imgs, labels = data
-                    imgs = imgs.to(dev)
 
                     with torch.no_grad():
                         outputs = net(imgs)
                         loss = Y_loss(outputs, labels)
                         val_loss += loss.item()
 
+                # just use final batch from validate_dataloader for now!
+                mAP_calcs = batch_mAP(
+                    outputs, YOGOLoss.format_label_batch(outputs, labels)
+                )
+
                 wandb.log(
-                    {"val_loss": val_loss / len(validate_dataloader)},
+                    {
+                        "val loss": val_loss / len(validate_dataloader),
+                        "val mAP": mAP_calcs["map"],
+                    },
                 )
                 torch.save(
                     {
@@ -137,7 +143,6 @@ def train(dev):
     test_loss = 0.0
     for data in test_dataloader:
         imgs, labels = data
-        imgs = imgs.to(dev)
 
         with torch.no_grad():
             outputs = net(imgs)

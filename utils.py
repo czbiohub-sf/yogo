@@ -22,6 +22,7 @@ def format_preds_for_torchmetrics(batch_preds) -> List[Dict[str, torch.Tensor]]:
         for img_preds in batch_preds
     ]
 
+
 def format_labels_for_torchmetrics(batch_labels) -> List[Dict[str, torch.Tensor]]:
     batch_size, label_shape, Sy, Sx = batch_labels.shape
     l = []
@@ -34,14 +35,19 @@ def format_labels_for_torchmetrics(batch_labels) -> List[Dict[str, torch.Tensor]
             row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
             # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
             masked = row_ordered_img_labels[row_ordered_img_labels[..., 0] == 1, ...]
-            l.append({ "boxes": masked[:, 1:5], "labels": masked[:, 5], })
+            l.append(
+                {
+                    "boxes": masked[:, 1:5],
+                    "labels": masked[:, 5],
+                }
+            )
     return l
 
 
 def batch_mAP(self, batch_preds, batch_labels):
     formatted_batch_preds = format_preds_for_torchmetrics(batch_preds)
     formatted_batch_labels = format_labels_for_torchmetrics(batch_labels)
-    metric = MeanAveragePrecision(box_format='xywh')
+    metric = MeanAveragePrecision(box_format="xywh")
     metric.update(formatted_batch_preds, formatted_batch_labels)
     return metric.compute()
 
