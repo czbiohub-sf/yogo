@@ -54,3 +54,9 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 `class_index` is the 0-index of the class from the `class_names` field of `description.yaml`. `x_center` and `width` are normalized to the width of the image, and `y_center` and `height` are normalized to the height of the image.
 
  `dataset_split_fractions` split up the dataset by those percentages - so in the above example, 70% of the dataset is in the training set, 25% is in the testing set, and 5% is in the validation set. They partition the total dataset - so train ∪ val ∪ test = dataset, and train ∩ val = 0, train ∩ test = 0, and val ∩ test = 0.
+
+### TODOs
+
+- impl. mAP
+- parameter sweeps?
+- solve all `rg TODO -A 3`

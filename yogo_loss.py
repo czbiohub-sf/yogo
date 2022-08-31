@@ -36,7 +36,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
     def to(self, device):
         self.device = device
-        super().to(device)
+        super().to(device, dtype=torch.float32)
         return self
 
     def forward(
