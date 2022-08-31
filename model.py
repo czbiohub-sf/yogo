@@ -68,13 +68,8 @@ class YOGO(nn.Module):
             nn.BatchNorm2d(num_channels),
             nn.LeakyReLU(),
         )
-        conv_block_2 = nn.Sequential(
-            nn.Conv2d(num_channels, num_channels, 3, padding=1),
-            nn.BatchNorm2d(num_channels),
-            nn.LeakyReLU(),
-        )
-        conv_block_3 = nn.Conv2d(num_channels, 5 + num_classes, 1)
-        return nn.Sequential(conv_block_1, conv_block_2, conv_block_3)
+        conv_block_2 = nn.Conv2d(num_channels, 5 + num_classes, 1)
+        return nn.Sequential(conv_block_1, conv_block_2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.float()
