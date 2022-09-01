@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from cluster_anchors import torch_iou, centers_to_corners
 
 from collections import defaultdict
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict, Tuple, Union
 
 """
 Original YOLO paper did not mention IOU?
@@ -60,7 +60,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
 
-        label_tensor = self.set_labels(pred_batch, label_batch)
+        label_tensor = self.format_label_batch(
+            pred_batch, label_batch, device=self.device
+        )
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -110,8 +112,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         return loss
 
-    def set_labels(
-        self, pred_batch: torch.Tensor, label_batch: List[torch.Tensor]
+    @classmethod
+    def format_label_batch(
+        cls,
+        pred_batch: torch.Tensor,
+        label_batch: List[torch.Tensor],
+        device: Union[str, torch.device] = "cpu",
     ) -> torch.Tensor:
         """
         input:
@@ -127,7 +133,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
-            output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx, device=self.device)
+            output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx, device=device)
             for i, label_layer in enumerate(label_batch):
                 label_cells = split_labels_into_bins(label_layer, Sx, Sy)
 

@@ -14,7 +14,13 @@ def parse():
         "--note",
         type=str,
         nargs="?",
-        help="note for the run (e.g. run on a TI-82)",
+        help="note for the run (e.g. 'run on a TI-82')",
         default="",
+    )
+    parser.add_argument(
+        "--group",
+        type=str,
+        nargs="?",
+        help="group that the run belongs to (e.g. 'mAP test')",
     )
     return parser.parse_args()
