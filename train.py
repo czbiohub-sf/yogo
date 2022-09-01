@@ -69,15 +69,6 @@ def train(
                 step=global_step,
             )
 
-            if global_step % VALIDATION_PERIOD - 1 == 0:
-                wandb.log(
-                    {
-                        "training_bbs": wandb.Image(
-                            draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-                        )
-                    },
-                )
-
             if global_step % VALIDATION_PERIOD == 0:
 
                 val_loss = 0.0
@@ -92,16 +83,20 @@ def train(
                         val_loss += loss.item()
 
                 # just use final batch from validate_dataloader for now!
+                annotated_img = wandb.Image(
+                    draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
+                )
                 mAP_calcs = batch_mAP(
                     outputs, YOGOLoss.format_label_batch(outputs, labels)
                 )
-
                 wandb.log(
                     {
+                        "training_bbs": annotated_img,
                         "val loss": val_loss / len(validate_dataloader),
                         "val mAP": mAP_calcs["map"],
                     },
                 )
+
                 torch.save(
                     {
                         "epoch": epoch,

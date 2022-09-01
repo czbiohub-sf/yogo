@@ -9,10 +9,6 @@ class YOGO(nn.Module):
         boxes across the dataset verifies this), meaning that it does not make sense to
         have more than 1 anchor box
         - grayscale
-
-    TODO:
-        - Figure out conv layer sizing to properly reduce size of input to desired Sx, Sy
-        - Add residuals?
     """
 
     def __init__(self, anchor_w, anchor_h):

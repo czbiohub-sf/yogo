@@ -66,7 +66,7 @@ def parse():
         type=bool,
         help="visualize PyTorch computational graph",
         action=argparse.BooleanOptionalAction,
-        default=False
+        default=False,
     )
     return parser.parse_args()
 
