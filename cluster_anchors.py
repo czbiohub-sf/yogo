@@ -168,7 +168,7 @@ def k_means(data, k=3, plot=False) -> CornerBox:
     means = np.concatenate([gen_random_box() for _ in range(k)], axis=0)
 
     boxes = []
-    for _ in range(50):
+    for _ in range(100):
         boxes.append(means.copy())
         mean_groups = get_closest_mean(data, means)
 
@@ -183,8 +183,13 @@ def k_means(data, k=3, plot=False) -> CornerBox:
     return cast(CornerBox, corners_to_centers(means))
 
 
-def best_anchor(data: CenterBox) -> Tuple[float, float]:
-    """Optimization for k_means(data, k=1)"""
+def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
+    """
+    Optimization for k_means(data, k=1)
+
+    FIXME: doesn't seem to work for a dataset with larger RBCs
+    """
+    import logging
     from scipy import optimize
 
     def centered_wh_iou(b1: CenterBox, b2: CenterBox):
@@ -198,19 +203,19 @@ def best_anchor(data: CenterBox) -> Tuple[float, float]:
     def f(x: CenterBox):
         return (1 - centered_wh_iou(x, data)).sum()
 
-    res = optimize.minimize(f, method="Nelder-Mead", x0=gen_random_box(center_box=True))
-    if res.success:
-        return res.x[2], res.x[3]
-    else:
-        import logging
-
-        logging.warning(
-            f"scipy could not optimize to ideal solution: '{res.message}'\n"
-            f"defaulting to k_mean(data, k=1)"
-        )
-        corners = k_means(centers_to_corners(data), k=1)[0]
-        centers = centers_to_corners(corners)
-        return cast(Tuple[float, float], (centers[2], centers[3]))
+    if not kmeans:
+        random_center_box = gen_random_box(center_box=True)[0]
+        res = optimize.minimize(f, method="Nelder-Mead", x0=random_center_box)
+        if res.success:
+            return res.x[2], res.x[3]
+        else:
+            logging.warning(
+                f"scipy could not optimize to ideal solution: '{res.message}'\n"
+                f"defaulting to k_mean(data, k=1)"
+            )
+    corners = k_means(centers_to_corners(data), k=1)[0]
+    centers = centers_to_corners(corners)
+    return cast(Tuple[float, float], (centers[2], centers[3]))
 
 
 if __name__ == "__main__":
@@ -224,4 +229,6 @@ if __name__ == "__main__":
     # sanity checks for our data
     assert np.all(data[:, 0] < data[:, 1])
     assert np.all(data[:, 2] < data[:, 3])
+    print(gen_random_box(center_box=True))
     print(k_means(data, k=1, plot=True))
+    print(best_anchor(data))

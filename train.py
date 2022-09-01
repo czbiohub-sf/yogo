@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
     _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
     anchor_w, anchor_h = best_anchor(
-        get_all_bounding_boxes(str(label_path), center_box=True)
+        get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
     )
 
     dataloaders = get_dataloader("healthy_cell_dataset.yml", BATCH_SIZE, device=device)
