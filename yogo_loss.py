@@ -71,14 +71,14 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             (1 - label_tensor[:, 0, :, :])
             * self.no_obj_weight
             * self.mse(pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]))
-        ).mean()
+        ).sum()
 
         # objectness loss when there is an obj
         loss += (
             label_tensor[:, 0, :, :]
             * self.no_obj_weight
             * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]))
-        ).mean()
+        ).sum()
 
         # localization (i.e. xc, yc, w, h) loss
         loss += (
@@ -102,15 +102,15 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     torch.sqrt(label_tensor[:, 4, :, :]),
                 )
             )
-        ).mean()
+        ).sum()
 
         # classification loss
         loss += (
             label_tensor[:, 0, :, :]
             * self.cel(pred_batch[:, 5:, :, :], label_tensor[:, 5, :, :].long())
-        ).mean()
+        ).sum()
 
-        return loss
+        return loss / batch_size
 
     @classmethod
     def format_label_batch(
