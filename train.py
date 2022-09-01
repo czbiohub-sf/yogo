@@ -64,7 +64,7 @@ def train(
             optimizer.step()
 
             wandb.log(
-                {"train_loss": loss.item(), "epoch": epoch},
+                {"train loss": loss.item(), "epoch": epoch},
                 commit=False,
                 step=global_step,
             )
@@ -164,6 +164,7 @@ if __name__ == "__main__":
             "device": str(device),
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
+            "group": args.group
         },
         notes=args.note,
     )
