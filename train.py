@@ -21,7 +21,7 @@ from typing import List
 
 EPOCHS = 64
 ADAM_LR = 3e-4
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 VALIDATION_PERIOD = 100
 
 # TODO find sync points - wandb may be it, unfortunately :(
