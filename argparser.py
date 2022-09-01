@@ -23,4 +23,10 @@ def parse():
         nargs="?",
         help="group that the run belongs to (e.g. 'mAP test')",
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        nargs="?",
+        help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
+    )
     return parser.parse_args()
