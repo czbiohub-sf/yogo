@@ -69,7 +69,7 @@ def train(
                 step=global_step,
             )
 
-            if global_step % VALIDATION_PERIOD == 0:
+            if global_step % VALIDATION_PERIOD - 1 == 0:
                 wandb.log(
                     {
                         "training_bbs": wandb.Image(
@@ -77,6 +77,8 @@ def train(
                         )
                     },
                 )
+
+            if global_step % VALIDATION_PERIOD == 0:
 
                 val_loss = 0.0
 
