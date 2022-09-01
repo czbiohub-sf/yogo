@@ -164,7 +164,7 @@ if __name__ == "__main__":
             "device": str(device),
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
-            "group": args.group
+            "group": args.group,
         },
         notes=args.note,
     )

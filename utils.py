@@ -8,46 +8,58 @@ from typing import Optional, Union, List
 
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-from typing import List, Dict
+from typing import Tuple, List, Dict
 
 
-def format_preds_for_torchmetrics(batch_preds) -> List[Dict[str, torch.Tensor]]:
-    batch_size, pred_shape, Sy, Sx = batch_preds.shape
-    return [
-        {
-            "boxes": img_preds[:4, ...].view(4, Sy * Sx).T,
-            "scores": img_preds[4, ...].view(Sy * Sx),
-            "labels": torch.argmax(img_preds[5:, ...], dim=0).view(Sy * Sx),
-        }
-        for img_preds in batch_preds
-    ]
-
-
-def format_labels_for_torchmetrics(batch_labels) -> List[Dict[str, torch.Tensor]]:
+def format_for_mAP(
+    batch_preds, batch_labels
+) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
     batch_size, label_shape, Sy, Sx = batch_labels.shape
-    l = []
-    for b, img_labels in enumerate(batch_labels):
+    bs1, pred_shape, Syy, Sxx = batch_preds.shape
+    assert batch_size == bs1
+
+    preds, labels = [], []
+    for b, (img_preds, img_labels) in enumerate(zip(batch_preds, batch_labels)):
         if torch.all(img_labels[0, ...] == 0).item():
             # mask says there are no labels!
-            l.append({"boxes": torch.tensor([[]]), "labels": torch.tensor([])})
-        else:
-            # view -> T keeps tensor as a view, and no copies?
-            row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
-            # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
-            masked = row_ordered_img_labels[row_ordered_img_labels[..., 0] == 1, ...]
-            l.append(
+            labels.append({"boxes": torch.tensor([]), "labels": torch.tensor([])})
+            preds.append(
                 {
-                    "boxes": masked[:, 1:5],
-                    "labels": masked[:, 5],
+                    "boxes": torch.tensor([]),
+                    "labels": torch.tensor([]),
+                    "scores": torch.tensor([]),
                 }
             )
-    return l
+        else:
+            # view -> T keeps tensor as a view, and no copies?
+            row_ordered_img_preds = img_preds.view(-1, Sy * Sx).T
+            row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
+
+            # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
+            mask = row_ordered_img_labels[..., 0] == 1
+
+            labels.append(
+                {
+                    "boxes": row_ordered_img_labels[mask, 1:5],
+                    "labels": row_ordered_img_labels[mask, 5],
+                }
+            )
+            preds.append(
+                {
+                    "boxes": row_ordered_img_preds[mask, :4],
+                    "scores": row_ordered_img_preds[mask, 4],
+                    "labels": torch.argmax(row_ordered_img_preds[mask, 5:], dim=1),
+                }
+            )
+
+    return preds, labels
 
 
-def batch_mAP(self, batch_preds, batch_labels):
-    formatted_batch_preds = format_preds_for_torchmetrics(batch_preds)
-    formatted_batch_labels = format_labels_for_torchmetrics(batch_labels)
-    metric = MeanAveragePrecision(box_format="xywh")
+def batch_mAP(batch_preds, batch_labels):
+    formatted_batch_preds, formatted_batch_labels = format_for_mAP(
+        batch_preds, batch_labels
+    )
+    metric = MeanAveragePrecision(box_format="cxcywh")
     metric.update(formatted_batch_preds, formatted_batch_labels)
     return metric.compute()
 
@@ -117,6 +129,5 @@ if __name__ == "__main__":
     for img_batch, label_batch in DL:
         out = Y(img_batch)
         formatted_label_batch = YOGOLoss.format_label_batch(out, label_batch)
-        format_preds_for_torchmetrics(out)
-        format_labels_for_torchmetrics(formatted_label_batch)
-        print("SUCCESS WOO")
+        format_for_mAP(out, formatted_label_batch)
+        print(batch_mAP(out, formatted_label_batch))
