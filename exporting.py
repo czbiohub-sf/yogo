@@ -113,7 +113,6 @@ def do_export(args):
     net = YOGO(0.1, 0.1)
     net.eval()
 
-    # TODO CPU vs GPU vs whatever else?
     model_save = torch.load(pth_filename, map_location=torch.device("cpu"))
     net.load_state_dict(model_save["model_state_dict"])
 
