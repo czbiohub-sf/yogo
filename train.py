@@ -26,6 +26,13 @@ VALIDATION_PERIOD = 100
 
 # TODO find sync points - wandb may be it, unfortunately :(
 # https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
+# this will error out if a synchronizing operation occurs - with warning (that I do not think involve us)
+#   "This is an experimental feature, and not all synchronizing operations will trigger warning
+#    or error. In particular, operations in torch.distributed and torch.sparse namespaces are
+#    not covered yet."
+
+if torch.cuda.is_available():
+    torch.cuda.set_sync_debug_mode('error')
 
 # TODO
 # measure forward / backward pass timing w/

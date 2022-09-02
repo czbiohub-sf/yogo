@@ -60,6 +60,7 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
 - parameter sweeps?
 - solve all `rg "TODO|FIXME" -A 3` (quick summary)
+  - WANDB LOG Sx, Sy
   - figure out PyTorch sync points
   - BAG OF FREEBIESS
   - cluster_anchors.best_anchor (scipy.minimize) seems to do poorly on larger RBCs, for some reason
@@ -67,3 +68,9 @@ In the "labels" folder, each text file corresponds to one image file in "images"
   - turn `if __name__ ==  __main__` sanity checks into tests
   - profile forward/backward passes
   - test MPS (why was it converging so poorly?)
+
+### Miscelaneous Notes
+
+- Using the M1 chip's MPS accelerator seems to either
+  - not converge, basically at all
+  - error out with aa note requesting we report to PyTorch
