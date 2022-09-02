@@ -57,6 +57,7 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 
 ### TODOs
 
+- https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#gpu-specific-optimizations
 - How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
 - parameter sweeps?
 - solve all `rg "TODO|FIXME" -A 3` (quick summary)
