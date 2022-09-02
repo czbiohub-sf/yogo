@@ -140,18 +140,18 @@ def plot_boxes(boxes, color_period=0) -> None:
     plt.show()
 
 
-def get_all_bounding_boxes(bb_dir, center_box=False) -> npt.NDArray[np.float64]:
+def get_all_bounding_boxes(bb_dir, center_box=False) -> Union[CenterBox, CornerBox]:
     conv_func = lambda x: x if center_box else centers_to_corners
     bbs = []
     for fname in glob.glob(f"{bb_dir}/*.csv"):
         with open(fname, "r") as f:
             for line in f:
                 vs = np.array([float(v) for v in line.split(",")])
-                bbs.append(centers_to_corners(vs[1:]))
+                bbs.append(conv_func(vs[1:]))
     return np.array(bbs)
 
 
-def k_means(data, k=3, plot=False) -> CornerBox:
+def k_means(data: CornerBox, k=3, plot=False) -> CornerBox:
     """
     https://blog.paperspace.com/speed-up-kmeans-numpy-vectorization-broadcasting-profiling/
     assumptions:
@@ -180,7 +180,7 @@ def k_means(data, k=3, plot=False) -> CornerBox:
     if plot:
         plot_boxes(np.array(boxes).reshape(-1, 4), color_period=k)
 
-    return cast(CornerBox, corners_to_centers(means))
+    return means
 
 
 def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
@@ -190,7 +190,6 @@ def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
     FIXME: doesn't seem to work for a dataset with larger RBCs
     """
     import logging
-    from scipy import optimize
 
     def centered_wh_iou(b1: CenterBox, b2: CenterBox):
         "get iou, assuming b1 and b2 are centerd on eachother"
@@ -204,6 +203,8 @@ def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
         return (1 - centered_wh_iou(x, data)).sum()
 
     if not kmeans:
+        from scipy import optimize
+
         random_center_box = gen_random_box(center_box=True)[0]
         res = optimize.minimize(f, method="Nelder-Mead", x0=random_center_box)
         if res.success:
@@ -214,21 +215,26 @@ def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
                 f"defaulting to k_mean(data, k=1)"
             )
     corners = k_means(centers_to_corners(data), k=1)[0]
-    centers = centers_to_corners(corners)
+    centers = corners_to_centers(corners)
     return cast(Tuple[float, float], (centers[2], centers[3]))
 
 
 if __name__ == "__main__":
-    import sys
+    # import sys
 
-    if len(sys.argv) != 2:
-        print(f"usage: {sys.argv[0]} <path to labels>")
-        sys.exit(1)
+    # if len(sys.argv) != 2:
+    #     print(f"usage: {sys.argv[0]} <path to labels>")
+    #     sys.exit(1)
 
-    data = get_all_bounding_boxes(sys.argv[1])
-    # sanity checks for our data
-    assert np.all(data[:, 0] < data[:, 1])
-    assert np.all(data[:, 2] < data[:, 3])
-    print(gen_random_box(center_box=True))
-    print(k_means(data, k=1, plot=True))
-    print(best_anchor(data))
+    # data: CornerBox = get_all_bounding_boxes(sys.argv[1])
+
+    # print("k-means", k_means(data, k=1, plot=True))
+    # print("best anchor", best_anchor(data))
+
+    from dataloader import load_dataset_description
+
+    _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
+    anchor_w, anchor_h = best_anchor(
+        get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
+    )
+    print(anchor_w, anchor_h)
