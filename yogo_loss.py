@@ -131,8 +131,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         mask is 0, then the rest of the label values are "don't care" values (just
         setting to 0 is fine).
 
-        TODO: Add JIT to get around losing synchronization points??
-        https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#fuse-pointwise-operations
+        TODO: maybe we can drop some sync points by converting label_batch to tensor?
+        Have a parameter for "num labels" or smth, and have all tensors be the size
+        of the minimum tensor size (instead of having a list)
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
