@@ -16,18 +16,23 @@ def format_for_mAP(
 ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
     batch_size, label_shape, Sy, Sx = batch_labels.shape
     bs1, pred_shape, Syy, Sxx = batch_preds.shape
-    assert batch_size == bs1
 
+    device = batch_preds.device
     preds, labels = [], []
     for b, (img_preds, img_labels) in enumerate(zip(batch_preds, batch_labels)):
         if torch.all(img_labels[0, ...] == 0).item():
             # mask says there are no labels!
-            labels.append({"boxes": torch.tensor([]), "labels": torch.tensor([])})
+            labels.append(
+                {
+                    "boxes": torch.tensor([], device=device),
+                    "labels": torch.tensor([], device=device),
+                }
+            )
             preds.append(
                 {
-                    "boxes": torch.tensor([]),
-                    "labels": torch.tensor([]),
-                    "scores": torch.tensor([]),
+                    "boxes": torch.tensor([], device=device),
+                    "labels": torch.tensor([], device=device),
+                    "scores": torch.tensor([], device=device),
                 }
             )
         else:
