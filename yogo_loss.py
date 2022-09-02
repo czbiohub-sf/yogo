@@ -131,6 +131,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         mask is 0, then the rest of the label values are "don't care" values (just
         setting to 0 is fine).
         """
+        def centers_to_corners(b):
+            return torch.vstack(
+                (
+                    b[..., 0] - b[..., 2] / 2,
+                    b[..., 0] + b[..., 2] / 2,
+                    b[..., 1] - b[..., 3] / 2,
+                    b[..., 1] + b[..., 3] / 2,
+                )
+            ).T
+
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
             output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx, device=device)
@@ -157,8 +167,8 @@ def split_labels_into_bins(
 ) -> Dict[Tuple[int, int], torch.Tensor]:
     d: Dict[Tuple[int, int], List[torch.Tensor]] = defaultdict(list)
     for label in labels:
-        i = int(label[1].item() // (1 / Sx))
-        j = int(label[2].item() // (1 / Sy))
+        i = torch.div(label[1], (1 / Sx), rounding_mode='trunc').long()
+        j = torch.div(label[2], (1 / Sy), rounding_mode='trunc').long()
         d[(i, j)].append(label)
     return {k: torch.vstack(vs) for k, vs in d.items()}
 

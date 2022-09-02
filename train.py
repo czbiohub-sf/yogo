@@ -4,6 +4,7 @@
 import wandb
 import torch
 
+import torch
 from torch import nn
 from torch.optim import AdamW
 
@@ -41,14 +42,13 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def train(
-    dev, train_dataloader, validate_dataloader, test_dataloader, anchor_w, anchor_h
+    dev, train_dataloader, validate_dataloader, test_dataloader, anchor_w, anchor_h, img_size
 ):
-    net = YOGO(anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
+    net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
 
-    resize_shape = train_dataloader.dataset.dataset.img_size
-    Sx, Sy = net.get_grid_size(resize_shape)
+    Sx, Sy = net.get_grid_size(img_size)
     wandb.config.update({"Sx": Sx, "Sy": Sy, })
 
     if wandb.run.name is not None:
@@ -59,9 +59,13 @@ def train(
         )
     model_save_dir.mkdir(exist_ok=True, parents=True)
 
+
     global_step = 0
     for epoch in range(EPOCHS):
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
+            # if torch.cuda.is_available():
+            #     torch.cuda.set_sync_debug_mode("warn")
+
             global_step += 1
 
             optimizer.zero_grad()  # possible set_to_none=True to get "modest" speedup
@@ -95,7 +99,7 @@ def train(
                     draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
                 )
                 mAP_calcs = batch_mAP(
-                    outputs, YOGOLoss.format_label_batch(outputs, labels)
+                    outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
                 )
                 wandb.log(
                     {
@@ -151,7 +155,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
+    _, __, label_path, ___ = load_dataset_description("100x.yml")
     anchor_w, anchor_h = best_anchor(
         get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
     )
@@ -161,7 +165,7 @@ if __name__ == "__main__":
     # in train.py. Yuck! Good enough for now.
     resize_target_size = (300, 400)
     dataloaders = get_dataloader(
-        "healthy_cell_dataset.yml", BATCH_SIZE, img_size=resize_target_size, device=device
+        "100x.yml", BATCH_SIZE, img_size=resize_target_size, device=device
     )
     train_dataloader = dataloaders["train"]
     validate_dataloader = dataloaders["val"]
@@ -169,6 +173,7 @@ if __name__ == "__main__":
 
     wandb.init(
         "yogo",
+        entity="ajacobsen-czb",
         config={
             "learning rate": ADAM_LR,
             "epochs": EPOCHS,
@@ -184,11 +189,13 @@ if __name__ == "__main__":
         tags=["initial-testing"],
     )
 
-    train(
-        device,
-        train_dataloader,
-        validate_dataloader,
-        test_dataloader,
-        anchor_w,
-        anchor_h,
-    )
+    with torch.autograd.detect_anomaly():
+        train(
+            device,
+            train_dataloader,
+            validate_dataloader,
+            test_dataloader,
+            anchor_w,
+            anchor_h,
+            resize_target_size
+        )
