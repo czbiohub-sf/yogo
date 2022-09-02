@@ -13,7 +13,12 @@ class YOGO(nn.Module):
         - grayscale
     """
 
-    def __init__(self, img_size, anchor_w, anchor_h, ):
+    def __init__(
+        self,
+        img_size,
+        anchor_w,
+        anchor_h,
+    ):
         super().__init__()
         self.device = "cpu"
 

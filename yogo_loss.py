@@ -161,8 +161,8 @@ def split_labels_into_bins(
 ) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
     d: Dict[Tuple[int, int], List[torch.Tensor]] = defaultdict(list)
     for label in labels:
-        i = torch.div(label[1], (1 / Sx), rounding_mode='trunc').long()
-        j = torch.div(label[2], (1 / Sy), rounding_mode='trunc').long()
+        i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
+        j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()
         d[(i, j)].append(label)
     return {k: torch.vstack(vs) for k, vs in d.items()}
 

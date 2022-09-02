@@ -8,6 +8,7 @@ from __future__ import annotations
 import glob
 import torch
 import numpy as np
+
 try:
     import numpy.typing as npt
 except ImportError:

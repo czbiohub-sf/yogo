@@ -23,7 +23,6 @@ from typing import List
 EPOCHS = 64
 ADAM_LR = 3e-4
 BATCH_SIZE = 16
-VALIDATION_PERIOD = 100
 
 # TODO find sync points - wandb may be it, unfortunately :(
 # https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
@@ -42,14 +41,25 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def train(
-    dev, train_dataloader, validate_dataloader, test_dataloader, anchor_w, anchor_h, img_size
+    dev,
+    train_dataloader,
+    validate_dataloader,
+    test_dataloader,
+    anchor_w,
+    anchor_h,
+    img_size,
 ):
     net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
 
     Sx, Sy = net.get_grid_size(img_size)
-    wandb.config.update({"Sx": Sx, "Sy": Sy, })
+    wandb.config.update(
+        {
+            "Sx": Sx,
+            "Sy": Sy,
+        }
+    )
 
     if wandb.run.name is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
@@ -77,44 +87,41 @@ def train(
                 step=global_step,
             )
 
-            if global_step % VALIDATION_PERIOD == 0:
+        val_loss = 0.0
+        net.eval()
+        for data in validate_dataloader:
+            imgs, labels = data
 
-                val_loss = 0.0
+            with torch.no_grad():
+                outputs = net(imgs)
+                loss = Y_loss(outputs, labels)
+                val_loss += loss.item()
 
-                net.eval()
-                for data in validate_dataloader:
-                    imgs, labels = data
+        # just use final batch from validate_dataloader for now!
+        annotated_img = wandb.Image(
+            draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
+        )
+        mAP_calcs = batch_mAP(
+            outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
+        )
+        wandb.log(
+            {
+                "validation bbs": annotated_img,
+                "val loss": val_loss / len(validate_dataloader),
+                "val mAP": mAP_calcs["map"],
+            },
+        )
 
-                    with torch.no_grad():
-                        outputs = net(imgs)
-                        loss = Y_loss(outputs, labels)
-                        val_loss += loss.item()
-
-                # just use final batch from validate_dataloader for now!
-                annotated_img = wandb.Image(
-                    draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-                )
-                mAP_calcs = batch_mAP(
-                    outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
-                )
-                wandb.log(
-                    {
-                        "validation bbs": annotated_img,
-                        "val loss": val_loss / len(validate_dataloader),
-                        "val mAP": mAP_calcs["map"],
-                    },
-                )
-
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "model_state_dict": deepcopy(net.state_dict()),
-                        "optimizer_state_dict": deepcopy(optimizer.state_dict()),
-                        "avg_val_loss": val_loss / len(validate_dataloader),
-                    },
-                    str(model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"),
-                )
-                net.train()
+        torch.save(
+            {
+                "epoch": epoch,
+                "model_state_dict": deepcopy(net.state_dict()),
+                "optimizer_state_dict": deepcopy(optimizer.state_dict()),
+                "avg_val_loss": val_loss / len(validate_dataloader),
+            },
+            str(model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"),
+        )
+        net.train()
 
     net.eval()
     test_loss = 0.0
@@ -193,5 +200,5 @@ if __name__ == "__main__":
         test_dataloader,
         anchor_w,
         anchor_h,
-        resize_target_size
+        resize_target_size,
     )
