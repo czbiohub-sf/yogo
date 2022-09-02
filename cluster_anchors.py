@@ -3,10 +3,15 @@
 """ K-means clustering of anchors
 """
 
+from __future__ import annotations
+
 import glob
 import torch
 import numpy as np
-import numpy.typing as npt
+try:
+    import numpy.typing as npt
+except ImportError:
+    pass
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
@@ -14,9 +19,9 @@ from matplotlib.patches import Rectangle
 from typing import cast, Union, Tuple
 
 # [dims, xmin, xmax, ymin, ymax]
-CornerBox = Union[npt.NDArray[np.float64], torch.Tensor]
+CornerBox = Union["npt.NDArray[np.float64]", torch.Tensor]
 # [dims, xc, yc, w, h]
-CenterBox = Union[npt.NDArray[np.float64], torch.Tensor]
+CenterBox = Union["npt.NDArray[np.float64]", torch.Tensor]
 Box = Union[CornerBox, CenterBox]
 
 
@@ -70,10 +75,10 @@ def corners_to_centers(b: CornerBox) -> CenterBox:
         )
 
 
-def iou(b1: CornerBox, b2: CornerBox) -> npt.NDArray[np.float64]:
+def iou(b1: CornerBox, b2: CornerBox) -> "npt.NDArray[np.float64]":
     """b1, b2 of shape [1,d]"""
 
-    def area(b: CornerBox) -> npt.NDArray[np.float64]:
+    def area(b: CornerBox) -> "npt.NDArray[np.float64]":
         return np.abs((b[..., 1] - b[..., 0]) * (b[..., 3] - b[..., 2]))
 
     intersection = np.maximum(

@@ -154,7 +154,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
+    _, __, label_path, ___ = load_dataset_description("100x.yml")
     anchor_w, anchor_h = best_anchor(
         get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
     )
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     # in train.py. Yuck! Good enough for now.
     resize_target_size = (300, 400)
     dataloaders = get_dataloader(
-        "healthy_cell_dataset.yml", BATCH_SIZE, img_size=resize_target_size, device=device
+        "100x.yml", BATCH_SIZE, img_size=resize_target_size, device=device
     )
     train_dataloader = dataloaders["train"]
     validate_dataloader = dataloaders["val"]
@@ -172,6 +172,7 @@ if __name__ == "__main__":
 
     wandb.init(
         "yogo",
+        entity="ajacobsen-czb",
         config={
             "learning rate": ADAM_LR,
             "epochs": EPOCHS,
