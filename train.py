@@ -59,13 +59,9 @@ def train(
         )
     model_save_dir.mkdir(exist_ok=True, parents=True)
 
-
     global_step = 0
     for epoch in range(EPOCHS):
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
-            # if torch.cuda.is_available():
-            #     torch.cuda.set_sync_debug_mode("warn")
-
             global_step += 1
 
             optimizer.zero_grad(set_to_none=True)
@@ -160,9 +156,10 @@ if __name__ == "__main__":
         get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
     )
 
+    # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
+    torch.backends.cudnn.benchmark = True
+
     # TODO: BATCH_SIZE and img_size in yml file?
-    # TODO: I also do not like how we handle img_size - we retrieve from dataloader
-    # in train.py. Yuck! Good enough for now.
     resize_target_size = (300, 400)
     dataloaders = get_dataloader(
         "100x.yml", BATCH_SIZE, img_size=resize_target_size, device=device
@@ -189,13 +186,12 @@ if __name__ == "__main__":
         tags=["initial-testing"],
     )
 
-    with torch.autograd.detect_anomaly():
-        train(
-            device,
-            train_dataloader,
-            validate_dataloader,
-            test_dataloader,
-            anchor_w,
-            anchor_h,
-            resize_target_size
-        )
+    train(
+        device,
+        train_dataloader,
+        validate_dataloader,
+        test_dataloader,
+        anchor_w,
+        anchor_h,
+        resize_target_size
+    )
