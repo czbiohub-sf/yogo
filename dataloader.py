@@ -231,6 +231,7 @@ def get_datasets(
     dataset_description_file: str,
     batch_size: int,
     training: bool = True,
+    img_size: Tuple[int, int] = (300, 400),
 ) -> Dict[str, Subset]:
     (
         classes,
@@ -242,7 +243,7 @@ def get_datasets(
     augmentations = (
         [RandomHorizontalFlipYOGO(0.5), RandomVerticalFlipYOGO(0.5)] if training else []
     )
-    transforms = [Resize([300, 400]), *augmentations]
+    transforms = [Resize(img_size), *augmentations]
 
     full_dataset = ObjectDetectionDataset(
         classes,
@@ -288,10 +289,13 @@ def get_dataloader(
     batch_size: int,
     split_percentages: List[float] = [1],
     training: bool = True,
+    img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
 ):
     # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
-    split_datasets = get_datasets(root_dir, batch_size, training=training)
+    split_datasets = get_datasets(
+        root_dir, batch_size, img_size=img_size, training=training
+    )
     return {
         designation: DataLoader(
             dataset,

@@ -91,7 +91,7 @@ def train(
                 )
                 wandb.log(
                     {
-                        "training_bbs": annotated_img,
+                        "validation bbs": annotated_img,
                         "val loss": val_loss / len(validate_dataloader),
                         "val mAP": mAP_calcs["map"],
                     },
@@ -148,7 +148,10 @@ if __name__ == "__main__":
         get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
     )
 
-    dataloaders = get_dataloader("healthy_cell_dataset.yml", BATCH_SIZE, device=device)
+    # TODO: BATCH_SIZE and img_size in yml file?
+    dataloaders = get_dataloader(
+        "healthy_cell_dataset.yml", BATCH_SIZE, img_size=(300, 400), device=device
+    )
     train_dataloader = dataloaders["train"]
     validate_dataloader = dataloaders["val"]
     test_dataloader = dataloaders["test"]
