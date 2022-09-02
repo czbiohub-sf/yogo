@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from typing import Tuple
+
 
 class YOGO(nn.Module):
     """
@@ -28,6 +30,12 @@ class YOGO(nn.Module):
 
     def num_params(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+    def get_grid_size(self, input_shape: Tuple[int, int]) -> Tuple[int, int]:
+        "return Sx,Sy"
+        out = self(torch.rand(1, 1, *input_shape))
+        _, _, Sy, Sx = out.shape
+        return Sx, Sy
 
     def gen_backbone(self) -> nn.Module:
         conv_block_1 = nn.Sequential(

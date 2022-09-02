@@ -60,7 +60,6 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
 - parameter sweeps?
 - solve all `rg "TODO|FIXME" -A 3` (quick summary)
-  - WANDB LOG Sx, Sy
   - figure out PyTorch sync points
   - BAG OF FREEBIESS
   - cluster_anchors.best_anchor (scipy.minimize) seems to do poorly on larger RBCs, for some reason

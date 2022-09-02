@@ -32,7 +32,7 @@ VALIDATION_PERIOD = 100
 #    not covered yet."
 
 if torch.cuda.is_available():
-    torch.cuda.set_sync_debug_mode('error')
+    torch.cuda.set_sync_debug_mode("error")
 
 # TODO
 # measure forward / backward pass timing w/
@@ -49,6 +49,10 @@ def train(
     net = YOGO(anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
+
+    resize_shape = train_dataloader.dataset.dataset.img_size
+    Sx, Sy = net.get_grid_size(resize_shape)
+    wandb.config.update({"Sx": Sx, "Sy": Sy, })
 
     if wandb.run.name is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
@@ -127,7 +131,7 @@ def train(
 
     wandb.log(
         {
-            "test_loss": test_loss / len(test_dataloader),
+            "test loss": test_loss / len(test_dataloader),
         },
     )
     torch.save(
@@ -156,8 +160,11 @@ if __name__ == "__main__":
     )
 
     # TODO: BATCH_SIZE and img_size in yml file?
+    # TODO: I also do not like how we handle img_size - we retrieve from dataloader
+    # in train.py. Yuck! Good enough for now.
+    resize_target_size = (300, 400)
     dataloaders = get_dataloader(
-        "healthy_cell_dataset.yml", BATCH_SIZE, img_size=(300, 400), device=device
+        "healthy_cell_dataset.yml", BATCH_SIZE, img_size=resize_target_size, device=device
     )
     train_dataloader = dataloaders["train"]
     validate_dataloader = dataloaders["val"]
@@ -166,16 +173,18 @@ if __name__ == "__main__":
     wandb.init(
         "yogo",
         config={
-            "learning_rate": ADAM_LR,
+            "learning rate": ADAM_LR,
             "epochs": EPOCHS,
-            "batch_size": BATCH_SIZE,
-            "training_set_size": len(train_dataloader),
+            "batch size": BATCH_SIZE,
+            "training set size": len(train_dataloader),
             "device": str(device),
-            "anchor_w": anchor_w,
-            "anchor_h": anchor_h,
-            "group": args.group,
+            "anchor w": anchor_w,
+            "anchor h": anchor_h,
+            "resize shape": resize_target_size,
+            "run group": args.group,
         },
         notes=args.note,
+        tags=["initial-testing"],
     )
 
     train(
