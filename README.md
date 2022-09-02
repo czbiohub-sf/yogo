@@ -57,16 +57,13 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 
 ### TODOs
 
-- https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#gpu-specific-optimizations
+- HEAVY data augmentation
 - How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
 - parameter sweeps?
-- solve all `rg "TODO|FIXME" -A 3` (quick summary)
-  - figure out PyTorch sync points
-  - BAG OF FREEBIESS
-  - turn `if __name__ ==  __main__` sanity checks into tests
-  - test MPS (why was it converging so poorly?) (see below)
-  - profile forward/backward passes
-  - look at pinned memory (low probability of success, low priority)
+- figure out PyTorch sync points
+- BAG OF FREEBIESS
+- turn `if __name__ ==  __main__` sanity checks into tests
+- https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
 
 ### Miscelaneous Notes
 
