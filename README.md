@@ -62,11 +62,10 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - solve all `rg "TODO|FIXME" -A 3` (quick summary)
   - figure out PyTorch sync points
   - BAG OF FREEBIESS
-  - cluster_anchors.best_anchor (scipy.minimize) seems to do poorly on larger RBCs, for some reason
-  - look at pinned memory (low probability of success, low priority)
   - turn `if __name__ ==  __main__` sanity checks into tests
+  - test MPS (why was it converging so poorly?) (see below)
   - profile forward/backward passes
-  - test MPS (why was it converging so poorly?)
+  - look at pinned memory (low probability of success, low priority)
 
 ### Miscelaneous Notes
 

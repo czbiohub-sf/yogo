@@ -130,17 +130,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         if there is a label associated with (Sy,Sx) at the given batch, else 0. If
         mask is 0, then the rest of the label values are "don't care" values (just
         setting to 0 is fine).
-        """
-        def centers_to_corners(b):
-            return torch.vstack(
-                (
-                    b[..., 0] - b[..., 2] / 2,
-                    b[..., 0] + b[..., 2] / 2,
-                    b[..., 1] - b[..., 3] / 2,
-                    b[..., 1] + b[..., 3] / 2,
-                )
-            ).T
 
+        TODO: Add JIT to get around losing synchronization points??
+        https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#fuse-pointwise-operations
+        """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
             output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx, device=device)
@@ -164,7 +157,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
 def split_labels_into_bins(
     labels: torch.Tensor, Sx, Sy
-) -> Dict[Tuple[int, int], torch.Tensor]:
+) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
     d: Dict[Tuple[int, int], List[torch.Tensor]] = defaultdict(list)
     for label in labels:
         i = torch.div(label[1], (1 / Sx), rounding_mode='trunc').long()
