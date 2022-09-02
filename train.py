@@ -63,8 +63,8 @@ def train(
     global_step = 0
     for epoch in range(EPOCHS):
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
-            #if torch.cuda.is_available():
-            #    torch.cuda.set_sync_debug_mode("error")
+            # if torch.cuda.is_available():
+            #     torch.cuda.set_sync_debug_mode("warn")
 
             global_step += 1
 

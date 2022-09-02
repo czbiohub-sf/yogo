@@ -1,0 +1,121 @@
+wandb: Currently logged in as: ajacobsen-czb. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.13.2
+wandb: Run data is saved locally in /home/axel.jacobsen/celldiagnosis/yogo/wandb/run-20220902_133001-2edun7lf
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run floral-darkness-3
+wandb: ⭐️ View project at https://wandb.ai/ajacobsen-czb/yogo
+wandb: 🚀 View run at https://wandb.ai/ajacobsen-czb/yogo/runs/2edun7lf
+train.py:192: UserWarning: Anomaly Detection has been enabled. This mode will increase the runtime and should only be enabled for debugging.
+  with torch.autograd.detect_anomaly():
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torch/cuda/__init__.py:567: UserWarning: Synchronization debug mode is a prototype feature and does not yet detect all synchronizing operations (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/torch/csrc/cuda/Module.cpp:448.)
+  torch._C._cuda_set_sync_debug_mode(debug_mode)
+/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py:154: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  centers_to_corners(pred_batch[i, :4, j, k]),
+/home/axel.jacobsen/celldiagnosis/yogo/cluster_anchors.py:107: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  torch.minimum(b1[..., [1, 3]], b2[..., [1, 3]])
+/home/axel.jacobsen/celldiagnosis/yogo/cluster_anchors.py:108: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  - torch.maximum(b1[..., [0, 2]], b2[..., [0, 2]]),
+/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py:158: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  output[i, 0, j, k] = 1
+/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py:159: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  output[i, 1:5, j, k] = labels[pred_square_idx][1:]
+/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py:160: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  output[i, 5, j, k] = labels[pred_square_idx][0]
+/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py:67: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  loss = torch.tensor(0, dtype=torch.float32, device=self.device)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torch/autograd/__init__.py:175: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  allow_unreachable=True, accumulate_grad=True)  # Calls into the C++ engine to run the backward pass
+train.py:79: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  {"train loss": loss.item(), "epoch": epoch},
+/home/axel.jacobsen/celldiagnosis/yogo/dataloader.py:287: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
+train.py:95: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  val_loss += loss.item()
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:91: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  rects = [r for r in rects.reshape(pred_dim, Sx * Sy).T if r[4] > thresh]
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:104: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  for r in rects
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchvision/transforms/functional.py:272: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  npimg = np.transpose(pic.cpu().numpy(), (1, 2, 0))
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:23: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  if torch.all(img_labels[0, ...] == 0).item():
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:48: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  "boxes": row_ordered_img_labels[mask, 1:5],
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:49: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  "labels": row_ordered_img_labels[mask, 5],
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:54: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  "boxes": row_ordered_img_preds[mask, :4],
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:55: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  "scores": row_ordered_img_preds[mask, 4],
+/home/axel.jacobsen/celldiagnosis/yogo/utils.py:56: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  "labels": torch.argmax(row_ordered_img_preds[mask, 5:], dim=1),
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torch/functional.py:864: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  return_counts=return_counts,
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:441: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  return torch.cat(self.detection_labels + self.groundtruth_labels).unique().tolist()
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:461: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  gt_label_mask = (self.groundtruth_labels[idx] == class_id).nonzero().squeeze(1)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:462: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  det_label_mask = (self.detection_labels[idx] == class_id).nonzero().squeeze(1)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:467: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  gt = [gt[i] for i in gt_label_mask]
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:468: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  det = [det[i] for i in det_label_mask]
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:475: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  scores_filtered = scores[self.detection_labels[idx] == class_id]
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:479: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  det = [det[i] for i in inds]
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:483: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  ious = compute_iou(det, gt, self.iou_type).to(self.device)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:563: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  gt_label_mask = (self.groundtruth_labels[idx] == class_id).nonzero().squeeze(1)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:564: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  det_label_mask = (self.detection_labels[idx] == class_id).nonzero().squeeze(1)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:580: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  gt = [gt[i] for i in gt_label_mask]
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:581: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  det = [det[i] for i in det_label_mask]
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:589: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  areas = compute_area(gt, iou_type=self.iou_type).to(self.device)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:603: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  det = [det[i] for i in dtind]
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:628: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  det_areas = compute_area(det, iou_type=self.iou_type).to(self.device)
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torchmetrics/detection/mean_ap.py:638: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  "dtScores": scores_sorted.to(self.device),
+/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torch/_utils.py:45: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
+  return dtype(self.size()).copy_(self, non_blocking)
+wandb: Waiting for W&B process to finish... (failed 255). Press Control-C to abort syncing.
+wandb: - 0.092 MB of 0.092 MB uploaded (0.000 MB deduped)wandb: \ 0.092 MB of 0.092 MB uploaded (0.000 MB deduped)wandb: | 0.092 MB of 0.092 MB uploaded (0.000 MB deduped)wandb: / 0.092 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: - 0.092 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: \ 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: | 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: / 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: - 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: \ 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: | 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: / 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:      epoch ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅███████
+wandb: train loss █▆▄▃▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   val loss █▁
+wandb:    val mAP ▁█
+wandb: 
+wandb: Run summary:
+wandb:      epoch 2
+wandb: train loss 1.57374
+wandb:   val loss 5.01018
+wandb:    val mAP 0.48375
+wandb: 
+wandb: Synced floral-darkness-3: https://wandb.ai/ajacobsen-czb/yogo/runs/2edun7lf
+wandb: Synced 6 W&B file(s), 2 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20220902_133001-2edun7lf/logs
+Traceback (most recent call last):
+  File "train.py", line 200, in <module>
+    resize_target_size
+  File "train.py", line 74, in train
+    loss = Y_loss(outputs, labels)
+  File "/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1110, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py", line 64, in forward
+    pred_batch, label_batch, device=self.device
+  File "/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py", line 155, in format_label_batch
+    centers_to_corners(labels[:, 1:]),
+  File "/home/axel.jacobsen/celldiagnosis/yogo/cluster_anchors.py", line 111, in torch_iou
+    return intersection / (area(b1) + area(b2) - intersection)
+  File "/home/axel.jacobsen/celldiagnosis/yogo/cluster_anchors.py", line 101, in area
+    def area(b):
+KeyboardInterrupt
