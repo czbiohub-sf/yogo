@@ -68,7 +68,7 @@ def train(
 
             global_step += 1
 
-            optimizer.zero_grad()  # possible set_to_none=True to get "modest" speedup
+            optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
