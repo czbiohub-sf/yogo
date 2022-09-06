@@ -164,7 +164,6 @@ if __name__ == "__main__":
     )
 
     _, dataset_paths, __ = load_dataset_description(args.dataset_descriptor_file)
-    # just pick a random dataset for now - ideally, we go over the entire set of datasets
     label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
         get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
