@@ -22,27 +22,50 @@ To define the dataset, we use a `.yml` file.
 
 ### `description.yml` requirements
 
-The file `description.yml` describes the class to label map. E.G.
+The file `example_dataset_description.yml` describes the class to label map. E.G.
 
 ```yaml
+# DATASET DESCRIPTION FILE
+#
+# Here, we are describing our dataset. There are only a couple pieces
+# of information that you have to supply. The first is the class names:
 class_names: ["healthy", "ring", "schitzont", "troph"]
-image_path: <absolute_path_to_image_folder>
-label_path: <absolute_path_to_label_folder>
+# Neural networks encode classes by integers, and the list above defines this
+# ordering by index. I.e. "0" maps to "healthy", "1" maps to ring, e.t.c.
+#
+# You can define how the dataset is split up. This is the `dataset_split_fractions`
+# definition below. It splits up the total dataset (all image-label pairs) by the
+# percentages below. Each of these keys are required, and their values must sum
+# to 1.
 dataset_split_fractions:
   train: 0.7
   test:  0.25
   val:   0.05
+#
+# Finally, we have to actually point to our data. If we have just one set of
+# folders for images and labels, then we just define the image path and label
+# path, like below:
+image_path: /path/to/images/
+label_path: /path/to/labels/
+# However, if we want multiple sets of folders for training and inference, we
+# use `dataset_paths` to define the paths to folders individually.
+dataset_paths:
+  set1:  # this name is just for your convenience!
+    image_path: /path/to/images/
+    label_path: /path/to/labels/
+  set2:
+    image_path: /path/to/images/
+    label_path: /path/to/labels/
+  ...
 ```
 
-See `example_dataset_description.yml` for an example dataset description `yaml` file, which will be pretty much a verbatim reproduction of the above.
+Here is an example file structure for the each of the dataset paths in `example_dataset_description.yml` above.
 
-Here is an example file structure for the `description.yml` above.
-
-    images/
+    /path/to/images/
       image1.png
       image2.png
       ...
-    labels/
+    /path/to/labels/
       image1.csv
       image2.csv
       ...
@@ -53,7 +76,6 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 
 `class_index` is the 0-index of the class from the `class_names` field of `description.yaml`. `x_center` and `width` are normalized to the width of the image, and `y_center` and `height` are normalized to the height of the image.
 
- `dataset_split_fractions` split up the dataset by those percentages - so in the above example, 70% of the dataset is in the training set, 25% is in the testing set, and 5% is in the validation set. They partition the total dataset - so train ∪ val ∪ test = dataset, and train ∩ val = 0, train ∩ test = 0, and val ∩ test = 0.
 
 ### TODOs
 
