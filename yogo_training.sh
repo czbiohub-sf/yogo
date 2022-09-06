@@ -34,7 +34,7 @@ echo
 nvidia-smi
 
 wandb online
-conda run python3 train.py --note "sparser validation" 
+conda run python3 train.py "$@"
 wandb offline
 
 #echo

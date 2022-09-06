@@ -6,9 +6,7 @@ def parse():
     parser.add_argument(
         "dataset_descriptor_file",
         type=str,
-        nargs="?",
         help="path to yml dataset descriptor file",
-        default="healthy_cell_dataset.yml",
     )
     parser.add_argument(
         "--note",

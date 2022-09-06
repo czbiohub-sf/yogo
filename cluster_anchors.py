@@ -8,16 +8,18 @@ from __future__ import annotations
 import glob
 import torch
 import numpy as np
+from pathlib import Path
 
 try:
     import numpy.typing as npt
 except ImportError:
     pass
 
+from typing import cast, Union, Tuple, Sequence
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from typing import cast, Union, Tuple
 
 # [dims, xmin, xmax, ymin, ymax]
 CornerBox = Union["npt.NDArray[np.float64]", torch.Tensor]
@@ -146,7 +148,17 @@ def plot_boxes(boxes, color_period=0) -> None:
     plt.show()
 
 
-def get_all_bounding_boxes(bb_dir, center_box=False) -> Union[CenterBox, CornerBox]:
+def get_dataset_bounding_boxes(
+    bb_dirs: Sequence[Union[Path, str]], center_box=False
+) -> Union[CenterBox, CornerBox]:
+    return np.vstack(
+        tuple(get_bounding_boxes(str(d), center_box=center_box) for d in bb_dirs)
+    )
+
+
+def get_bounding_boxes(
+    bb_dir: str, center_box=False
+) -> Union[CenterBox, CornerBox]:
     conv_func = lambda x: x if center_box else centers_to_corners
     bbs = []
     for fname in glob.glob(f"{bb_dir}/*.csv"):
@@ -223,24 +235,3 @@ def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
     corners = k_means(centers_to_corners(data), k=1)[0]
     centers = corners_to_centers(corners)
     return cast(Tuple[float, float], (centers[2], centers[3]))
-
-
-if __name__ == "__main__":
-    # import sys
-
-    # if len(sys.argv) != 2:
-    #     print(f"usage: {sys.argv[0]} <path to labels>")
-    #     sys.exit(1)
-
-    # data: CornerBox = get_all_bounding_boxes(sys.argv[1])
-
-    # print("k-means", k_means(data, k=1, plot=True))
-    # print("best anchor", best_anchor(data))
-
-    from dataloader import load_dataset_description
-
-    _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
-    anchor_w, anchor_h = best_anchor(
-        get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
-    )
-    print(anchor_w, anchor_h)

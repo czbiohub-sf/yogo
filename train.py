@@ -13,7 +13,7 @@ from argparser import parse
 from yogo_loss import YOGOLoss
 from utils import draw_rects, batch_mAP
 from dataloader import load_dataset_description, get_dataloader
-from cluster_anchors import best_anchor, get_all_bounding_boxes
+from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
 from pathlib import Path
 from copy import deepcopy
@@ -158,9 +158,11 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    _, __, label_path, ___ = load_dataset_description("100x.yml")
+    _, dataset_paths, __ = load_dataset_description(args.dataset_descriptor_file)
+    # just pick a random dataset for now - ideally, we go over the entire set of datasets
+    label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
-        get_all_bounding_boxes(str(label_path), center_box=True), kmeans=True
+        get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
     )
 
     # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -169,7 +171,10 @@ if __name__ == "__main__":
     # TODO: BATCH_SIZE and img_size in yml file?
     resize_target_size = (300, 400)
     dataloaders = get_dataloader(
-        "100x.yml", BATCH_SIZE, img_size=resize_target_size, device=device
+        args.dataset_descriptor_file,
+        BATCH_SIZE,
+        img_size=resize_target_size,
+        device=device,
     )
     train_dataloader = dataloaders["train"]
     validate_dataloader = dataloaders["val"]

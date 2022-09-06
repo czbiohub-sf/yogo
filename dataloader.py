@@ -11,12 +11,61 @@ import torchvision.transforms.functional as F
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
-from torch.utils.data import DataLoader, random_split, Subset
+from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 from torchvision.transforms import Resize
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 
 from data_transforms import RandomHorizontalFlipYOGO, RandomVerticalFlipYOGO
+
+
+def load_dataset_description(
+    dataset_description,
+) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
+    with open(dataset_description, "r") as desc:
+        yaml_data = yaml.safe_load(desc)
+
+        classes = yaml_data["class_names"]
+
+        # either we have image_path and label_path directly defined
+        # in our yaml file (describing 1 dataset exactly), or we have
+        # a nested dict structure describing each dataset description.
+        # see README.md for more detail
+        if "dataset_paths" in yaml_data:
+            dataset_paths = [
+                {k: Path(v) for k, v in d.items()}
+                for d in yaml_data["dataset_paths"].values()
+            ]
+        else:
+            dataset_paths = [
+                {
+                    "image_path": Path(yaml_data["image_path"]),
+                    "label_path": Path(yaml_data["label_path"]),
+                }
+            ]
+
+        split_fractions = {
+            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
+        }
+
+        if not sum(split_fractions.values()) == 1:
+            raise ValueError(
+                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
+            )
+
+        check_dataset_paths(dataset_paths)
+        return classes, dataset_paths, split_fractions
+
+
+def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
+    for dataset_desc in dataset_paths:
+        if not (
+            dataset_desc["image_path"].is_dir() and dataset_desc["label_path"].is_dir()
+        ):
+            raise FileNotFoundError(
+                f"image_path or label_path do not lead to a directory\n"
+                f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
+            )
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -114,7 +163,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
-
+        Modified (gently) to transform label as well as target
         Args:
             index (int): Index
 
@@ -139,56 +188,32 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return len(self.samples)
 
 
-def load_dataset_description(
-    dataset_description,
-) -> Tuple[List[str], Path, Path, Dict[str, float]]:
-    with open(dataset_description, "r") as desc:
-        yaml_data = yaml.safe_load(desc)
-
-        classes = yaml_data["class_names"]
-        image_path = Path(yaml_data["image_path"])
-        label_path = Path(yaml_data["label_path"])
-        split_fractions = {
-            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
-        }
-
-        if not sum(split_fractions.values()) == 1:
-            raise ValueError(
-                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
-            )
-
-        if not (image_path.is_dir() and label_path.is_dir()):
-            raise FileNotFoundError(
-                f"image_path or label_path do not lead to a directory\nimage_path={image_path}\nlabel_path={label_path}"
-            )
-
-        return classes, image_path, label_path, split_fractions
-
-
 def get_datasets(
     dataset_description_file: str,
     batch_size: int,
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
-) -> Dict[str, Subset]:
-    (
-        classes,
-        image_path,
-        label_path,
-        split_fractions,
-    ) = load_dataset_description(dataset_description_file)
-
+) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     augmentations = (
         [RandomHorizontalFlipYOGO(0.5), RandomVerticalFlipYOGO(0.5)] if training else []
     )
     transforms = [Resize(img_size), *augmentations]
 
-    full_dataset = ObjectDetectionDataset(
+    (
         classes,
-        image_path,
-        label_path,
-        img_size=img_size,
-        transform=transforms,
+        dataset_paths,
+        split_fractions,
+    ) = load_dataset_description(dataset_description_file)
+
+    full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
+        ObjectDetectionDataset(
+            classes,
+            dataset_desc["image_path"],
+            dataset_desc["label_path"],
+            img_size=img_size,
+            transform=transforms,
+        )
+        for dataset_desc in dataset_paths
     )
 
     dataset_sizes = {
@@ -217,12 +242,6 @@ def get_datasets(
     )
 
 
-def collate_batch(batch, device):
-    inputs, labels = zip(*batch)
-    batched_inputs = torch.stack(inputs)
-    return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
-
-
 def get_dataloader(
     root_dir: str,
     batch_size: int,
@@ -231,6 +250,11 @@ def get_dataloader(
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
 ):
+    def collate_batch(batch, device):
+        inputs, labels = zip(*batch)
+        batched_inputs = torch.stack(inputs)
+        return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
+
     # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
     split_datasets = get_datasets(
         root_dir, batch_size, img_size=img_size, training=training
@@ -260,7 +284,7 @@ if __name__ == "__main__":
     else:
         num_imgs = 4
 
-    ODL = get_datasets("healthy_cell_dataset.yml", batch_size=128)
+    ODL = get_datasets("dataset_defs/full_100x_dataset.yml", batch_size=128)
     print({k: len(d) for k, d in ODL.items()})
 
     for img, labels in ODL["test"]:
