@@ -91,3 +91,7 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - Using the M1 chip's MPS accelerator seems to either
   - not converge, basically at all
   - error out with aa note requesting we report to PyTorch
+
+### Sync Points
+- IOU prediction
+-

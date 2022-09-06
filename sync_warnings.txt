@@ -85,37 +85,3 @@ train.py:95: UserWarning: called a synchronizing CUDA operation (Triggered inter
   "dtScores": scores_sorted.to(self.device),
 /home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torch/_utils.py:45: UserWarning: called a synchronizing CUDA operation (Triggered internally at  /opt/conda/conda-bld/pytorch_1646755953518/work/c10/cuda/CUDAFunctions.cpp:147.)
   return dtype(self.size()).copy_(self, non_blocking)
-wandb: Waiting for W&B process to finish... (failed 255). Press Control-C to abort syncing.
-wandb: - 0.092 MB of 0.092 MB uploaded (0.000 MB deduped)wandb: \ 0.092 MB of 0.092 MB uploaded (0.000 MB deduped)wandb: | 0.092 MB of 0.092 MB uploaded (0.000 MB deduped)wandb: / 0.092 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: - 0.092 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: \ 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: | 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: / 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: - 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: \ 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: | 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb: / 0.115 MB of 0.115 MB uploaded (0.000 MB deduped)wandb:                                                                                
-wandb: 
-wandb: Run history:
-wandb:      epoch ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅███████
-wandb: train loss █▆▄▃▂▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
-wandb:   val loss █▁
-wandb:    val mAP ▁█
-wandb: 
-wandb: Run summary:
-wandb:      epoch 2
-wandb: train loss 1.57374
-wandb:   val loss 5.01018
-wandb:    val mAP 0.48375
-wandb: 
-wandb: Synced floral-darkness-3: https://wandb.ai/ajacobsen-czb/yogo/runs/2edun7lf
-wandb: Synced 6 W&B file(s), 2 media file(s), 0 artifact file(s) and 0 other file(s)
-wandb: Find logs at: ./wandb/run-20220902_133001-2edun7lf/logs
-Traceback (most recent call last):
-  File "train.py", line 200, in <module>
-    resize_target_size
-  File "train.py", line 74, in train
-    loss = Y_loss(outputs, labels)
-  File "/home/axel.jacobsen/.conda/envs/malaria-autofocus/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1110, in _call_impl
-    return forward_call(*input, **kwargs)
-  File "/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py", line 64, in forward
-    pred_batch, label_batch, device=self.device
-  File "/home/axel.jacobsen/celldiagnosis/yogo/yogo_loss.py", line 155, in format_label_batch
-    centers_to_corners(labels[:, 1:]),
-  File "/home/axel.jacobsen/celldiagnosis/yogo/cluster_anchors.py", line 111, in torch_iou
-    return intersection / (area(b1) + area(b2) - intersection)
-  File "/home/axel.jacobsen/celldiagnosis/yogo/cluster_anchors.py", line 101, in area
-    def area(b):
-KeyboardInterrupt
