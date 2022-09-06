@@ -113,26 +113,3 @@ def draw_rects(
         draw.rectangle(r, outline="red")
 
     return rgb
-
-
-if __name__ == "__main__":
-    from model import YOGO
-    from yogo_loss import YOGOLoss
-    from cluster_anchors import best_anchor, get_all_bounding_boxes
-    from dataloader import get_dataloader, load_dataset_description
-
-    _, __, label_path, ___ = load_dataset_description("healthy_cell_dataset.yml")
-    anchor_w, anchor_h = best_anchor(
-        get_all_bounding_boxes(str(label_path), center_box=True)
-    )
-
-    dataloaders = get_dataloader("healthy_cell_dataset.yml", 16)
-    DL = dataloaders["val"]
-    Y = YOGO(anchor_w, anchor_h)
-    Y.eval()
-
-    for img_batch, label_batch in DL:
-        out = Y(img_batch)
-        formatted_label_batch = YOGOLoss.format_label_batch(out, label_batch)
-        format_for_mAP(out, formatted_label_batch)
-        print(batch_mAP(out, formatted_label_batch))
