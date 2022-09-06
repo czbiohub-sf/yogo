@@ -41,7 +41,6 @@ dataset_split_fractions:
   train: 0.7
   test:  0.25
   val:   0.05
-#
 # Finally, we have to actually point to our data. If we have just one set of
 # folders for images and labels, then we just define the image path and label
 # path, like below:
