@@ -88,27 +88,28 @@ def train(
             )
 
         val_loss = 0.0
+        mAP_total = 0.0
         net.eval()
-        for data in validate_dataloader:
-            imgs, labels = data
-
+        for imgs, labels in validate_dataloader:
             with torch.no_grad():
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
+            mAP_calcs = batch_mAP(
+                outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
+            )
+            mAP_total += mAP_calcs["map"]
+
         # just use final batch from validate_dataloader for now!
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-        )
-        mAP_calcs = batch_mAP(
-            outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
         )
         wandb.log(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
-                "val mAP": mAP_calcs["map"],
+                "val mAP": mAP_total / len(validate_dataloader),
             },
         )
 
@@ -125,17 +126,21 @@ def train(
 
     net.eval()
     test_loss = 0.0
-    for data in test_dataloader:
-        imgs, labels = data
-
+    for imgs, labels in test_dataloader:
         with torch.no_grad():
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
+        mAP_calcs = batch_mAP(
+            outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
+        )
+        mAP_total += mAP_calcs["map"]
+
     wandb.log(
         {
             "test loss": test_loss / len(test_dataloader),
+            "test mAP": mAP_total / len(test_dataloader),
         },
     )
     torch.save(

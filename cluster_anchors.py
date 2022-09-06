@@ -156,9 +156,7 @@ def get_dataset_bounding_boxes(
     )
 
 
-def get_bounding_boxes(
-    bb_dir: str, center_box=False
-) -> Union[CenterBox, CornerBox]:
+def get_bounding_boxes(bb_dir: str, center_box=False) -> Union[CenterBox, CornerBox]:
     conv_func = lambda x: x if center_box else centers_to_corners
     bbs = []
     for fname in glob.glob(f"{bb_dir}/*.csv"):
