@@ -13,12 +13,7 @@ class YOGO(nn.Module):
         - grayscale
     """
 
-    def __init__(
-        self,
-        img_size,
-        anchor_w,
-        anchor_h,
-    ):
+    def __init__(self, img_size, anchor_w, anchor_h, inference=False):
         super().__init__()
         self.device = "cpu"
 
@@ -28,6 +23,8 @@ class YOGO(nn.Module):
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
+
+        self.inference = inference
 
         self.Cxs = None
         self.Cys = None
@@ -104,10 +101,10 @@ class YOGO(nn.Module):
                 .to(self.device)
             )
 
-        if self.training:
-            classification = x[:, 5:, :, :]
-        else:
+        if self.inference:
             classification = torch.softmax(x[:, 5:, :, :], dim=1)
+        else:
+            classification = x[:, 5:, :, :]
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:
