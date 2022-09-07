@@ -11,7 +11,7 @@ from torch.optim import AdamW
 from model import YOGO
 from argparser import parse
 from yogo_loss import YOGOLoss
-from utils import draw_rects, format_for_mAP
+from utils import draw_rects, Metrics, format_for_mAP
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
@@ -51,19 +51,13 @@ def train(
     anchor_h,
     img_size,
 ):
-
     net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
-    mAP_metric = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
+    metrics = Metrics(num_classes=4, device=dev)
 
     Sx, Sy = net.get_grid_size(img_size)
-    wandb.config.update(
-        {
-            "Sx": Sx,
-            "Sy": Sy,
-        }
-    )
+    wandb.config.update({"Sx": Sx, "Sy": Sy,})
 
     if wandb.run.name is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
@@ -75,6 +69,7 @@ def train(
 
     global_step = 0
     for epoch in range(EPOCHS):
+        # train
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
             global_step += 1
 
@@ -91,6 +86,7 @@ def train(
                 step=global_step,
             )
 
+        # do validation things
         val_loss = 0.0
         net.eval()
         for imgs, labels in validate_dataloader:
@@ -99,20 +95,20 @@ def train(
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            formatted_batch_preds, formatted_batch_labels = format_for_mAP(
-                outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
-            )
-            mAP_metric.update(formatted_batch_preds, formatted_batch_labels)
+            metrics.update(outputs, YOGOLoss.format_label_batch(outputs, labels, device=device))
 
         # just use final batch from validate_dataloader for now!
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
+        mAP, confusion = metrics.compute()
+        print('safe')
         wandb.log(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
-                "val mAP": mAP_metric.compute(),
+                "val mAP": mAP,
+                "val confusion": confusion,
             },
         )
 
@@ -127,6 +123,7 @@ def train(
         )
         net.train()
 
+    # do test things
     net.eval()
     test_loss = 0.0
     for imgs, labels in test_dataloader:
@@ -135,15 +132,14 @@ def train(
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        formatted_batch_preds, formatted_batch_labels = format_for_mAP(
-            outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
-        )
-        mAP_metric.update(formatted_batch_preds, formatted_batch_labels)
+        metrics.update(outputs, YOGOLoss.format_label_batch(outputs, labels, device=device))
 
+    mAP, confusion = metrics.compute()
     wandb.log(
         {
             "test loss": test_loss / len(test_dataloader),
-            "test mAP": mAP_metric.compute(),
+            "test mAP": mAP,
+            "test confusion": confusion,
         },
     )
     torch.save(

@@ -6,16 +6,43 @@ import torchvision.transforms as T
 from PIL import Image, ImageDraw
 from typing import Optional, Union, List
 
+from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from typing import Tuple, List, Dict
 
 
+
+class Metrics:
+    def __init__(self, num_classes=4, device='cpu'):
+        self.mAP = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
+        self.confusion = ConfusionMatrix(num_classes=num_classes)
+
+        self.confusion.to(device)
+
+    def update(self, preds, targets):
+        bs, pred_shape, Sy, Sx = preds.shape
+        bs, label_shape, Sy, Sx = targets.shape
+
+        mAP_preds, mAP_targets = format_for_mAP(preds, targets)
+        confusion_preds = preds.permute(1,0,2,3).reshape(pred_shape, bs * Sx * Sy)[5:, :].T
+        confusion_targets = targets.permute(1,0,2,3).reshape(label_shape, bs*Sx*Sy)[5, :].long()
+
+        self.mAP.update(mAP_preds, mAP_targets)
+        self.confusion.update(confusion_preds, confusion_targets)
+
+    def compute(self):
+        return (
+            self.mAP.compute(),
+            self.confusion.compute()
+        )
+
+
 def format_for_mAP(
     batch_preds, batch_labels
 ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
-    batch_size, label_shape, Sy, Sx = batch_labels.shape
-    bs1, pred_shape, Syy, Sxx = batch_preds.shape
+    bs, label_shape, Sy, Sx = batch_labels.shape
+    bs, pred_shape, Sy, Sx = batch_preds.shape
 
     device = batch_preds.device
     preds, labels = [], []
