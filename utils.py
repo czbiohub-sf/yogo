@@ -14,9 +14,11 @@ from typing import Tuple, List, Dict
 
 
 class Metrics:
-    def __init__(self, num_classes=4):
+    def __init__(self, num_classes=4, device='cpu'):
         self.mAP = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
         self.confusion = ConfusionMatrix(num_classes=num_classes)
+
+        self.confusion.to(device)
 
     def update(self, preds, targets):
         bs, pred_shape, Sy, Sx = preds.shape

@@ -54,7 +54,7 @@ def train(
     net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
-    metrics = Metrics(num_classes=4)
+    metrics = Metrics(num_classes=4, device=dev)
 
     Sx, Sy = net.get_grid_size(img_size)
     wandb.config.update({"Sx": Sx, "Sy": Sy,})
