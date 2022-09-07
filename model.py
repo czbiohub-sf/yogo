@@ -48,34 +48,28 @@ class YOGO(nn.Module):
 
     def gen_backbone(self) -> nn.Module:
         conv_block_1 = nn.Sequential(
-            nn.Conv2d(1, 16, 3, padding=1, bias=False),
+            nn.Conv2d(1, 32, 3, padding=1, bias=False),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
         )
         conv_block_2 = nn.Sequential(
-            nn.Conv2d(16, 32, 3, padding=1, bias=False),
+            nn.Conv2d(32, 64, 3, padding=1, bias=False),
             nn.BatchNorm2d(32),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
         )
         conv_block_3 = nn.Sequential(
-            nn.Conv2d(32, 64, 3, padding=1, bias=False),
+            nn.Conv2d(64, 128, 3, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
-        )
-        conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 256, 3, padding=1),
         )
         return nn.Sequential(
-            conv_block_1, conv_block_2, conv_block_3, conv_block_4, conv_block_5
+            conv_block_1, conv_block_2, conv_block_3, conv_block_4
         )
 
     def gen_head(self, num_channels: int, num_classes: int) -> nn.Module:
