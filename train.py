@@ -11,9 +11,11 @@ from torch.optim import AdamW
 from model import YOGO
 from argparser import parse
 from yogo_loss import YOGOLoss
-from utils import draw_rects, batch_mAP
+from utils import draw_rects, format_for_mAP
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_dataset_bounding_boxes
+
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from pathlib import Path
 from copy import deepcopy
@@ -49,9 +51,11 @@ def train(
     anchor_h,
     img_size,
 ):
+
     net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
+    mAP_metric = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
 
     Sx, Sy = net.get_grid_size(img_size)
     wandb.config.update(
@@ -88,7 +92,6 @@ def train(
             )
 
         val_loss = 0.0
-        mAP_total = 0.0
         net.eval()
         for imgs, labels in validate_dataloader:
             with torch.no_grad():
@@ -96,10 +99,10 @@ def train(
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            mAP_calcs = batch_mAP(
+            formatted_batch_preds, formatted_batch_labels = format_for_mAP(
                 outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
             )
-            mAP_total += mAP_calcs["map"]
+            mAP_metric.update(formatted_batch_preds, formatted_batch_labels)
 
         # just use final batch from validate_dataloader for now!
         annotated_img = wandb.Image(
@@ -109,7 +112,7 @@ def train(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
-                "val mAP": mAP_total / len(validate_dataloader),
+                "val mAP": mAP_metric.compute(),
             },
         )
 
@@ -132,15 +135,15 @@ def train(
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        mAP_calcs = batch_mAP(
+        formatted_batch_preds, formatted_batch_labels = format_for_mAP(
             outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
         )
-        mAP_total += mAP_calcs["map"]
+        mAP_metric.update(formatted_batch_preds, formatted_batch_labels)
 
     wandb.log(
         {
             "test loss": test_loss / len(test_dataloader),
-            "test mAP": mAP_total / len(test_dataloader),
+            "test mAP": mAP_metric.compute(),
         },
     )
     torch.save(
