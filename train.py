@@ -15,8 +15,6 @@ from utils import draw_rects, Metrics
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
-from torchmetrics.detection.mean_ap import MeanAveragePrecision
-
 from pathlib import Path
 from copy import deepcopy
 from typing import List
