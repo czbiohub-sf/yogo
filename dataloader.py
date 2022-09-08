@@ -162,6 +162,12 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         return labels
 
+    def count_class(self, class_index: int) -> int:
+        s = 0
+        for k, v in self.samples:
+            s += sum(l[0] == class_index for l in v)
+        return s
+
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
         Modified (gently) to transform label as well as target
@@ -286,24 +292,31 @@ if __name__ == "__main__":
         num_imgs = 4
 
     ODL = get_datasets("dataset_defs/full_100x_dataset.yml", batch_size=128)
-    print({k: len(d) for k, d in ODL.items()})
 
-    for img, labels in ODL["test"]:
-        fig, ax = plt.subplots()
-        _, img_h, img_w = img.shape
-        ax.imshow(img[0, ...])
-        for l in labels:
-            [_, xc, yc, w, h] = l
-            rect = Rectangle(
-                (img_w * (xc - w / 2), img_h * (yc - h / 2)),
-                img_w * w,
-                img_h * h,
-                facecolor="none",
-                edgecolor="black",
-            )
-            ax.add_patch(rect)
-        plt.show()
+    print(ODL)
+    print(sum(D.count_class(0) for D in ODL["train"].dataset.datasets))
+    print(sum(D.count_class(0) for D in ODL["test"].dataset.datasets))
+    print(sum(D.count_class(0) for D in ODL["val"].dataset.datasets))
+    print(sum(D.count_class(1) for D in ODL["train"].dataset.datasets))
+    print(sum(D.count_class(2) for D in ODL["train"].dataset.datasets))
+    print(sum(D.count_class(3) for D in ODL["train"].dataset.datasets))
 
-        num_imgs -= 1
-        if num_imgs == 0:
-            break
+    # for img, labels in ODL["test"]:
+    #     fig, ax = plt.subplots()
+    #     _, img_h, img_w = img.shape
+    #     ax.imshow(img[0, ...])
+    #     for l in labels:
+    #         [_, xc, yc, w, h] = l
+    #         rect = Rectangle(
+    #             (img_w * (xc - w / 2), img_h * (yc - h / 2)),
+    #             img_w * w,
+    #             img_h * h,
+    #             facecolor="none",
+    #             edgecolor="black",
+    #         )
+    #         ax.add_patch(rect)
+    #     plt.show()
+
+    #     num_imgs -= 1
+    #     if num_imgs == 0:
+    #         break

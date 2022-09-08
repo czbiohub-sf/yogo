@@ -81,9 +81,9 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - ~~Visualize Confusion Tables in W&B~~
 - [Profile training, try to speed it up](https://pytorch.org/tutorials/beginner/profiler.html)
 - Optimize for model performance
+  - Correct for class imbalance
   - Data Augmentation (rotations, concatenations)
   - Implement ["Bag of Freebies"](https://arxiv.org/pdf/1902.04103.pdf)
-  - Correct for class imbalance
   - Measure how Sx/Sy vs. output image size affects performance
   - Sweeps for LR / BS /
 
