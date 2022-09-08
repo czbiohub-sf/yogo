@@ -11,7 +11,7 @@ from torch.optim import AdamW
 from model import YOGO
 from argparser import parse
 from yogo_loss import YOGOLoss
-from utils import draw_rects, Metrics, format_for_mAP
+from utils import draw_rects, Metrics
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
