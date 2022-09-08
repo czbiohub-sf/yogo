@@ -46,19 +46,15 @@ def train(
     anchor_w,
     anchor_h,
     img_size,
+    class_names,
 ):
     net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
-    metrics = Metrics(num_classes=4, device=dev)
+    metrics = Metrics(num_classes=4, device=dev, class_names=class_names)
 
     Sx, Sy = net.get_grid_size(img_size)
-    wandb.config.update(
-        {
-            "Sx": Sx,
-            "Sy": Sy,
-        }
-    )
+    wandb.config.update({"Sx": Sx, "Sy": Sy})
 
     if wandb.run.name is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
@@ -103,13 +99,28 @@ def train(
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
-        mAP, confusion = metrics.compute()
+
+        mAP, confusion_data = metrics.compute()
+        metrics.reset()
+
         wandb.log(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
                 "val mAP": mAP,
-                "val confusion": confusion,
+                "val confusion": wandb.plot_table(
+                    "wandb/confusion_matrix/v1",
+                    wandb.Table(
+                        columns=["Actual", "Predicted", "nPredictions"],
+                        data=confusion_data,
+                    ),
+                    {
+                        "Actual": "Actual",
+                        "Predicted": "Predicted",
+                        "nPredictions": "nPredictions",
+                    },
+                    {"title": "validation confusion matrix"},
+                ),
             },
         )
 
@@ -135,12 +146,25 @@ def train(
 
         metrics.update(outputs, YOGOLoss.format_labels(outputs, labels, device=device))
 
-    mAP, confusion = metrics.compute()
+    mAP, confusion_data = metrics.compute()
+    metrics.reset()
     wandb.log(
         {
             "test loss": test_loss / len(test_dataloader),
             "test mAP": mAP,
-            "test confusion": confusion,
+            "test confusion": wandb.plot_table(
+                "wandb/confusion_matrix/v1",
+                wandb.Table(
+                    columns=["Actual", "Predicted", "nPredictions"],
+                    data=confusion_data,
+                ),
+                {
+                    "Actual": "Actual",
+                    "Predicted": "Predicted",
+                    "nPredictions": "nPredictions",
+                },
+                {"title": "test confusion matrix"},
+            ),
         },
     )
     torch.save(
@@ -163,7 +187,9 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    _, dataset_paths, __ = load_dataset_description(args.dataset_descriptor_file)
+    class_names, dataset_paths, _ = load_dataset_description(
+        args.dataset_descriptor_file
+    )
     label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
         get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
@@ -214,4 +240,5 @@ if __name__ == "__main__":
         anchor_w,
         anchor_h,
         resize_target_size,
+        class_names,
     )

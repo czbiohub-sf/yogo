@@ -15,78 +15,116 @@ from typing import Tuple, List, Dict
 
 
 class Metrics:
-    def __init__(self, num_classes=4, device="cpu"):
+    def __init__(self, num_classes=4, device="cpu", class_names=None):
         self.mAP = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
         self.confusion = ConfusionMatrix(num_classes=num_classes)
-
         self.confusion.to(device)
 
-    def update(self, preds, targets):
+        self.class_names = (
+            list(range(num_classes)) if class_names is None else class_names
+        )
+
+    def update(self, preds, labels, raw_preds=True):
         bs, pred_shape, Sy, Sx = preds.shape
-        bs, label_shape, Sy, Sx = targets.shape
+        bs, label_shape, Sy, Sx = labels.shape
 
-        mAP_preds, mAP_targets = format_for_mAP(preds, targets)
-        confusion_preds = (
-            preds.permute(1, 0, 2, 3).reshape(pred_shape, bs * Sx * Sy)[5:, :].T
-        )
-        confusion_targets = (
-            targets.permute(1, 0, 2, 3).reshape(label_shape, bs * Sx * Sy)[5, :].long()
+        mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
+
+        confusion_preds, confusion_labels = self.format_for_confusion(
+            preds, labels, raw_preds=raw_preds
         )
 
-        self.mAP.update(mAP_preds, mAP_targets)
-        self.confusion.update(confusion_preds, confusion_targets)
+        self.mAP.update(mAP_preds, mAP_labels)
+        self.confusion.update(confusion_preds, confusion_labels)
 
     def compute(self):
-        return (self.mAP.compute(), self.confusion.compute())
+        confusion_mat = self.confusion.compute()
 
+        nc1, nc2 = confusion_mat.shape
+        assert nc1 == nc2
 
-def format_for_mAP(
-    batch_preds, batch_labels
-) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
-    bs, label_shape, Sy, Sx = batch_labels.shape
-    bs, pred_shape, Sy, Sx = batch_preds.shape
+        L = []
+        for i in range(nc1):
+            for j in range(nc2):
+                L.append(
+                    (self.class_names[i], self.class_names[j], confusion_mat[i, j])
+                )
 
-    device = batch_preds.device
-    preds, labels = [], []
-    for b, (img_preds, img_labels) in enumerate(zip(batch_preds, batch_labels)):
-        if torch.all(img_labels[0, ...] == 0).item():
-            # mask says there are no labels!
-            labels.append(
-                {
-                    "boxes": torch.tensor([], device=device),
-                    "labels": torch.tensor([], device=device),
-                }
-            )
-            preds.append(
-                {
-                    "boxes": torch.tensor([], device=device),
-                    "labels": torch.tensor([], device=device),
-                    "scores": torch.tensor([], device=device),
-                }
-            )
-        else:
-            # view -> T keeps tensor as a view, and no copies?
-            row_ordered_img_preds = img_preds.view(-1, Sy * Sx).T
-            row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
+        return self.mAP.compute(), L
 
-            # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
-            mask = row_ordered_img_labels[..., 0] == 1
+    def reset(self):
+        self.mAP.reset()
+        self.confusion.reset()
 
-            labels.append(
-                {
-                    "boxes": row_ordered_img_labels[mask, 1:5],
-                    "labels": row_ordered_img_labels[mask, 5],
-                }
-            )
-            preds.append(
-                {
-                    "boxes": row_ordered_img_preds[mask, :4],
-                    "scores": row_ordered_img_preds[mask, 4],
-                    "labels": torch.argmax(row_ordered_img_preds[mask, 5:], dim=1),
-                }
-            )
+    @staticmethod
+    def format_for_confusion(
+        batch_preds, batch_labels, raw_preds=True
+    ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
+        bs, pred_shape, Sy, Sx = batch_preds.shape
+        bs, label_shape, Sy, Sx = batch_labels.shape
 
-    return preds, labels
+        if raw_preds:
+            batch_preds[:, 5:, :, :] = torch.softmax(batch_preds[:, 5:, :, :], dim=1)
+
+        confusion_batch_preds = (
+            batch_preds.permute(1, 0, 2, 3)[5:, ...].reshape(-1, bs * Sx * Sy).T
+        )
+        confusion_labels = (
+            batch_labels.permute(1, 0, 2, 3)[5, :, :, :]
+            .reshape(1, bs * Sx * Sy)
+            .permute(1, 0)
+            .long()
+        )
+        return confusion_batch_preds, confusion_labels
+
+    @staticmethod
+    def format_for_mAP(
+        batch_preds, batch_labels
+    ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
+        bs, label_shape, Sy, Sx = batch_labels.shape
+        bs, pred_shape, Sy, Sx = batch_preds.shape
+
+        device = batch_preds.device
+        preds, labels = [], []
+        for b, (img_preds, img_labels) in enumerate(zip(batch_preds, batch_labels)):
+            if torch.all(img_labels[0, ...] == 0).item():
+                # mask says there are no labels!
+                labels.append(
+                    {
+                        "boxes": torch.tensor([], device=device),
+                        "labels": torch.tensor([], device=device),
+                    }
+                )
+                preds.append(
+                    {
+                        "boxes": torch.tensor([], device=device),
+                        "labels": torch.tensor([], device=device),
+                        "scores": torch.tensor([], device=device),
+                    }
+                )
+            else:
+                # view -> T keeps tensor as a view, and no copies?
+                row_ordered_img_preds = img_preds.view(-1, Sy * Sx).T
+                row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
+
+                # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
+                mask = row_ordered_img_labels[..., 0] == 1
+
+                labels.append(
+                    {
+                        "boxes": row_ordered_img_labels[mask, 1:5],
+                        "labels": row_ordered_img_labels[mask, 5],
+                    }
+                )
+                preds.append(
+                    {
+                        "boxes": row_ordered_img_preds[mask, :4],
+                        "scores": row_ordered_img_preds[mask, 4],
+                        "labels": torch.argmax(row_ordered_img_preds[mask, 5:], dim=1),
+                    }
+                )
+
+        return preds, labels
 
 
 def draw_rects(
