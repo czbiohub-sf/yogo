@@ -162,8 +162,8 @@ def get_bounding_boxes(bb_dir: str, center_box=False) -> Union[CenterBox, Corner
     for fname in glob.glob(f"{bb_dir}/*.csv"):
         with open(fname, "r") as f:
             for line in f:
-                vs = np.array([float(v) for v in line.split(",")])
-                bbs.append(conv_func(vs[1:]))
+                vs = np.array([float(v) for v in line.split(",")[1:]])
+                bbs.append(conv_func(vs))
     return np.array(bbs)
 
 

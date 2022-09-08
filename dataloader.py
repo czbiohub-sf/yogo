@@ -155,7 +155,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     assert (
                         len(row) == 5
                     ), "should have [class,xc,yc,w,h] - got length {len(row)}"
-                    labels.append([float(v) for v in row])
+                    label_idx = self.classes.index(row[0])
+                    labels.append([float(label_idx)] + [float(v) for v in row[1:]])
         except FileNotFoundError:
             pass
 

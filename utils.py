@@ -179,9 +179,7 @@ def tupleize(v: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
     return v
 
 
-def convolution_output_shape(
-    H_in, W_in, kernel_size, padding=0, stride=1, dilation=1
-):
+def convolution_output_shape(H_in, W_in, kernel_size, padding=0, stride=1, dilation=1):
     """
     simple calculator for output shape given input shape and conv2d params
     works for maxpool2d too
@@ -205,7 +203,7 @@ def convolution_output_shape(
 
 
 if __name__ == "__main__":
-    x = 300,300
+    x = 300, 300
 
     # backbone
     x = convolution_output_shape(*x, 3, padding=1)  # conv1
@@ -229,7 +227,10 @@ if __name__ == "__main__":
 
     # head
     x = convolution_output_shape(*x, 3, padding=1)  # conv1
-    x = convolution_output_shape(*x, 3, )  # conv1
+    x = convolution_output_shape(
+        *x,
+        3,
+    )  # conv1
     print("block 6 done")
 
     print(x)

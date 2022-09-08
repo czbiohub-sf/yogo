@@ -65,9 +65,7 @@ class YOGO(nn.Module):
         conv_block_4 = nn.Sequential(
             nn.Conv2d(64, 128, 3, padding=1),
         )
-        return nn.Sequential(
-            conv_block_1, conv_block_2, conv_block_3, conv_block_4
-        )
+        return nn.Sequential(conv_block_1, conv_block_2, conv_block_3, conv_block_4)
 
     def gen_head(self, num_channels: int, num_classes: int) -> nn.Module:
         conv_block_1 = nn.Sequential(
@@ -123,7 +121,7 @@ class YOGO(nn.Module):
 if __name__ == "__main__":
     import time
 
-    img_size = (300,400)
+    img_size = (300, 400)
     Y = YOGO(img_size, 0.0455, 0.059)
     Y.eval()
 
