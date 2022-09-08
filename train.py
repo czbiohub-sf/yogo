@@ -50,15 +50,15 @@ def train(
     anchor_w,
     anchor_h,
     img_size,
-    class_names
+    class_names,
 ):
     net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
-    metrics = Metrics(num_classes=4, device=dev)
+    metrics = Metrics(num_classes=4, device=dev, class_names=class_names)
 
     Sx, Sy = net.get_grid_size(img_size)
-    wandb.config.update({"Sx": Sx, "Sy": Sy,})
+    wandb.config.update({"Sx": Sx, "Sy": Sy})
 
     if wandb.run.name is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
@@ -96,21 +96,33 @@ def train(
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            metrics.update(outputs, YOGOLoss.format_label_batch(outputs, labels, device=device))
+            metrics.update(
+                outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
+            )
 
         # just use final batch from validate_dataloader for now!
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
-        mAP, (confusion_preds, confusion_labels) = metrics.compute()
+        mAP, confusion_data = metrics.compute()
         wandb.log(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
                 "val mAP": mAP,
-                "val confusion": wandb.plot.confusion_matrix(
-                    probs=confusion_labels, y_true=confusion_labels[:, 0], class_names=class_names
-                )
+                "val confusion": wandb.plot_table(
+                    "absolute confusion table",
+                    wandb.Table(
+                        columns=["actual", "predicted", "num predictions"],
+                        data=confusion_data,
+                    ),
+                    {
+                        "Actual": "Actual",
+                        "Predicted": "Predicted",
+                        "nPredictions": "nPredictions",
+                    },
+                    {"title": "validation confusion matrix"},
+                ),
             },
         )
 
@@ -134,7 +146,9 @@ def train(
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        metrics.update(outputs, YOGOLoss.format_label_batch(outputs, labels, device=device))
+        metrics.update(
+            outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
+        )
 
     mAP, confusion = metrics.compute()
     wandb.log(
@@ -164,7 +178,9 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    class_names, dataset_paths, _ = load_dataset_description(args.dataset_descriptor_file)
+    class_names, dataset_paths, _ = load_dataset_description(
+        args.dataset_descriptor_file
+    )
     label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
         get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
@@ -211,5 +227,5 @@ if __name__ == "__main__":
         anchor_w,
         anchor_h,
         resize_target_size,
-        class_names
+        class_names,
     )
