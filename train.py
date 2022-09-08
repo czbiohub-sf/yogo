@@ -227,7 +227,7 @@ if __name__ == "__main__":
             "run group": args.group,
         },
         notes=args.note,
-        tags=["initial-testing"],
+        tags=["v0.0.1"],
     )
 
     train(
