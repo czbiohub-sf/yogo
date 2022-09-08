@@ -105,21 +105,23 @@ def train(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
         mAP, confusion_data = metrics.compute()
+        metrics.reset()
+
         wandb.log(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
                 "val mAP": mAP,
                 "val confusion": wandb.plot_table(
-                    "absolute confusion table",
+                    "wandb/confusion_matrix/v1",
                     wandb.Table(
                         columns=["actual", "predicted", "num predictions"],
                         data=confusion_data,
                     ),
                     {
-                        "Actual": "Actual",
-                        "Predicted": "Predicted",
-                        "nPredictions": "nPredictions",
+                        "actual": "actual",
+                        "predicted": "predicted",
+                        "num predictions": "num predictions",
                     },
                     {"title": "validation confusion matrix"},
                 ),
@@ -150,12 +152,25 @@ def train(
             outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
         )
 
-    mAP, confusion = metrics.compute()
+    mAP, confusion_data = metrics.compute()
+    metrics.reset()
     wandb.log(
         {
             "test loss": test_loss / len(test_dataloader),
             "test mAP": mAP,
-            "test confusion": confusion,
+            "test confusion": wandb.plot_table(
+                "wandb/confusion_matrix/v1",
+                wandb.Table(
+                    columns=["actual", "predicted", "num predictions"],
+                    data=confusion_data,
+                ),
+                {
+                    "actual": "actual",
+                    "predicted": "predicted",
+                    "num predictions": "num predictions",
+                },
+                {"title": "test confusion matrix"},
+            ),
         },
     )
     torch.save(
