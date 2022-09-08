@@ -37,10 +37,6 @@ BATCH_SIZE = 16
 # measure forward / backward pass timing w/
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
-# TODO test! seems like potentially large improvement on the table
-# https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
-torch.backends.cuda.matmul.allow_tf32 = True
-
 
 def train(
     dev,
@@ -168,6 +164,9 @@ if __name__ == "__main__":
 
     # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
     torch.backends.cudnn.benchmark = True
+    # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
+    torch.backends.cuda.matmul.allow_tf32 = True
+
 
     # TODO: EPOCH and BATCH_SIZE and img_size in yml file?
     resize_target_size = (300, 400)
