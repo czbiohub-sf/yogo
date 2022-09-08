@@ -18,6 +18,7 @@ from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 from pathlib import Path
 from copy import deepcopy
 from typing import List
+from tqdm import tqdm
 
 WARMUP = 100
 ADAM_LR = 3e-4
@@ -58,11 +59,12 @@ def profile_run(
 
     Sx, Sy = net.get_grid_size(img_size)
 
+    """
     print("warming up")
     for epoch in range(WARMUP):
         outputs = net(torch.randn(1, 1, *img_size, device=dev))
-
     net.zero_grad()
+    """
 
     print("here we goooooo!")
     with profile(
@@ -70,7 +72,7 @@ def profile_run(
         with_stack=True,
         profile_memory=True,
     ) as prof:
-        for imgs, labels in train_dataloader:
+        for imgs, labels in tqdm(train_dataloader):
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
@@ -82,6 +84,7 @@ def profile_run(
                 outputs, MockedLoss.format_labels(outputs, labels, device=device)
             )
 
+        metrics.compute()
         return prof
 
 
@@ -138,11 +141,6 @@ if __name__ == "__main__":
     print(
         prof.key_averages(group_by_stack_n=5).table(
             sort_by="cuda_time_total", row_limit=10
-        )
-    )
-    print(
-        prof.key_averages(group_by_stack_n=5).table(
-            sort_by="self_cuda_time_total", row_limit=4
         )
     )
     prof.export_chrome_trace("chrome_profile.json")
