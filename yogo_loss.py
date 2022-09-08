@@ -60,9 +60,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
 
-        label_tensor = self.format_label_batch(
-            pred_batch, label_batch, device=self.device
-        )
+        label_tensor = self.format_labels(pred_batch, label_batch, device=self.device)
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -113,7 +111,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         return loss / batch_size
 
     @classmethod
-    def format_label_batch(
+    def format_labels(
         cls,
         pred_batch: torch.Tensor,
         label_batch: List[torch.Tensor],

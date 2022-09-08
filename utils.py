@@ -1,21 +1,50 @@
 #! /usr/bin/env python3
 
+import math
+
 import torch
 import torchvision.transforms as T
 
 from PIL import Image, ImageDraw
 from typing import Optional, Union, List
 
+from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from typing import Tuple, List, Dict
 
 
+class Metrics:
+    def __init__(self, num_classes=4, device="cpu"):
+        self.mAP = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
+        self.confusion = ConfusionMatrix(num_classes=num_classes)
+
+        self.confusion.to(device)
+
+    def update(self, preds, targets):
+        bs, pred_shape, Sy, Sx = preds.shape
+        bs, label_shape, Sy, Sx = targets.shape
+
+        mAP_preds, mAP_targets = format_for_mAP(preds, targets)
+        confusion_preds = (
+            preds.permute(1, 0, 2, 3).reshape(pred_shape, bs * Sx * Sy)[5:, :].T
+        )
+        confusion_targets = (
+            targets.permute(1, 0, 2, 3).reshape(label_shape, bs * Sx * Sy)[5, :].long()
+        )
+
+        self.mAP.update(mAP_preds, mAP_targets)
+        self.confusion.update(confusion_preds, confusion_targets)
+
+    def compute(self):
+        return (self.mAP.compute(), self.confusion.compute())
+
+
 def format_for_mAP(
     batch_preds, batch_labels
 ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
-    batch_size, label_shape, Sy, Sx = batch_labels.shape
-    bs1, pred_shape, Syy, Sxx = batch_preds.shape
+    bs, label_shape, Sy, Sx = batch_labels.shape
+    bs, pred_shape, Sy, Sx = batch_preds.shape
 
     device = batch_preds.device
     preds, labels = [], []
@@ -58,15 +87,6 @@ def format_for_mAP(
             )
 
     return preds, labels
-
-
-def batch_mAP(batch_preds, batch_labels):
-    formatted_batch_preds, formatted_batch_labels = format_for_mAP(
-        batch_preds, batch_labels
-    )
-    metric = MeanAveragePrecision(box_format="cxcywh")
-    metric.update(formatted_batch_preds, formatted_batch_labels)
-    return metric.compute()
 
 
 def draw_rects(
@@ -113,3 +133,65 @@ def draw_rects(
         draw.rectangle(r, outline="red")
 
     return rgb
+
+
+def tupleize(v: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
+    if isinstance(v, int):
+        return (v, v)
+    return v
+
+
+def convolution_output_shape(
+    H_in, W_in, kernel_size, padding=0, stride=1, dilation=1
+):
+    """
+    simple calculator for output shape given input shape and conv2d params
+    works for maxpool2d too
+
+    https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+    """
+    kernel_size = tupleize(kernel_size)
+    padding = tupleize(padding)
+    stride = tupleize(stride)
+    dilation = tupleize(dilation)
+
+    H_out = math.floor(
+        1 + (H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]
+    )
+    W_out = math.floor(
+        1 + (W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1]
+    )
+
+    print(H_out, W_out)
+    return H_out, W_out
+
+
+if __name__ == "__main__":
+    x = 300,300
+
+    # backbone
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 1 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 2 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 3 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 4 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    print("block 5 done")
+
+    # head
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 3, )  # conv1
+    print("block 6 done")
+
+    print(x)

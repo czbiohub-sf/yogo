@@ -13,12 +13,7 @@ class YOGO(nn.Module):
         - grayscale
     """
 
-    def __init__(
-        self,
-        img_size,
-        anchor_w,
-        anchor_h,
-    ):
+    def __init__(self, img_size, anchor_w, anchor_h, inference=False):
         super().__init__()
         self.device = "cpu"
 
@@ -28,6 +23,8 @@ class YOGO(nn.Module):
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
+
+        self.inference = inference
 
         self.Cxs = None
         self.Cys = None
@@ -98,10 +95,10 @@ class YOGO(nn.Module):
                 .to(self.device)
             )
 
-        if self.training:
-            classification = x[:, 5:, :, :]
-        else:
+        if self.inference:
             classification = torch.softmax(x[:, 5:, :, :], dim=1)
+        else:
+            classification = x[:, 5:, :, :]
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         # Order of meanings:
@@ -112,11 +109,11 @@ class YOGO(nn.Module):
         #  'objectness' score
         return torch.cat(
             (
-                ((1 / Sx) * torch.sigmoid(x[:, 0, :, :]) + self.Cxs)[:, None, :, :],
-                ((1 / Sy) * torch.sigmoid(x[:, 1, :, :]) + self.Cys)[:, None, :, :],
-                (self.anchor_w * torch.exp(x[:, 2, :, :]))[:, None, :, :],
-                (self.anchor_h * torch.exp(x[:, 3, :, :]))[:, None, :, :],
-                (torch.sigmoid(x[:, 4, :, :]))[:, None, :, :],
+                ((1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self.Cxs),
+                ((1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self.Cys),
+                (self.anchor_w * torch.exp(x[:, 2:3, :, :])),
+                (self.anchor_h * torch.exp(x[:, 3:4, :, :])),
+                (torch.sigmoid(x[:, 4:5, :, :])),
                 *torch.split(classification, 1, dim=1),
             ),
             dim=1,
@@ -126,7 +123,8 @@ class YOGO(nn.Module):
 if __name__ == "__main__":
     import time
 
-    Y = YOGO(0.0455, 0.059)
+    img_size = (300,400)
+    Y = YOGO(img_size, 0.0455, 0.059)
     Y.eval()
 
     x = torch.randn(3, 1, 416, 416)
@@ -138,7 +136,5 @@ if __name__ == "__main__":
     t1 = time.perf_counter()
 
     print((t1 - t0) / N)
-    print(Y(x).shape, Y(x)[0, :, 0, 0])
-
-    for k, v in Y.state_dict().items():
-        print(k)
+    print(img_size, "->", Y(x).shape, Y(x)[0, :, 0, 0])
+    print(Y.modules)
