@@ -76,15 +76,22 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 `class_index` is the 0-index of the class from the `class_names` field of `description.yaml`. `x_center` and `width` are normalized to the width of the image, and `y_center` and `height` are normalized to the height of the image.
 
 
+### TODOs
+
+- Visualize Confusion Tables in W&B
+- [Profile training, try to speed it up](https://pytorch.org/tutorials/beginner/profiler.html)
+- Optimize for model performance
+  - Implement ["Bag of Freebies"](https://arxiv.org/pdf/1902.04103.pdf)
+  - Correct for class imbalance
+  - Measure how Sx/Sy vs. output image size affects performance
+  - Sweeps for LR / BS /
+
 ### Ideas
 
-- Make Sx / Sy tunable!
 - How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
-- figure out PyTorch sync points
-- bag of freebies
 - turn `if __name__ ==  __main__` sanity checks into tests
 - [conv net ordering of batchnorms, dropouts, maxpools, e.t.c.](https://stackoverflow.com/questions/59634780/correct-order-for-spatialdropout2d-batchnormalization-and-activation-function)
- 
+
 ### Weird observations
 
 - Using the M1 chip's MPS accelerator seems to either
