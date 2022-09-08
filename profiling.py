@@ -60,7 +60,7 @@ def profile_run(
 
     print("warming up")
     for epoch in range(WARMUP):
-        outputs = net(torch.randn(1, 1, *img_size))
+        outputs = net(torch.randn(1, 1, *img_size, device=dev))
 
     net.zero_grad()
 
