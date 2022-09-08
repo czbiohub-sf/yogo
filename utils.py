@@ -50,6 +50,10 @@ class Metrics:
 
         return self.mAP.compute(), L
 
+    def reset(self):
+        self.mAP.reset()
+        self.confusion.reset()
+
     @staticmethod
     def format_for_confusion(
         batch_preds, batch_labels, raw_preds=True

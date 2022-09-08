@@ -115,13 +115,13 @@ def train(
                 "val confusion": wandb.plot_table(
                     "wandb/confusion_matrix/v1",
                     wandb.Table(
-                        columns=["actual", "predicted", "num predictions"],
+                        columns=["Actual", "Predicted", "nPredictions"],
                         data=confusion_data,
                     ),
                     {
-                        "actual": "actual",
-                        "predicted": "predicted",
-                        "num predictions": "num predictions",
+                        "Actual": "Actual",
+                        "Predicted": "Predicted",
+                        "nPredictions": "nPredictions",
                     },
                     {"title": "validation confusion matrix"},
                 ),
@@ -161,13 +161,13 @@ def train(
             "test confusion": wandb.plot_table(
                 "wandb/confusion_matrix/v1",
                 wandb.Table(
-                    columns=["actual", "predicted", "num predictions"],
+                    columns=["Actual", "Predicted", "nPredictions"],
                     data=confusion_data,
                 ),
                 {
-                    "actual": "actual",
-                    "predicted": "predicted",
-                    "num predictions": "num predictions",
+                    "Actual": "Actual",
+                    "Predicted": "Predicted",
+                    "nPredictions": "nPredictions",
                 },
                 {"title": "test confusion matrix"},
             ),
