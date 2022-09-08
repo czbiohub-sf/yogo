@@ -105,7 +105,7 @@ def train(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
-                "val mAP": mAP["mAP"],
+                "val mAP": mAP["map"],
                 "val confusion": wandb.plot_table(
                     "wandb/confusion_matrix/v1",
                     wandb.Table(
@@ -149,7 +149,7 @@ def train(
     wandb.log(
         {
             "test loss": test_loss / len(test_dataloader),
-            "test mAP": mAP["mAP"],
+            "test mAP": mAP["map"],
             "test confusion": wandb.plot_table(
                 "wandb/confusion_matrix/v1",
                 wandb.Table(
