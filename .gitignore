@@ -9,3 +9,6 @@ slurm*
 
 *.bin
 *.xml
+
+chrome_profile.json
+profile.txt
