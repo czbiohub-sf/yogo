@@ -18,7 +18,7 @@ class YOGO(nn.Module):
         self.device = "cpu"
 
         self.backbone = self.gen_backbone()
-        self.head = self.gen_head(num_channels=256, num_classes=4)
+        self.head = self.gen_head(num_channels=128, num_classes=4)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
@@ -60,19 +60,13 @@ class YOGO(nn.Module):
             nn.Conv2d(32, 64, 3, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
+            nn.MaxPool2d(2, stride=4),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
-        )
-        conv_block_5 = nn.Sequential(
-            nn.Conv2d(128, 256, 3, padding=1),
+            nn.Conv2d(64, 128, 3, padding=1),
         )
         return nn.Sequential(
-            conv_block_1, conv_block_2, conv_block_3, conv_block_4, conv_block_5
+            conv_block_1, conv_block_2, conv_block_3, conv_block_4
         )
 
     def gen_head(self, num_channels: int, num_classes: int) -> nn.Module:
