@@ -22,14 +22,14 @@ from copy import deepcopy
 from typing import List
 
 
-EPOCHS = 64
+EPOCHS = 96
 ADAM_LR = 3e-4
 BATCH_SIZE = 16
 
-# TODO find sync points - wandb may be it, unfortunately :(
+# TODO find sync points
 # https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
 # this will error out if a synchronizing operation occurs
-#
+
 # TUNING GUIDE - goes over this
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
 
@@ -97,12 +97,10 @@ def train(
 
             metrics.update(outputs, YOGOLoss.format_label_batch(outputs, labels, device=device))
 
-        # just use final batch from validate_dataloader for now!
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
         mAP, confusion = metrics.compute()
-        print('safe')
         wandb.log(
             {
                 "validation bbs": annotated_img,
@@ -171,7 +169,7 @@ if __name__ == "__main__":
     # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
     torch.backends.cudnn.benchmark = True
 
-    # TODO: BATCH_SIZE and img_size in yml file?
+    # TODO: EPOCH and BATCH_SIZE and img_size in yml file?
     resize_target_size = (300, 400)
     dataloaders = get_dataloader(
         args.dataset_descriptor_file,
