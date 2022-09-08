@@ -129,7 +129,8 @@ class YOGO(nn.Module):
 if __name__ == "__main__":
     import time
 
-    Y = YOGO(0.0455, 0.059)
+    img_size = (300,400)
+    Y = YOGO(img_size, 0.0455, 0.059)
     Y.eval()
 
     x = torch.randn(3, 1, 416, 416)
@@ -141,7 +142,7 @@ if __name__ == "__main__":
     t1 = time.perf_counter()
 
     print((t1 - t0) / N)
-    print(Y(x).shape, Y(x)[0, :, 0, 0])
+    print(img_size, "->", Y(x).shape, Y(x)[0, :, 0, 0])
 
     for k, v in Y.state_dict().items():
         print(k)
