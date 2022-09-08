@@ -115,11 +115,11 @@ class YOGO(nn.Module):
         #  'objectness' score
         return torch.cat(
             (
-                ((1 / Sx) * torch.sigmoid(x[:, 0, :, :]) + self.Cxs)[:, None, :, :],
-                ((1 / Sy) * torch.sigmoid(x[:, 1, :, :]) + self.Cys)[:, None, :, :],
-                (self.anchor_w * torch.exp(x[:, 2, :, :]))[:, None, :, :],
-                (self.anchor_h * torch.exp(x[:, 3, :, :]))[:, None, :, :],
-                (torch.sigmoid(x[:, 4, :, :]))[:, None, :, :],
+                ((1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self.Cxs),
+                ((1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self.Cys),
+                (self.anchor_w * torch.exp(x[:, 2:3, :, :])),
+                (self.anchor_h * torch.exp(x[:, 3:4, :, :])),
+                (torch.sigmoid(x[:, 4:5, :, :])),
                 *torch.split(classification, 1, dim=1),
             ),
             dim=1,

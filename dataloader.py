@@ -266,7 +266,6 @@ def get_dataloader(
             collate_fn=partial(collate_batch, device=device),
             shuffle=True,
             drop_last=True,
-            num_workers=4  # can change
         )
         for designation, dataset in split_datasets.items()
     }
