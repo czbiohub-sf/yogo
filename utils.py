@@ -12,9 +12,8 @@ from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from typing import Tuple, List, Dict
 
 
-
 class Metrics:
-    def __init__(self, num_classes=4, device='cpu'):
+    def __init__(self, num_classes=4, device="cpu"):
         self.mAP = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
         self.confusion = ConfusionMatrix(num_classes=num_classes)
 
@@ -25,17 +24,18 @@ class Metrics:
         bs, label_shape, Sy, Sx = targets.shape
 
         mAP_preds, mAP_targets = format_for_mAP(preds, targets)
-        confusion_preds = preds.permute(1,0,2,3).reshape(pred_shape, bs * Sx * Sy)[5:, :].T
-        confusion_targets = targets.permute(1,0,2,3).reshape(label_shape, bs*Sx*Sy)[5, :].long()
+        confusion_preds = (
+            preds.permute(1, 0, 2, 3).reshape(pred_shape, bs * Sx * Sy)[5:, :].T
+        )
+        confusion_targets = (
+            targets.permute(1, 0, 2, 3).reshape(label_shape, bs * Sx * Sy)[5, :].long()
+        )
 
         self.mAP.update(mAP_preds, mAP_targets)
         self.confusion.update(confusion_preds, confusion_targets)
 
     def compute(self):
-        return (
-            self.mAP.compute(),
-            self.confusion.compute()
-        )
+        return (self.mAP.compute(), self.confusion.compute())
 
 
 def format_for_mAP(

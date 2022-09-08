@@ -53,7 +53,12 @@ def train(
     metrics = Metrics(num_classes=4, device=dev)
 
     Sx, Sy = net.get_grid_size(img_size)
-    wandb.config.update({"Sx": Sx, "Sy": Sy,})
+    wandb.config.update(
+        {
+            "Sx": Sx,
+            "Sy": Sy,
+        }
+    )
 
     if wandb.run.name is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
@@ -91,7 +96,9 @@ def train(
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            metrics.update(outputs, YOGOLoss.format_label_batch(outputs, labels, device=device))
+            metrics.update(
+                outputs, YOGOLoss.format_labels(outputs, labels, device=device)
+            )
 
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
@@ -126,7 +133,7 @@ def train(
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        metrics.update(outputs, YOGOLoss.format_label_batch(outputs, labels, device=device))
+        metrics.update(outputs, YOGOLoss.format_labels(outputs, labels, device=device))
 
     mAP, confusion = metrics.compute()
     wandb.log(
@@ -166,7 +173,6 @@ if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
     # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
     torch.backends.cuda.matmul.allow_tf32 = True
-
 
     # TODO: EPOCH and BATCH_SIZE and img_size in yml file?
     resize_target_size = (300, 400)
