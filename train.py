@@ -22,24 +22,20 @@ from copy import deepcopy
 from typing import List
 
 
-EPOCHS = 64
+EPOCHS = 96
 ADAM_LR = 3e-4
 BATCH_SIZE = 16
 
-# TODO find sync points - wandb may be it, unfortunately :(
+# TODO find sync points
 # https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
 # this will error out if a synchronizing operation occurs
-#
+
 # TUNING GUIDE - goes over this
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
 
 # TODO
 # measure forward / backward pass timing w/
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
-
-# TODO test! seems like potentially large improvement on the table
-# https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
-torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def train(
@@ -97,13 +93,13 @@ def train(
                 val_loss += loss.item()
 
             metrics.update(
-                outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
+                outputs, YOGOLoss.format_labels(outputs, labels, device=device)
             )
 
-        # just use final batch from validate_dataloader for now!
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
+
         mAP, confusion_data = metrics.compute()
         metrics.reset()
 
@@ -148,9 +144,7 @@ def train(
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        metrics.update(
-            outputs, YOGOLoss.format_label_batch(outputs, labels, device=device)
-        )
+        metrics.update(outputs, YOGOLoss.format_labels(outputs, labels, device=device))
 
     mAP, confusion_data = metrics.compute()
     metrics.reset()
@@ -203,8 +197,10 @@ if __name__ == "__main__":
 
     # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
     torch.backends.cudnn.benchmark = True
+    # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
+    torch.backends.cuda.matmul.allow_tf32 = True
 
-    # TODO: BATCH_SIZE and img_size in yml file?
+    # TODO: EPOCH and BATCH_SIZE and img_size in yml file?
     resize_target_size = (300, 400)
     dataloaders = get_dataloader(
         args.dataset_descriptor_file,
@@ -223,7 +219,9 @@ if __name__ == "__main__":
             "learning rate": ADAM_LR,
             "epochs": EPOCHS,
             "batch size": BATCH_SIZE,
-            "training set size": len(train_dataloader),
+            "training set size": f"{len(train_dataloader) * BATCH_SIZE} images",
+            "validation set size": f"{len(validate_dataloader) * BATCH_SIZE} images",
+            "testing set size": f"{len(test_dataloader) * BATCH_SIZE} images",
             "device": str(device),
             "anchor w": anchor_w,
             "anchor h": anchor_h,

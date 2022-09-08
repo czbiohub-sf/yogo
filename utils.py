@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import math
+
 import torch
 import torchvision.transforms as T
 
@@ -169,3 +171,65 @@ def draw_rects(
         draw.rectangle(r, outline="red")
 
     return rgb
+
+
+def tupleize(v: Union[int, Tuple[int, int]]) -> Tuple[int, int]:
+    if isinstance(v, int):
+        return (v, v)
+    return v
+
+
+def convolution_output_shape(
+    H_in, W_in, kernel_size, padding=0, stride=1, dilation=1
+):
+    """
+    simple calculator for output shape given input shape and conv2d params
+    works for maxpool2d too
+
+    https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+    """
+    kernel_size = tupleize(kernel_size)
+    padding = tupleize(padding)
+    stride = tupleize(stride)
+    dilation = tupleize(dilation)
+
+    H_out = math.floor(
+        1 + (H_in + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0]
+    )
+    W_out = math.floor(
+        1 + (W_in + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1]
+    )
+
+    print(H_out, W_out)
+    return H_out, W_out
+
+
+if __name__ == "__main__":
+    x = 300,300
+
+    # backbone
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 1 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 2 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 3 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 2, stride=2)  # maxp1
+    print("block 4 done")
+
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    print("block 5 done")
+
+    # head
+    x = convolution_output_shape(*x, 3, padding=1)  # conv1
+    x = convolution_output_shape(*x, 3, )  # conv1
+    print("block 6 done")
+
+    print(x)

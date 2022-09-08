@@ -18,7 +18,7 @@ class YOGO(nn.Module):
         self.device = "cpu"
 
         self.backbone = self.gen_backbone()
-        self.head = self.gen_head(num_channels=256, num_classes=4)
+        self.head = self.gen_head(num_channels=128, num_classes=4)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
@@ -60,19 +60,13 @@ class YOGO(nn.Module):
             nn.Conv2d(32, 64, 3, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
+            nn.MaxPool2d(2, stride=4),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
-        )
-        conv_block_5 = nn.Sequential(
-            nn.Conv2d(128, 256, 3, padding=1),
+            nn.Conv2d(64, 128, 3, padding=1),
         )
         return nn.Sequential(
-            conv_block_1, conv_block_2, conv_block_3, conv_block_4, conv_block_5
+            conv_block_1, conv_block_2, conv_block_3, conv_block_4
         )
 
     def gen_head(self, num_channels: int, num_classes: int) -> nn.Module:
@@ -115,11 +109,11 @@ class YOGO(nn.Module):
         #  'objectness' score
         return torch.cat(
             (
-                ((1 / Sx) * torch.sigmoid(x[:, 0, :, :]) + self.Cxs)[:, None, :, :],
-                ((1 / Sy) * torch.sigmoid(x[:, 1, :, :]) + self.Cys)[:, None, :, :],
-                (self.anchor_w * torch.exp(x[:, 2, :, :]))[:, None, :, :],
-                (self.anchor_h * torch.exp(x[:, 3, :, :]))[:, None, :, :],
-                (torch.sigmoid(x[:, 4, :, :]))[:, None, :, :],
+                ((1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self.Cxs),
+                ((1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self.Cys),
+                (self.anchor_w * torch.exp(x[:, 2:3, :, :])),
+                (self.anchor_h * torch.exp(x[:, 3:4, :, :])),
+                (torch.sigmoid(x[:, 4:5, :, :])),
                 *torch.split(classification, 1, dim=1),
             ),
             dim=1,
@@ -129,7 +123,8 @@ class YOGO(nn.Module):
 if __name__ == "__main__":
     import time
 
-    Y = YOGO(0.0455, 0.059)
+    img_size = (300,400)
+    Y = YOGO(img_size, 0.0455, 0.059)
     Y.eval()
 
     x = torch.randn(3, 1, 416, 416)
@@ -141,7 +136,5 @@ if __name__ == "__main__":
     t1 = time.perf_counter()
 
     print((t1 - t0) / N)
-    print(Y(x).shape, Y(x)[0, :, 0, 0])
-
-    for k, v in Y.state_dict().items():
-        print(k)
+    print(img_size, "->", Y(x).shape, Y(x)[0, :, 0, 0])
+    print(Y.modules)

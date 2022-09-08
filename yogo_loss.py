@@ -31,7 +31,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
-        self.cel = torch.nn.CrossEntropyLoss()
+        self.cel = torch.nn.CrossEntropyLoss(reduction="none")
         self.device = "cpu"
 
     def to(self, device):
@@ -60,9 +60,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
 
-        label_tensor = self.format_label_batch(
-            pred_batch, label_batch, device=self.device
-        )
+        label_tensor = self.format_labels(pred_batch, label_batch, device=self.device)
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -113,7 +111,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         return loss / batch_size
 
     @classmethod
-    def format_label_batch(
+    def format_labels(
         cls,
         pred_batch: torch.Tensor,
         label_batch: List[torch.Tensor],
@@ -159,7 +157,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 def split_labels_into_bins(
     labels: torch.Tensor, Sx, Sy
 ) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
-    d: Dict[Tuple[int, int], List[torch.Tensor]] = defaultdict(list)
+    # it is really a single-element long tensor
+    d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
     for label in labels:
         i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
         j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()

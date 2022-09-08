@@ -78,16 +78,23 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 
 ### TODOs
 
-- HEAVY data augmentation
-- How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
-- parameter sweeps?
-- figure out PyTorch sync points
-- BAG OF FREEBIESS
-- turn `if __name__ ==  __main__` sanity checks into tests
-- https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
+- Visualize Confusion Tables in W&B
+- [Profile training, try to speed it up](https://pytorch.org/tutorials/beginner/profiler.html)
+- Optimize for model performance
+  - Implement ["Bag of Freebies"](https://arxiv.org/pdf/1902.04103.pdf)
+  - Correct for class imbalance
+  - Measure how Sx/Sy vs. output image size affects performance
+  - Sweeps for LR / BS /
 
-### Miscelaneous Notes
+### Ideas
+
+- How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
+- turn `if __name__ ==  __main__` sanity checks into tests
+- [conv net ordering of batchnorms, dropouts, maxpools, e.t.c.](https://stackoverflow.com/questions/59634780/correct-order-for-spatialdropout2d-batchnormalization-and-activation-function)
+
+### Weird observations
 
 - Using the M1 chip's MPS accelerator seems to either
   - not converge, basically at all
   - error out with aa note requesting we report to PyTorch
+- Why does `dataloader.num_workers = 1` report nothing on W&B? Is it running?
