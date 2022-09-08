@@ -11,7 +11,7 @@ from torch.optim import AdamW
 from model import YOGO
 from argparser import parse
 from yogo_loss import YOGOLoss
-from utils import draw_rects, Metrics, format_for_mAP
+from utils import draw_rects, Metrics
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
@@ -50,6 +50,7 @@ def train(
     anchor_w,
     anchor_h,
     img_size,
+    class_names
 ):
     net = YOGO(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
     Y_loss = YOGOLoss().to(dev)
@@ -101,14 +102,15 @@ def train(
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
-        mAP, confusion = metrics.compute()
-        print('safe')
+        mAP, (confusion_preds, confusion_labels) = metrics.compute()
         wandb.log(
             {
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
                 "val mAP": mAP,
-                "val confusion": confusion,
+                "val confusion": wandb.plot.confusion_matrix(
+                    probs=confusion_labels, y_true=confusion_labels[:, 0], class_names=class_names
+                )
             },
         )
 
@@ -162,7 +164,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    _, dataset_paths, __ = load_dataset_description(args.dataset_descriptor_file)
+    class_names, dataset_paths, _ = load_dataset_description(args.dataset_descriptor_file)
     label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
         get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
@@ -209,4 +211,5 @@ if __name__ == "__main__":
         anchor_w,
         anchor_h,
         resize_target_size,
+        class_names
     )
