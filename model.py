@@ -49,12 +49,13 @@ class YOGO(nn.Module):
             nn.BatchNorm2d(16),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
+            nn.Dropout2d()
         )
         conv_block_2 = nn.Sequential(
             nn.Conv2d(16, 32, 3, padding=1, bias=False),
-            nn.BatchNorm2d(32),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
+            nn.Dropout2d()
         )
         conv_block_3 = nn.Sequential(
             nn.Conv2d(32, 64, 3, padding=1, bias=False),
