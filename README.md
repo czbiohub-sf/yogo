@@ -78,11 +78,10 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 
 ### TODOs
 
-- HEAVY data augmentation
+- Make Sx / Sy tunable!
 - How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
-- parameter sweeps?
 - figure out PyTorch sync points
-- BAG OF FREEBIESS
+- BAG OF FREEBIES
 - turn `if __name__ ==  __main__` sanity checks into tests
 - https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
 
