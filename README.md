@@ -16,6 +16,34 @@ A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com
 
 - Initial benchmark of this model was run at ~40 FPS on the Raspberry Pi 4 w/ NCS2
 
+## Training
+
+Train locally by running
+
+```python3
+python3 train.py <path to dataset_definition.yml> [opts]
+```
+for list of opts, run `python3 train.py --help`.
+
+To train on SLURM, run
+
+```console
+sbatch yogo_training.sh <path to dataset_definition.yml> [opts]
+```
+with the same options from `train.py`.
+
+To run a sweep on SLURM, first modify `sweep.yml` to fit your needs. Then, run
+
+```console
+wandb sweep sweep.yml
+```
+
+which should give you a sweep ID that looks like `bioengineering/yogo/foo`. Then start each sweep job by running
+
+```console
+sbatch sweep_launch.sh bioengineering/yogo/foo
+```
+
 ## Dataset definition
 
 To define the dataset, we use a `.yml` file.
