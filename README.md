@@ -79,11 +79,14 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 ### TODOs
 
 - ~~Visualize Confusion Tables in W&B~~
+- Get output format for scope!
 - [Profile training, try to speed it up](https://pytorch.org/tutorials/beginner/profiler.html)
 - Optimize for model performance
+  - Figure out best model structure
   - Correct for class imbalance
   - Data Augmentation (rotations, concatenations)
   - Implement ["Bag of Freebies"](https://arxiv.org/pdf/1902.04103.pdf)
+    - Not sure how much is actually applicable - added label smoothing
   - Measure how Sx/Sy vs. output image size affects performance
   - Sweeps for LR / BS /
 
