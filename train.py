@@ -55,7 +55,7 @@ def train(
         img_size=config["resize shape"], anchor_w=anchor_w, anchor_h=anchor_h
     ).to(dev)
     Y_loss = YOGOLoss().to(dev)
-    optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
+    optimizer = AdamW(net.parameters(), lr=config["learning rate"])
     metrics = Metrics(num_classes=4, device=dev, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
@@ -151,7 +151,7 @@ def train(
     )
 
 
-def init_dataset(config, dataset_descriptor_path):
+def init_dataset(config, dataset_descriptor_file):
     dataloaders = get_dataloader(
         dataset_descriptor_file,
         config["batch size"],
