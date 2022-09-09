@@ -66,7 +66,6 @@ def profile_run(
     net.zero_grad()
     """
 
-    print("here we goooooo!")
     with profile(
         activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
         with_stack=True,
@@ -133,14 +132,15 @@ if __name__ == "__main__":
         class_names,
     )
 
-    print(
-        prof.key_averages(group_by_stack_n=5).table(
-            sort_by="cpu_time_total", row_limit=10
+    with open("profile.txt", "w") as f:
+        f.write(
+            prof.key_averages(group_by_stack_n=5).table(
+                sort_by="cpu_time_total", row_limit=10
+            )
         )
-    )
-    print(
-        prof.key_averages(group_by_stack_n=5).table(
-            sort_by="cuda_time_total", row_limit=10
+        f.write(
+            prof.key_averages(group_by_stack_n=5).table(
+                sort_by="cuda_time_total", row_limit=10
+            )
         )
-    )
     prof.export_chrome_trace("chrome_profile.json")
