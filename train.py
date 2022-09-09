@@ -239,13 +239,4 @@ if __name__ == "__main__":
         tags=["v0.0.1"],
     )
 
-    if args.sweep_id is not None:
-        wandb.agent(
-            args.sweep_id,
-            function=train,
-            entity="bioengineering",
-            project="yogo",
-            count=1,
-        )
-    else:
-        train()
+    train()

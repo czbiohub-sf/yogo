@@ -27,10 +27,4 @@ def parse():
         nargs="?",
         help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
     )
-    parser.add_argument(
-        "--sweep-id",
-        type=str,
-        nargs="?",
-        help="set a sweep ID - if not doing a sweep, leave blank!",
-    )
     return parser.parse_args()
