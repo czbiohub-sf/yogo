@@ -20,7 +20,7 @@ A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com
 
 Train locally by running
 
-```python3
+```console
 python3 train.py <path to dataset_definition.yml> [opts]
 ```
 for list of opts, run `python3 train.py --help`.
