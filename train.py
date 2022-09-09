@@ -37,30 +37,30 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def train(
-    dev,
-    dataset_descriptor,
-    anchor_w,
-    anchor_h,
-    img_size,
-    class_names,
-):
+def train():
     config = wandb.config
+    device = config["device"]
+    anchor_w = config["anchor_w"]
+    anchor_h = config["anchor_h"]
+    class_names = config["class_names"]
 
-    train_dataloader, validate_dataloader, test_dataloader = init_dataset(
-        config, dataset_descriptor
-    )
+    (
+        model_save_dir,
+        train_dataloader,
+        validate_dataloader,
+        test_dataloader,
+    ) = init_dataset(config)
 
     net = YOGO(
-        img_size=config["resize shape"], anchor_w=anchor_w, anchor_h=anchor_h
-    ).to(dev)
-    Y_loss = YOGOLoss().to(dev)
-    optimizer = AdamW(net.parameters(), lr=config["learning rate"])
-    metrics = Metrics(num_classes=4, device=dev, class_names=class_names)
+        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h
+    ).to(device)
+    Y_loss = YOGOLoss().to(device)
+    optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
+    metrics = Metrics(num_classes=4, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
-    Sx, Sy = net.get_grid_size(config["resize shape"])
+    Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
     global_step = 0
@@ -151,11 +151,11 @@ def train(
     )
 
 
-def init_dataset(config, dataset_descriptor_file):
+def init_dataset(config):
     dataloaders = get_dataloader(
-        dataset_descriptor_file,
-        config["batch size"],
-        img_size=config["resize shape"],
+        config["dataset_descriptor_file"],
+        config["batch_size"],
+        img_size=config["resize_shape"],
         device=config["device"],
     )
 
@@ -164,10 +164,10 @@ def init_dataset(config, dataset_descriptor_file):
     test_dataloader = dataloaders["test"]
 
     wandb.config.update(
-        {  # we do this here b.c. batch size can change wrt sweeps
-            "training set size": f"{len(train_dataloader) * config['batch size']} images",
-            "validation set size": f"{len(validate_dataloader) * config['batch size']} images",
-            "testing set size": f"{len(test_dataloader) * config['batch size']} images",
+        {  # we do this here b.c. batch_size can change wrt sweeps
+            "training set size": f"{len(train_dataloader) * config['batch_size']} images",
+            "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
+            "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
         }
     )
 
@@ -179,7 +179,7 @@ def init_dataset(config, dataset_descriptor_file):
         )
     model_save_dir.mkdir(exist_ok=True, parents=True)
 
-    return train_dataloader, validate_dataloader, test_dataloader
+    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
 def get_wandb_confusion(confusion_data):
@@ -207,7 +207,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 128
+    epochs = 384
     adam_lr = 3e-4
     batch_size = 16
     resize_target_size = (300, 400)
@@ -222,26 +222,30 @@ if __name__ == "__main__":
 
     wandb.init(
         "yogo",
-        entity="ajacobsen-czb",  # aaagh! this needs to be bioengineering
+        entity="bioengineering",
         config={
-            "learning rate": adam_lr,
+            "learning_rate": adam_lr,
             "epochs": epochs,
-            "batch size": batch_size,
+            "batch_size": batch_size,
             "device": str(device),
-            "anchor w": anchor_w,
-            "anchor h": anchor_h,
-            "resize shape": resize_target_size,
+            "anchor_w": anchor_w,
+            "anchor_h": anchor_h,
+            "resize_shape": resize_target_size,
+            "class_names": class_names,
             "run group": args.group,
+            "dataset_descriptor_file": args.dataset_descriptor_file,
         },
         notes=args.note,
         tags=["v0.0.1"],
     )
 
-    train(
-        device,
-        args.dataset_descriptor_file,
-        anchor_w,
-        anchor_h,
-        resize_target_size,
-        class_names,
-    )
+    if args.sweep_id is not None:
+        wandb.agent(
+            args.sweep_id,
+            function=train,
+            entity="bioengineering",
+            project="yogo",
+            count=1,
+        )
+    else:
+        train()
