@@ -20,7 +20,7 @@ from copy import deepcopy
 from typing import List
 
 
-EPOCHS = 96
+EPOCHS = 128
 ADAM_LR = 3e-4
 BATCH_SIZE = 16
 
