@@ -32,33 +32,33 @@ class TestClustering(unittest.TestCase):
         self.assertEqual(iou(b3, b4), (0.5 * 0.5) / (0.5 * 0.5 + 1 * 1 - 0.5 * 0.5))
 
     def test_IOU_sanity_checks_tensor(self) -> None:
-        b1 = torch.tensor([0, 1, 0, 1])
-        b2 = torch.tensor([1, 2, 1, 2])
-        b3 = torch.tensor([10, 11, 10, 11])
+        b1 = torch.tensor([[0, 0, 1, 1]])
+        b2 = torch.tensor([[1, 1, 2, 2]])
+        b3 = torch.tensor([[10, 10, 11, 11]])
         self.assertEqual(torch_iou(b1, b1), torch.tensor(1.0))
         self.assertEqual(torch_iou(b2, b2), torch.tensor(1.0))
         self.assertEqual(torch_iou(b1, b2), torch.tensor(0))
         self.assertEqual(torch_iou(b1, b3), torch.tensor(0))
 
     def test_IOU_basic_tensor(self) -> None:
-        b1 = torch.tensor([0, 4, 2, 6])
-        b2 = torch.tensor([2, 6, 0, 4])
+        b1 = torch.tensor([[0, 2, 4, 6]])
+        b2 = torch.tensor([[2, 0, 6, 4]])
         self.assertEqual(torch_iou(b1, b2), torch.tensor(4 / (4 * 4 + 4 * 4 - 4)))
         self.assertEqual(torch_iou(b2, b1), torch.tensor(4 / (4 * 4 + 4 * 4 - 4)))
 
     def test_finding_max_IOU_tensor(self) -> None:
-        b1 = torch.tensor([0, 1, 0, 1])
+        b1 = torch.tensor([[0, 0, 1, 1]])
         b2 = torch.tensor(
             [
-                [0, 0.5, 0, 0.5],
-                [0, 0.25, 0, 0.25],
-                [0, 0.125, 0, 0.125],
+                [0, 0, 0.5, 0.5],
+                [0, 0, 0.25, 0.25],
+                [0, 0, 0.125, 0.125],
             ]
         )
         out = torch_iou(b1, b2)
-        self.assertEqual(out[0], 0.5**2 / (1**2 + 0.5**2 - 0.5**2))
-        self.assertEqual(out[1], 0.25**2 / (1**2 + 0.25**2 - 0.25**2))
-        self.assertEqual(out[2], 0.125**2 / (1**2 + 0.125**2 - 0.125**2))
+        self.assertEqual(out[0, 0], 0.5**2 / (1**2 + 0.5**2 - 0.5**2))
+        self.assertEqual(out[0, 1], 0.25**2 / (1**2 + 0.25**2 - 0.25**2))
+        self.assertEqual(out[0, 2], 0.125**2 / (1**2 + 0.125**2 - 0.125**2))
 
     def test_box_definition_conversions(self) -> None:
         for i in range(100):
@@ -88,8 +88,9 @@ class TestLossUtilities(unittest.TestCase):
         )
         Sx, Sy = 2, 1
         d = split_labels_into_bins(labels, Sx, Sy)
-        self.assertTensorEq(d[0, 0], torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]))
-        self.assertTensorEq(d[1, 0], torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]))
+        print(d)
+        self.assertTensorEq(d[(torch.tensor(0), torch.tensor(0))], torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]))
+        self.assertTensorEq(d[(torch.tensor(1), torch.tensor(0))], torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]))
 
     def test_labels_into_bins_2(self):
         labels = torch.tensor(
@@ -102,10 +103,10 @@ class TestLossUtilities(unittest.TestCase):
         )
         Sx, Sy = 2, 2
         d = split_labels_into_bins(labels, Sx, Sy)
-        self.assertTensorEq(d[0, 0], torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]))
-        self.assertTensorEq(d[1, 0], torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]))
-        self.assertTensorEq(d[0, 1], torch.tensor([[0.0, 0.1, 0.9, 0.0, 0.0]]))
-        self.assertTensorEq(d[1, 1], torch.tensor([[0.0, 0.9, 0.9, 0.0, 0.0]]))
+        self.assertTensorEq(d[(torch.tensor(0), torch.tensor(0))], torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]))
+        self.assertTensorEq(d[(torch.tensor(1), torch.tensor(0))], torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]))
+        self.assertTensorEq(d[(torch.tensor(0), torch.tensor(1))], torch.tensor([[0.0, 0.1, 0.9, 0.0, 0.0]]))
+        self.assertTensorEq(d[(torch.tensor(1), torch.tensor(1))], torch.tensor([[0.0, 0.9, 0.9, 0.0, 0.0]]))
 
     def test_labels_into_bins_3(self):
         sq0 = torch.tensor(
@@ -138,13 +139,13 @@ class TestLossUtilities(unittest.TestCase):
             torch.vstack([el for sq in [sq0, sq1, sq2, sq3] for el in sq]),
         )
         d = split_labels_into_bins(labels, Sx, Sy)
-        for el in d[0, 0]:
+        for el in d[(torch.tensor(0), torch.tensor(0))]:
             self.assertIn(el, sq0)
-        for el in d[1, 0]:
+        for el in d[(torch.tensor(1), torch.tensor(0))]:
             self.assertIn(el, sq1)
-        for el in d[0, 1]:
+        for el in d[(torch.tensor(0), torch.tensor(1))]:
             self.assertIn(el, sq2)
-        for el in d[1, 1]:
+        for el in d[(torch.tensor(1), torch.tensor(1))]:
             self.assertIn(el, sq3)
 
     def test_labels_into_bins_empty(self):
