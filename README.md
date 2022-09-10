@@ -112,6 +112,7 @@ In the "labels" folder, each text file corresponds to one image file in "images"
   - profiled, and `chrome://tracing` the `chrome_profile.json` actually is not too bad.
   - Results: yogo_loss.format_labels is SO slow
     - cluster_anchors.centers_to_corners and cluster_anchors.torch_iou are the big offenders
+      - fixed by using the tools in torchvision.ops!
     - yogo_loss.split_labels_into_bins is a close second
   - loading data is second slowest
   - cuda is DUMB quick, its rediculous - we should try to push more work to the GPU, it is barely used!
