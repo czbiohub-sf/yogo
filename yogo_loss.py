@@ -12,6 +12,8 @@ from cluster_anchors import torch_iou, centers_to_corners
 from collections import defaultdict
 from typing import Any, List, Dict, Tuple, Union
 
+import threading
+
 """
 Original YOLO paper did not mention IOU?
 IOU Loss?
@@ -134,23 +136,40 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         Have a parameter for "num labels" or smth, and have all tensors be the size
         of the minimum tensor size (instead of having a list)
         """
+
+        def work(i, j, k, labels, output):
+            if len(labels) > 0:
+                # select best label by best IOU!
+                IoU = ops.box_iou(
+                    ops.box_convert(
+                        pred_batch[i, :4, j, k].unsqueeze(0), "cxcywh", "xyxy"
+                    ),
+                    ops.box_convert(labels[:, 1:], "cxcywh", "xyxy"),
+                )
+                pred_square_idx = torch.argmax(IoU)
+                output[i, 0, j, k] = 1
+                output[i, 1:5, j, k] = labels[pred_square_idx][1:]
+                output[i, 5, j, k] = labels[pred_square_idx][0]
+
         batch_size, preds_size, Sy, Sx = pred_batch.shape
+        ts = []
+
         with torch.no_grad():
             output = torch.zeros(batch_size, 1 + 4 + 1, Sy, Sx, device=device)
             for i, label_layer in enumerate(label_batch):
                 label_cells = split_labels_into_bins(label_layer, Sx, Sy)
+                newthreads = [
+                    threading.Thread(target=work, args=(i, j, k, labels, output))
+                    for ((k, j), labels) in label_cells.items()
+                ]
 
-                for (k, j), labels in label_cells.items():
-                    if len(labels) > 0:
-                        # select best label by best IOU!
-                        IoU = ops.box_iou(
-                            ops.box_convert(pred_batch[i, :4, j, k].unsqueeze(0), "cxcywh", "xyxy"),
-                            ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
-                        )
-                        pred_square_idx = torch.argmax(IoU)
-                        output[i, 0, j, k] = 1
-                        output[i, 1:5, j, k] = labels[pred_square_idx][1:]
-                        output[i, 5, j, k] = labels[pred_square_idx][0]
+                for t in newthreads:
+                    t.start()
+
+                ts.extend(newthreads)
+
+            for t in ts:
+                t.join()
 
             return output
 
@@ -158,11 +177,13 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 def split_labels_into_bins(
     labels: torch.Tensor, Sx, Sy
 ) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    # This should be in the dataloader!
     # it is really a single-element long tensor
     d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
+    Sx_inv, Sy_inv = 1 / Sx, 1 / Sy
     for label in labels:
-        i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
-        j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()
+        i = torch.div(label[1], Sx_inv, rounding_mode="trunc").long()
+        j = torch.div(label[2], Sy_inv, rounding_mode="trunc").long()
         d[(i, j)].append(label)
     return {k: torch.vstack(vs) for k, vs in d.items()}
 
