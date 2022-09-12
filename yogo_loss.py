@@ -7,8 +7,6 @@ import torch
 import torch.nn.functional as F
 import torchvision.ops as ops
 
-from cluster_anchors import torch_iou, centers_to_corners
-
 from collections import defaultdict
 from typing import Any, List, Dict, Tuple, Union
 
