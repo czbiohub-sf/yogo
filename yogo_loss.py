@@ -5,6 +5,7 @@ Implement YOLO loss function here
 import torch
 
 import torch.nn.functional as F
+import torchvision.ops as ops
 
 from cluster_anchors import torch_iou, centers_to_corners
 
@@ -142,9 +143,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 for (k, j), labels in label_cells.items():
                     if len(labels) > 0:
                         # select best label by best IOU!
-                        IoU = torch_iou(
-                            centers_to_corners(pred_batch[i, :4, j, k]),
-                            centers_to_corners(labels[:, 1:]),
+                        IoU = ops.box_iou(
+                            ops.box_convert(pred_batch[i, :4, j, k].unsqueeze(0), "cxcywh", "xyxy"),
+                            ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
                         )
                         pred_square_idx = torch.argmax(IoU)
                         output[i, 0, j, k] = 1
