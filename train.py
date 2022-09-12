@@ -63,6 +63,7 @@ def train():
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
+    best_mAP = 0
     global_step = 0
     for epoch in range(config["epochs"]):
         # train
@@ -111,14 +112,27 @@ def train():
             },
         )
 
+        if mAP["map"] > best_mAP:
+            best_mAP = mAP["map"]
+            wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "global_step": global_step,
+                    "model_state_dict": deepcopy(net.state_dict()),
+                    "optimizer_state_dict": deepcopy(optimizer.state_dict()),
+                },
+                str(model_save_dir / f"best.pth"),
+            )
         torch.save(
             {
                 "epoch": epoch,
                 "model_state_dict": deepcopy(net.state_dict()),
                 "optimizer_state_dict": deepcopy(optimizer.state_dict()),
             },
-            str(model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"),
+            str(model_save_dir / f"latest.pth"),
         )
+
         net.train()
 
     # do test things
