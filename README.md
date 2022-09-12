@@ -113,6 +113,7 @@ In the "labels" folder, each text file corresponds to one image file in "images"
   - Results: yogo_loss.format_labels is SO slow
     - cluster_anchors.centers_to_corners and cluster_anchors.torch_iou are the big offenders
       - fixed by using the tools in torchvision.ops!
+      - Naiive multithreading doesn't seem to help - thanks GIL
     - yogo_loss.split_labels_into_bins is a close second
   - loading data is second slowest
   - cuda is DUMB quick, its rediculous - we should try to push more work to the GPU, it is barely used!
