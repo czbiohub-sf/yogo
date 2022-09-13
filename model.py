@@ -11,6 +11,15 @@ class YOGO(nn.Module):
         boxes across the dataset verifies this), meaning that it does not make sense to
         have more than 1 anchor box
         - grayscale
+
+    TODO: We do messy stuff here w/r/t inference vs. training mode. While training, we
+    want to set self.training=False occasionally (batchnorm and dropout behaviour is
+    different during inference), but we still want to use the yogo_loss function to
+    measure validation and test, so we do not want to convert to sigmoids or whatever
+    else.
+
+    A better way to do this would be to have an "inference" method, that you could plug
+    onto the end of forward if we are running inference.
     """
 
     def __init__(self, img_size, anchor_w, anchor_h, inference=False):
