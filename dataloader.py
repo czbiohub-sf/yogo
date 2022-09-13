@@ -22,6 +22,7 @@ from data_transforms import (
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
     ImageTransformLabelIdentity,
+    MultiArgSequential
 )
 
 
@@ -242,13 +243,6 @@ def get_datasets(
             ),
         )
     )
-
-
-class MultiArgSequential(nn.Sequential):
-    def forward(self, *input):
-        for module in self:
-            input = module(*input)
-        return input
 
 
 def collate_batch(batch, device="cpu", transforms=None):

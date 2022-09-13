@@ -1,10 +1,25 @@
 import torch
 import torchvision.transforms.functional as F
 
-from typing import List, Tuple, Any
+from typing import Sequence, Tuple, List, Any
 
 
-class ImageTransformLabelIdentity(torch.nn.Module):
+class DualInputModule(torch.nn.Module):
+    def forward(self, inpt_a, inpt_b):
+        ...
+
+
+class MultiArgSequential(torch.nn.Sequential):
+    def __init__(self, *args: DualInputModule, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def forward(self, *input):
+        for module in self:
+            input = module(*input)
+        return input
+
+
+class ImageTransformLabelIdentity(DualInputModule):
     def __init__(self, transform):
         super().__init__()
         self.transform = transform
@@ -13,7 +28,7 @@ class ImageTransformLabelIdentity(torch.nn.Module):
         return self.transform(img_batch), labels
 
 
-class RandomHorizontalFlipWithBBs(torch.nn.Module):
+class RandomHorizontalFlipWithBBs(DualInputModule):
     """Random HFLIP that will flip the labels if the image is flipped!"""
 
     def __init__(self, p=0.5):
@@ -32,7 +47,7 @@ class RandomHorizontalFlipWithBBs(torch.nn.Module):
         return img_batch, label_batch
 
 
-class RandomVerticalFlipWithBBs(torch.nn.Module):
+class RandomVerticalFlipWithBBs(DualInputModule):
     """Random VFLIP that will flip the labels if the image is flipped!"""
 
     def __init__(self, p=0.5):
