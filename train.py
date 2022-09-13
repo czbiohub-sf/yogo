@@ -97,6 +97,7 @@ def train():
                 outputs, YOGOLoss.format_labels(outputs, labels, device=device)
             )
 
+        outputs[0, 4:5, :, :] = torch.sigmoid(outputs[0, 4:5, :, :], dim=1)
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
