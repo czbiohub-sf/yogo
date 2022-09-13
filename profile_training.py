@@ -6,6 +6,7 @@ import torch
 import torch
 from torch import nn
 from torch.optim import AdamW
+from torch.multiprocessing import set_start_method
 from torch.profiler import profile, ProfilerActivity, record_function
 
 from model import YOGO
@@ -89,6 +90,8 @@ def profile_run(
 
 
 if __name__ == "__main__":
+    set_start_method("spawn")
+
     args = parse()
 
     device = torch.device(

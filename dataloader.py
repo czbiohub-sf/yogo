@@ -74,6 +74,10 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
             )
 
 
+def read_grayscale(img):
+    return read_image(img, ImageReadMode.GRAY)
+
+
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
@@ -81,7 +85,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         image_path: Path,
         label_path: Path,
         img_size: Tuple[int, int],
-        loader: Callable = lambda img: read_image(img, ImageReadMode.GRAY),
+        loader: Callable = read_grayscale,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,

@@ -7,6 +7,7 @@ import torch
 import torch
 from torch import nn
 from torch.optim import AdamW
+from torch.multiprocessing import set_start_method
 
 from model import YOGO
 from argparser import parse
@@ -213,6 +214,8 @@ def get_wandb_confusion(confusion_data):
 
 
 if __name__ == "__main__":
+    set_start_method("spawn")
+
     args = parse()
 
     device = torch.device(
