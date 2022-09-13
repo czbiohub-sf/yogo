@@ -190,7 +190,7 @@ def init_dataset(config):
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
     else:
         model_save_dir = Path(
-            f"trained_models/unamed_run_{torch.randint(100, size=(1,)).item()}"
+            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
         )
     model_save_dir.mkdir(exist_ok=True, parents=True)
 
