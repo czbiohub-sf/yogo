@@ -9,14 +9,20 @@ from operator import itemgetter
 
 import torchvision.transforms.functional as F
 
+from torch import nn
+
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
-from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 from torchvision.transforms import Resize
+from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 
-from data_transforms import RandomHorizontalFlipYOGO, RandomVerticalFlipYOGO
+from data_transforms import (
+    RandomHorizontalFlipWithBBs,
+    RandomVerticalFlipWithBBs,
+    ImageTransformLabelIdentity,
+)
 
 
 def load_dataset_description(
@@ -179,15 +185,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         """
         path, target = self.samples[index]
         sample = self.loader(path)
-        if self.transform is not None:
-            for t in self.transform:
-                try:
-                    sample, target = t(sample, target)
-                except TypeError:
-                    sample = t(sample)
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-
         return sample, target
 
     def __len__(self) -> int:
@@ -201,11 +198,6 @@ def get_datasets(
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    augmentations = (
-        [RandomHorizontalFlipYOGO(0.5), RandomVerticalFlipYOGO(0.5)] if training else []
-    )
-    transforms = [Resize(img_size), *augmentations]
-
     (
         classes,
         dataset_paths,
@@ -218,7 +210,6 @@ def get_datasets(
             dataset_desc["image_path"],
             dataset_desc["label_path"],
             img_size=img_size,
-            transform=transforms,
         )
         for dataset_desc in dataset_paths
     )
@@ -249,6 +240,20 @@ def get_datasets(
     )
 
 
+class MultiArgSequential(nn.Sequential):
+    def forward(self, *input):
+        for module in self:
+            input = module(*input)
+        return input
+
+
+def collate_batch(batch, device="cpu", transforms=None):
+    # perform image transforms here so we can transform in batches! :)
+    inputs, labels = zip(*batch)
+    batched_inputs = torch.stack(inputs)
+    return transforms(batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels])
+
+
 def get_dataloader(
     root_dir: str,
     batch_size: int,
@@ -257,66 +262,23 @@ def get_dataloader(
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
 ):
-    def collate_batch(batch, device):
-        inputs, labels = zip(*batch)
-        batched_inputs = torch.stack(inputs)
-        return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
-
-    # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
     split_datasets = get_datasets(
         root_dir, batch_size, img_size=img_size, training=training
+    )
+    augmentations = (
+        [RandomHorizontalFlipWithBBs(0.5), RandomVerticalFlipWithBBs(0.5)] if training else []
+    )
+    transforms = MultiArgSequential(
+        ImageTransformLabelIdentity(Resize(img_size)),
+        *augmentations
     )
     return {
         designation: DataLoader(
             dataset,
             batch_size=batch_size,
-            collate_fn=partial(collate_batch, device=device),
+            collate_fn=partial(collate_batch, device=device, transforms=transforms),
             shuffle=True,
             drop_last=True,
         )
         for designation, dataset in split_datasets.items()
     }
-
-
-if __name__ == "__main__":
-    # FIXME: this is quick and dirty code to plot some results
-    import sys
-    import matplotlib.pyplot as plt
-
-    from utils import draw_rects
-    from matplotlib.patches import Rectangle
-
-    if len(sys.argv) == 2:
-        num_imgs = abs(int(sys.argv[1]))
-    else:
-        num_imgs = 4
-
-    ODL = get_datasets("dataset_defs/full_100x_dataset.yml", batch_size=128)
-
-    print(ODL)
-    print(sum(D.count_class(0) for D in ODL["train"].dataset.datasets))
-    print(sum(D.count_class(0) for D in ODL["test"].dataset.datasets))
-    print(sum(D.count_class(0) for D in ODL["val"].dataset.datasets))
-    print(sum(D.count_class(1) for D in ODL["train"].dataset.datasets))
-    print(sum(D.count_class(2) for D in ODL["train"].dataset.datasets))
-    print(sum(D.count_class(3) for D in ODL["train"].dataset.datasets))
-
-    # for img, labels in ODL["test"]:
-    #     fig, ax = plt.subplots()
-    #     _, img_h, img_w = img.shape
-    #     ax.imshow(img[0, ...])
-    #     for l in labels:
-    #         [_, xc, yc, w, h] = l
-    #         rect = Rectangle(
-    #             (img_w * (xc - w / 2), img_h * (yc - h / 2)),
-    #             img_w * w,
-    #             img_h * h,
-    #             facecolor="none",
-    #             edgecolor="black",
-    #         )
-    #         ax.add_patch(rect)
-    #     plt.show()
-
-    #     num_imgs -= 1
-    #     if num_imgs == 0:
-    #         break
