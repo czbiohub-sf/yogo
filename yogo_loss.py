@@ -30,6 +30,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
+        self.bce = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1 / no_obj_weight]), reduction='none')
         self.cel = torch.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.01)
         self.device = "cpu"
 
@@ -63,19 +64,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
-        # objectness loss when there is no obj
-        loss += (
-            (1 - label_tensor[:, 0, :, :])
-            * self.no_obj_weight
-            * self.mse(pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]))
-        ).sum()
-
-        # objectness loss when there is an obj
-        loss += (
-            label_tensor[:, 0, :, :]
-            * self.no_obj_weight
-            * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]))
-        ).sum()
+        # objectness loss
+        loss += self.bce(pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :])).sum()
 
         # localization (i.e. xc, yc, w, h) loss
         loss += (
