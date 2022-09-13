@@ -1,69 +1,66 @@
 import torch
 import torchvision.transforms.functional as F
 
-from typing import List, Tuple
+from typing import Sequence, Tuple, List, Any
 
 
-class RandomHorizontalFlipYOGO(torch.nn.Module):
+class DualInputModule(torch.nn.Module):
+    def forward(self, inpt_a, inpt_b):
+        ...
+
+
+class MultiArgSequential(torch.nn.Sequential):
+    def __init__(self, *args: DualInputModule, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def forward(self, *input):
+        for module in self:
+            input = module(*input)
+        return input
+
+
+class ImageTransformLabelIdentity(DualInputModule):
+    def __init__(self, transform):
+        super().__init__()
+        self.transform = transform
+
+    def forward(self, img_batch, labels):
+        return self.transform(img_batch), labels
+
+
+class RandomHorizontalFlipWithBBs(DualInputModule):
     """Random HFLIP that will flip the labels if the image is flipped!"""
 
     def __init__(self, p=0.5):
         super().__init__()
         self.p = p
 
-    def forward(
-        self, img: torch.Tensor, labels: List[List[float]]
-    ) -> Tuple[torch.Tensor, List[List[float]]]:
+    def forward(self, img_batch, label_batch) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
         """
         if torch.rand(1) < self.p:
-            # this math op reverses the labels.
-            # flip them back to make sorting in loss function quick.
-            # labels is ordered via itemgetter(1,2), so all we have to
-            # do here is reverse in x.
-            flipped_labels = [
-                [
-                    l[0],
-                    1 - l[1],
-                    l[2],
-                    l[3],
-                    l[4],
-                ]
-                for l in labels
-            ]
-            return F.hflip(img), flipped_labels
-        return img, labels
+            for labels in label_batch:
+                if len(labels) > 0:
+                    labels[:, 1] = 1 - labels[:, 1]
+            return F.hflip(img_batch), label_batch
+        return img_batch, label_batch
 
 
-class RandomVerticalFlipYOGO(torch.nn.Module):
+class RandomVerticalFlipWithBBs(DualInputModule):
     """Random VFLIP that will flip the labels if the image is flipped!"""
 
     def __init__(self, p=0.5):
         super().__init__()
         self.p = p
 
-    def forward(
-        self, img: torch.Tensor, labels: List[List[float]]
-    ) -> Tuple[torch.Tensor, List[List[float]]]:
+    def forward(self, img_batch, label_batch) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
         """
         if torch.rand(1) < self.p:
-            # this math op reverses the labels.
-            # flip them back to make sorting in loss function quick.
-            # labels is ordered via itemgetter(1,2), so we have to sort
-            # in x and then in y to maintain proper order. "x" should
-            # already be ordered, so this should be relatively quick.
-            flipped_labels = [
-                [
-                    l[0],
-                    l[1],
-                    1 - l[2],
-                    l[3],
-                    l[4],
-                ]
-                for l in labels
-            ]
-            return F.vflip(img), flipped_labels
-        return img, labels
+            for labels in label_batch:
+                if len(labels) > 0:
+                    labels[:, 2] = 1 - labels[:, 2]
+            return F.vflip(img_batch), label_batch
+        return img_batch, label_batch

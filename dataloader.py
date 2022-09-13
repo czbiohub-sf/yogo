@@ -9,14 +9,21 @@ from operator import itemgetter
 
 import torchvision.transforms.functional as F
 
+from torch import nn
+
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
-from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 from torchvision.transforms import Resize
+from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 
-from data_transforms import RandomHorizontalFlipYOGO, RandomVerticalFlipYOGO
+from data_transforms import (
+    RandomHorizontalFlipWithBBs,
+    RandomVerticalFlipWithBBs,
+    ImageTransformLabelIdentity,
+    MultiArgSequential
+)
 
 
 def load_dataset_description(
@@ -183,15 +190,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         """
         path, target = self.samples[index]
         sample = self.loader(path)
-        if self.transform is not None:
-            for t in self.transform:
-                try:
-                    sample, target = t(sample, target)
-                except TypeError:
-                    sample = t(sample)
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-
         return sample, target
 
     def __len__(self) -> int:
@@ -205,11 +203,6 @@ def get_datasets(
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    augmentations = (
-        [RandomHorizontalFlipYOGO(0.5), RandomVerticalFlipYOGO(0.5)] if training else []
-    )
-    transforms = [Resize(img_size), *augmentations]
-
     (
         classes,
         dataset_paths,
@@ -222,7 +215,6 @@ def get_datasets(
             dataset_desc["image_path"],
             dataset_desc["label_path"],
             img_size=img_size,
-            transform=transforms,
         )
         for dataset_desc in dataset_paths
     )
@@ -253,10 +245,11 @@ def get_datasets(
     )
 
 
-def collate_batch(batch, device):
+def collate_batch(batch, device="cpu", transforms=None):
+    # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
-    return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
+    return transforms(batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels])
 
 
 def get_dataloader(
@@ -267,16 +260,21 @@ def get_dataloader(
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
 ):
-
-    # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
     split_datasets = get_datasets(
         root_dir, batch_size, img_size=img_size, training=training
+    )
+    augmentations = (
+        [RandomHorizontalFlipWithBBs(0.5), RandomVerticalFlipWithBBs(0.5)] if training else []
+    )
+    transforms = MultiArgSequential(
+        ImageTransformLabelIdentity(Resize(img_size)),
+        *augmentations
     )
     return {
         designation: DataLoader(
             dataset,
             batch_size=batch_size,
-            collate_fn=partial(collate_batch, device=device),
+            collate_fn=partial(collate_batch, device=device, transforms=transforms),
             shuffle=True,
             drop_last=True,
         )
