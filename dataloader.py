@@ -68,6 +68,10 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
             )
 
 
+def read_grayscale(img):
+    return read_image(img, ImageReadMode.GRAY)
+
+
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
@@ -75,7 +79,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         image_path: Path,
         label_path: Path,
         img_size: Tuple[int, int],
-        loader: Callable = lambda img: read_image(img, ImageReadMode.GRAY),
+        loader: Callable = read_grayscale,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,
@@ -249,6 +253,12 @@ def get_datasets(
     )
 
 
+def collate_batch(batch, device):
+    inputs, labels = zip(*batch)
+    batched_inputs = torch.stack(inputs)
+    return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
+
+
 def get_dataloader(
     root_dir: str,
     batch_size: int,
@@ -257,10 +267,6 @@ def get_dataloader(
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
 ):
-    def collate_batch(batch, device):
-        inputs, labels = zip(*batch)
-        batched_inputs = torch.stack(inputs)
-        return batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
 
     # TODO: try pinned memory, a la https://pytorch.org/docs/stable/notes/cuda.html#use-pinned-memory-buffers
     split_datasets = get_datasets(
@@ -276,47 +282,3 @@ def get_dataloader(
         )
         for designation, dataset in split_datasets.items()
     }
-
-
-if __name__ == "__main__":
-    # FIXME: this is quick and dirty code to plot some results
-    import sys
-    import matplotlib.pyplot as plt
-
-    from utils import draw_rects
-    from matplotlib.patches import Rectangle
-
-    if len(sys.argv) == 2:
-        num_imgs = abs(int(sys.argv[1]))
-    else:
-        num_imgs = 4
-
-    ODL = get_datasets("dataset_defs/full_100x_dataset.yml", batch_size=128)
-
-    print(ODL)
-    print(sum(D.count_class(0) for D in ODL["train"].dataset.datasets))
-    print(sum(D.count_class(0) for D in ODL["test"].dataset.datasets))
-    print(sum(D.count_class(0) for D in ODL["val"].dataset.datasets))
-    print(sum(D.count_class(1) for D in ODL["train"].dataset.datasets))
-    print(sum(D.count_class(2) for D in ODL["train"].dataset.datasets))
-    print(sum(D.count_class(3) for D in ODL["train"].dataset.datasets))
-
-    # for img, labels in ODL["test"]:
-    #     fig, ax = plt.subplots()
-    #     _, img_h, img_w = img.shape
-    #     ax.imshow(img[0, ...])
-    #     for l in labels:
-    #         [_, xc, yc, w, h] = l
-    #         rect = Rectangle(
-    #             (img_w * (xc - w / 2), img_h * (yc - h / 2)),
-    #             img_w * w,
-    #             img_h * h,
-    #             facecolor="none",
-    #             edgecolor="black",
-    #         )
-    #         ax.add_patch(rect)
-    #     plt.show()
-
-    #     num_imgs -= 1
-    #     if num_imgs == 0:
-    #         break
