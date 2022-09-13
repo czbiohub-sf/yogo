@@ -224,7 +224,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 384
+    epochs = 192
     adam_lr = 3e-4
     batch_size = 16
     resize_target_size = (300, 400)
