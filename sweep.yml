@@ -1,0 +1,22 @@
+command:
+  - conda
+  - run
+  - python3
+  - ${program}
+  - ../full_100x_dataset.yml
+  - --note
+  - testing sweep!
+method: random
+metric:
+  goal: maximize
+  name: val mAP
+parameters:
+  batch_size:
+    distribution: q_log_uniform_values
+    max: 256
+    min: 8
+  learning_rate:
+    distribution: log_uniform_values
+    max: 0.01
+    min: 0.0001
+program: train.py

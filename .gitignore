@@ -1,5 +1,3 @@
-*.yml
-
 .python-version
 
 wandb
@@ -15,3 +13,5 @@ profile.txt
 notes/profile_results
 
 notes/trace2html
+
+dataset_defs
