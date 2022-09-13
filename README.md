@@ -28,7 +28,7 @@ for list of opts, run `python3 train.py --help`.
 To train on SLURM, run
 
 ```console
-sbatch yogo_training.sh <path to dataset_definition.yml> [opts]
+sbatch submit_cmd.sh python3 train.py <path to dataset_definition.yml> [opts]
 ```
 with the same options from `train.py`.
 
