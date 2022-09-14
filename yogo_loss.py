@@ -73,7 +73,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # objectness loss when there is an obj
         loss += (
             label_tensor[:, 0, :, :]
-            * self.no_obj_weight
             * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]))
         ).sum()
 
