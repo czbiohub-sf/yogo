@@ -109,7 +109,7 @@ def train():
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
                 "val mAP": mAP["map"],
-                "val confusion": get_wandb_confusion(confusion_data),
+                "val confusion": get_wandb_confusion(confusion_data, "validation confusion matrix"),
             },
         )
 
@@ -153,7 +153,7 @@ def train():
         {
             "test loss": test_loss / len(test_dataloader),
             "test mAP": mAP["map"],
-            "test confusion": get_wandb_confusion(confusion_data),
+            "test confusion": get_wandb_confusion(confusion_data, "test confusion matrix"),
         },
     )
     torch.save(
@@ -197,7 +197,7 @@ def init_dataset(config):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-def get_wandb_confusion(confusion_data):
+def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
@@ -209,7 +209,7 @@ def get_wandb_confusion(confusion_data):
             "Predicted": "Predicted",
             "nPredictions": "nPredictions",
         },
-        {"title": "validation confusion matrix"},
+        {"title": title},
     )
 
 
