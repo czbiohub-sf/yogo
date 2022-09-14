@@ -52,8 +52,14 @@ class TestLossUtilities(unittest.TestCase):
         )
         Sx, Sy = 2, 1
         d = split_labels_into_bins(labels, Sx, Sy)
-        self.assertTensorEq(d[(torch.tensor(0), torch.tensor(0))], torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]))
-        self.assertTensorEq(d[(torch.tensor(1), torch.tensor(0))], torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]))
+        self.assertTensorEq(
+            d[(torch.tensor(0), torch.tensor(0))],
+            torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]),
+        )
+        self.assertTensorEq(
+            d[(torch.tensor(1), torch.tensor(0))],
+            torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]),
+        )
 
     def test_labels_into_bins_2(self):
         labels = torch.tensor(
@@ -66,10 +72,22 @@ class TestLossUtilities(unittest.TestCase):
         )
         Sx, Sy = 2, 2
         d = split_labels_into_bins(labels, Sx, Sy)
-        self.assertTensorEq(d[(torch.tensor(0), torch.tensor(0))], torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]))
-        self.assertTensorEq(d[(torch.tensor(1), torch.tensor(0))], torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]))
-        self.assertTensorEq(d[(torch.tensor(0), torch.tensor(1))], torch.tensor([[0.0, 0.1, 0.9, 0.0, 0.0]]))
-        self.assertTensorEq(d[(torch.tensor(1), torch.tensor(1))], torch.tensor([[0.0, 0.9, 0.9, 0.0, 0.0]]))
+        self.assertTensorEq(
+            d[(torch.tensor(0), torch.tensor(0))],
+            torch.tensor([[0.0, 0.1, 0.1, 0.0, 0.0]]),
+        )
+        self.assertTensorEq(
+            d[(torch.tensor(1), torch.tensor(0))],
+            torch.tensor([[0.0, 0.9, 0.1, 0.0, 0.0]]),
+        )
+        self.assertTensorEq(
+            d[(torch.tensor(0), torch.tensor(1))],
+            torch.tensor([[0.0, 0.1, 0.9, 0.0, 0.0]]),
+        )
+        self.assertTensorEq(
+            d[(torch.tensor(1), torch.tensor(1))],
+            torch.tensor([[0.0, 0.9, 0.9, 0.0, 0.0]]),
+        )
 
     def test_labels_into_bins_3(self):
         sq0 = torch.tensor(

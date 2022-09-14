@@ -49,11 +49,13 @@ class YOGO(nn.Module):
     def grad_norm(self) -> float:
         # https://discuss.pytorch.org/t/check-the-norm-of-gradients/27961/5
         total_norm = 0
-        parameters = [p for p in self.parameters() if p.grad is not None and p.requires_grad]
+        parameters = [
+            p for p in self.parameters() if p.grad is not None and p.requires_grad
+        ]
         for p in parameters:
             param_norm = p.grad.detach().data.norm(2)
             total_norm += param_norm.item() ** 2
-        total_norm = total_norm ** 0.5
+        total_norm = total_norm**0.5
         return total_norm
 
     def get_grid_size(self, input_shape: Tuple[int, int]) -> Tuple[int, int]:

@@ -84,10 +84,7 @@ def train():
                 step=global_step,
             )
 
-        wandb.log(
-            {"training grad norm": net.grad_norm()},
-            step=global_step
-        )
+        wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
 
         # do validation things
         val_loss = 0.0
@@ -114,7 +111,9 @@ def train():
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
                 "val mAP": mAP["map"],
-                "val confusion": get_wandb_confusion(confusion_data, "validation confusion matrix"),
+                "val confusion": get_wandb_confusion(
+                    confusion_data, "validation confusion matrix"
+                ),
             },
         )
 
@@ -158,7 +157,9 @@ def train():
         {
             "test loss": test_loss / len(test_dataloader),
             "test mAP": mAP["map"],
-            "test confusion": get_wandb_confusion(confusion_data, "test confusion matrix"),
+            "test confusion": get_wandb_confusion(
+                confusion_data, "test confusion matrix"
+            ),
         },
     )
     torch.save(

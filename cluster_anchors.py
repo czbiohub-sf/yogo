@@ -65,7 +65,6 @@ def iou(b1: CornerBox, b2: CornerBox) -> "npt.NDArray[np.float64]":
     return intersection / (area(b1) + area(b2) - intersection)
 
 
-
 def gen_random_box(n=1, center_box=False) -> CornerBox:
     xmin = np.random.rand(n, 1) / 2
     xmax = np.random.rand(n, 1) / 2 + xmin

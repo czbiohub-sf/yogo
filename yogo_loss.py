@@ -141,8 +141,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     if len(labels) > 0:
                         # select best label by best IOU!
                         IoU = ops.box_iou(
-                            ops.box_convert(pred_batch[i, :4, j, k].unsqueeze(0), "cxcywh", "xyxy"),
-                            ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
+                            ops.box_convert(
+                                pred_batch[i, :4, j, k].unsqueeze(0), "cxcywh", "xyxy"
+                            ),
+                            ops.box_convert(labels[:, 1:], "cxcywh", "xyxy"),
                         )
                         pred_square_idx = torch.argmax(IoU)
                         output[i, 0, j, k] = 1

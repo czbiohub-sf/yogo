@@ -35,7 +35,9 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         super().__init__()
         self.p = p
 
-    def forward(self, img_batch, label_batch) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+    def forward(
+        self, img_batch, label_batch
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
         """
@@ -54,7 +56,9 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         super().__init__()
         self.p = p
 
-    def forward(self, img_batch, label_batch) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+    def forward(
+        self, img_batch, label_batch
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
         """
