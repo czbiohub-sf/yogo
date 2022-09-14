@@ -58,7 +58,7 @@ def train():
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
-    scheduler = CosineAnnealingWarmRestarts(optimizer, len(train_dataloader), 2)
+    scheduler = CosineAnnealingWarmRestarts(optimizer, len(train_dataloader), 1)
     metrics = Metrics(num_classes=4, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
@@ -82,7 +82,7 @@ def train():
             scheduler.step()
 
             wandb.log(
-                {"train loss": loss.item(), "epoch": epoch, "cosine LR": scheduler.get_last_lr()},
+                {"train loss": loss.item(), "epoch": epoch, "cosine LR": scheduler.get_last_lr()[0]},
                 commit=False,
                 step=global_step,
             )
