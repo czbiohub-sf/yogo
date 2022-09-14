@@ -87,6 +87,11 @@ def train():
                 step=global_step,
             )
 
+        wandb.log(
+            {"training grad norm": net.grad_norm()},
+            step=global_step
+        )
+
         # do validation things
         val_loss = 0.0
         net.eval()
@@ -230,7 +235,7 @@ if __name__ == "__main__":
 
     epochs = 192
     adam_lr = 3e-4
-    batch_size = 16
+    batch_size = 32
     resize_target_size = (300, 400)
 
     class_names, dataset_paths, _ = load_dataset_description(
