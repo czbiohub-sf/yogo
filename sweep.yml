@@ -6,17 +6,19 @@ command:
   - ../full_100x_dataset.yml
   - --note
   - "Sweeping along batchsize & learning rate"
-method: random
+method: grid
 metric:
   goal: maximize
   name: val mAP
 parameters:
-  batch_size:
-    distribution: q_log_uniform_values
-    max: 256
-    min: 1
-  learning_rate:
-    distribution: log_uniform_values
-    max: 0.1
-    min: 0.0001
+  model_arch:
+    values: 
+      - gen_model_original
+      - gen_model_wider
+      - gen_model_deeper
+      - gen_model_smaller
+      - gen_model_dropout
+      - gen_model_bigger_SxSy_1
+      - gen_model_bigger_SxSy_2
+      - gen_model_smaller_SxSy
 program: train.py

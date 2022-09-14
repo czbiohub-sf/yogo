@@ -9,7 +9,7 @@ from torch import nn
 from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
 
-from model import YOGO
+from model import YOGO, funcs
 from argparser import parse
 from yogo_loss import YOGOLoss
 from utils import draw_rects, Metrics
@@ -53,7 +53,10 @@ def train():
     ) = init_dataset(config)
 
     net = YOGO(
-        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h
+        img_size=config["resize_shape"],
+        anchor_w=anchor_w,
+        anchor_h=anchor_h,
+        model_override=funcs[config["model_arch"]],
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
@@ -84,10 +87,7 @@ def train():
                 step=global_step,
             )
 
-        wandb.log(
-            {"training grad norm": net.grad_norm()},
-            step=global_step
-        )
+        wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
 
         # do validation things
         val_loss = 0.0
@@ -114,7 +114,9 @@ def train():
                 "validation bbs": annotated_img,
                 "val loss": val_loss / len(validate_dataloader),
                 "val mAP": mAP["map"],
-                "val confusion": get_wandb_confusion(confusion_data, "validation confusion matrix"),
+                "val confusion": get_wandb_confusion(
+                    confusion_data, "validation confusion matrix"
+                ),
             },
         )
 
@@ -158,7 +160,9 @@ def train():
         {
             "test loss": test_loss / len(test_dataloader),
             "test mAP": mAP["map"],
-            "test confusion": get_wandb_confusion(confusion_data, "test confusion matrix"),
+            "test confusion": get_wandb_confusion(
+                confusion_data, "test confusion matrix"
+            ),
         },
     )
     torch.save(
