@@ -61,15 +61,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         assert batch_size == len(label_batch)
 
         label_tensor = self.format_labels(pred_batch, label_batch, device=self.device)
+        mask = label_tensor[:, 0, :, :]
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
         # objectness loss
-        loss += self.bce(pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :])).sum()
+        loss += self.bce(pred_batch[:, 4, :, :], mask).sum()
 
         # localization (i.e. xc, yc, w, h) loss
         loss += (
-            label_tensor[:, 0, :, :]
+            mask
             * self.coord_weight
             * (
                 self.mse(
@@ -93,7 +94,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         # classification loss
         loss += (
-            label_tensor[:, 0, :, :]
+            mask
             * self.cel(pred_batch[:, 5:, :, :], label_tensor[:, 5, :, :].long())
         ).sum()
 
