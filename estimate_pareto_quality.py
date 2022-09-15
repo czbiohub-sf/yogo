@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-
 import wandb
 import torch
 
@@ -8,6 +7,7 @@ import torch
 from torch import nn
 from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
+from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingWarmRestarts
 
 from model import YOGO
 from argparser import parse
@@ -26,19 +26,10 @@ torch.backends.cudnn.benchmark = True
 # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
 torch.backends.cuda.matmul.allow_tf32 = True
 
-# TODO find sync points
-# https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
-# this will error out if a synchronizing operation occurs
 
-# TUNING GUIDE - goes over this
-# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
+def pareto_quality():
+    report_periods = (16, 32, 64, 128, 256)
 
-# TODO
-# measure forward / backward pass timing w/
-# https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
-
-
-def train():
     config = wandb.config
     device = config["device"]
     anchor_w = config["anchor_w"]
@@ -57,6 +48,12 @@ def train():
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
+
+    min_period = 8 * len(train_dataloader)
+    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
+    cs = CosineAnnealingWarmRestarts(optimizer, T_0=min_period, T_mult=2)
+    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+
     metrics = Metrics(num_classes=4, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
@@ -64,114 +61,58 @@ def train():
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
-    best_mAP = 0
     global_step = 0
     for epoch in range(config["epochs"]):
         # train
-        for i, (imgs, labels) in enumerate(train_dataloader, 1):
+        for imgs, labels in train_dataloader:
             global_step += 1
 
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+            loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
+
+            if global_step % 100 == 0:
+                wandb.log(
+                    {
+                        "train loss": loss.item(),
+                        "LR": scheduler.get_last_lr()[0],
+                        "epoch": epoch
+                    },
+                    commit=False,
+                    step=global_step,
+                )
+
+        net.eval()
+
+        if (epoch + 1) in report_periods:
+            # do validation things
+            val_loss = 0.0
+            for imgs, labels in validate_dataloader:
+                with torch.no_grad():
+                    outputs = net(imgs)
+                    formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+                    loss = Y_loss(outputs, formatted_labels)
+                    val_loss += loss.item()
+
+                metrics.update(outputs, formatted_labels)
+
+            mAP, _ = metrics.compute()
+            metrics.reset()
 
             wandb.log(
-                {"train loss": loss.item(), "epoch": epoch},
-                commit=False,
+                {
+                    "val loss": val_loss / len(validate_dataloader),
+                    "val mAP": mAP['map'],
+                    "epoch": epoch,
+                },
                 step=global_step,
             )
-
-        wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
-
-        # do validation things
-        val_loss = 0.0
-        net.eval()
-        for imgs, labels in validate_dataloader:
-            with torch.no_grad():
-                outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
-                loss = Y_loss(outputs, formatted_labels)
-                val_loss += loss.item()
-
-            metrics.update(
-                outputs, formatted_labels
-            )
-
-        annotated_img = wandb.Image(
-            draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-        )
-
-        mAP, confusion_data = metrics.compute()
-        metrics.reset()
-
-        wandb.log(
-            {
-                "validation bbs": annotated_img,
-                "val loss": val_loss / len(validate_dataloader),
-                "val mAP": mAP["map"],
-                "val confusion": get_wandb_confusion(
-                    confusion_data, "validation confusion matrix"
-                ),
-            },
-        )
-
-        if mAP["map"] > best_mAP:
-            best_mAP = mAP["map"]
-            wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "global_step": global_step,
-                    "model_state_dict": deepcopy(net.state_dict()),
-                    "optimizer_state_dict": deepcopy(optimizer.state_dict()),
-                },
-                str(model_save_dir / f"best.pth"),
-            )
-        torch.save(
-            {
-                "epoch": epoch,
-                "model_state_dict": deepcopy(net.state_dict()),
-                "optimizer_state_dict": deepcopy(optimizer.state_dict()),
-            },
-            str(model_save_dir / f"latest.pth"),
-        )
-
         net.train()
-
-    # do test things
-    net.eval()
-    test_loss = 0.0
-    for imgs, labels in test_dataloader:
-        with torch.no_grad():
-            outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
-            loss = Y_loss(outputs, formatted_labels)
-            test_loss += loss.item()
-
-        metrics.update(outputs, formatted_labels)
-
-    mAP, confusion_data = metrics.compute()
-    metrics.reset()
-    wandb.log(
-        {
-            "test loss": test_loss / len(test_dataloader),
-            "test mAP": mAP["map"],
-            "test confusion": get_wandb_confusion(
-                confusion_data, "test confusion matrix"
-            ),
-        },
-    )
-    torch.save(
-        {
-            "epoch": epoch,
-            "model_state_dict": deepcopy(net.state_dict()),
-            "optimizer_state_dict": deepcopy(optimizer.state_dict()),
-        },
-        str(model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"),
-    )
 
 
 def init_dataset(config):
@@ -180,6 +121,7 @@ def init_dataset(config):
         config["batch_size"],
         img_size=config["resize_shape"],
         device=config["device"],
+        split_fractions_override={"train": 0.8, "test": 0., "val": 0.2}
     )
 
     train_dataloader = dataloaders["train"]
@@ -205,25 +147,7 @@ def init_dataset(config):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-def get_wandb_confusion(confusion_data, title):
-    return wandb.plot_table(
-        "wandb/confusion_matrix/v1",
-        wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"],
-            data=confusion_data,
-        ),
-        {
-            "Actual": "Actual",
-            "Predicted": "Predicted",
-            "nPredictions": "nPredictions",
-        },
-        {"title": title},
-    )
-
-
 if __name__ == "__main__":
-    set_start_method("spawn")
-
     args = parse()
 
     device = torch.device(
@@ -232,7 +156,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 192
+    epochs = 256
     adam_lr = 3e-4
     batch_size = 32
     resize_target_size = (300, 400)
@@ -260,8 +184,8 @@ if __name__ == "__main__":
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
         },
-        notes=args.note,
+        notes="pareto run: " + args.note,
         tags=["v0.0.1"],
     )
 
-    train()
+    pareto_quality()

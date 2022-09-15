@@ -39,7 +39,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         return self
 
     def forward(
-        self, pred_batch: torch.Tensor, label_batch: List[torch.Tensor]
+        self, pred_batch: torch.Tensor, label_batch: torch.Tensor
     ) -> torch.Tensor:
         """
         pred and label are both 4d. pred_batch has shape
@@ -59,51 +59,49 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
 
-        label_tensor = self.format_labels(pred_batch, label_batch, device=self.device)
-
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
         # objectness loss when there is no obj
         loss += (
-            (1 - label_tensor[:, 0, :, :])
+            (1 - label_batch[:, 0, :, :])
             * self.no_obj_weight
             * self.mse(pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]))
         ).sum()
 
         # objectness loss when there is an obj
         loss += (
-            label_tensor[:, 0, :, :]
+            label_batch[:, 0, :, :]
             * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]))
         ).sum()
 
         # localization (i.e. xc, yc, w, h) loss
         loss += (
-            label_tensor[:, 0, :, :]
+            label_batch[:, 0, :, :]
             * self.coord_weight
             * (
                 self.mse(
                     pred_batch[:, 0, :, :],
-                    label_tensor[:, 1, :, :],
+                    label_batch[:, 1, :, :],
                 )
                 + self.mse(
                     pred_batch[:, 1, :, :],
-                    label_tensor[:, 2, :, :],
+                    label_batch[:, 2, :, :],
                 )
                 + self.mse(
                     torch.sqrt(pred_batch[:, 2, :, :]),
-                    torch.sqrt(label_tensor[:, 3, :, :]),
+                    torch.sqrt(label_batch[:, 3, :, :]),
                 )
                 + self.mse(
                     torch.sqrt(pred_batch[:, 3, :, :]),
-                    torch.sqrt(label_tensor[:, 4, :, :]),
+                    torch.sqrt(label_batch[:, 4, :, :]),
                 )
             )
         ).sum()
 
         # classification loss
         loss += (
-            label_tensor[:, 0, :, :]
-            * self.cel(pred_batch[:, 5:, :, :], label_tensor[:, 5, :, :].long())
+            label_batch[:, 0, :, :]
+            * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
         ).sum()
 
         return loss / batch_size

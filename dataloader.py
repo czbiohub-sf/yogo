@@ -202,6 +202,7 @@ def get_datasets(
     batch_size: int,
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
+    split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
         classes,
@@ -218,6 +219,9 @@ def get_datasets(
         )
         for dataset_desc in dataset_paths
     )
+
+    if split_fractions_override is not None:
+        split_fractions = split_fractions_override
 
     dataset_sizes = {
         designation: int(split_fractions[designation] * len(full_dataset))
@@ -258,13 +262,17 @@ def collate_batch(batch, device="cpu", transforms=None):
 def get_dataloader(
     root_dir: str,
     batch_size: int,
-    split_percentages: List[float] = [1],
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
+    split_fractions_override: Optional[Dict[str, float]] = None,
 ):
     split_datasets = get_datasets(
-        root_dir, batch_size, img_size=img_size, training=training
+        root_dir,
+        batch_size,
+        img_size=img_size,
+        training=training,
+        split_fractions_override=split_fractions_override,
     )
     augmentations = (
         [RandomHorizontalFlipWithBBs(0.5), RandomVerticalFlipWithBBs(0.5)]
