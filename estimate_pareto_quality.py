@@ -28,7 +28,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def pareto_quality():
-    report_periods = (16, 24, 40, 72, 136, 264)
+    report_periods = (16, 32, 64, 128, 256, 512)
 
     config = wandb.config
     device = config["device"]
