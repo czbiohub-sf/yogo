@@ -95,11 +95,12 @@ def train():
         for imgs, labels in validate_dataloader:
             with torch.no_grad():
                 outputs = net(imgs)
-                loss = Y_loss(outputs, labels)
+                formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
+                loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
 
             metrics.update(
-                outputs, YOGOLoss.format_labels(outputs, labels, device=device)
+                outputs, formatted_labels
             )
 
         annotated_img = wandb.Image(
@@ -147,10 +148,11 @@ def train():
     for imgs, labels in test_dataloader:
         with torch.no_grad():
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
+            loss = Y_loss(outputs, formatted_labels)
             test_loss += loss.item()
 
-        metrics.update(outputs, YOGOLoss.format_labels(outputs, labels, device=device))
+        metrics.update(outputs, formatted_labels)
 
     mAP, confusion_data = metrics.compute()
     metrics.reset()
