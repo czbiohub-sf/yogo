@@ -22,9 +22,9 @@ class YOGO(nn.Module):
     onto the end of forward if we are running inference.
     """
 
-    def __init__(self, img_size, anchor_w, anchor_h, inference=False):
+    def __init__(self, img_size, anchor_w, anchor_h, inference=False, device="cpu"):
         super().__init__()
-        self.device = "cpu"
+        self.device = device
 
         self.backbone = self.gen_backbone()
         self.head = self.gen_head(num_channels=128, num_classes=4)

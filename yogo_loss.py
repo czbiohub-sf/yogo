@@ -26,6 +26,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
         class_weights: Optional[List[float]] = None,
+        device: str = "cpu"
     ) -> None:
         super().__init__()
         self.coord_weight = coord_weight
@@ -34,7 +35,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.cel = torch.nn.CrossEntropyLoss(
             weight=torch.tensor(class_weights), reduction="none", label_smoothing=0.01
         )
-        self.device = "cpu"
+        self.device = device
 
     def to(self, device):
         self.device = device

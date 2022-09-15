@@ -52,17 +52,19 @@ def train():
         test_dataloader,
     ) = init_dataset(config)
 
+    weights = dataloader_class_weights(train_dataloader)
+
     net = YOGO(
-        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h
-    ).to(device)
-    Y_loss = YOGOLoss().to(device)
+        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h, device=device
+    )
+    Y_loss = YOGOLoss(class_weights=weights, device=device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
     metrics = Metrics(num_classes=4, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
     Sx, Sy = net.get_grid_size(config["resize_shape"])
-    wandb.config.update({"Sx": Sx, "Sy": Sy})
+    wandb.config.update({"Sx": Sx, "Sy": Sy, "class_weights": weights})
 
     best_mAP = 0
     global_step = 0
@@ -74,7 +76,10 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            formatted_labels = YOGOLoss.format_labels(
+                outputs, labels, device=device
+            )
+            loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
 
@@ -228,7 +233,9 @@ def dataloader_class_weights(dataloader):
 
     This peels back the layers and returns the class counts in our dataset
     """
-    return [sum(d.count_class(i) for d in dataset.dataset.datasets) for i in range(4)]
+    counts = [sum(d.count_class(i) for d in dataloader.dataset.dataset.datasets) for i in range(4)]
+    weight = [sum(counts) / c for c in counts]
+    return [w / sum(weight) for w in weight]
 
 
 if __name__ == "__main__":
