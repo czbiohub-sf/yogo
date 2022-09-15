@@ -28,7 +28,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def pareto_quality():
-    report_periods = (16, 32, 64, 128, 256, 512)
+    report_periods = (16, 32, 64, 128, 256)
 
     config = wandb.config
     device = config["device"]
@@ -156,7 +156,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 264
+    epochs = 256
     adam_lr = 3e-4
     batch_size = 32
     resize_target_size = (300, 400)
