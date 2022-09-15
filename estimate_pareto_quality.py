@@ -51,7 +51,7 @@ def pareto_quality():
 
     min_period = 8 * len(train_dataloader)
     lin = LinearLR(optimizer, start_factor=0.01, total_iters=min_period)
-    cs = CosineAnnealingWarmRestarts(optimizer, T_mult=min_period, T_mult=2)
+    cs = CosineAnnealingWarmRestarts(optimizer, T_mult=min_period)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
     metrics = Metrics(num_classes=4, device=device, class_names=class_names)
