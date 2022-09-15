@@ -81,7 +81,7 @@ def pareto_quality():
                     {
                         "train loss": loss.item(),
                         "LR": scheduler.get_last_lr()[0],
-                        "epoch": epoch
+                        "epoch": epoch,
                     },
                     commit=False,
                     step=global_step,
@@ -95,7 +95,9 @@ def pareto_quality():
             for imgs, labels in validate_dataloader:
                 with torch.no_grad():
                     outputs = net(imgs)
-                    formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+                    formatted_labels = Y_loss.format_labels(
+                        outputs, labels, device=device
+                    )
                     loss = Y_loss(outputs, formatted_labels)
                     val_loss += loss.item()
 
@@ -107,7 +109,7 @@ def pareto_quality():
             wandb.log(
                 {
                     "val loss": val_loss / len(validate_dataloader),
-                    "val mAP": mAP['map'],
+                    "val mAP": mAP["map"],
                     "epoch": epoch,
                 },
                 step=global_step,
@@ -121,7 +123,7 @@ def init_dataset(config):
         config["batch_size"],
         img_size=config["resize_shape"],
         device=config["device"],
-        split_fractions_override={"train": 0.8, "test": 0., "val": 0.2}
+        split_fractions_override={"train": 0.8, "test": 0.0, "val": 0.2},
     )
 
     train_dataloader = dataloaders["train"]

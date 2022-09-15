@@ -92,13 +92,13 @@ def train():
         for imgs, labels in validate_dataloader:
             with torch.no_grad():
                 outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
+                formatted_labels = YOGOLoss.format_labels(
+                    outputs, labels, device=device
+                )
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
 
-            metrics.update(
-                outputs, formatted_labels
-            )
+            metrics.update(outputs, formatted_labels)
 
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
@@ -219,6 +219,16 @@ def get_wandb_confusion(confusion_data, title):
         },
         {"title": title},
     )
+
+
+def dataloader_class_weights(dataloader):
+    """We have a deep dataset class/object heirarchy:
+
+    Dataloader -> Split Dataset -> Concat Dataset -> ObjectDetectionDataset
+
+    This peels back the layers and returns the class counts in our dataset
+    """
+    return [sum(d.count_class(i) for d in dataset.dataset.datasets) for i in range(4)]
 
 
 if __name__ == "__main__":

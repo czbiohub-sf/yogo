@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torchvision.ops as ops
 
 from collections import defaultdict
-from typing import Any, List, Dict, Tuple, Union
+from typing import Any, List, Dict, Tuple, Union, Optional
 
 """
 Original YOLO paper did not mention IOU?
@@ -25,12 +25,15 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self,
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
+        class_weights: Optional[List[float]] = None,
     ) -> None:
         super().__init__()
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
-        self.cel = torch.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.01)
+        self.cel = torch.nn.CrossEntropyLoss(
+            weight=torch.tensor(class_weights), reduction="none", label_smoothing=0.01
+        )
         self.device = "cpu"
 
     def to(self, device):

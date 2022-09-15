@@ -230,9 +230,7 @@ def get_datasets(
     test_dataset_size = {"test": len(full_dataset) - sum(dataset_sizes.values())}
     split_sizes = {**dataset_sizes, **test_dataset_size}
 
-    assert all([sz > 0 for sz in split_sizes.values()]) and sum(
-        split_sizes.values()
-    ) == len(
+    assert sum(split_sizes.values()) == len(
         full_dataset
     ), f"could not create valid dataset split sizes: {split_sizes}, full dataset size is {len(full_dataset)}"
 
