@@ -50,7 +50,7 @@ def pareto_quality():
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     min_period = 8 * len(train_dataloader)
-    lin = LinearLR(optimizer, start_factor=0.01, total_iters=min_period)
+    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
     cs = CosineAnnealingWarmRestarts(optimizer, T_0=min_period, T_mult=2)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
@@ -61,44 +61,45 @@ def pareto_quality():
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
-    best_mAP = 0
     global_step = 0
     for epoch in range(config["epochs"]):
         # train
-        for i, (imgs, labels) in enumerate(train_dataloader, 1):
+        for imgs, labels in train_dataloader:
             global_step += 1
 
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+            loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
             scheduler.step()
 
-            wandb.log(
-                {
-                    "train loss": loss.item()
-                    "LR": : scheduler.get_last_lr()[0]
-                },
-                commit=False,
-                step=global_step,
-            )
+            if global_step % 100 == 0:
+                wandb.log(
+                    {
+                        "train loss": loss.item(),
+                        "LR": scheduler.get_last_lr()[0],
+                        "epoch": epoch
+                    },
+                    commit=False,
+                    step=global_step,
+                )
+
+        net.eval()
 
         if (epoch + 1) in report_periods:
-            net.eval()
-
             # do validation things
             val_loss = 0.0
             for imgs, labels in validate_dataloader:
                 with torch.no_grad():
                     outputs = net(imgs)
-                    loss = Y_loss(outputs, labels)
+                    formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+                    loss = Y_loss(outputs, formatted_labels)
                     val_loss += loss.item()
 
-                metrics.update(
-                    outputs, YOGOLoss.format_labels(outputs, labels, device=device)
-                )
+                metrics.update(outputs, formatted_labels)
 
             mAP, _ = metrics.compute()
             metrics.reset()
@@ -106,12 +107,12 @@ def pareto_quality():
             wandb.log(
                 {
                     "val loss": val_loss / len(validate_dataloader),
-                    "val mAP": mAP["map"],
+                    "val mAP": mAP['map'],
                     "epoch": epoch,
                 },
                 step=global_step,
             )
-            net.train()
+        net.train()
 
 
 def init_dataset(config):
