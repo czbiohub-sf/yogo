@@ -22,7 +22,7 @@ from data_transforms import (
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
     ImageTransformLabelIdentity,
-    MultiArgSequential
+    MultiArgSequential,
 )
 
 
@@ -202,6 +202,7 @@ def get_datasets(
     batch_size: int,
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
+    split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
         classes,
@@ -218,6 +219,9 @@ def get_datasets(
         )
         for dataset_desc in dataset_paths
     )
+
+    if split_fractions_override is not None:
+        split_fractions = split_fractions_override
 
     dataset_sizes = {
         designation: int(split_fractions[designation] * len(full_dataset))
@@ -240,7 +244,7 @@ def get_datasets(
             random_split(
                 full_dataset,
                 [split_sizes["train"], split_sizes["val"], split_sizes["test"]],
-                generator=torch.Generator().manual_seed(42)
+                generator=torch.Generator().manual_seed(42),
             ),
         )
     )
@@ -250,26 +254,33 @@ def collate_batch(batch, device="cpu", transforms=None):
     # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
-    return transforms(batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels])
+    return transforms(
+        batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
+    )
 
 
 def get_dataloader(
     root_dir: str,
     batch_size: int,
-    split_percentages: List[float] = [1],
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
+    split_fractions_override: Optional[Dict[str, float]] = None,
 ):
     split_datasets = get_datasets(
-        root_dir, batch_size, img_size=img_size, training=training
+        root_dir,
+        batch_size,
+        img_size=img_size,
+        training=training,
+        split_fractions_override=split_fractions_override,
     )
     augmentations = (
-        [RandomHorizontalFlipWithBBs(0.5), RandomVerticalFlipWithBBs(0.5)] if training else []
+        [RandomHorizontalFlipWithBBs(0.5), RandomVerticalFlipWithBBs(0.5)]
+        if training
+        else []
     )
     transforms = MultiArgSequential(
-        ImageTransformLabelIdentity(Resize(img_size)),
-        *augmentations
+        ImageTransformLabelIdentity(Resize(img_size)), *augmentations
     )
     return {
         designation: DataLoader(

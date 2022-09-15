@@ -104,7 +104,7 @@ def pareto_quality():
                 {
                     "val loss": val_loss / len(validate_dataloader),
                     "val mAP": mAP["map"],
-                    "epoch": epoch
+                    "epoch": epoch,
                 },
             )
             net.train()
