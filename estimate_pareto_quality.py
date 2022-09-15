@@ -116,6 +116,7 @@ def init_dataset(config):
         config["batch_size"],
         img_size=config["resize_shape"],
         device=config["device"],
+        split_fractions_override={"train": 0.8, "test": 0., "val": 0.2}
     )
 
     train_dataloader = dataloaders["train"]
