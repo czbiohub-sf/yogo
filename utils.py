@@ -87,7 +87,7 @@ class Metrics:
         device = batch_preds.device
         preds, labels = [], []
         for b, (img_preds, img_labels) in enumerate(zip(batch_preds, batch_labels)):
-            if torch.all(img_labels[0, ...] == 0).item():
+            if torch.eq(torch.all(img_labels[0, ...] == 0), torch.tensor(False)):
                 # mask says there are no labels!
                 labels.append(
                     {
