@@ -19,11 +19,10 @@ from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 from pathlib import Path
 from copy import deepcopy
 from typing import List
-from tqdm import tqdm
 
-WARMUP = 100
+WARMUP = 10
 ADAM_LR = 3e-4
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 
 class MockedModel(YOGO):
@@ -60,12 +59,10 @@ def profile_run(
 
     Sx, Sy = net.get_grid_size(img_size)
 
-    """
     print("warming up")
     for epoch in range(WARMUP):
         outputs = net(torch.randn(1, 1, *img_size, device=dev))
     net.zero_grad()
-    """
 
     print("here we goooooo!")
     with profile(
@@ -73,17 +70,20 @@ def profile_run(
         with_stack=True,
         profile_memory=True,
     ) as prof:
-        for imgs, labels in tqdm(train_dataloader):
+        for imgs, labels in train_dataloader:
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            formatted_labels = MockedLoss.format_labels(
+                outputs,
+                labels,
+                device=device
+            )
+            loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
 
-            metrics.update(
-                outputs, MockedLoss.format_labels(outputs, labels, device=device)
-            )
+            metrics.update(outputs, formatted_labels)
 
         metrics.compute()
         return prof
@@ -136,14 +136,5 @@ if __name__ == "__main__":
         class_names,
     )
 
-    print(
-        prof.key_averages(group_by_stack_n=5).table(
-            sort_by="cpu_time_total", row_limit=10
-        )
-    )
-    print(
-        prof.key_averages(group_by_stack_n=5).table(
-            sort_by="cuda_time_total", row_limit=10
-        )
-    )
     prof.export_chrome_trace("chrome_profile.json")
+    print("I am done!")
