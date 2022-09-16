@@ -38,6 +38,9 @@ class YOGO(nn.Module):
         self.Cxs = None
         self.Cys = None
 
+        # hack?
+        self.to(device)
+
     def to(self, device):
         self.device = device
         super().to(device, dtype=torch.float32)

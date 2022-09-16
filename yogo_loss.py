@@ -33,7 +33,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
         self.cel = torch.nn.CrossEntropyLoss(
-            weight=torch.tensor(class_weights), reduction="none", label_smoothing=0.01
+            weight=torch.tensor(class_weights, device=device), reduction="none", label_smoothing=0.01
         )
         self.device = device
 
