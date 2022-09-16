@@ -9,6 +9,7 @@ from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingWarmRestarts
 
+from train import init_dataset, dataloader_class_weights
 from model import YOGO
 from argparser import parse
 from yogo_loss import YOGOLoss
@@ -43,10 +44,15 @@ def pareto_quality():
         test_dataloader,
     ) = init_dataset(config)
 
+    weights = dataloader_class_weights(train_dataloader)
+
     net = YOGO(
-        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h
-    ).to(device)
-    Y_loss = YOGOLoss().to(device)
+        img_size=config["resize_shape"],
+        anchor_w=anchor_w,
+        anchor_h=anchor_h,
+        device=device,
+    )
+    Y_loss = YOGOLoss(class_weights=weights, device=device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     min_period = 8 * len(train_dataloader)
@@ -115,38 +121,6 @@ def pareto_quality():
                 step=global_step,
             )
         net.train()
-
-
-def init_dataset(config):
-    dataloaders = get_dataloader(
-        config["dataset_descriptor_file"],
-        config["batch_size"],
-        img_size=config["resize_shape"],
-        device=config["device"],
-        split_fractions_override={"train": 0.8, "test": 0.0, "val": 0.2},
-    )
-
-    train_dataloader = dataloaders["train"]
-    validate_dataloader = dataloaders["val"]
-    test_dataloader = dataloaders["test"]
-
-    wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader) * config['batch_size']} images",
-            "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
-            "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
-        }
-    )
-
-    if wandb.run.name is not None:
-        model_save_dir = Path(f"trained_models/{wandb.run.name}")
-    else:
-        model_save_dir = Path(
-            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
-        )
-    model_save_dir.mkdir(exist_ok=True, parents=True)
-
-    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
 if __name__ == "__main__":

@@ -55,7 +55,10 @@ def train():
     weights = dataloader_class_weights(train_dataloader)
 
     net = YOGO(
-        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h, device=device
+        img_size=config["resize_shape"],
+        anchor_w=anchor_w,
+        anchor_h=anchor_h,
+        device=device,
     )
     Y_loss = YOGOLoss(class_weights=weights, device=device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
@@ -76,9 +79,7 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, device=device
-            )
+            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -233,7 +234,10 @@ def dataloader_class_weights(dataloader):
 
     This peels back the layers and returns the class counts in our dataset
     """
-    counts = [sum(d.count_class(i) for d in dataloader.dataset.dataset.datasets) for i in range(4)]
+    counts = [
+        sum(d.count_class(i) for d in dataloader.dataset.dataset.datasets)
+        for i in range(4)
+    ]
     weight = [sum(counts) / c for c in counts]
     return [w / sum(weight) for w in weight]
 

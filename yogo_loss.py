@@ -26,14 +26,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
         class_weights: Optional[List[float]] = None,
-        device: str = "cpu"
+        device: str = "cpu",
     ) -> None:
         super().__init__()
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
         self.cel = torch.nn.CrossEntropyLoss(
-            weight=torch.tensor(class_weights, device=device), reduction="none", label_smoothing=0.01
+            weight=torch.tensor(class_weights, device=device),
+            reduction="none",
+            label_smoothing=0.01,
         )
         self.device = device
 
