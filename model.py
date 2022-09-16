@@ -22,17 +22,11 @@ class YOGO(nn.Module):
     onto the end of forward if we are running inference.
     """
 
-    def __init__(
-        self, img_size, anchor_w, anchor_h, inference=False, model_override=None
-    ):
+    def __init__(self, img_size, anchor_w, anchor_h, inference=False):
         super().__init__()
         self.device = "cpu"
 
-        self.model = (
-            self.gen_model(num_classes=4)
-            if model_override is None
-            else model_override(num_classes=4)
-        )
+        self.model = self.gen_model(num_classes=4)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
@@ -114,7 +108,6 @@ class YOGO(nn.Module):
             conv_block_6,
             conv_block_7,
         )
-
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.float()

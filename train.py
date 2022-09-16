@@ -9,7 +9,7 @@ from torch import nn
 from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
 
-from model import YOGO, funcs
+from model import YOGO
 from argparser import parse
 from yogo_loss import YOGOLoss
 from utils import draw_rects, Metrics
@@ -56,7 +56,6 @@ def train():
         img_size=config["resize_shape"],
         anchor_w=anchor_w,
         anchor_h=anchor_h,
-        model_override=funcs[config["model_arch"]],
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
@@ -95,13 +94,13 @@ def train():
         for imgs, labels in validate_dataloader:
             with torch.no_grad():
                 outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
+                formatted_labels = YOGOLoss.format_labels(
+                    outputs, labels, device=device
+                )
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
 
-            metrics.update(
-                outputs, formatted_labels
-            )
+            metrics.update(outputs, formatted_labels)
 
         annotated_img = wandb.Image(
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
