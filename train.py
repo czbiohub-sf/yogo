@@ -9,7 +9,7 @@ from torch import nn
 from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
 
-from model import YOGO
+from model import YOGO, funcs
 from argparser import parse
 from yogo_loss import YOGOLoss
 from utils import draw_rects, Metrics
@@ -53,7 +53,10 @@ def train():
     ) = init_dataset(config)
 
     net = YOGO(
-        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h
+        img_size=config["resize_shape"],
+        anchor_w=anchor_w,
+        anchor_h=anchor_h,
+        model_override=funcs[config["model_arch"]],
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
