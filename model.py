@@ -75,28 +75,36 @@ class YOGO(nn.Module):
             nn.BatchNorm2d(16),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
+            nn.Dropout2d(),
         )
         conv_block_2 = nn.Sequential(
-            nn.Conv2d(16, 32, 3, padding=1, bias=False),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(16, 32, 3, padding=1),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
         )
         conv_block_3 = nn.Sequential(
-            nn.Conv2d(32, 64, 3, padding=1, bias=False),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(32, 64, 3, padding=1),
             nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=4),
+            nn.MaxPool2d(2, stride=2),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1),
-        )
-        conv_block_5 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1, bias=False),
+            nn.Conv2d(64, 128, 3, padding=1, bias=False),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(),
+            nn.MaxPool2d(2, stride=2),
+            nn.Dropout2d(),
         )
-        conv_block_6 = nn.Conv2d(128, 5 + num_classes, 1)
+        conv_block_5 = nn.Sequential(
+            nn.Conv2d(128, 128, 3, padding=1),
+            nn.LeakyReLU(),
+            # nn.MaxPool2d(2, stride=2),
+        )
+        conv_block_6 = nn.Sequential(
+            nn.Conv2d(128, 128, 3, padding=1),
+            nn.LeakyReLU(),
+            # nn.MaxPool2d(4, stride=2),
+        )
+        conv_block_7 = nn.Conv2d(128, 5 + num_classes, 1)
         return nn.Sequential(
             conv_block_1,
             conv_block_2,
@@ -104,7 +112,9 @@ class YOGO(nn.Module):
             conv_block_4,
             conv_block_5,
             conv_block_6,
+            conv_block_7,
         )
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.float()
@@ -146,336 +156,6 @@ class YOGO(nn.Module):
             dim=1,
         )
 
-
-def gen_model_original(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, padding=1, bias=False),
-        nn.BatchNorm2d(16),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(16, 32, 3, padding=1, bias=False),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1, bias=False),
-        nn.BatchNorm2d(64),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-    )
-    conv_block_6 = nn.Conv2d(128, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-        conv_block_5,
-        conv_block_6,
-    )
-
-
-def gen_model_wider(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 32, 3, padding=1, bias=False),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1, bias=False),
-        nn.BatchNorm2d(64),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_4 = nn.Sequential(
-        nn.Conv2d(128, 256, 3, padding=1, bias=False),
-        nn.BatchNorm2d(256),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_5 = nn.Sequential(
-        nn.Conv2d(256, 256, 3, padding=1, bias=False),
-        nn.BatchNorm2d(256),
-        nn.LeakyReLU(),
-    )
-    conv_block_6 = nn.Conv2d(256, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-        conv_block_5,
-        conv_block_6,
-    )
-
-
-def gen_model_deeper(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, padding=1, bias=False),
-        nn.BatchNorm2d(16),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-        nn.Dropout2d(),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(16, 32, 3, padding=1),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-        nn.Dropout2d(),
-    )
-    conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1),
-        nn.LeakyReLU(),
-        # nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_6 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1),
-        nn.LeakyReLU(),
-        # nn.MaxPool2d(4, stride=2),
-    )
-    conv_block_7 = nn.Conv2d(128, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-        conv_block_5,
-        conv_block_6,
-        conv_block_7,
-    )
-
-
-def gen_model_smaller(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 32, 3, padding=1, bias=False),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(32, 32, 3, padding=1, bias=False),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-        nn.Dropout2d(),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=4),
-    )
-    conv_block_4 = nn.Conv2d(64, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-    )
-
-
-def gen_model_dropout(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, padding=1, bias=False),
-        nn.BatchNorm2d(16),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(16, 32, 3, padding=1),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-        nn.Dropout2d(),
-    )
-    conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1, bias=False),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-        nn.Dropout2d(),
-    )
-    conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1, bias=False),
-        nn.LeakyReLU(),
-        nn.Dropout2d(),
-    )
-    conv_block_6 = nn.Conv2d(128, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-        conv_block_5,
-        conv_block_6,
-    )
-
-
-def gen_model_bigger_SxSy_1(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, padding=1, bias=False),
-        nn.BatchNorm2d(16),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(16, 32, 3, padding=1, bias=False),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1, bias=False),
-        nn.BatchNorm2d(64),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-    )
-    conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_6 = nn.Conv2d(128, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-        conv_block_5,
-        conv_block_6,
-    )
-
-
-def gen_model_bigger_SxSy_2(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, padding=1, bias=False),
-        nn.BatchNorm2d(16),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(16, 32, 3, padding=1, bias=False),
-        nn.BatchNorm2d(32),
-        nn.LeakyReLU(),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1, bias=False),
-        nn.BatchNorm2d(64),
-        nn.LeakyReLU(),
-    )
-    conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-    )
-    conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_6 = nn.Conv2d(128, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-        conv_block_5,
-        conv_block_6,
-    )
-
-
-def gen_model_smaller_SxSy(num_classes) -> nn.Module:
-    conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, padding=1, bias=False),
-        nn.BatchNorm2d(16),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_2 = nn.Sequential(
-        nn.Conv2d(16, 32, 3, padding=1, bias=False),
-        nn.BatchNorm2d(32),
-        nn.MaxPool2d(2, stride=2),
-        nn.LeakyReLU(),
-    )
-    conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, padding=1, bias=False),
-        nn.BatchNorm2d(64),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=2),
-    )
-    conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.MaxPool2d(2, stride=2),
-        nn.LeakyReLU(),
-    )
-    conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1, bias=False),
-        nn.BatchNorm2d(128),
-        nn.LeakyReLU(),
-        nn.MaxPool2d(2, stride=4),
-    )
-    conv_block_6 = nn.Conv2d(128, 5 + num_classes, 1)
-    return nn.Sequential(
-        conv_block_1,
-        conv_block_2,
-        conv_block_3,
-        conv_block_4,
-        conv_block_5,
-        conv_block_6,
-    )
-
-
-funcs = {
-    "gen_model_original": gen_model_original,
-    "gen_model_wider": gen_model_wider,
-    "gen_model_deeper": gen_model_deeper,
-    "gen_model_smaller": gen_model_smaller,
-    "gen_model_dropout": gen_model_dropout,
-    "gen_model_bigger_SxSy_1": gen_model_bigger_SxSy_1,
-    "gen_model_bigger_SxSy_2": gen_model_bigger_SxSy_2,
-    "gen_model_smaller_SxSy": gen_model_smaller_SxSy,
-}
 
 if __name__ == "__main__":
     import time
