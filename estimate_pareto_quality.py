@@ -61,6 +61,7 @@ def pareto_quality():
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
+    best_mAP = 0.0
     global_step = 0
     for epoch in range(config["epochs"]):
         # train
@@ -89,31 +90,32 @@ def pareto_quality():
 
         net.eval()
 
+        # do validation things
+        val_loss = 0.0
+        for imgs, labels in validate_dataloader:
+            with torch.no_grad():
+                outputs = net(imgs)
+                formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+                loss = Y_loss(outputs, formatted_labels)
+                val_loss += loss.item()
+
+            metrics.update(outputs, formatted_labels)
+
+        mAP, _ = metrics.compute()
+        metrics.reset()
+
+        best_mAP = max(best_mAP, mAP["map"])
+
         if (epoch + 1) in report_periods:
-            # do validation things
-            val_loss = 0.0
-            for imgs, labels in validate_dataloader:
-                with torch.no_grad():
-                    outputs = net(imgs)
-                    formatted_labels = Y_loss.format_labels(
-                        outputs, labels, device=device
-                    )
-                    loss = Y_loss(outputs, formatted_labels)
-                    val_loss += loss.item()
-
-                metrics.update(outputs, formatted_labels)
-
-            mAP, _ = metrics.compute()
-            metrics.reset()
-
             wandb.log(
                 {
                     "val loss": val_loss / len(validate_dataloader),
-                    "val mAP": mAP["map"],
+                    "val mAP": best_mAP,
                     "epoch": epoch,
                 },
                 step=global_step,
             )
+            best_mAP = 0.0
         net.train()
 
 
