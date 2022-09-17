@@ -91,12 +91,10 @@ class YOGO(nn.Module):
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 128, 3, padding=1),
             nn.LeakyReLU(),
-            # nn.MaxPool2d(2, stride=2),
         )
         conv_block_6 = nn.Sequential(
             nn.Conv2d(128, 128, 3, padding=1),
             nn.LeakyReLU(),
-            # nn.MaxPool2d(4, stride=2),
         )
         conv_block_7 = nn.Conv2d(128, 5 + num_classes, 1)
         return nn.Sequential(
