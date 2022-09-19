@@ -16,6 +16,33 @@ IOU Loss?
 """
 
 
+def focal_loss(
+    inputs: torch.Tensor,
+    targets: torch.Tensor,
+    alpha: float = 0.25,
+    gamma: float = 2,
+    reduction: str = "none",
+    label_smoothing: float = 0
+) -> torch.Tensor:
+    # Adapted from link below to use softmax instead of sigmoid
+    # https://pytorch.org/vision/stable/_modules/torchvision/ops/focal_loss.html
+    p = torch.softmax(inputs, dim=1)
+    p_t = p * targets + (1 - p) * (1 - targets)
+    ce_loss = F.cross_entropy(inputs, targets, reduction="none", label_smoothing=label_smoothing)
+    loss = ce_loss * ((1 - p_t) ** gamma)
+
+    if alpha >= 0:
+        alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
+        loss = alpha_t * loss
+
+    if reduction == "mean":
+        loss = loss.mean()
+    elif reduction == "sum":
+        loss = loss.sum()
+
+    return loss
+
+
 class YOGOLoss(torch.nn.modules.loss._Loss):
     __constants__ = ["coord_weight", "no_obj_weight"]
     coord_weight: float
@@ -30,7 +57,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
-        self.cel = torch.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.01)
         self.device = "cpu"
 
     def to(self, device):
@@ -101,7 +127,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # classification loss
         loss += (
             label_batch[:, 0, :, :]
-            * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
+            * focal_loss(
+                pred_batch[:, 5:, :, :],
+                label_batch[:, 5, :, :].long(),
+                reduction='none',
+                label_smoothing=0.01
+            )
         ).sum()
 
         return loss / batch_size
