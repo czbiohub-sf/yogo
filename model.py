@@ -22,20 +22,34 @@ class YOGO(nn.Module):
     onto the end of forward if we are running inference.
     """
 
-    def __init__(self, img_size, anchor_w, anchor_h, inference=False):
+    def __init__(self, img_size, anchor_w, anchor_h, num_classes=4, inference=False):
         super().__init__()
         self.device = "cpu"
 
-        self.model = self.gen_model(num_classes=4)
+        self.model = self.gen_model(num_classes=num_classes)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
+        # self.register_buffer("num_classes", torch.tensor(num_classes))
 
         self.inference = inference
 
-        self.Cxs = None
-        self.Cys = None
+        self._Cxs = None
+        self._Cys = None
+
+    @classmethod
+    def from_state_dict(cls, loaded_pth, inference=False):
+        params = loaded_pth["model_state_dict"]
+        img_size = params["img_size"]
+        anchor_w = params["anchor_w"]
+        anchor_h = params["anchor_h"]
+        num_classes = params["num_classes"]
+        model = cls(
+            img_size, anchor_w, anchor_h, num_classes=num_classes, inference=inference
+        )
+        model.load_state_dict(params)
+        return model
 
     def to(self, device):
         self.device = device
@@ -113,8 +127,8 @@ class YOGO(nn.Module):
 
         bs, preds, Sy, Sx = x.shape
 
-        if self.Cxs is None or self.Cys is None:
-            self.Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
+        if self._Cxs is None or self._Cys is None:
+            self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
             self.Cys = (
                 torch.linspace(0, 1 - 1 / Sy, Sy)
                 .expand(1, -1)
@@ -137,8 +151,8 @@ class YOGO(nn.Module):
         #  'objectness' score
         return torch.cat(
             (
-                ((1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self.Cxs),
-                ((1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self.Cys),
+                ((1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs),
+                ((1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys),
                 (self.anchor_w * torch.exp(x[:, 2:3, :, :])),
                 (self.anchor_h * torch.exp(x[:, 3:4, :, :])),
                 (torch.sigmoid(x[:, 4:5, :, :])),
