@@ -128,8 +128,12 @@ class YOGO(nn.Module):
         bs, preds, Sy, Sx = x.shape
 
         if self._Cxs is None or self._Cys is None:
-            self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
-            self.Cys = (
+            self._Cxs = (
+                torch.linspace(0, 1 - 1 / Sx, Sx)
+                .expand(Sy, -1)
+                .to(self.device)
+            )
+            self._Cys = (
                 torch.linspace(0, 1 - 1 / Sy, Sy)
                 .expand(1, -1)
                 .transpose(0, 1)
