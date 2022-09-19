@@ -104,7 +104,17 @@ def pareto_quality():
         mAP, _ = metrics.compute()
         metrics.reset()
 
-        best_mAP = max(best_mAP, mAP["map"])
+        if mAP["map"] > best_mAP:
+            best_mAP = mAP["map"]
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "global_step": global_step,
+                    "model_state_dict": deepcopy(net.state_dict()),
+                    "optimizer_state_dict": deepcopy(optimizer.state_dict()),
+                },
+                str(model_save_dir / f"best.pth"),
+            )
 
         if (epoch + 1) in report_periods:
             wandb.log(
