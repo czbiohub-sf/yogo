@@ -39,7 +39,7 @@ class YOGO(nn.Module):
         self._Cys = None
 
     @classmethod
-    def from_state_dict(cls, loaded_pth, inference=False):
+    def from_pth(cls, loaded_pth, inference=False):
         params = loaded_pth["model_state_dict"]
         img_size = params["img_size"]
         anchor_w = params["anchor_w"]

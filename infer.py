@@ -29,7 +29,7 @@ if __name__ == "__main__":
     if len(sys.argv) == 3:
         pth = torch.load(sys.argv[1], map_location=torch.device("cpu"))
         img_h, img_w = pth["model_state_dict"]["img_size"]
-        model = YOGO.from_state_dict(pth, inference=True)
+        model = YOGO.from_pth(pth, inference=True)
         data_path = sys.argv[2]
     else:
         img_h, img_w = 600, 800
