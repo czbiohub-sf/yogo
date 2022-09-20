@@ -199,7 +199,7 @@ if __name__ == "__main__":
             "dataset_descriptor_file": args.dataset_descriptor_file,
         },
         notes="pareto run: " + args.note,
-        tags=["v0.0.1"],
+        tags=["v0.0.1", "pareto"],
     )
 
     pareto_quality()
