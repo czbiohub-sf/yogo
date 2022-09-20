@@ -13,7 +13,7 @@ from torch import nn
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
-from torchvision.transforms import Resize
+from torchvision.transforms import Resize, RandomAdjustSharpness
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
@@ -275,7 +275,11 @@ def get_dataloader(
         split_fractions_override=split_fractions_override,
     )
     augmentations = (
-        [RandomHorizontalFlipWithBBs(0.5), RandomVerticalFlipWithBBs(0.5)]
+        [
+            ImageTransformLabelIdentity(RandomAdjustSharpness(0, p=0.5)),
+            RandomHorizontalFlipWithBBs(0.5),
+            RandomVerticalFlipWithBBs(0.5),
+        ]
         if training
         else []
     )
