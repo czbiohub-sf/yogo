@@ -76,7 +76,10 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            formatted_labels = YOGOLoss.format_labels(
+                outputs, labels, device=device
+            )
+            loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
 
