@@ -66,13 +66,13 @@ def do_export(args):
     if not onnx_filename.endswith(".onnx"):
         onnx_filename += ".onnx"
 
-    net = YOGO(0.1, 0.1)
-    net.eval()
 
     model_save = torch.load(pth_filename, map_location=torch.device("cpu"))
-    net.load_state_dict(model_save["model_state_dict"])
+    net = YOGO.from_pth(model_save, inference=True)
+    net.eval()
 
-    dummy_input = torch.randn(1, 1, 300, 400, requires_grad=False)
+    img_h, img_w = model_save["model_state_dict"]["img_size"]
+    dummy_input = torch.randn(1, 1, img_h, img_w, requires_grad=False)
     torch_out = net(dummy_input)
 
     torch.onnx.export(net, dummy_input, onnx_filename, verbose=False, opset_version=14)
