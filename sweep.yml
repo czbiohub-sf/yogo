@@ -5,7 +5,7 @@ command:
   - ${program}
   - ../full_100x_dataset.yml
   - --note
-  - "Sweeping along batchsize & learning rate"
+  - "Coarse sweeping along Sx/Sy"
 method: grid
 metric:
   goal: maximize
@@ -13,12 +13,8 @@ metric:
 parameters:
   model_arch:
     values: 
-      - gen_model_original
-      - gen_model_wider
-      - gen_model_deeper
-      - gen_model_smaller
-      - gen_model_dropout
-      - gen_model_bigger_SxSy_1
-      - gen_model_bigger_SxSy_2
-      - gen_model_smaller_SxSy
-program: train.py
+      - gen_model_1
+      - gen_model_2
+      - gen_model_3
+      - gen_model_4
+program: estimate_pareto_quality.py

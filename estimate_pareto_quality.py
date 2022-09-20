@@ -44,6 +44,7 @@ def pareto_quality():
     ) = init_dataset(config)
 
     net = YOGO(
+        config["model"],
         img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h
     ).to(device)
     Y_loss = YOGOLoss().to(device)
@@ -173,7 +174,7 @@ if __name__ == "__main__":
     epochs = 256
     adam_lr = 3e-4
     batch_size = 32
-    resize_target_size = (300, 400)
+    resize_target_size = (600, 800)
 
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
@@ -187,6 +188,7 @@ if __name__ == "__main__":
         "yogo",
         entity="bioengineering",
         config={
+            "model": "gen_model_1",
             "learning_rate": adam_lr,
             "epochs": epochs,
             "batch_size": batch_size,
