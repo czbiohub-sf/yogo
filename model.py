@@ -44,9 +44,14 @@ class YOGO(nn.Module):
         img_size = params["img_size"]
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
-        num_classes = params["num_classes"]
+        num_classes = 4
+        # num_classes = params["num_classes"]
         model = cls(
-            img_size, anchor_w, anchor_h, num_classes=num_classes, inference=inference
+            (img_size[0], img_size[1]),
+            anchor_w.item(),
+            anchor_h.item(),
+            num_classes=num_classes,
+            inference=inference,
         )
         model.load_state_dict(params)
         return model
@@ -128,11 +133,7 @@ class YOGO(nn.Module):
         bs, preds, Sy, Sx = x.shape
 
         if self._Cxs is None or self._Cys is None:
-            self._Cxs = (
-                torch.linspace(0, 1 - 1 / Sx, Sx)
-                .expand(Sy, -1)
-                .to(self.device)
-            )
+            self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
             self._Cys = (
                 torch.linspace(0, 1 - 1 / Sy, Sy)
                 .expand(1, -1)
