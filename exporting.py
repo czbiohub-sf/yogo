@@ -16,59 +16,13 @@ import numpy as np
 
 from model import YOGO
 from pathlib import Path
+from argparsers import export_parser
 from dataloader import get_dataloader
 
 
 """
 Learning from https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html
 """
-
-
-def parse():
-    parser = argparse.ArgumentParser(description="convert a pth to onnx or Intel IR")
-
-    subparsers = parser.add_subparsers()
-
-    export_parser = subparsers.add_parser(
-        "export", description="export PTH file to various formats"
-    )
-    export_parser.add_argument(
-        "input",
-        type=str,
-        help="path to input pth file",
-    )
-    export_parser.add_argument(
-        "--output-filename",
-        type=str,
-        help="output filename",
-    )
-    export_parser.add_argument(
-        "--simplify",
-        type=bool,
-        help="attempt to simplify the onnx model",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-    )
-    export_parser.add_argument(
-        "--IR",
-        type=bool,
-        help="export to IR (for NCS2)",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-    )
-
-    # vis_parser = subparsers.add_parser(
-    #     "vis",
-    #     description="create model visualization",
-    # )
-    parser.add_argument(
-        "--visualize",
-        type=bool,
-        help="visualize PyTorch computational graph",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-    )
-    return parser.parse_args()
 
 
 def to_numpy(tensor):
@@ -78,6 +32,8 @@ def to_numpy(tensor):
 
 
 def do_vis(filename):
+    raise NotImplementedError("This is currently broken :'( yell at axel!")
+
     # FIXME: this is a hack, we should just create a fake label tensor)
     from yogo_loss import YOGOLoss
 
@@ -173,9 +129,13 @@ def do_export(args):
 
 
 if __name__ == "__main__":
-    args = parse()
+    parser = export_parser()
+    args = parser.parse_args()
 
     if args.visualize:
         vis_filename = do_vis("computational_graph")
     else:
-        do_export(args)
+        try:
+            do_export(args)
+        except AttributeError:
+            parser.print_help()
