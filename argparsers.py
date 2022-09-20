@@ -1,6 +1,12 @@
 import argparse
 
 
+try:
+    boolean_action = argparse.BooleanOptionalAction
+except AttributeError:
+    boolean_action = "store_true"
+
+
 def train_parser():
     parser = argparse.ArgumentParser(description="commence a training run")
     parser.add_argument(
@@ -50,23 +56,20 @@ def export_parser():
     )
     export_parser.add_argument(
         "--simplify",
-        type=bool,
         help="attempt to simplify the onnx model",
-        action=argparse.BooleanOptionalAction,
+        action=boolean_action,
         default=True,
     )
     export_parser.add_argument(
         "--IR",
-        type=bool,
         help="export to IR (for NCS2)",
-        action=argparse.BooleanOptionalAction,
+        action=boolean_action,
         default=True,
     )
     parser.add_argument(
         "--visualize",
-        type=bool,
         help="visualize PyTorch computational graph",
-        action=argparse.BooleanOptionalAction,
+        action=boolean_action,
         default=False,
     )
     return parser

@@ -31,7 +31,7 @@ def to_numpy(tensor):
 
 
 def do_vis(filename):
-    raise NotImplementedError("This is currently broken :'( yell at axel!")
+    raise NotImplementedError("This is currently broken, y'all :'( yell at axel!")
 
     import torchviz
 
@@ -120,11 +120,12 @@ def do_export(args):
                     Path(onnx_filename).resolve().parents[0],
                 ]
             )
-            success_msg += ", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
+            success_msg += f", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
         except Exception as e:
             # if some error occurs, just quietly fail
             success_msg += f"; could not export to IR: {str(e)}"
 
+    print("\n" * 3)
     print(success_msg)
 
 
