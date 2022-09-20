@@ -9,7 +9,6 @@ import onnxsim
 import onnxruntime
 
 import torch
-import torchviz
 import torchvision
 
 import numpy as np
@@ -33,6 +32,8 @@ def to_numpy(tensor):
 
 def do_vis(filename):
     raise NotImplementedError("This is currently broken :'( yell at axel!")
+
+    import torchviz
 
     # FIXME: this is a hack, we should just create a fake label tensor)
     from yogo_loss import YOGOLoss
@@ -65,7 +66,6 @@ def do_export(args):
 
     if not onnx_filename.endswith(".onnx"):
         onnx_filename += ".onnx"
-
 
     model_save = torch.load(pth_filename, map_location=torch.device("cpu"))
     net = YOGO.from_pth(model_save, inference=True)
