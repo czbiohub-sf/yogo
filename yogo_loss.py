@@ -22,7 +22,7 @@ def focal_loss(
     alpha: float = 0.25,
     gamma: float = 2,
     reduction: str = "none",
-    label_smoothing: float = 0
+    label_smoothing: float = 0,
 ) -> torch.Tensor:
     # Adapted from link below to use softmax instead of sigmoid
     # https://pytorch.org/vision/stable/_modules/torchvision/ops/focal_loss.html
@@ -33,10 +33,13 @@ def focal_loss(
 
     p_t = p_shaped * targets_shaped + (1 - p_shaped) * (1 - targets_shaped)
 
-    ce_loss = F.cross_entropy(inputs, targets[:, 0, :, :], reduction="none", label_smoothing=label_smoothing)
-    ce_loss = ce_loss.unsqueeze(-1)
+    ce_loss = F.cross_entropy(
+        inputs, targets[:, 0, :, :], reduction="none", label_smoothing=label_smoothing
+    )
+    ce_loss = torch.permute(ce_loss.unsqueeze(1), (0,2,3,1))
 
     loss = ce_loss * ((1 - p_t) ** gamma)
+    print("p.shape, p_shaped.shape, p_t.shape, ce_loss.shape, loss.shape", p.shape, p_shaped.shape, p_t.shape, ce_loss.shape, loss.shape)
 
     if alpha >= 0:
         alpha_t = alpha * targets_shaped + (1 - alpha) * (1 - targets_shaped)
@@ -133,12 +136,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         # classification loss
         loss += (
-            torch.permute(label_batch, (0,2,3,1))[:, :, :, 0:1]
+            torch.permute(label_batch, (0, 2, 3, 1))[:, :, :, 0:1]
             * focal_loss(
                 pred_batch[:, 5:, :, :],
                 label_batch[:, 5:6, :, :].long(),
-                reduction='none',
-                label_smoothing=0.01
+                reduction="none",
+                label_smoothing=0.01,
             )
         ).sum()
 
