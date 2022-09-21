@@ -33,7 +33,7 @@ def train_parser():
         nargs="?",
         help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
     )
-    return parser.parse_args()
+    return parser
 
 
 def export_parser():
