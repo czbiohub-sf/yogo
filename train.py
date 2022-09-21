@@ -231,8 +231,6 @@ def get_wandb_confusion(confusion_data, title):
 
 
 if __name__ == "__main__":
-    set_start_method("spawn")
-
     parser = train_parser()
     args = parser.parse_args()
 
