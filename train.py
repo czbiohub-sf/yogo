@@ -7,7 +7,7 @@ import torch
 import torch
 from torch import nn
 from torch.optim import AdamW
-from torch.multiprocessing import set_start_method
+from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from model import YOGO
 from argparsers import train_parser
@@ -59,6 +59,13 @@ def train():
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
+
+    min_period = 8 * len(train_dataloader)
+    anneal_period = config["epochs"] * len(train_dataloader) - min_period
+    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
+    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
+    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+
     metrics = Metrics(num_classes=4, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
@@ -80,9 +87,10 @@ def train():
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             wandb.log(
-                {"train loss": loss.item(), "epoch": epoch},
+                {"train loss": loss.item(), "epoch": epoch, "LR": scheduler.get_last_lr()[0]},
                 commit=False,
                 step=global_step,
             )
@@ -225,8 +233,6 @@ def get_wandb_confusion(confusion_data, title):
 
 
 if __name__ == "__main__":
-    set_start_method("spawn")
-
     parser = train_parser()
     args = parser.parse_args()
 
