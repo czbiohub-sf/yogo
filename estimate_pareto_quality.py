@@ -10,7 +10,7 @@ from torch.multiprocessing import set_start_method
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingWarmRestarts
 
 from model import YOGO
-from argparser import parse
+from argparsers import train_parser
 from yogo_loss import YOGOLoss
 from utils import draw_rects, Metrics
 from dataloader import load_dataset_description, get_dataloader
@@ -162,7 +162,8 @@ def init_dataset(config):
 
 
 if __name__ == "__main__":
-    args = parse()
+    parser = train_parser()
+    args = parser.parse_args()
 
     device = torch.device(
         args.device

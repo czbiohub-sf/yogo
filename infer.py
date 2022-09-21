@@ -2,6 +2,11 @@
 
 import sys
 import torch
+import signal
+
+# lets us ctrl-c to exit while matplotlib is showing stuff
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
 import matplotlib.pyplot as plt
 
 from matplotlib.patches import Rectangle
@@ -21,37 +26,36 @@ if __name__ == "__main__":
         print(f"usage: {sys.argv[0]} [<path_to_pth>] <path_to_image_or_images>")
         sys.exit(1)
 
-    m = YOGO(17 / 400, 17 / 300)
-    m.eval()
-
     if len(sys.argv) == 3:
         pth = torch.load(sys.argv[1], map_location=torch.device("cpu"))
-        m.load_state_dict(pth["model_state_dict"])
+        img_h, img_w = pth["model_state_dict"]["img_size"]
+        model = YOGO.from_pth(pth, inference=True)
         data_path = sys.argv[2]
     else:
+        img_h, img_w = 600, 800
+        model = YOGO((img_h, img_w), 0.01, 0.01, inference=True)
         data_path = sys.argv[1]
 
-    img_h, img_w = 300, 400
     R = Resize([img_h, img_w])
 
     data = Path(data_path)
     if data.is_dir():
-        raise NotImplementedError()
-        # for img_path in data.glob("*.png"):
-        #     img = R(read_image(str(img_path), ImageReadMode.GRAY))
-        #     plt.imshow(img[0,...], cmap='gray')  # imshow doesn't like C=1 for CHW imgs
-        #     plt.show()
+        imgs = [str(d) for d in data.glob("*.png")]
     else:
-        img = R(read_image(str(data), ImageReadMode.GRAY))
+        imgs = [str(data)]
+
+    for fname in imgs:
+        img = R(read_image(fname, ImageReadMode.GRAY))
         fig, ax = plt.subplots()
 
         ax.imshow(img[0, ...], cmap="gray")  # imshow doesn't like C=1 for CHW imgs
 
-        res = m(img[None, ...])
+        res = model(img[None, ...])
         _, pred_dim, Sy, Sx = res.shape
         for pred in torch.permute(res.reshape(1, pred_dim, Sx * Sy)[0, :, :], (1, 0)):
             assert len(pred) == 9
             xc, yc, w, h = pred[:4].detach()
+            # TODO: Tune threshold?
             if pred[4].item() > 0.5:
                 ax.add_patch(
                     Rectangle(

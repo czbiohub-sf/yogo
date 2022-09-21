@@ -10,7 +10,7 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from model import YOGO
-from argparser import parse
+from argparsers import train_parser
 from yogo_loss import YOGOLoss
 from utils import draw_rects, Metrics
 from dataloader import load_dataset_description, get_dataloader
@@ -83,9 +83,7 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, device=device
-            )
+            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -235,7 +233,8 @@ def get_wandb_confusion(confusion_data, title):
 
 
 if __name__ == "__main__":
-    args = parse()
+    parser = train_parser()
+    args = parser.parse_args()
 
     device = torch.device(
         args.device

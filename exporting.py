@@ -9,66 +9,19 @@ import onnxsim
 import onnxruntime
 
 import torch
-import torchviz
 import torchvision
 
 import numpy as np
 
 from model import YOGO
 from pathlib import Path
+from argparsers import export_parser
 from dataloader import get_dataloader
 
 
 """
 Learning from https://pytorch.org/tutorials/advanced/super_resolution_with_onnxruntime.html
 """
-
-
-def parse():
-    parser = argparse.ArgumentParser(description="convert a pth to onnx or Intel IR")
-
-    subparsers = parser.add_subparsers()
-
-    export_parser = subparsers.add_parser(
-        "export", description="export PTH file to various formats"
-    )
-    export_parser.add_argument(
-        "input",
-        type=str,
-        help="path to input pth file",
-    )
-    export_parser.add_argument(
-        "--output-filename",
-        type=str,
-        help="output filename",
-    )
-    export_parser.add_argument(
-        "--simplify",
-        type=bool,
-        help="attempt to simplify the onnx model",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-    )
-    export_parser.add_argument(
-        "--IR",
-        type=bool,
-        help="export to IR (for NCS2)",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-    )
-
-    # vis_parser = subparsers.add_parser(
-    #     "vis",
-    #     description="create model visualization",
-    # )
-    parser.add_argument(
-        "--visualize",
-        type=bool,
-        help="visualize PyTorch computational graph",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-    )
-    return parser.parse_args()
 
 
 def to_numpy(tensor):
@@ -78,6 +31,10 @@ def to_numpy(tensor):
 
 
 def do_vis(filename):
+    raise NotImplementedError("This is currently broken, y'all :'( yell at axel!")
+
+    import torchviz
+
     # FIXME: this is a hack, we should just create a fake label tensor)
     from yogo_loss import YOGOLoss
 
@@ -110,13 +67,12 @@ def do_export(args):
     if not onnx_filename.endswith(".onnx"):
         onnx_filename += ".onnx"
 
-    net = YOGO(0.1, 0.1)
+    model_save = torch.load(pth_filename, map_location=torch.device("cpu"))
+    net = YOGO.from_pth(model_save, inference=True)
     net.eval()
 
-    model_save = torch.load(pth_filename, map_location=torch.device("cpu"))
-    net.load_state_dict(model_save["model_state_dict"])
-
-    dummy_input = torch.randn(1, 1, 300, 400, requires_grad=False)
+    img_h, img_w = model_save["model_state_dict"]["img_size"]
+    dummy_input = torch.randn(1, 1, img_h, img_w, requires_grad=False)
     torch_out = net(dummy_input)
 
     torch.onnx.export(net, dummy_input, onnx_filename, verbose=False, opset_version=14)
@@ -164,18 +120,23 @@ def do_export(args):
                     Path(onnx_filename).resolve().parents[0],
                 ]
             )
-            success_msg += ", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
+            success_msg += f", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
         except Exception as e:
             # if some error occurs, just quietly fail
             success_msg += f"; could not export to IR: {str(e)}"
 
+    print("\n" * 3)
     print(success_msg)
 
 
 if __name__ == "__main__":
-    args = parse()
+    parser = export_parser()
+    args = parser.parse_args()
 
     if args.visualize:
         vis_filename = do_vis("computational_graph")
     else:
-        do_export(args)
+        try:
+            do_export(args)
+        except AttributeError:
+            parser.print_help()
