@@ -104,7 +104,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
         ).sum()
 
-        return loss / batch_size
+        return loss / (batch_size * Sx * Sy)
 
     @classmethod
     def format_labels(
