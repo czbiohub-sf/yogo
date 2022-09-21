@@ -60,7 +60,7 @@ def train():
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
     scheduler = OneCycleLR(
-        optimizer.parameters(),
+        optimizer,
         max_lr=0.3,
         total_steps=len(train_dataloader) * config["epochs"],
     )
