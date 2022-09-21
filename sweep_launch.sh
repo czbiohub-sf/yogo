@@ -6,6 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-node=a100:1
+#SBATCH --outputs ./slurm-outputs
 
 # TODO: See docs for potentially cleaner way to do this https://slurm.schedmd.com/sbatch.html
 
