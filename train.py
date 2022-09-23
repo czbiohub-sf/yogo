@@ -206,6 +206,12 @@ def init_dataset(config):
             "training set size": f"{len(train_dataloader) * config['batch_size']} images",
             "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
             "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
+            "training set class counts": {
+                c: sum(
+                    d.count_class(i) for d in train_dataloader.dataset.dataset.datasets
+                )
+                for i, c in enumerate(class_names)
+            },
         }
     )
 
@@ -249,7 +255,7 @@ if __name__ == "__main__":
     epochs = 256
     adam_lr = 3e-4
     batch_size = 32
-    resize_target_size = (600, 800)
+    resize_target_size = (300, 400)
 
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
@@ -273,12 +279,6 @@ if __name__ == "__main__":
             "class_names": class_names,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
-            "training set class counts": {
-                c: sum(
-                    d.count_class(i) for d in train_dataloader.dataset.dataset.datasets
-                )
-                for i, c in enumerate(class_names)
-            },
         },
         notes=args.note,
         tags=["v0.0.1"],

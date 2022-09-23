@@ -47,14 +47,15 @@ class YOGO(nn.Module):
 
         try:
             num_classes = params["num_classes"]
-        except AttributeError:
-            num_classes = 4
+        except KeyError:
+            num_classes = torch.tensor(4)
+            params["num_classes"] = num_classes
 
         model = cls(
             (img_size[0], img_size[1]),
             anchor_w.item(),
             anchor_h.item(),
-            num_classes=num_classes,
+            num_classes=num_classes.item(),
             inference=inference,
         )
         model.load_state_dict(params)
