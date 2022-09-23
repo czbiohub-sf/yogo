@@ -85,10 +85,10 @@ class YOGO(nn.Module):
     def gen_model(self, num_classes) -> nn.Module:
         conv_block_1 = nn.Sequential(
             nn.Conv2d(1, 16, 3, padding=1, bias=False),
-            nn.BatchNorm2d(16),
+            # nn.BatchNorm2d(16),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
-            nn.Dropout2d(),
+            # nn.Dropout2d(),
         )
         conv_block_2 = nn.Sequential(
             nn.Conv2d(16, 32, 3, padding=1),
@@ -102,10 +102,10 @@ class YOGO(nn.Module):
         )
         conv_block_4 = nn.Sequential(
             nn.Conv2d(64, 128, 3, padding=1, bias=False),
-            nn.BatchNorm2d(128),
+            # nn.BatchNorm2d(128),
             nn.LeakyReLU(),
             nn.MaxPool2d(2, stride=2),
-            nn.Dropout2d(),
+            # nn.Dropout2d(),
         )
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 128, 3, padding=1),

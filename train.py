@@ -6,7 +6,7 @@ import torch
 
 import torch
 from torch import nn
-from torch.optim import AdamW
+from torch.optim import SGD
 from torch.optim.lr_scheduler import OneCycleLR
 
 from model import YOGO
@@ -58,11 +58,14 @@ def train():
         anchor_h=anchor_h,
     ).to(device)
     Y_loss = YOGOLoss().to(device)
-    optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
+    optimizer = SGD(net.parameters(), lr=config["learning_rate"], momentum=0.9)
     scheduler = OneCycleLR(
         optimizer,
         max_lr=0.3,
-        total_steps=len(train_dataloader) * config["epochs"],
+        div_factor=1000,
+        steps_per_epoch=len(train_dataloader),
+        epochs=config["epochs"],
+        cycle_momentum=False,
     )
     metrics = Metrics(num_classes=4, device=device, class_names=class_names)
 
@@ -84,11 +87,16 @@ def train():
             formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
+            nn.utils.clip_grad_norm_(net.parameters(), 1000)
             optimizer.step()
             scheduler.step()
 
             wandb.log(
-                {"train loss": loss.item(), "epoch": epoch, "LR": scheduler.get_last_lr()},
+                {
+                    "train loss": loss.item(),
+                    "epoch": epoch,
+                    "LR": scheduler.get_last_lr()[0],
+                },
                 commit=False,
                 step=global_step,
             )
