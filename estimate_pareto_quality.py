@@ -198,6 +198,12 @@ if __name__ == "__main__":
             "class_names": class_names,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
+            "training set class counts": {
+                c: sum(
+                    d.count_class(i) for d in train_dataloader.dataset.dataset.datasets
+                )
+                for i, c in enumerate(class_names)
+            },
         },
         notes="pareto run: " + args.note,
         tags=["v0.0.1", "pareto"],

@@ -90,7 +90,11 @@ def train():
             scheduler.step()
 
             wandb.log(
-                {"train loss": loss.item(), "epoch": epoch, "LR": scheduler.get_last_lr()[0]},
+                {
+                    "train loss": loss.item(),
+                    "epoch": epoch,
+                    "LR": scheduler.get_last_lr()[0],
+                },
                 commit=False,
                 step=global_step,
             )
@@ -242,7 +246,7 @@ if __name__ == "__main__":
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 192
+    epochs = 256
     adam_lr = 3e-4
     batch_size = 32
     resize_target_size = (600, 800)
@@ -269,6 +273,12 @@ if __name__ == "__main__":
             "class_names": class_names,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
+            "training set class counts": {
+                c: sum(
+                    d.count_class(i) for d in train_dataloader.dataset.dataset.datasets
+                )
+                for i, c in enumerate(class_names)
+            },
         },
         notes=args.note,
         tags=["v0.0.1"],
