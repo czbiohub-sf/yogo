@@ -130,6 +130,9 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - How does (Sx, Sy) affect performance? (Sx, Sy) vs. (anchor\_w, anchor\_h)?
 - turn `if __name__ ==  __main__` sanity checks into tests
 - [conv net ordering of batchnorms, dropouts, maxpools, e.t.c.](https://stackoverflow.com/questions/59634780/correct-order-for-spatialdropout2d-batchnormalization-and-activation-function)
+- clean up model arch
+- add res connections?
+- fix superconvergence?
 
 ### Weird observations
 
