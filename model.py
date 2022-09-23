@@ -127,8 +127,7 @@ class YOGO(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x.float()
-        x = self.model(x)
+        x = self.model(x.float())
 
         bs, preds, Sy, Sx = x.shape
 
