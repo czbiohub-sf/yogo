@@ -31,7 +31,7 @@ class YOGO(nn.Module):
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
-        # self.register_buffer("num_classes", torch.tensor(num_classes))
+        self.register_buffer("num_classes", torch.tensor(num_classes))
 
         self.inference = inference
 
@@ -44,8 +44,12 @@ class YOGO(nn.Module):
         img_size = params["img_size"]
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
-        num_classes = 4
-        # num_classes = params["num_classes"]
+
+        try:
+            num_classes = params["num_classes"]
+        except AttributeError:
+            num_classes = 4
+
         model = cls(
             (img_size[0], img_size[1]),
             anchor_w.item(),
