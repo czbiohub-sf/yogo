@@ -158,6 +158,7 @@ def draw_rects(
             int(h * (r[1] - r[3] / 2)),
             int(w * (r[0] + r[2] / 2)),
             int(h * (r[1] + r[3] / 2)),
+            torch.argmax(r[5:]).item(),
         ]
         for r in rects
     ]
@@ -168,7 +169,8 @@ def draw_rects(
     draw = ImageDraw.Draw(rgb)
 
     for r in formatted_rects:
-        draw.rectangle(r, outline="red")
+        draw.rectangle(r[:4], outline="red")
+        draw.text((r[0], r[3]), str(r[4]))
 
     return rgb
 
