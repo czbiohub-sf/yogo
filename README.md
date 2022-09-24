@@ -103,7 +103,6 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 
 `class_index` is the 0-index of the class from the `class_names` field of `description.yaml`. `x_center` and `width` are normalized to the width of the image, and `y_center` and `height` are normalized to the height of the image.
 
-
 ### TODOs
 
 - ~~Visualize Confusion Tables in W&B~~
@@ -133,6 +132,8 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - clean up model arch
 - add res connections?
 - fix superconvergence?
+- Do we need to even need predict box w/h? Fairly uniform size, not really useful at all for diagnosis
+- Distill big fat model into small model
 
 ### Weird observations
 
