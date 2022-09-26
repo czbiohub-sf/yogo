@@ -108,8 +108,8 @@ def train():
         # do validation things
         val_loss = 0.0
         net.eval()
-        for imgs, labels in validate_dataloader:
-            with torch.no_grad():
+        with torch.no_grad():
+            for imgs, labels in validate_dataloader:
                 outputs = net(imgs)
                 formatted_labels = YOGOLoss.format_labels(
                     outputs, labels, device=device
@@ -163,8 +163,8 @@ def train():
     # do test things
     net.eval()
     test_loss = 0.0
-    for imgs, labels in test_dataloader:
-        with torch.no_grad():
+    with torch.no_grad():
+        for imgs, labels in test_dataloader:
             outputs = net(imgs)
             formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
