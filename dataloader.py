@@ -287,13 +287,18 @@ def get_dataloader(
     transforms = MultiArgSequential(
         ImageTransformLabelIdentity(Resize(img_size)), *augmentations
     )
-    return {
-        designation: DataLoader(
+
+    d = dict()
+    for designation, dataset in split_datasets.items():
+        transforms = MultiArgSequential(
+            ImageTransformLabelIdentity(Resize(img_size)),
+            *augmentations if designation == "train" else [],
+        )
+        d[designation] = DataLoader(
             dataset,
             batch_size=batch_size,
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
             shuffle=True,
             drop_last=True,
         )
-        for designation, dataset in split_datasets.items()
-    }
+    return d
