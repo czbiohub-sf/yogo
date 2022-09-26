@@ -302,3 +302,10 @@ def get_dataloader(
             drop_last=True,
         )
     return d
+
+
+def get_class_counts_for_dataloader(dataloader, class_names):
+    return {
+        c: sum(d.count_class(i) for d in dataloader.dataset.dataset.datasets)
+        for i, c in enumerate(class_names)
+    }
