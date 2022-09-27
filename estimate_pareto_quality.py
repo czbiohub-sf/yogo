@@ -10,8 +10,9 @@ from torch.multiprocessing import set_start_method
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingWarmRestarts
 
 from model import YOGO
-from argparsers import train_parser
+from train import init_dataset
 from yogo_loss import YOGOLoss
+from argparsers import train_parser
 from utils import draw_rects, Metrics
 from dataloader import load_dataset_description, get_dataloader
 from cluster_anchors import best_anchor, get_dataset_bounding_boxes
@@ -129,38 +130,6 @@ def pareto_quality():
         net.train()
 
 
-def init_dataset(config):
-    dataloaders = get_dataloader(
-        config["dataset_descriptor_file"],
-        config["batch_size"],
-        img_size=config["resize_shape"],
-        device=config["device"],
-        split_fractions_override={"train": 0.8, "test": 0.0, "val": 0.2},
-    )
-
-    train_dataloader = dataloaders["train"]
-    validate_dataloader = dataloaders["val"]
-    test_dataloader = dataloaders["test"]
-
-    wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader) * config['batch_size']} images",
-            "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
-            "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
-        }
-    )
-
-    if wandb.run.name is not None:
-        model_save_dir = Path(f"trained_models/{wandb.run.name}")
-    else:
-        model_save_dir = Path(
-            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
-        )
-    model_save_dir.mkdir(exist_ok=True, parents=True)
-
-    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
-
-
 if __name__ == "__main__":
     parser = train_parser()
     args = parser.parse_args()
@@ -181,7 +150,7 @@ if __name__ == "__main__":
     )
     label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
+        get_dataset_bounding_boxes(label_paths, center_box=True)
     )
 
     wandb.init(
@@ -198,12 +167,6 @@ if __name__ == "__main__":
             "class_names": class_names,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
-            "training set class counts": {
-                c: sum(
-                    d.count_class(i) for d in train_dataloader.dataset.dataset.datasets
-                )
-                for i, c in enumerate(class_names)
-            },
         },
         notes="pareto run: " + args.note,
         tags=["v0.0.1", "pareto"],
