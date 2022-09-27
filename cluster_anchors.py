@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import glob
 import torch
-import torchvision.ops as ops
 import numpy as np
 from pathlib import Path
+
+import torchvision.ops as ops
 
 try:
     import numpy.typing as npt
@@ -140,7 +141,7 @@ def k_means(data: CornerBox, k=3, plot=False) -> CornerBox:
         mean_groups = get_closest_mean(data, means)
 
         for m in range(k):
-            means[m] = data[mean_groups == m].mean(axis=0)
+            means[m] = data[mean_groups == m].mean(axis=0)  # type: ignore
 
         boxes.append(means.copy())
 
@@ -150,13 +151,7 @@ def k_means(data: CornerBox, k=3, plot=False) -> CornerBox:
     return means
 
 
-def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
-    """
-    Optimization for k_means(data, k=1)
-
-    FIXME: doesn't seem to work for a dataset with larger RBCs
-    """
-    import logging
+def best_anchor(data: CenterBox) -> Tuple[float, float]:
 
     def centered_wh_iou(b1: CenterBox, b2: CenterBox):
         "get iou, assuming b1 and b2 are centerd on eachother"
@@ -169,18 +164,6 @@ def best_anchor(data: CenterBox, kmeans=False) -> Tuple[float, float]:
     def f(x: CenterBox):
         return (1 - centered_wh_iou(x, data)).sum()
 
-    if not kmeans:
-        from scipy import optimize
-
-        random_center_box = gen_random_box(center_box=True)[0]
-        res = optimize.minimize(f, method="Nelder-Mead", x0=random_center_box)
-        if res.success:
-            return res.x[2], res.x[3]
-        else:
-            logging.warning(
-                f"scipy could not optimize to ideal solution: '{res.message}'\n"
-                f"defaulting to k_mean(data, k=1)"
-            )
     corners = k_means(centers_to_corners(data), k=1)[0]
     centers = corners_to_centers(corners)
     return cast(Tuple[float, float], (centers[2], centers[3]))

@@ -1,10 +1,12 @@
 import argparse
 
+from typing import Union
+
 
 try:
-    boolean_action = argparse.BooleanOptionalAction
+    boolean_action = argparse.BooleanOptionalAction # type: ignore
 except AttributeError:
-    boolean_action = "store_true"
+    boolean_action = "store_true" # type: ignore
 
 
 def train_parser():

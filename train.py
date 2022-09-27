@@ -269,7 +269,7 @@ if __name__ == "__main__":
     )
     label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
+        get_dataset_bounding_boxes(label_paths, center_box=True)
     )
 
     wandb.init(
