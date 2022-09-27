@@ -210,14 +210,8 @@ def init_dataset(config):
             "training set size": f"{len(train_dataloader) * config['batch_size']} images",
             "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
             "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
-            "training set class counts": get_class_counts_for_dataloader(
+            "dataset class counts": get_class_counts_for_dataloader(
                 train_dataloader, config["class_names"]
-            ),
-            "validation set class counts": get_class_counts_for_dataloader(
-                validate_dataloader, config["class_names"]
-            ),
-            "testing set class counts": get_class_counts_for_dataloader(
-                test_dataloader, config["class_names"]
             ),
         }
     )
