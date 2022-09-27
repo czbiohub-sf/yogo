@@ -63,7 +63,7 @@ class YOGO(nn.Module):
 
     def to(self, device):
         self.device = device
-        super().to(device, dtype=torch.float32)
+        super().to(device, non_blocking=True, dtype=torch.float32)
         return self
 
     def num_params(self) -> int:
@@ -137,13 +137,13 @@ class YOGO(nn.Module):
         bs, preds, Sy, Sx = x.shape
 
         if self._Cxs is None or self._Cys is None:
-            self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
+            self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device, non_blocking=True)
             self._Cys = (
                 torch.linspace(0, 1 - 1 / Sy, Sy)
                 .expand(1, -1)
                 .transpose(0, 1)
                 .expand(Sy, Sx)
-                .to(self.device)
+                .to(self.device, non_blocking=True)
             )
 
         if self.inference:

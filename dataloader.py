@@ -255,7 +255,7 @@ def collate_batch(batch, device="cpu", transforms=None):
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
     return transforms(
-        batched_inputs.to(device), [torch.tensor(l).to(device) for l in labels]
+        batched_inputs.to(device, non_blocking=True), [torch.tensor(l).to(device, non_blocking=True) for l in labels]
     )
 
 
