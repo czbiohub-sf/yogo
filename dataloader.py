@@ -287,13 +287,25 @@ def get_dataloader(
     transforms = MultiArgSequential(
         ImageTransformLabelIdentity(Resize(img_size)), *augmentations
     )
-    return {
-        designation: DataLoader(
+
+    d = dict()
+    for designation, dataset in split_datasets.items():
+        transforms = MultiArgSequential(
+            ImageTransformLabelIdentity(Resize(img_size)),
+            *augmentations if designation == "train" else [],
+        )
+        d[designation] = DataLoader(
             dataset,
             batch_size=batch_size,
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
             shuffle=True,
             drop_last=True,
         )
-        for designation, dataset in split_datasets.items()
+    return d
+
+
+def get_class_counts_for_dataloader(dataloader, class_names):
+    return {
+        c: sum(d.count_class(i) for d in dataloader.dataset.dataset.datasets)
+        for i, c in enumerate(class_names)
     }

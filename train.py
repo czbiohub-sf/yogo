@@ -13,7 +13,11 @@ from model import YOGO
 from argparsers import train_parser
 from yogo_loss import YOGOLoss
 from utils import draw_rects, Metrics
-from dataloader import load_dataset_description, get_dataloader
+from dataloader import (
+    load_dataset_description,
+    get_dataloader,
+    get_class_counts_for_dataloader,
+)
 from cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
 from pathlib import Path
@@ -104,8 +108,8 @@ def train():
         # do validation things
         val_loss = 0.0
         net.eval()
-        for imgs, labels in validate_dataloader:
-            with torch.no_grad():
+        with torch.no_grad():
+            for imgs, labels in validate_dataloader:
                 outputs = net(imgs)
                 formatted_labels = YOGOLoss.format_labels(
                     outputs, labels, device=device
@@ -159,8 +163,8 @@ def train():
     # do test things
     net.eval()
     test_loss = 0.0
-    for imgs, labels in test_dataloader:
-        with torch.no_grad():
+    with torch.no_grad():
+        for imgs, labels in test_dataloader:
             outputs = net(imgs)
             formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
@@ -206,12 +210,15 @@ def init_dataset(config):
             "training set size": f"{len(train_dataloader) * config['batch_size']} images",
             "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
             "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
-            "training set class counts": {
-                c: sum(
-                    d.count_class(i) for d in train_dataloader.dataset.dataset.datasets
-                )
-                for i, c in enumerate(class_names)
-            },
+            "training set class counts": get_class_counts_for_dataloader(
+                train_dataloader, config["class_names"]
+            ),
+            "validation set class counts": get_class_counts_for_dataloader(
+                validate_dataloader, config["class_names"]
+            ),
+            "testing set class counts": get_class_counts_for_dataloader(
+                test_dataloader, config["class_names"]
+            ),
         }
     )
 
