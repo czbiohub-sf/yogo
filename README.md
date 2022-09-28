@@ -119,10 +119,8 @@ In the "labels" folder, each text file corresponds to one image file in "images"
   - Figure out best model structure
   - Correct for class imbalance
   - Data Augmentation (rotations, concatenations)
-  - Implement ["Bag of Freebies"](https://arxiv.org/pdf/1902.04103.pdf)
-    - Not sure how much is actually applicable - added label smoothing
+    - w/ 100x images: downsize and tile them into 40x images, phat data augmentation
   - Measure how Sx/Sy vs. output image size affects performance
-  - Sweeps for LR / BS /
 
 ### Ideas
 
