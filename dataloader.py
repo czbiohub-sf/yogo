@@ -284,9 +284,6 @@ def get_dataloader(
         if training
         else []
     )
-    transforms = MultiArgSequential(
-        ImageTransformLabelIdentity(Resize(img_size)), *augmentations
-    )
 
     d = dict()
     for designation, dataset in split_datasets.items():
