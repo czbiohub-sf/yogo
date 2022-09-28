@@ -249,7 +249,8 @@ def collate_batch(batch, device="cpu", transforms=None):
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
     return transforms(
-        batched_inputs.to(device, non_blocking=True), [torch.tensor(l).to(device, non_blocking=True) for l in labels]
+        batched_inputs.to(device, non_blocking=True),
+        [torch.tensor(l).to(device, non_blocking=True) for l in labels],
     )
 
 
@@ -297,13 +298,10 @@ def get_dataloader(
 
 def count_dataloader_class(dataloader, class_index: int) -> int:
     s = 0
-    for k, v in dataloader:
-        s += sum(l[0] == class_index for l in v)
+    for _, labels in dataloader:
+        s += sum((l[:, 0] == class_index).sum().item() for l in labels if len(l) > 0)
     return s
 
 
 def get_class_counts_for_dataloader(dataloader, class_names):
-    return {
-        c: count_dataloader_class(d, i)
-        for i, c in enumerate(class_names)
-    }
+    return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
