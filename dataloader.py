@@ -173,12 +173,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         return labels
 
-    def count_class(self, class_index: int) -> int:
-        s = 0
-        for k, v in self.samples:
-            s += sum(l[0] == class_index for l in v)
-        return s
-
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
         Modified (gently) to transform label as well as target
@@ -301,8 +295,15 @@ def get_dataloader(
     return d
 
 
+def count_dataloader_class(dataloader, class_index: int) -> int:
+    s = 0
+    for k, v in dataloader:
+        s += sum(l[0] == class_index for l in v)
+    return s
+
+
 def get_class_counts_for_dataloader(dataloader, class_names):
     return {
-        c: sum(d.count_class(i) for d in dataloader.dataset.dataset.datasets)
+        c: count_dataloader_class(d, i)
         for i, c in enumerate(class_names)
     }
