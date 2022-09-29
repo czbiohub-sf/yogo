@@ -26,57 +26,29 @@ from data_transforms import (
 )
 
 
-def load_dataset_description(
-    dataset_description,
-) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
-    with open(dataset_description, "r") as desc:
-        yaml_data = yaml.safe_load(desc)
-
-        classes = yaml_data["class_names"]
-
-        # either we have image_path and label_path directly defined
-        # in our yaml file (describing 1 dataset exactly), or we have
-        # a nested dict structure describing each dataset description.
-        # see README.md for more detail
-        if "dataset_paths" in yaml_data:
-            dataset_paths = [
-                {k: Path(v) for k, v in d.items()}
-                for d in yaml_data["dataset_paths"].values()
-            ]
-        else:
-            dataset_paths = [
-                {
-                    "image_path": Path(yaml_data["image_path"]),
-                    "label_path": Path(yaml_data["label_path"]),
-                }
-            ]
-
-        split_fractions = {
-            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
-        }
-
-        if not sum(split_fractions.values()) == 1:
-            raise ValueError(
-                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
-            )
-
-        check_dataset_paths(dataset_paths)
-        return classes, dataset_paths, split_fractions
+def count_dataloader_class(dataloader, class_index: int) -> int:
+    s = 0
+    for _, labels in dataloader:
+        s += sum((l[:, 0] == class_index).sum().item() for l in labels if len(l) > 0)
+    return s
 
 
-def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
-    for dataset_desc in dataset_paths:
-        if not (
-            dataset_desc["image_path"].is_dir() and dataset_desc["label_path"].is_dir()
-        ):
-            raise FileNotFoundError(
-                f"image_path or label_path do not lead to a directory\n"
-                f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
-            )
+def get_class_counts_for_dataloader(dataloader, class_names):
+    return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
 
 
 def read_grayscale(img):
     return read_image(img, ImageReadMode.GRAY)
+
+
+def collate_batch(batch, device="cpu", transforms=None):
+    # perform image transforms here so we can transform in batches! :)
+    inputs, labels = zip(*batch)
+    batched_inputs = torch.stack(inputs)
+    return transforms(
+        batched_inputs.to(device, non_blocking=True),
+        [torch.tensor(l).to(device, non_blocking=True) for l in labels],
+    )
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -191,6 +163,55 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return len(self.samples)
 
 
+def load_dataset_description(
+    dataset_description,
+) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
+    with open(dataset_description, "r") as desc:
+        yaml_data = yaml.safe_load(desc)
+
+        classes = yaml_data["class_names"]
+
+        # either we have image_path and label_path directly defined
+        # in our yaml file (describing 1 dataset exactly), or we have
+        # a nested dict structure describing each dataset description.
+        # see README.md for more detail
+        if "dataset_paths" in yaml_data:
+            dataset_paths = [
+                {k: Path(v) for k, v in d.items()}
+                for d in yaml_data["dataset_paths"].values()
+            ]
+        else:
+            dataset_paths = [
+                {
+                    "image_path": Path(yaml_data["image_path"]),
+                    "label_path": Path(yaml_data["label_path"]),
+                }
+            ]
+
+        split_fractions = {
+            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
+        }
+
+        if not sum(split_fractions.values()) == 1:
+            raise ValueError(
+                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
+            )
+
+        check_dataset_paths(dataset_paths)
+        return classes, dataset_paths, split_fractions
+
+
+def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
+    for dataset_desc in dataset_paths:
+        if not (
+            dataset_desc["image_path"].is_dir() and dataset_desc["label_path"].is_dir()
+        ):
+            raise FileNotFoundError(
+                f"image_path or label_path do not lead to a directory\n"
+                f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
+            )
+
+
 def get_datasets(
     dataset_description_file: str,
     batch_size: int,
@@ -244,16 +265,6 @@ def get_datasets(
     )
 
 
-def collate_batch(batch, device="cpu", transforms=None):
-    # perform image transforms here so we can transform in batches! :)
-    inputs, labels = zip(*batch)
-    batched_inputs = torch.stack(inputs)
-    return transforms(
-        batched_inputs.to(device, non_blocking=True),
-        [torch.tensor(l).to(device, non_blocking=True) for l in labels],
-    )
-
-
 def get_dataloader(
     root_dir: str,
     batch_size: int,
@@ -295,14 +306,3 @@ def get_dataloader(
             generator=torch.Generator().manual_seed(101010),
         )
     return d
-
-
-def count_dataloader_class(dataloader, class_index: int) -> int:
-    s = 0
-    for _, labels in dataloader:
-        s += sum((l[:, 0] == class_index).sum().item() for l in labels if len(l) > 0)
-    return s
-
-
-def get_class_counts_for_dataloader(dataloader, class_names):
-    return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
