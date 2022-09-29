@@ -132,6 +132,7 @@ In the "labels" folder, each text file corresponds to one image file in "images"
 - fix superconvergence?
 - Do we need to even need predict box w/h? Fairly uniform size, not really useful at all for diagnosis
 - Distill big fat model into small model
+- Mosaic 100x to make 50x
 
 ### Weird observations
 
