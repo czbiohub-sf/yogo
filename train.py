@@ -64,7 +64,7 @@ def train():
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
-    min_period = 8 * len(train_dataloader)
+    min_period = 16 * len(train_dataloader)
     anneal_period = config["epochs"] * len(train_dataloader) - min_period
     lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
     cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
