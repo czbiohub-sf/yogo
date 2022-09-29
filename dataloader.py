@@ -238,7 +238,7 @@ def get_datasets(
             random_split(
                 full_dataset,
                 [split_sizes["train"], split_sizes["val"], split_sizes["test"]],
-                generator=torch.Generator().manual_seed(42),
+                generator=torch.Generator().manual_seed(101010),
             ),
         )
     )
