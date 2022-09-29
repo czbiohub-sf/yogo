@@ -260,7 +260,7 @@ if __name__ == "__main__":
     )
 
     epochs = 256
-    adam_lr = 3e-4
+    adam_lr = 3e-2
     batch_size = 32
     resize_target_size = (300, 400)
 
