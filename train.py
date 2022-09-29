@@ -123,7 +123,7 @@ def train():
             draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
         )
 
-        mAP, confusion_data = metrics.compute()
+        mAP, confusion_data, precision_recall_data = metrics.compute()
         metrics.reset()
 
         wandb.log(
@@ -134,6 +134,7 @@ def train():
                 "val confusion": get_wandb_confusion(
                     confusion_data, "validation confusion matrix"
                 ),
+                "val precision-recall": precision_recall_data
             },
         )
 
@@ -172,7 +173,7 @@ def train():
 
         metrics.update(outputs, formatted_labels)
 
-    mAP, confusion_data = metrics.compute()
+    mAP, confusion_data, precision_recall_data = metrics.compute()
     metrics.reset()
     wandb.log(
         {
@@ -181,6 +182,7 @@ def train():
             "test confusion": get_wandb_confusion(
                 confusion_data, "test confusion matrix"
             ),
+            "test precision-recall": precision_recall_data
         },
     )
     torch.save(
@@ -245,6 +247,15 @@ def get_wandb_confusion(confusion_data, title):
             "Predicted": "Predicted",
             "nPredictions": "nPredictions",
         },
+        {"title": title},
+    )
+
+def get_wandb_pr(pr, title):
+    table = wandb.Table(data=pr)
+    return wandb.plot_table(
+        "wandb/area-under-curve/v0",
+        table,
+        {"x": "recall", "y": "precision", "class": "class"},
         {"title": title},
     )
 
