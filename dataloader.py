@@ -169,13 +169,13 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     label_idx = self.classes.index(row[0])
                     labels.append([float(label_idx)] + [float(v) for v in row[1:]])
         except FileNotFoundError:
+            # TODO: increment "missing / corrupt file"-type counter
             pass
 
         return labels
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
-        Modified (gently) to transform label as well as target
         Args:
             index (int): Index
 
