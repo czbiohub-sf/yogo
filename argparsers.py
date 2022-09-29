@@ -4,9 +4,9 @@ from typing import Union
 
 
 try:
-    boolean_action = argparse.BooleanOptionalAction # type: ignore
+    boolean_action = argparse.BooleanOptionalAction  # type: ignore
 except AttributeError:
-    boolean_action = "store_true" # type: ignore
+    boolean_action = "store_true"  # type: ignore
 
 
 def train_parser():
