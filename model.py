@@ -4,6 +4,15 @@ from torch import nn
 from typing import Tuple
 
 
+class Residual(nn.Module):
+    def __init__(self, module: nn.Module):
+        super().__init__()
+        self.module = module
+
+    def forward(self, x):
+        return self.module(x) + x
+
+
 class YOGO(nn.Module):
     """
     Restricting assumptions:
@@ -89,37 +98,54 @@ class YOGO(nn.Module):
 
     def gen_model(self, num_classes) -> nn.Module:
         conv_block_1 = nn.Sequential(
-            nn.Conv2d(1, 16, 3, padding=1, bias=False),
-            nn.BatchNorm2d(16),
-            nn.LeakyReLU(),
+            Residual(
+                nn.Sequential(
+                    nn.Conv2d(1, 16, 3, padding=1, bias=False),
+                    nn.BatchNorm2d(16),
+                    nn.LeakyReLU(),
+                )
+            ),
             nn.MaxPool2d(2, stride=2),
-            nn.Dropout2d(p=0.2),
         )
         conv_block_2 = nn.Sequential(
-            nn.Conv2d(16, 32, 3, padding=1),
-            nn.LeakyReLU(),
+            Residual(
+                nn.Sequential(
+                    nn.Conv2d(16, 32, 3, padding=1),
+                    nn.LeakyReLU(),
+                    nn.MaxPool2d(2, stride=2),
+                )
+            ),
             nn.MaxPool2d(2, stride=2),
-            nn.Dropout2d(p=0.2),
         )
         conv_block_3 = nn.Sequential(
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.LeakyReLU(),
+            Residual(
+                nn.Sequential(
+                    nn.Conv2d(32, 64, 3, padding=1),
+                    nn.LeakyReLU(),
+                    nn.Dropout2d(p=0.2),
+                )
+            ),
             nn.MaxPool2d(2, stride=2),
-            nn.Dropout2d(p=0.2),
         )
-        conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1, bias=False),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.2),
+        conv_block_4 = Residual(
+            nn.Sequential(
+                nn.Conv2d(64, 128, 3, padding=1, bias=False),
+                nn.LeakyReLU(),
+                nn.Dropout2d(p=0.2),
+            )
         )
-        conv_block_5 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
+        conv_block_5 = Residual(
+            nn.Sequential(
+                nn.Conv2d(128, 128, 3, padding=1),
+                nn.BatchNorm2d(128),
+                nn.LeakyReLU(),
+            )
         )
-        conv_block_6 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.LeakyReLU(),
+        conv_block_6 = Residual(
+            nn.Sequential(
+                nn.Conv2d(128, 128, 3, padding=1),
+                nn.LeakyReLU(),
+            )
         )
         conv_block_7 = nn.Conv2d(128, 5 + num_classes, 1)
         return nn.Sequential(
