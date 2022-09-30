@@ -3,6 +3,7 @@
 import math
 
 import torch
+import torch.nn.functional as F
 import torchvision.transforms as T
 
 from PIL import Image, ImageDraw
@@ -141,8 +142,12 @@ class Metrics:
         return preds, labels
 
 
+def argmax(arr):
+    return max(range(len(arr)), key=arr.__getitem__)
+
+
 def draw_rects(
-    img: torch.Tensor, rects: Union[torch.Tensor, List], thresh: Optional[float] = None
+        img: torch.Tensor, rects: Union[torch.Tensor, List[torch.Tensor]], thresh: Optional[float] = None, num_classes: int=4
 ) -> Image:
     """
     img is the torch tensor representing an image
@@ -164,7 +169,7 @@ def draw_rects(
     elif isinstance(rects, list):
         if thresh is not None:
             raise ValueError("threshold only valid for tensor (i.e. prediction) input")
-        rects = [r[1:] for r in rects]
+        rects = [torch.cat([r[1:], F.one_hot(torch.tensor(r[0], dtype=torch.long), 4)]) for r in rects]
 
     formatted_rects = [
         [
@@ -172,7 +177,7 @@ def draw_rects(
             int(h * (r[1] - r[3] / 2)),
             int(w * (r[0] + r[2] / 2)),
             int(h * (r[1] + r[3] / 2)),
-            torch.argmax(r[5:]).item(),
+            argmax(r[5:]),
         ]
         for r in rects
     ]
