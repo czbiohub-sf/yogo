@@ -64,6 +64,7 @@ def load_dataset_description(
         return classes, dataset_paths, split_fractions
 
 
+
 def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
     for dataset_desc in dataset_paths:
         if not (
@@ -191,6 +192,81 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return len(self.samples)
 
 
+class MosaicObjectDetectionDataset(ObjectDetectionDataset):
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        els = self.unique_four_from_list(self.samples, index)
+        paths, labels_per_image = zip(*els)
+        images = [self.loader(path) for path in paths]
+        new_img = self.tile(*images)
+        _, h, w = images[0].shape
+
+        # Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        transformed_bboxes = []
+        for i, labels in enumerate(labels_per_image):
+            for label in labels:
+                transformed_bboxes.append([
+                    label[0],
+                    label[1] / 2,
+                    label[2] / 2,
+                    label[3] / 2 + (i % 2) * w,
+                    label[4] / 2 + (i // 2) * h,
+                ])
+
+        return new_img, transformed_bboxes
+
+    @staticmethod
+    def unique_four_from_list(l, i):
+        e0 = 0 * ((len(l) - 1) // 4) + i
+        e1 = 1 * ((len(l) - 1) // 4) + i
+        e2 = 2 * ((len(l) - 1) // 4) + i
+        e3 = 3 + ((len(l) - 1) // 4) + i
+        return [l[e0 % len(l)], l[e1 % len(l)], l[e2 % len(l)], l[e3 % len(l)]]
+
+    @staticmethod
+    def tile(A,B,C,D):
+        E1 = torch.vstack([A,C])
+        E2 = torch.vstack([B,D])
+        return torch.hstack([E1, E2])
+
+
+def load_dataset_description(
+    dataset_description,
+) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
+    with open(dataset_description, "r") as desc:
+        yaml_data = yaml.safe_load(desc)
+
+        classes = yaml_data["class_names"]
+
+        # either we have image_path and label_path directly defined
+        # in our yaml file (describing 1 dataset exactly), or we have
+        # a nested dict structure describing each dataset description.
+        # see README.md for more detail
+        if "dataset_paths" in yaml_data:
+            dataset_paths = [
+                {k: Path(v) for k, v in d.items()}
+                for d in yaml_data["dataset_paths"].values()
+            ]
+        else:
+            dataset_paths = [
+                {
+                    "image_path": Path(yaml_data["image_path"]),
+                    "label_path": Path(yaml_data["label_path"]),
+                }
+            ]
+
+        split_fractions = {
+            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
+        }
+
+        if not sum(split_fractions.values()) == 1:
+            raise ValueError(
+                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
+            )
+
+        check_dataset_paths(dataset_paths)
+        return classes, dataset_paths, split_fractions
+
+
 def get_datasets(
     dataset_description_file: str,
     batch_size: int,
@@ -205,7 +281,7 @@ def get_datasets(
     ) = load_dataset_description(dataset_description_file)
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-        ObjectDetectionDataset(
+        MosaicObjectDetectionDataset(
             classes,
             dataset_desc["image_path"],
             dataset_desc["label_path"],
