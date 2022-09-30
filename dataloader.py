@@ -26,45 +26,6 @@ from data_transforms import (
 )
 
 
-def load_dataset_description(
-    dataset_description,
-) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
-    with open(dataset_description, "r") as desc:
-        yaml_data = yaml.safe_load(desc)
-
-        classes = yaml_data["class_names"]
-
-        # either we have image_path and label_path directly defined
-        # in our yaml file (describing 1 dataset exactly), or we have
-        # a nested dict structure describing each dataset description.
-        # see README.md for more detail
-        if "dataset_paths" in yaml_data:
-            dataset_paths = [
-                {k: Path(v) for k, v in d.items()}
-                for d in yaml_data["dataset_paths"].values()
-            ]
-        else:
-            dataset_paths = [
-                {
-                    "image_path": Path(yaml_data["image_path"]),
-                    "label_path": Path(yaml_data["label_path"]),
-                }
-            ]
-
-        split_fractions = {
-            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
-        }
-
-        if not sum(split_fractions.values()) == 1:
-            raise ValueError(
-                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
-            )
-
-        check_dataset_paths(dataset_paths)
-        return classes, dataset_paths, split_fractions
-
-
-
 def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
     for dataset_desc in dataset_paths:
         if not (
@@ -198,20 +159,20 @@ class MosaicObjectDetectionDataset(ObjectDetectionDataset):
         paths, labels_per_image = zip(*els)
         images = [self.loader(path) for path in paths]
         new_img = self.tile(*images)
-        _, h, w = images[0].shape
 
         # Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
         transformed_bboxes = []
-        for i, labels in enumerate(labels_per_image):
+        for i, labels in enumerate(labels_per_image, start=1):
             for label in labels:
-                transformed_bboxes.append([
-                    label[0],
-                    label[1] / 2,
-                    label[2] / 2,
-                    label[3] / 2 + (i % 2) * w,
-                    label[4] / 2 + (i // 2) * h,
-                ])
-
+                transformed_bboxes.append(
+                    [
+                        label[0],
+                        label[1] / 2 + 0.5 * (i % 2 == 0),
+                        label[2] / 2 + 0.5 * (i // 3),
+                        label[3] / 2,
+                        label[4] / 2,
+                    ]
+                )
         return new_img, transformed_bboxes
 
     @staticmethod
@@ -223,10 +184,10 @@ class MosaicObjectDetectionDataset(ObjectDetectionDataset):
         return [l[e0 % len(l)], l[e1 % len(l)], l[e2 % len(l)], l[e3 % len(l)]]
 
     @staticmethod
-    def tile(A,B,C,D):
-        E1 = torch.vstack([A,C])
-        E2 = torch.vstack([B,D])
-        return torch.hstack([E1, E2])
+    def tile(A, B, C, D):
+        E1 = torch.cat([A, C], dim=1)
+        E2 = torch.cat([B, D], dim=1)
+        return torch.cat([E1, E2], dim=2)
 
 
 def load_dataset_description(
@@ -325,7 +286,8 @@ def collate_batch(batch, device="cpu", transforms=None):
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
     return transforms(
-        batched_inputs.to(device, non_blocking=True), [torch.tensor(l).to(device, non_blocking=True) for l in labels]
+        batched_inputs.to(device, non_blocking=True),
+        [torch.tensor(l).to(device, non_blocking=True) for l in labels],
     )
 
 
@@ -379,7 +341,4 @@ def count_dataloader_class(dataloader, class_index: int) -> int:
 
 
 def get_class_counts_for_dataloader(dataloader, class_names):
-    return {
-        c: count_dataloader_class(d, i)
-        for i, c in enumerate(class_names)
-    }
+    return {c: count_dataloader_class(d, i) for i, c in enumerate(class_names)}
