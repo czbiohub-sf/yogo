@@ -14,6 +14,7 @@ from argparsers import train_parser
 from yogo_loss import YOGOLoss
 from utils import draw_rects, Metrics
 from dataloader import (
+    MosaicObjectDetectionDataset,
     load_dataset_description,
     get_dataloader,
     get_class_counts_for_dataloader,
@@ -201,6 +202,7 @@ def init_dataset(config):
         config["batch_size"],
         img_size=config["resize_shape"],
         device=config["device"],
+        dataset_class=MosaicObjectDetectionDataset
     )
 
     train_dataloader = dataloaders["train"]

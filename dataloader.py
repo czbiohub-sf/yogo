@@ -16,7 +16,7 @@ from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast, TypeVar
+from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast, TypeVar, Type
 
 from data_transforms import (
     RandomHorizontalFlipWithBBs,
@@ -237,7 +237,7 @@ def get_datasets(
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
     split_fractions_override: Optional[Dict[str, float]] = None,
-    dataset_class: type[T] = ObjectDetectionDataset,
+    dataset_class: Type[T] = ObjectDetectionDataset,
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
         classes,
@@ -302,7 +302,7 @@ def get_dataloader(
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
-    dataset_class: type[T] = ObjectDetectionDataset,
+    dataset_class: Type[T] = ObjectDetectionDataset,
 ):
     split_datasets = get_datasets(
         root_dir,
@@ -347,4 +347,4 @@ def count_dataloader_class(dataloader, class_index: int) -> int:
 
 
 def get_class_counts_for_dataloader(dataloader, class_names):
-    return {c: count_dataloader_class(d, i) for i, c in enumerate(class_names)}
+    return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
