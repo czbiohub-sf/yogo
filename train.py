@@ -134,7 +134,7 @@ def train():
                 "val confusion": get_wandb_confusion(
                     confusion_data, "validation confusion matrix"
                 ),
-                "val precision-recall": precision_recall_data
+                "val precision-recall": precision_recall_data,
             },
         )
 
@@ -182,7 +182,7 @@ def train():
             "test confusion": get_wandb_confusion(
                 confusion_data, "test confusion matrix"
             ),
-            "test precision-recall": precision_recall_data
+            "test precision-recall": precision_recall_data,
         },
     )
     torch.save(
@@ -249,6 +249,7 @@ def get_wandb_confusion(confusion_data, title):
         },
         {"title": title},
     )
+
 
 def get_wandb_pr(pr, title):
     table = wandb.Table(data=pr)

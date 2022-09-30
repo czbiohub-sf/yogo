@@ -70,7 +70,6 @@ class Metrics:
     def format_pr(pr_data):
         precision, recall, thresholds = pr_data
 
-
     @staticmethod
     def format_for_accuracy_metrics(
         batch_preds, batch_labels, raw_preds=True
@@ -147,7 +146,10 @@ def argmax(arr):
 
 
 def draw_rects(
-        img: torch.Tensor, rects: Union[torch.Tensor, List[torch.Tensor]], thresh: Optional[float] = None, num_classes: int=4
+    img: torch.Tensor,
+    rects: Union[torch.Tensor, List[torch.Tensor]],
+    thresh: Optional[float] = None,
+    num_classes: int = 4,
 ) -> Image:
     """
     img is the torch tensor representing an image
@@ -169,7 +171,10 @@ def draw_rects(
     elif isinstance(rects, list):
         if thresh is not None:
             raise ValueError("threshold only valid for tensor (i.e. prediction) input")
-        rects = [torch.cat([r[1:], F.one_hot(torch.tensor(r[0], dtype=torch.long), 4)]) for r in rects]
+        rects = [
+            torch.cat([r[1:], F.one_hot(torch.tensor(r[0], dtype=torch.long), 4)])
+            for r in rects
+        ]
 
     formatted_rects = [
         [
