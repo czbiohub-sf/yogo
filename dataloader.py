@@ -16,7 +16,7 @@ from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
+from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast, TypeVar
 
 from data_transforms import (
     RandomHorizontalFlipWithBBs,
@@ -228,12 +228,16 @@ def load_dataset_description(
         return classes, dataset_paths, split_fractions
 
 
+T = TypeVar("T", bound=ObjectDetectionDataset)
+
+
 def get_datasets(
     dataset_description_file: str,
     batch_size: int,
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
     split_fractions_override: Optional[Dict[str, float]] = None,
+    dataset_class: type[T] = ObjectDetectionDataset,
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
         classes,
@@ -242,7 +246,7 @@ def get_datasets(
     ) = load_dataset_description(dataset_description_file)
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-        MosaicObjectDetectionDataset(
+        dataset_class(
             classes,
             dataset_desc["image_path"],
             dataset_desc["label_path"],
@@ -298,6 +302,7 @@ def get_dataloader(
     img_size: Tuple[int, int] = (300, 400),
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
+    dataset_class: type[T] = ObjectDetectionDataset,
 ):
     split_datasets = get_datasets(
         root_dir,
@@ -305,6 +310,7 @@ def get_dataloader(
         img_size=img_size,
         training=training,
         split_fractions_override=split_fractions_override,
+        dataset_class=dataset_class,
     )
     augmentations = (
         [
