@@ -26,17 +26,6 @@ from data_transforms import (
 )
 
 
-def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
-    for dataset_desc in dataset_paths:
-        if not (
-            dataset_desc["image_path"].is_dir() and dataset_desc["label_path"].is_dir()
-        ):
-            raise FileNotFoundError(
-                f"image_path or label_path do not lead to a directory\n"
-                f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
-            )
-
-
 def read_grayscale(img):
     return read_image(img, ImageReadMode.GRAY)
 
@@ -188,6 +177,17 @@ class MosaicObjectDetectionDataset(ObjectDetectionDataset):
         E1 = torch.cat([A, C], dim=1)
         E2 = torch.cat([B, D], dim=1)
         return torch.cat([E1, E2], dim=2)
+
+
+def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
+    for dataset_desc in dataset_paths:
+        if not (
+            dataset_desc["image_path"].is_dir() and dataset_desc["label_path"].is_dir()
+        ):
+            raise FileNotFoundError(
+                f"image_path or label_path do not lead to a directory\n"
+                f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
+            )
 
 
 def load_dataset_description(
