@@ -9,7 +9,7 @@ import torchvision.transforms as T
 from PIL import Image, ImageDraw
 from typing import Optional, Union, List
 
-from torchmetrics import MetricCollection, ConfusionMatrix, PrecisionRecallCurve
+from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from typing import Tuple, List, Dict
@@ -18,13 +18,8 @@ from typing import Tuple, List, Dict
 class Metrics:
     def __init__(self, num_classes=4, device="cpu", class_names=None):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        self.accuracy_metrics = MetricCollection(
-            [
-                ConfusionMatrix(num_classes=num_classes),
-                PrecisionRecallCurve(num_classes=num_classes),
-            ]
-        )
-        self.accuracy_metrics.to(device)
+        self.confusion = ConfusionMatrix(num_classes=num_classes)
+        self.confusion.to(device)
 
         self.class_names = (
             list(range(num_classes)) if class_names is None else class_names
@@ -36,27 +31,18 @@ class Metrics:
 
         mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
 
-        accuracy_preds, accuracy_labels = self.format_for_accuracy_metrics(
+        confusion_preds, confusion_labels = self.format_for_confusion(
             preds, labels, raw_preds=raw_preds
         )
 
         self.mAP.update(mAP_preds, mAP_labels)
-        self.accuracy_metrics.update(accuracy_preds, accuracy_labels)
+        self.confusion.update(confusion_preds, confusion_labels)
 
     def compute(self):
-        mAP = self.mAP.compute()
-        accuracy_metrics = self.accuracy_metrics.compute()
-        L = self.format_confusion_matrix(accuracy_metrics["Confusion"])
+        confusion_mat = self.confusion.compute()
 
-        return mAP, L, accuracy_metrics["PrecisionRecallCurve"]
-
-    def reset(self):
-        self.mAP.reset()
-        self.accuracy_metrics.reset()
-
-    @staticmethod
-    def format_confusion_matrix(confusion_mat):
         nc1, nc2 = confusion_mat.shape
+        assert nc1 == nc2
 
         L = []
         for i in range(nc1):
@@ -64,14 +50,15 @@ class Metrics:
                 L.append(
                     (self.class_names[i], self.class_names[j], confusion_mat[i, j])
                 )
-        return L
+
+        return self.mAP.compute(), L
+
+    def reset(self):
+        self.mAP.reset()
+        self.confusion.reset()
 
     @staticmethod
-    def format_pr(pr_data):
-        precision, recall, thresholds = pr_data
-
-    @staticmethod
-    def format_for_accuracy_metrics(
+    def format_for_confusion(
         batch_preds, batch_labels, raw_preds=True
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
         bs, pred_shape, Sy, Sx = batch_preds.shape
@@ -80,16 +67,16 @@ class Metrics:
         if raw_preds:
             batch_preds[:, 5:, :, :] = torch.softmax(batch_preds[:, 5:, :, :], dim=1)
 
-        accuracy_batch_preds = (
+        confusion_batch_preds = (
             batch_preds.permute(1, 0, 2, 3)[5:, ...].reshape(-1, bs * Sx * Sy).T
         )
-        accuracy_labels = (
+        confusion_labels = (
             batch_labels.permute(1, 0, 2, 3)[5, :, :, :]
             .reshape(1, bs * Sx * Sy)
             .permute(1, 0)
             .long()
         )
-        return accuracy_batch_preds, accuracy_labels
+        return confusion_batch_preds, confusion_labels
 
     @staticmethod
     def format_for_mAP(

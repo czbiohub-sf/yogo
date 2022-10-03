@@ -12,6 +12,8 @@ env | grep "^SLURM" | sort
 
 nvidia-smi
 
+CUDA_LAUNCH_BLOCKING=1
+
 wandb online
 conda run "$@"
 wandb offline

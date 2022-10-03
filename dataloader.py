@@ -16,7 +16,18 @@ from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast, TypeVar, Type
+from typing import (
+    Any,
+    List,
+    Dict,
+    Union,
+    Tuple,
+    Optional,
+    Callable,
+    cast,
+    TypeVar,
+    Type,
+)
 
 from data_transforms import (
     RandomHorizontalFlipWithBBs,
@@ -341,8 +352,8 @@ def get_dataloader(
 
 def count_dataloader_class(dataloader, class_index: int) -> int:
     s = 0
-    for k, v in dataloader:
-        s += sum(l[0] == class_index for l in v)
+    for _, labels in dataloader:
+        s += sum((l[:, 0] == class_index).sum().item() for l in labels if len(l) > 0)
     return s
 
 
