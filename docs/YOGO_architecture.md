@@ -18,8 +18,10 @@ Our specific application of diagnosing malaria is a much simpler problem (in ter
 For example, below is an image of malarial blood (100x magnification):
 
 ![malarial blood](imgs/100x_bb_preds.png)
+**"0" denotes a healthy cell, "1" denotes a ring-stage parasite, "3" denotes a trophozoite-stage parasite**
 
-And here is an example of an image from the [YOLO9000 Paper](https://arxiv.org/pdf/1612.08242.pdf):
+And here is an example of an image from the [YOLO9000 Paper](https://arxiv.org/pdf/1612.08242.pdf) (not necessarily in the MS COCO dataset):
 
 <img src="imgs/yolo9000_example.png" width="400">
-![yolo9000 paper img](imgs/yolo9000_example.png)
+
+Notice the varying sizes of scale for people ("athletes" in foreground and "contestant" in background), large number of classes (there are "athletes", "contestants", and "unicycles" in this picture - a typical, smaller dataset would have just classified "athletes" and "contestants" as "people").
