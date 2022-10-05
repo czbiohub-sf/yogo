@@ -18,10 +18,20 @@ Our specific application of diagnosing malaria is a much simpler problem (in ter
 For example, below is an image of malarial blood (100x magnification):
 
 ![malarial blood](imgs/100x_bb_preds.png)
-**"0" denotes a healthy cell, "1" denotes a ring-stage parasite, "3" denotes a trophozoite-stage parasite**
+
+*"0" denotes a healthy cell, "1" denotes a ring-stage parasite, "3" denotes a trophozoite-stage parasite*
 
 And here is an example of an image from the [YOLO9000 Paper](https://arxiv.org/pdf/1612.08242.pdf) (not necessarily in the MS COCO dataset):
 
 <img src="imgs/yolo9000_example.png" width="400">
 
-Notice the varying sizes of scale for people ("athletes" in foreground and "contestant" in background), large number of classes (there are "athletes", "contestants", and "unicycles" in this picture - a typical, smaller dataset would have just classified "athletes" and "contestants" as "people").
+Notice the varying sizes of scale for people and the large number of classes - there are "athletes", "contestants", and "unicycles" in this picture. A typical, smaller dataset would have just classified "athletes" and "contestants" as "people".
+
+The relative simplicity of our problem allows us to strip back a lot of the complexity of a typical YOLO architecture.
+
+
+## YOGO Architecture
+
+The YOGO architecture is relatively simple convolutional network. The specifics of the architecture are changing frequently, as it is still under development, but the core ideas remain constant. The network can be broken into two main components: the Backbone and the Head.
+
+The Backbone processes the input image into a feature map that represents the image. It is 6 layers of convolutions with batchnorm and dropout for regularization, max pool layers to downsample, and Leaky ReLU activations. The Head is a convolutional layer which converts the feature map into the output tensor. The values of the output tensor represent the predicted bounding boxes.
