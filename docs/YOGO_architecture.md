@@ -19,7 +19,7 @@ For example, below is an image of malarial blood (100x magnification):
 
 ![malarial blood](imgs/100x_bb_preds.png)
 
-*"0" denotes a healthy cell, "1" denotes a ring-stage parasite, "3" denotes a trophozoite-stage parasite*
+<!-- *"0" denotes a healthy cell, "1" denotes a ring-stage parasite, "3" denotes a trophozoite-stage parasite* -->
 
 And here is an example of an image from the [YOLO9000 Paper](https://arxiv.org/pdf/1612.08242.pdf) (not necessarily in the MS COCO dataset):
 
@@ -34,4 +34,17 @@ The relative simplicity of our problem allows us to strip back a lot of the comp
 
 The YOGO architecture is relatively simple convolutional network. The specifics of the architecture are changing frequently, as it is still under development, but the core ideas remain constant. The network can be broken into two main components: the Backbone and the Head.
 
-The Backbone processes the input image into a feature map that represents the image. It is 6 layers of convolutions with batchnorm and dropout for regularization, max pool layers to downsample, and Leaky ReLU activations. The Head is a convolutional layer which converts the feature map into the output tensor. The values of the output tensor represent the predicted bounding boxes.
+The Backbone processes the input image into a feature map that represents the image. It is 6 layers of convolutions with batchnorm and dropout for regularization, max pool layers to downsample, and Leaky ReLU activations. The Head is a convolutional layer which converts the feature map into the output tensor. The output tensor contains a grid of predictions.
+
+The following sections will discuss the details of this section. It will be a little bit out of order, but I think that this is the right ordering.
+
+### Prediction
+
+The prediction of a bounding box is broken into 6 components, which are `xc`, `yc`, `w`, `h`, `to`, and `class predictions`:
+
+- `xc` and `yc` are the x and y centers of the bounding box, normalized to the width and height of the image (so they are between 0 and 1)
+- `w` and `h` are the width and height, also normalized
+- `to` is the "objectness" of the prediction - this can be considered the product of
+- `classes` are your normal class predictions from softmax
+
+<img src="imgs/prediction_format.png" width="400">
