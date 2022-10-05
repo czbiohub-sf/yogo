@@ -21,4 +21,5 @@ For example, below is an image of malarial blood (100x magnification):
 
 And here is an example of an image from the [YOLO9000 Paper](https://arxiv.org/pdf/1612.08242.pdf):
 
+<img src="imgs/yolo9000_example.png" width="400">
 ![yolo9000 paper img](imgs/yolo9000_example.png)
