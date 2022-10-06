@@ -49,7 +49,7 @@ def checkpoint_model(model, epoch, optimizer, name, ver="0.0.1"):
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
         },
-        str(model_save_dir / name),
+        str(name),
     )
 
 
@@ -151,9 +151,9 @@ def train():
         if mAP["map"] > best_mAP:
             best_mAP = mAP["map"]
             wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-            checkpoint_model(net, epoch, optimizer, "best.pth")
+            checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
         else:
-            checkpoint_model(net, epoch, optimizer, "latest.pth")
+            checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
 
         net.train()
 
@@ -181,7 +181,7 @@ def train():
         },
     )
 
-    checkpoint_model(net, epoch, optimizer, f"{wandb.run.name}_{epoch}_{i}.pth")
+    checkpoint_model(net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth")
 
 
 def init_dataset(config):
