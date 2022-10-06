@@ -138,8 +138,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         TODO: maybe we can drop some sync points by converting label_batch to tensor?
         Have a parameter for "num labels" or smth, and have all tensors be the size
         of the minimum tensor size (instead of having a list)
-
-        TODO: hard-coded as 4 classes?
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
