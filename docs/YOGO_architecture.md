@@ -19,7 +19,6 @@ For example, below is an image of malarial blood (100x magnification):
 
 ![malarial blood](imgs/100x_bb_preds.png)
 
-<!-- *"0" denotes a healthy cell, "1" denotes a ring-stage parasite, "3" denotes a trophozoite-stage parasite* -->
 
 And here is an example of an image from the [YOLO9000 Paper](https://arxiv.org/pdf/1612.08242.pdf) (not necessarily in the MS COCO dataset):
 
@@ -38,13 +37,20 @@ The Backbone processes the input image into a feature map that represents the im
 
 The following sections will discuss the details of this section. It will be a little bit out of order, but I think that this is the right ordering.
 
-### Prediction
+### Anchors and Predictions
 
-The prediction of a bounding box is broken into 6 components, which are `xc`, `yc`, `w`, `h`, `to`, and `class predictions`:
+Before anything else, we must understand what a prediction actually is. The prediction of a bounding box is broken into 6 components, which are $t_x$, $t_y$, $t_w$, $t_h$, `to`, and `class predictions`:
 
-- `xc` and `yc` are the x and y centers of the bounding box, normalized to the width and height of the image (so they are between 0 and 1)
-- `w` and `h` are the width and height, also normalized
-- `to` is the "objectness" of the prediction - this can be considered the product of
+- $t_x$ and $t_y$ are the x and y centers of the bounding box, normalized to the width and height of the image (so they are between 0 and 1)
+- $t_w$ and $t_h$ are the width and height, also normalized
+- $t_o$ is the "objectness" of the prediction - this can be considered the confidence of this prediction
 - `classes` are your normal class predictions from softmax
 
+One important thing to note is that the values $t_x$, $t_y$, $t_w$, $t_h$ are not **direct predictions** of the bounding box. They are
+
 <img src="imgs/prediction_format.png" width="400">
+
+
+## Great related sources
+
+https://www.jeremyjordan.me/object-detection-one-stage/
