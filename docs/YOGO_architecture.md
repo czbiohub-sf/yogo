@@ -37,19 +37,22 @@ The Backbone processes the input image into a feature map that represents the im
 
 The following sections will discuss the details of this section. It will be a little bit out of order, but I think that this is the right ordering.
 
+### Prediction Grid
+
+
+
 ### Anchors and Predictions
 
-Before anything else, we must understand what a prediction actually is. The prediction of a bounding box is broken into 6 components, which are $t_x$, $t_y$, $t_w$, $t_h$, `to`, and `class predictions`:
-
-- $t_x$ and $t_y$ are the x and y centers of the bounding box, normalized to the width and height of the image (so they are between 0 and 1)
-- $t_w$ and $t_h$ are the width and height, also normalized
-- $t_o$ is the "objectness" of the prediction - this can be considered the confidence of this prediction
-- `classes` are your normal class predictions from softmax
-
-One important thing to note is that the values $t_x$, $t_y$, $t_w$, $t_h$ are not **direct predictions** of the bounding box. They are
+Before anything else, we must understand what a prediction actually is. The prediction of a bounding box is broken into 5 numbers ($t_x$, $t_y$, $t_w$, $t_h$, $t_o$) and class predictions ($\mathbb{c}$). One important thing to note is that the values $t_x$, $t_y$, $t_w$, $t_h$ are not **direct predictions** of the bounding box. They are used in the following equations to interpret the bounding box:
 
 <img src="imgs/prediction_format.png" width="400">
 
+- $t_x$ and $t_y$ are the x and y centers of the bounding box, normalized to the width and height of the image (so they are between 0 and 1)
+- $t_w$ and $t_h$ are the width and height, also normalized
+- $t_o$ is the "objectness" of the prediction - this can be considered the confidence of this prediction, and this is also between 0 and 1
+- $\mathbb{c}$ is a vector of your normal class predictions (softmax'ed)
+
+They are
 
 ## Great related sources
 
