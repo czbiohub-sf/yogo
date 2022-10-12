@@ -52,12 +52,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
              Sx,
              Sy
         )
-
-        TODO:
-            - "bag of freebies" for free +5% mAP https://arxiv.org/pdf/1902.04103.pdf
-            - Sigmoid + L2 loss -> BCE with logits for "Objectness"
-            - See YoloV3 Sec 2.1
-
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         assert batch_size == len(label_batch)
