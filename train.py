@@ -181,7 +181,9 @@ def train():
         },
     )
 
-    checkpoint_model(net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth")
+    checkpoint_model(
+        net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
+    )
 
 
 def init_dataset(config):
