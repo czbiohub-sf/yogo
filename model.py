@@ -22,6 +22,8 @@ class YOGO(nn.Module):
     onto the end of forward if we are running inference.
     """
 
+    MODEL_VERSION = "0.0.1"
+
     def __init__(self, img_size, anchor_w, anchor_h, num_classes=4, inference=False):
         super().__init__()
         self.device = "cpu"
@@ -32,6 +34,7 @@ class YOGO(nn.Module):
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
         self.register_buffer("num_classes", torch.tensor(num_classes))
+        self.register_buffer("model_ver", torch.tensor(self.MODEL_VERSION))
 
         self.inference = inference
 
@@ -41,15 +44,23 @@ class YOGO(nn.Module):
     @classmethod
     def from_pth(cls, loaded_pth, inference=False):
         params = loaded_pth["model_state_dict"]
+
+        try:
+            model_ver = params["model_ver"]
+        except KeyError:
+            # just assume that the pth file is compatible
+            # TODO remove after it is probable that no more pth files w/o versions exist
+            model_ver = cls.MODEL_VERSION
+
+        if model_ver != cls.MODEL_VERSION:
+            raise ValueError(
+                f"pth version is {model_ver}, but the model is version {cls.MODEL_VERSION}"
+            )
+
         img_size = params["img_size"]
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
-
-        try:
-            num_classes = params["num_classes"]
-        except KeyError:
-            num_classes = torch.tensor(4)
-            params["num_classes"] = num_classes
+        num_classes = params["num_classes"]
 
         model = cls(
             (img_size[0], img_size[1]),
