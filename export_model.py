@@ -133,10 +133,7 @@ if __name__ == "__main__":
     parser = export_parser()
     args = parser.parse_args()
 
-    if args.visualize:
-        vis_filename = do_vis("computational_graph")
-    else:
-        try:
-            do_export(args)
-        except AttributeError:
-            parser.print_help()
+    try:
+        do_export(args)
+    except AttributeError:
+        parser.print_help()

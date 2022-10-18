@@ -40,38 +40,26 @@ def train_parser():
 
 def export_parser():
     parser = argparse.ArgumentParser(description="convert a pth to onnx or Intel IR")
-
-    subparsers = parser.add_subparsers()
-
-    export_parser = subparsers.add_parser(
-        "export", description="export PTH file to various formats"
-    )
-    export_parser.add_argument(
+    parser.add_argument(
         "input",
         type=str,
         help="path to input pth file",
     )
-    export_parser.add_argument(
+    parser.add_argument(
         "--output-filename",
         type=str,
         help="output filename",
     )
-    export_parser.add_argument(
+    parser.add_argument(
         "--simplify",
         help="attempt to simplify the onnx model",
         action=boolean_action,
         default=True,
     )
-    export_parser.add_argument(
+    parser.add_argument(
         "--IR",
         help="export to IR (for NCS2)",
         action=boolean_action,
         default=True,
-    )
-    parser.add_argument(
-        "--visualize",
-        help="visualize PyTorch computational graph",
-        action=boolean_action,
-        default=False,
     )
     return parser
