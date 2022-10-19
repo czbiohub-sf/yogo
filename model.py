@@ -34,7 +34,7 @@ class YOGO(nn.Module):
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_w))
         self.register_buffer("num_classes", torch.tensor(num_classes))
-        self.register_buffer("model_ver", torch.tensor(self.MODEL_VERSION))
+        # self.register_buffer("model_ver", torch.tensor(self.MODEL_VERSION))
 
         self.inference = inference
 
