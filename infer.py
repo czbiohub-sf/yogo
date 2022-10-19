@@ -10,15 +10,14 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 import matplotlib.pyplot as plt
 
 from matplotlib.patches import Rectangle
+from pathlib import Path
+from typing import Optional
 
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize
 
-from pathlib import Path
-
 from model import YOGO
-
-from typing import Optional
+from utils import draw_rects
 
 
 if __name__ == "__main__":
@@ -45,26 +44,12 @@ if __name__ == "__main__":
         imgs = [str(data)]
 
     for fname in imgs:
+        print(fname)
         img = R(read_image(fname, ImageReadMode.GRAY))
         fig, ax = plt.subplots()
 
-        ax.imshow(img[0, ...], cmap="gray")  # imshow doesn't like C=1 for CHW imgs
-
         res = model(img[None, ...])
-        _, pred_dim, Sy, Sx = res.shape
-        for pred in torch.permute(res.reshape(1, pred_dim, Sx * Sy)[0, :, :], (1, 0)):
-            assert len(pred) == 9
-            xc, yc, w, h = pred[:4].detach()
-            # TODO: Tune threshold?
-            if pred[4].item() > 0.5:
-                ax.add_patch(
-                    Rectangle(
-                        (img_w * (xc - w / 2), img_h * (yc - h / 2)),
-                        img_w * w,
-                        img_h * h,
-                        facecolor="none",
-                        edgecolor="black",
-                    )
-                )
+        drawn_img = draw_rects(img[0,...], res[0,...], thresh=0.5)
+        ax.imshow(drawn_img, cmap='gray')
 
         plt.show()
