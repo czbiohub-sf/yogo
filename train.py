@@ -200,6 +200,7 @@ def init_dataset(config):
         config["batch_size"],
         img_size=config["resize_shape"],
         device=config["device"],
+        dataset_class=MosaicObjectDetectionDataset
     )
 
     train_dataloader = dataloaders["train"]
