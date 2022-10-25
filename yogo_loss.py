@@ -63,8 +63,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             (1 - label_batch[:, 0, :, :])
             * self.no_obj_weight
             * self.mse(
-                pred_batch[:, self.num_classes, :, :],
-                torch.zeros_like(pred_batch[:, self.num_classes, :, :]),
+                pred_batch[:, 4, :, :],
+                torch.zeros_like(pred_batch[:, 4, :, :]),
             )
         ).sum()
 
@@ -72,8 +72,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         loss += (
             label_batch[:, 0, :, :]
             * self.mse(
-                pred_batch[:, self.num_classes, :, :],
-                torch.ones_like(pred_batch[:, self.num_classes, :, :]),
+                pred_batch[:, 4, :, :],
+                torch.ones_like(pred_batch[:, 4, :, :]),
             )
         ).sum()
 
@@ -96,7 +96,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 )
                 + self.mse(
                     torch.sqrt(pred_batch[:, 3, :, :]),
-                    torch.sqrt(label_batch[:, self.num_classes, :, :]),
+                    torch.sqrt(label_batch[:, 4, :, :]),
                 )
             )
         ).sum()
