@@ -54,7 +54,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         )
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
-        assert batch_size == len(label_batch)
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -81,22 +80,17 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         loss += (
             label_batch[:, 0, :, :]
             * self.coord_weight
-            * (
-                self.mse(
-                    pred_batch[:, 0, :, :],
-                    label_batch[:, 1, :, :],
-                )
-                + self.mse(
-                    pred_batch[:, 1, :, :],
-                    label_batch[:, 2, :, :],
-                )
-                + self.mse(
-                    torch.sqrt(pred_batch[:, 2, :, :]),
-                    torch.sqrt(label_batch[:, 3, :, :]),
-                )
-                + self.mse(
-                    torch.sqrt(pred_batch[:, 3, :, :]),
-                    torch.sqrt(label_batch[:, 4, :, :]),
+            * ops.complete_box_iou_loss(
+                    ops.box_convert(
+                        pred_batch[:, :4, :, :].view(batch_size * Sx * Sy, 4),
+                        "cxcywh",
+                        "xyxy",
+                    ),
+                    ops.box_convert(
+                        label_batch[:, :4, :, :].view(batch_size * Sx * Sy, 4),
+                        "cxcywh",
+                        "xyxy",
+                    ),
                 )
             )
         ).sum()
