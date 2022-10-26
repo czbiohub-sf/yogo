@@ -76,24 +76,36 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             )
         ).sum()
 
-        # localization (i.e. xc, yc, w, h) loss
+        """
+        pp = pred_batch[:, :4, :, :].permute((1, 0, 2, 3)).reshape(4, batch_size * Sx * Sy).permute((1,0))
+        ppp = label_batch[:, 1:5, :, :].permute((1, 0, 2, 3)).reshape(4, batch_size * Sx * Sy).permute((1,0))
+        ahhhh = label_batch[:, 0:1, :, :].permute((1, 0, 2, 3)).reshape(1, batch_size * Sx * Sy).permute((1,0))
+        """
+
+        pp = pred_batch[:, :4, :, :].permute((1,0,2,3)).reshape(4, batch_size * Sx * Sy).T
+        ppp = label_batch[:, 1:5, :, :].permute((1,0,2,3)).reshape(4, batch_size * Sx * Sy).T
+        ahhhh = label_batch[:, 0:1, :, :].permute((1,0,2,3)).reshape(1, batch_size * Sx * Sy).T
+        print(pp)
+        print(ahhhh)
+        print("before", loss)
+
         loss += (
-            label_batch[:, 0, :, :]
+            ahhhh
             * self.coord_weight
             * ops.complete_box_iou_loss(
-                    ops.box_convert(
-                        pred_batch[:, :4, :, :].view(batch_size * Sx * Sy, 4),
-                        "cxcywh",
-                        "xyxy",
-                    ),
-                    ops.box_convert(
-                        label_batch[:, :4, :, :].view(batch_size * Sx * Sy, 4),
-                        "cxcywh",
-                        "xyxy",
-                    ),
-                )
+                ops.box_convert(
+                    pp,
+                    "cxcywh",
+                    "xyxy",
+                ),
+                ops.box_convert(
+                    ppp,
+                    "cxcywh",
+                    "xyxy",
+                ),
             )
         ).sum()
+        print(loss)
 
         # classification loss
         loss += (
