@@ -76,19 +76,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             )
         ).sum()
 
-        """
         pp = pred_batch[:, :4, :, :].permute((1, 0, 2, 3)).reshape(4, batch_size * Sx * Sy).permute((1,0))
         ppp = label_batch[:, 1:5, :, :].permute((1, 0, 2, 3)).reshape(4, batch_size * Sx * Sy).permute((1,0))
         ahhhh = label_batch[:, 0:1, :, :].permute((1, 0, 2, 3)).reshape(1, batch_size * Sx * Sy).permute((1,0))
-        """
+        print(pp.shape, ppp.shape)
+        # pp = pred_batch[:, :4, :, :].to(memory_format=torch.channels_last)
+        # ppp = label_batch[:, 1:5, :, :].to(memory_format=torch.channels_last)
+        # ahhhh = label_batch[:, 0:1, :, :].to(memory_format=torch.channels_last)
+        print(pp[0,:], ppp[0,:], ahhhh.shape, ahhhh[0])
 
-        pp = pred_batch[:, :4, :, :].permute((1,0,2,3)).reshape(4, batch_size * Sx * Sy).T
-        ppp = label_batch[:, 1:5, :, :].permute((1,0,2,3)).reshape(4, batch_size * Sx * Sy).T
-        ahhhh = label_batch[:, 0:1, :, :].permute((1,0,2,3)).reshape(1, batch_size * Sx * Sy).T
-        print(pp)
-        print(ahhhh)
-        print("before", loss)
-
+        print('pre loss', loss)
         loss += (
             ahhhh
             * self.coord_weight
