@@ -187,5 +187,5 @@ def split_labels_into_bins(
     for label in labels:
         i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
         j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()
-        d[(i, j)].aformatted_predsend(label)
+        d[(i, j)].append(label)
     return {k: torch.vstack(vs) for k, vs in d.items()}
