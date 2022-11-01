@@ -284,5 +284,4 @@ if __name__ == "__main__":
         tags=["v0.0.1"],
     )
 
-    with torch.autograd.detect_anomaly():
-        train()
+    train()

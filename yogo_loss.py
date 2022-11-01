@@ -58,13 +58,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
         # objectness loss when there is no obj
-        loss += self.no_obj_weight * (
-            (1 - label_batch[:, 0, :, :])
-            * self.mse(
-                pred_batch[:, 4, :, :],
-                torch.zeros_like(pred_batch[:, 4, :, :]),
-            )
-        ).sum()
+        loss += (
+            self.no_obj_weight
+            * (
+                (1 - label_batch[:, 0, :, :])
+                * self.mse(
+                    pred_batch[:, 4, :, :],
+                    torch.zeros_like(pred_batch[:, 4, :, :]),
+                )
+            ).sum()
+        )
 
         # objectness loss when there is an obj
         loss += (
@@ -75,13 +78,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             )
         ).sum()
 
-        pp = (
-            pred_batch[:,:4,:,:]
+        # bounding box loss
+        # there is a lot of work to get it into the right format for loss
+        # hopefully it is not too slow
+        formatted_preds = (
+            pred_batch[:, :4, :, :]
             .permute((1, 0, 2, 3))
             .reshape(4, batch_size * Sx * Sy)
         )
-        ppp = (
-            label_batch[:,1:5,:,:]
+        formatted_labels = (
+            label_batch[:, 1:5, :, :]
             .permute((1, 0, 2, 3))
             .reshape(4, batch_size * Sx * Sy)
         )
@@ -90,38 +96,31 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             .permute((1, 0, 2, 3))
             .reshape(batch_size * Sx * Sy)
         ).bool()
-        print("shapes")
-        print(pp.shape, ppp.shape, mask.shape)
-        pp_masked = pp[:,mask].T
-        ppp_masked = ppp[:,mask].T
 
-        cc = torch.clamp(
-            ops.box_convert(
-                pp_masked,
-                "cxcywh",
-                "xyxy",
-            ),
-            min=0,
-            max=1,
+        formatted_preds_masked = formatted_preds[:, mask].permute((1,0))
+        formatted_labels_masked = formatted_labels[:, mask].permute((1,0))
+
+        loss += (
+            self.coord_weight
+            * (
+                ops.complete_box_iou_loss(
+                    torch.clamp(
+                        ops.box_convert(
+                            formatted_preds_masked,
+                            "cxcywh",
+                            "xyxy",
+                        ),
+                        min=0,
+                        max=1,
+                    ),
+                    ops.box_convert(
+                        formatted_labels_masked,
+                        "cxcywh",
+                        "xyxy",
+                    ),
+                )
+            ).sum()
         )
-        ccc = ops.box_convert(
-            ppp_masked,
-            "cxcywh",
-            "xyxy",
-        )
-        # pp = pred_batch[:, :4, :, :].to(memory_format=torch.channels_last)
-        # ppp = label_batch[:, 1:5, :, :].to(memory_format=torch.channels_last)
-        # mask = label_batch[:, 0:1, :, :].to(memory_format=torch.channels_last)
-
-        print("cc", cc[0, :], "ccc", ccc[0, :])
-        item_by_item_iou_loss = ops.complete_box_iou_loss(cc, ccc)
-        print('cc nans', torch.nonzero(torch.isnan(cc.view(-1))))
-        print('ccc nans', torch.nonzero(torch.isnan(ccc.view(-1))))
-        print('ciou_loss nans', torch.nonzero(torch.isnan(item_by_item_iou_loss.view(-1))))
-
-        # MASK W/ AHHHHH
-        loss += self.coord_weight * (item_by_item_iou_loss).sum()
-        print(loss)
 
         # classification loss
         loss += (
@@ -188,5 +187,5 @@ def split_labels_into_bins(
     for label in labels:
         i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
         j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()
-        d[(i, j)].append(label)
+        d[(i, j)].aformatted_predsend(label)
     return {k: torch.vstack(vs) for k, vs in d.items()}
