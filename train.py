@@ -100,13 +100,9 @@ def train():
             outputs = net(imgs)
             formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
-            print("weeebooooboosdofoo")
             loss.backward()
-            print("weeebooooboosdofoo")
             optimizer.step()
-            print("weeebooooboosdofoo")
             scheduler.step()
-            print("weeebooooboosdofoo")
 
             wandb.log(
                 {

@@ -58,9 +58,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
         # objectness loss when there is no obj
-        loss += (
+        loss += self.no_obj_weight * (
             (1 - label_batch[:, 0, :, :])
-            * self.no_obj_weight
             * self.mse(
                 pred_batch[:, 4, :, :],
                 torch.zeros_like(pred_batch[:, 4, :, :]),
@@ -76,32 +75,52 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             )
         ).sum()
 
-        pp = pred_batch[:, :4, :, :].permute((1, 0, 2, 3)).reshape(4, batch_size * Sx * Sy).permute((1,0))
-        ppp = label_batch[:, 1:5, :, :].permute((1, 0, 2, 3)).reshape(4, batch_size * Sx * Sy).permute((1,0))
-        ahhhh = label_batch[:, 0:1, :, :].permute((1, 0, 2, 3)).reshape(1, batch_size * Sx * Sy).permute((1,0))
-        print(pp.shape, ppp.shape)
+        pp = (
+            pred_batch[:,:4,:,:]
+            .permute((1, 0, 2, 3))
+            .reshape(4, batch_size * Sx * Sy)
+        )
+        ppp = (
+            label_batch[:,1:5,:,:]
+            .permute((1, 0, 2, 3))
+            .reshape(4, batch_size * Sx * Sy)
+        )
+        mask = (
+            label_batch[:, 0:1, :, :]
+            .permute((1, 0, 2, 3))
+            .reshape(batch_size * Sx * Sy)
+        ).bool()
+        print("shapes")
+        print(pp.shape, ppp.shape, mask.shape)
+        pp_masked = pp[:,mask].T
+        ppp_masked = ppp[:,mask].T
+
+        cc = torch.clamp(
+            ops.box_convert(
+                pp_masked,
+                "cxcywh",
+                "xyxy",
+            ),
+            min=0,
+            max=1,
+        )
+        ccc = ops.box_convert(
+            ppp_masked,
+            "cxcywh",
+            "xyxy",
+        )
         # pp = pred_batch[:, :4, :, :].to(memory_format=torch.channels_last)
         # ppp = label_batch[:, 1:5, :, :].to(memory_format=torch.channels_last)
-        # ahhhh = label_batch[:, 0:1, :, :].to(memory_format=torch.channels_last)
-        print(pp[0,:], ppp[0,:], ahhhh.shape, ahhhh[0])
+        # mask = label_batch[:, 0:1, :, :].to(memory_format=torch.channels_last)
 
-        print('pre loss', loss)
-        loss += (
-            ahhhh
-            * self.coord_weight
-            * ops.complete_box_iou_loss(
-                ops.box_convert(
-                    pp,
-                    "cxcywh",
-                    "xyxy",
-                ),
-                ops.box_convert(
-                    ppp,
-                    "cxcywh",
-                    "xyxy",
-                ),
-            )
-        ).sum()
+        print("cc", cc[0, :], "ccc", ccc[0, :])
+        item_by_item_iou_loss = ops.complete_box_iou_loss(cc, ccc)
+        print('cc nans', torch.nonzero(torch.isnan(cc.view(-1))))
+        print('ccc nans', torch.nonzero(torch.isnan(ccc.view(-1))))
+        print('ciou_loss nans', torch.nonzero(torch.isnan(item_by_item_iou_loss.view(-1))))
+
+        # MASK W/ AHHHHH
+        loss += self.coord_weight * (item_by_item_iou_loss).sum()
         print(loss)
 
         # classification loss
