@@ -8,7 +8,7 @@ import torchvision.transforms as T
 from PIL import Image, ImageDraw
 from typing import Optional, Union, List
 
-from torchmetrics import ConfusionMatrix
+from torchmetrics.classification import MulticlassConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from typing import Tuple, List, Dict
@@ -17,7 +17,7 @@ from typing import Tuple, List, Dict
 class Metrics:
     def __init__(self, num_classes=4, device="cpu", class_names=None):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        self.confusion = ConfusionMatrix(num_classes=num_classes)
+        self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
         self.confusion.to(device)
 
         self.class_names = (
@@ -67,10 +67,14 @@ class Metrics:
             batch_preds[:, 5:, :, :] = torch.softmax(batch_preds[:, 5:, :, :], dim=1)
 
         confusion_batch_preds = (
-            batch_preds.permute(1, 0, 2, 3)[5:, ...].reshape(-1, bs * Sx * Sy).T
+            batch_preds[:, 5:, :, :]
+            .permute(1, 0, 2, 3)
+            .reshape(-1, bs * Sx * Sy)
+            .permute(1, 0)
         )
         confusion_labels = (
-            batch_labels.permute(1, 0, 2, 3)[5, :, :, :]
+            batch_labels[5, :, :, :]
+            .permute(1, 0, 2, 3)
             .reshape(1, bs * Sx * Sy)
             .permute(1, 0)
             .long()
@@ -170,7 +174,7 @@ def draw_rects(
 
     for r in formatted_rects:
         draw.rectangle(r[:4], outline="red")
-        draw.text((r[0], r[1]), str(r[4]), (0,0,0))
+        draw.text((r[0], r[1]), str(r[4]), (0, 0, 0))
 
     return rgb
 
