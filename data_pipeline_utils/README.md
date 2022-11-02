@@ -1,3 +1,3 @@
 # Data Pipeline
 
-Cellpose .npy segmentations -> imagej ROIs -> imaging utils bbs -> YOGO bbs
+Cellpose .npy segmentations -> convert\_cellpose.py -> YOGO bbs
