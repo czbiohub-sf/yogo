@@ -30,32 +30,6 @@ def to_numpy(tensor):
     )
 
 
-def do_vis(filename):
-    raise NotImplementedError("This is currently broken, y'all :'( yell at axel!")
-
-    import torchviz
-
-    # FIXME: this is a hack, we should just create a fake label tensor)
-    from yogo_loss import YOGOLoss
-
-    dataloaders = get_dataloader("healthy_cell_dataset.yml", 1)
-    DL = dataloaders["val"]
-
-    Y = YOGO(0.1, 0.1)
-    loss_fcn = YOGOLoss()
-
-    img_batch, label_batch = next(iter(DL))
-
-    out = Y(img_batch)
-    g = torchviz.make_dot(
-        loss_fcn(out, label_batch),
-        params=dict(Y.named_parameters()),
-        show_attrs=True,
-        show_saved=True,
-    )
-    g.render(filename, format="pdf", view=False)
-
-
 def do_export(args):
     pth_filename = args.input
     onnx_filename = (
@@ -133,10 +107,7 @@ if __name__ == "__main__":
     parser = export_parser()
     args = parser.parse_args()
 
-    if args.visualize:
-        vis_filename = do_vis("computational_graph")
-    else:
-        try:
-            do_export(args)
-        except AttributeError:
-            parser.print_help()
+    try:
+        do_export(args)
+    except AttributeError:
+        parser.print_help()

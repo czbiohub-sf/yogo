@@ -68,10 +68,4 @@ def export_parser():
         action=boolean_action,
         default=True,
     )
-    parser.add_argument(
-        "--visualize",
-        help="visualize PyTorch computational graph",
-        action=boolean_action,
-        default=False,
-    )
     return parser
