@@ -12,28 +12,17 @@ from pathlib import Path
 from functools import partial
 from cellpose import utils, io
 
-from _utils import normalize, convert_coords
+from _utils import normalize, convert_coords, multiprocess_directory_work
 
 
-def process_cellpose_results(input_dir, output_dir, label=0):
+def process_cellpose_results(files, output_dir, label=0):
+    files = glob.glob(f"{input_dir}/*.npy")
+
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
-    work_fnc = partial(work, label, output_dir_path)
+    work_fcn = partial(work, label, output_dir_path)
 
-    files = glob.glob(f"{input_dir}/*.npy")
-    cpu_count = mp.cpu_count()
-
-    print(f"processing {len(files)} files")
-    print(f"num cpus: {cpu_count}")
-
-    with mp.Pool(cpu_count) as P:
-        # list so we get tqdm output, thats it!
-        for _ in tqdm(
-            P.imap_unordered(work_fnc, files, chunksize=64), total=len(files)
-        ):
-            pass
-        P.close()
-        P.join()
+    multiprocess_directory_work(files, work_fcn)
 
 
 def work(label, output_dir_path, f):

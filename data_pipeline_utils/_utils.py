@@ -1,3 +1,8 @@
+import mutliprocessing as np
+
+from pathlib import Path
+
+
 def normalize(x, y):
     height = 600
     width = 800
@@ -26,3 +31,19 @@ def convert_coords(xmin, xmax, ymin, ymax):
     ), f"{[xcenter, ycenter, width, height]}"
 
     return xcenter, ycenter, width, height
+
+
+def multiprocess_directory_work(files, work_fcn):
+    cpu_count = mp.cpu_count()
+
+    print(f"processing {len(files)} files")
+    print(f"num cpus: {cpu_count}")
+
+    with mp.Pool(cpu_count) as P:
+        # iterate so we get tqdm output, thats it!
+        for _ in tqdm(
+            P.imap_unordered(work_fcn, files, chunksize=64), total=len(files)
+        ):
+            pass
+        P.close()
+        P.join()
