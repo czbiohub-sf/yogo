@@ -50,6 +50,7 @@ def collate_batch(batch, device="cpu", transforms=None):
         [torch.tensor(l).to(device, non_blocking=True) for l in labels],
     )
 
+
 def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
     "loads labels from label file, given by image path"
     labels = []
@@ -144,7 +145,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         samples: List[Tuple[str, List[List[float]]]] = []
         for img_file_path in self.image_folder_path.glob("*"):
             if is_valid_file(str(img_file_path)):
-                label_path = self.label_folder_path / img_file_path.with_suffix(".csv").name
+                label_path = (
+                    self.label_folder_path / img_file_path.with_suffix(".csv").name
+                )
                 labels = load_labels_from_path(label_path, self.classes)
                 samples.append((str(img_file_path), labels))
         return samples

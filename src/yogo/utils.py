@@ -164,7 +164,7 @@ def draw_rects(
                 int(h * (r[2] - r[4] / 2)),
                 int(w * (r[1] + r[3] / 2)),
                 int(h * (r[2] + r[4] / 2)),
-                r[0]
+                r[0],
             ]
             for r in rects
         ]
