@@ -28,7 +28,9 @@ def process_cellpose_results(input_dir, output_dir, label=0):
 
     with mp.Pool(cpu_count) as P:
         # list so we get tqdm output, thats it!
-        for _ in tqdm(P.imap_unordered(work_fnc, files, chunksize=64), total=len(files)):
+        for _ in tqdm(
+            P.imap_unordered(work_fnc, files, chunksize=64), total=len(files)
+        ):
             pass
         P.close()
         P.join()
@@ -66,8 +68,4 @@ if __name__ == "__main__":
     except IndexError:
         label = 0
 
-    process_cellpose_results(
-        sys.argv[1],
-        sys.argv[2],
-        label=label
-    )
+    process_cellpose_results(sys.argv[1], sys.argv[2], label=label)
