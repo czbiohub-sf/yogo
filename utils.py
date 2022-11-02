@@ -39,6 +39,7 @@ class Metrics:
 
     def compute(self):
         confusion_mat = self.confusion.compute()
+        print(confusion_mat)
 
         nc1, nc2 = confusion_mat.shape
         assert nc1 == nc2
@@ -73,11 +74,10 @@ class Metrics:
             .permute(1, 0)
         )
         confusion_labels = (
-            batch_labels[5, :, :, :]
+            batch_labels[:, 5:6, :, :]
             .permute(1, 0, 2, 3)
-            .reshape(1, bs * Sx * Sy)
-            .permute(1, 0)
-            .long()
+            .reshape(-1, bs * Sx * Sy)
+            .squeeze()
         )
         return confusion_batch_preds, confusion_labels
 
