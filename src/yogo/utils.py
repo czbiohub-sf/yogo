@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
 
-import math
-
 import torch
 import torchvision.transforms as T
 

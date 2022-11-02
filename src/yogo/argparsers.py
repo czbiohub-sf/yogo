@@ -9,8 +9,22 @@ except AttributeError:
     boolean_action = "store_true"  # type: ignore
 
 
-def train_parser():
-    parser = argparse.ArgumentParser(description="commence a training run")
+def global_parser():
+    parser = argparse.ArgumentParser(description="looking for a glance?")
+    subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
+    train_subparser = train_parser(
+        parser=subparsers.add_parser("train", help="train a model")
+    )
+    export_subparser = export_parser(
+        parser=subparsers.add_parser("export", help="export a model")
+    )
+    return parser
+
+
+def train_parser(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(description="commence a training run")
+
     parser.add_argument(
         "dataset_descriptor_file",
         type=str,
@@ -38,31 +52,29 @@ def train_parser():
     return parser
 
 
-def export_parser():
-    parser = argparse.ArgumentParser(description="convert a pth to onnx or Intel IR")
+def export_parser(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(
+            description="convert a pth to onnx or Intel IR"
+        )
 
-    subparsers = parser.add_subparsers()
-
-    export_parser = subparsers.add_parser(
-        "export", description="export PTH file to various formats"
-    )
-    export_parser.add_argument(
+    parser.add_argument(
         "input",
         type=str,
         help="path to input pth file",
     )
-    export_parser.add_argument(
+    parser.add_argument(
         "--output-filename",
         type=str,
         help="output filename",
     )
-    export_parser.add_argument(
+    parser.add_argument(
         "--simplify",
         help="attempt to simplify the onnx model",
         action=boolean_action,
         default=True,
     )
-    export_parser.add_argument(
+    parser.add_argument(
         "--IR",
         help="export to IR (for NCS2)",
         action=boolean_action,

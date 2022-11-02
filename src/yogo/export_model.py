@@ -13,10 +13,11 @@ import torchvision
 
 import numpy as np
 
-from model import YOGO
 from pathlib import Path
-from argparsers import export_parser
-from dataloader import get_dataloader
+
+from .model import YOGO
+from .argparsers import export_parser
+from .dataloader import get_dataloader
 
 
 """

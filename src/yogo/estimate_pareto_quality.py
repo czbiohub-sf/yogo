@@ -9,13 +9,13 @@ from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingWarmRestarts
 
-from model import YOGO
-from train import init_dataset
-from yogo_loss import YOGOLoss
-from argparsers import train_parser
-from utils import draw_rects, Metrics
-from dataloader import load_dataset_description, get_dataloader
-from cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from .model import YOGO
+from .train import init_dataset
+from .yogo_loss import YOGOLoss
+from .argparsers import train_parser
+from .utils import draw_rects, Metrics
+from .dataloader import load_dataset_description, get_dataloader
+from .cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
 from pathlib import Path
 from copy import deepcopy
