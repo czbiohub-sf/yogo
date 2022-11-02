@@ -7,15 +7,20 @@ import numpy as np
 
 from pathlib import Path
 
+from tqdm import tqdm
 from cellpose import utils, io
 
 from _utils import normalize, convert_coords
 
 
-def process_cellpose_results(input_dir, output_dir):
-    for f in glob.glob("*.npy"):
+def process_cellpose_results(input_dir, output_dir, label=0):
+    output_dir_path = Path(output_dir)
+    output_dir_path.mkdir(parents=True, exist_ok=True)
+
+    for f in tqdm(glob.glob(f"{input_dir}/*.npy")):
         outlines = load_cellpose_npy_file(f)
-        new_csv = (Path(output_dir) / f.replace("_seg", "")).with_suffix(".csv")
+        file_name = Path(f).name.replace("_seg", "")
+        new_csv = (output_dir_path / file_name).with_suffix(".csv")
         with open(new_csv, "w") as g:
             for outline in outlines:
                 xmin, xmax, ymin, ymax = (
@@ -25,7 +30,7 @@ def process_cellpose_results(input_dir, output_dir):
                     outline[:, 1].max(),
                 )
                 xcenter, ycenter, width, height = convert_coords(xmin, xmax, ymin, ymax)
-                g.write(f"0,{xcenter},{ycenter},{width},{height}\n")
+                g.write(f"{label},{xcenter},{ycenter},{width},{height}\n")
 
 
 def load_cellpose_npy_file(f):
@@ -34,7 +39,16 @@ def load_cellpose_npy_file(f):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 3:
         print(f"usage: {sys.argv[0]} <input dir> <label dir>")
+        sys.exit(1)
 
-    process_cellpose_results(sys.argv[1], sys.argv[2])
+    try:
+        label = sys.argv[3]
+    except IndexError:
+        label = 0
+
+    process_cellpose_results(
+        sys.argv[1],
+        sys.argv[2],
+    )

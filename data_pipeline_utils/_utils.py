@@ -9,7 +9,9 @@ def convert_coords(xmin, xmax, ymin, ymax):
     xmax, ymax = normalize(xmax, ymax)
 
     if xmin == xmax or ymin == ymax:
-        raise ValueError(f"xmin == xmax = {xmin == xmax} or ymin == ymax = {ymin == ymax}")
+        raise ValueError(
+            f"xmin == xmax = {xmin == xmax} or ymin == ymax = {ymin == ymax}"
+        )
 
     assert xmin < xmax, f"need xmin < xmax, got {xmin}, {xmax}"
     assert ymin < ymax, f"need ymin < ymax, got {ymin}, {ymax}"
