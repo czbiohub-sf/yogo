@@ -16,8 +16,6 @@ from _utils import normalize, convert_coords, multiprocess_directory_work
 
 
 def process_cellpose_results(files, output_dir, label=0):
-    files = glob.glob(f"{input_dir}/*.npy")
-
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
     work_fcn = partial(work, label, output_dir_path)
@@ -57,4 +55,5 @@ if __name__ == "__main__":
     except IndexError:
         label = 0
 
-    process_cellpose_results(sys.argv[1], sys.argv[2], label=label)
+    files = glob.glob(f"{sys.argv[1]}/*.npy")
+    process_cellpose_results(files, sys.argv[2], label=label)
