@@ -16,3 +16,5 @@ notes/profile_results
 notes/trace2html
 
 dataset_defs
+
+src/yogo.egg-info

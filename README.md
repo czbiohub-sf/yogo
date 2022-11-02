@@ -16,21 +16,37 @@ A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com
 
 - Initial benchmark of this model was run at ~40 FPS on the Raspberry Pi 4 w/ NCS2
 
+## Installation
+
+Install with
+
+```console
+python3 -m pip install yogo
+```
+
+If you want to export models, run
+
+```console
+python3 -m pip install yogo[onnx]
+```
+
+It is difficult to install onnx on my M1, so I've just installed it on the HPC.
+
 ## Training
 
 Train locally by running
 
 ```console
-python3 train.py <path to dataset_definition.yml> [opts]
+yogo train <path to dataset_definition.yml> [opts]
 ```
-for list of opts, run `python3 train.py --help`.
+for list of opts, run `yogo train --help`.
 
 To train on SLURM, run
 
 ```console
-sbatch submit_cmd.sh python3 train.py <path to dataset_definition.yml> [opts]
+sbatch submit_cmd.sh yogo train <path to dataset_definition.yml> [opts]
 ```
-with the same options from `train.py`.
+with the same options from above.
 
 To run a sweep on SLURM, first modify `sweep.yml` to fit your needs. Then, run
 
@@ -43,6 +59,16 @@ which should give you a sweep ID that looks like `bioengineering/yogo/foo`. Then
 ```console
 sbatch sweep_launch.sh bioengineering/yogo/foo
 ```
+
+## Exporting
+
+To export a model, make sure you installed `yogo` with Onnx, and run
+
+```console
+yogo export <model pth file>
+```
+
+You can run `yogo export --help` to get the full list of options. The defaults should be pretty good though!
 
 ## Dataset definition
 

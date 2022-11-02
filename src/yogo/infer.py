@@ -16,8 +16,8 @@ from typing import Optional
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize
 
-from model import YOGO
-from utils import draw_rects
+from .model import YOGO
+from .utils import draw_rects
 
 
 if __name__ == "__main__":
