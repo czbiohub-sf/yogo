@@ -145,21 +145,29 @@ def draw_rects(
         if thresh is None:
             thresh = 0.0
         rects = [r for r in rects.reshape(pred_dim, Sx * Sy).T if r[4] > thresh]
+        formatted_rects = [
+            [
+                int(w * (r[0] - r[2] / 2)),
+                int(h * (r[1] - r[3] / 2)),
+                int(w * (r[0] + r[2] / 2)),
+                int(h * (r[1] + r[3] / 2)),
+                torch.argmax(r[5:]).item(),
+            ]
+            for r in rects
+        ]
     elif isinstance(rects, list):
         if thresh is not None:
             raise ValueError("threshold only valid for tensor (i.e. prediction) input")
-        rects = [r[1:] for r in rects]
-
-    formatted_rects = [
-        [
-            int(w * (r[0] - r[2] / 2)),
-            int(h * (r[1] - r[3] / 2)),
-            int(w * (r[0] + r[2] / 2)),
-            int(h * (r[1] + r[3] / 2)),
-            torch.argmax(r[5:]).item(),
+        formatted_rects = [
+            [
+                int(w * (r[1] - r[3] / 2)),
+                int(h * (r[2] - r[4] / 2)),
+                int(w * (r[1] + r[3] / 2)),
+                int(h * (r[2] + r[4] / 2)),
+                r[0]
+            ]
+            for r in rects
         ]
-        for r in rects
-    ]
 
     image = T.ToPILImage()(img[None, ...])
     rgb = Image.new("RGB", image.size)

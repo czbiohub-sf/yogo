@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import sys
 import signal
 
@@ -18,12 +20,14 @@ if __name__ == "__main__":
         print(f"usage: {sys.argv[0]} <path to image folder> <path to label folder>")
         sys.exit(1)
 
-    images = Path(sys.argv[1])
-    labels = Path(sys.argv[2])
-    for image in images.glob("*.png"):
-        label_path = labels / image.with_suffix(".csv").name
-        labels = load_labels_from_path(label_path)
-        img = read_grayscale(image)
+    image_dir = Path(sys.argv[1])
+    label_dir = Path(sys.argv[2])
+    for image_path in image_dir.glob("*.png"):
+        label_path = label_dir / image_path.with_suffix(".csv").name
+        print(label_path)
+        labels = load_labels_from_path(label_path, classes=range(4))
+
+        img = read_grayscale(str(image_path)).squeeze()
         annotated_img = draw_rects(img, labels)
 
         plt.imshow(annotated_img)
