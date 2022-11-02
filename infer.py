@@ -49,7 +49,7 @@ if __name__ == "__main__":
         fig, ax = plt.subplots()
 
         res = model(img[None, ...])
-        drawn_img = draw_rects(img[0,...], res[0,...], thresh=0.5)
-        ax.imshow(drawn_img, cmap='gray')
+        drawn_img = draw_rects(img[0, ...], res[0, ...], thresh=0.5)
+        ax.imshow(drawn_img, cmap="gray")
 
         plt.show()
