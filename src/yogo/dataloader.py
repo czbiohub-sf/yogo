@@ -50,6 +50,36 @@ def collate_batch(batch, device="cpu", transforms=None):
         [torch.tensor(l).to(device, non_blocking=True) for l in labels],
     )
 
+def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
+    "loads labels from label file, given by image path"
+    labels = []
+    # just ignore images without labels - is a missing label file
+    # the best way to do this?
+    try:
+        with open(label_path, "r") as f:
+            # yuck! checking for headers is not super easy
+            reader = csv.reader(f)
+            has_header = csv.Sniffer().has_header(f.read(1024))
+            f.seek(0)
+            if has_header:
+                next(reader, None)
+
+            for row in reader:
+                assert (
+                    len(row) == 5
+                ), "should have [class,xc,yc,w,h] - got length {len(row)}"
+
+                if row[0].isnumeric():
+                    label_idx = row[0]
+                else:
+                    label_idx = classes.index(row[0])
+
+                labels.append([float(label_idx)] + [float(v) for v in row[1:]])
+    except FileNotFoundError:
+        pass
+
+    return labels
+
 
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
@@ -114,37 +144,10 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         samples: List[Tuple[str, List[List[float]]]] = []
         for img_file_path in self.image_folder_path.glob("*"):
             if is_valid_file(str(img_file_path)):
-                labels = self.load_labels_from_image_name(img_file_path)
+                label_path = self.label_folder_path / img_file_path.with_suffix(".csv").name
+                labels = load_labels_from_path(label_path, self.classes)
                 samples.append((str(img_file_path), labels))
         return samples
-
-    def load_labels_from_image_name(self, image_path: Path) -> List[List[float]]:
-        "loads labels from label file, given by image path"
-        labels = []
-        label_filename = image_path.name.replace(image_path.suffix, ".csv")
-
-        # just ignore images without labels - is a missing label file
-        # the best way to do this?
-        try:
-            with open(self.label_folder_path / label_filename, "r") as f:
-                # yuck! checking for headers is not super easy
-                reader = csv.reader(f)
-                has_header = csv.Sniffer().has_header(f.read(1024))
-                f.seek(0)
-                if has_header:
-                    next(reader, None)
-
-                for row in reader:
-                    assert (
-                        len(row) == 5
-                    ), "should have [class,xc,yc,w,h] - got length {len(row)}"
-                    label_idx = self.classes.index(row[0])
-                    labels.append([float(label_idx)] + [float(v) for v in row[1:]])
-        except FileNotFoundError:
-            # TODO: increment "missing / corrupt file"-type counter
-            pass
-
-        return labels
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """From torchvision.datasets.folder.DatasetFolder
