@@ -27,11 +27,7 @@ if __name__ == "__main__":
         label_path = label_dir / image_path.with_suffix(".csv").name
         print(label_path)
 
-        try:
-            labels = load_labels_from_path(label_path, classes=range(4))
-        except csv.Error as e:
-            labels = []
-            print(f"csv error for {label_path}")
+        labels = load_labels_from_path(label_path, classes=range(4))
 
         img = read_grayscale(str(image_path)).squeeze()
         annotated_img = draw_rects(img, labels)

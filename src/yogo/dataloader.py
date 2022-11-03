@@ -59,8 +59,12 @@ def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
     try:
         with open(label_path, "r") as f:
             # yuck! checking for headers is not super easy
-            reader = csv.reader(f)
-            has_header = csv.Sniffer().has_header(f.read(1024))
+            try:
+                reader = csv.reader(f)
+                has_header = csv.Sniffer().has_header(f.read(1024))
+            except csv.Error:
+                # emtpy file, no labels, just keep moving
+                return labels
             f.seek(0)
             if has_header:
                 next(reader, None)
