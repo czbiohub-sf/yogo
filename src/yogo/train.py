@@ -9,20 +9,20 @@ from torch import nn
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
-from model import YOGO
-from argparsers import train_parser
-from yogo_loss import YOGOLoss
-from utils import draw_rects, Metrics
-from dataloader import (
+from pathlib import Path
+from copy import deepcopy
+from typing import List
+
+from .model import YOGO
+from .argparsers import train_parser
+from .yogo_loss import YOGOLoss
+from .utils import draw_rects, Metrics
+from .dataloader import (
     load_dataset_description,
     get_dataloader,
     get_class_counts_for_dataloader,
 )
-from cluster_anchors import best_anchor, get_dataset_bounding_boxes
-
-from pathlib import Path
-from copy import deepcopy
-from typing import List
+from .cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -242,10 +242,7 @@ def get_wandb_confusion(confusion_data, title):
     )
 
 
-if __name__ == "__main__":
-    parser = train_parser()
-    args = parser.parse_args()
-
+def do_training(args):
     device = torch.device(
         args.device
         if args.device is not None
@@ -285,3 +282,10 @@ if __name__ == "__main__":
     )
 
     train()
+
+
+if __name__ == "__main__":
+    parser = train_parser()
+    args = parser.parse_args()
+
+    do_training(args)
