@@ -10,6 +10,15 @@
 
 env | grep "^SLURM" | sort
 
+# curious about transfer time
+
+# TODO this is bad :(
+echo $(date '+%d/%m/%Y %H:%M:%S')
+mkdir -p /tmp
+tar -xf /hpc/projects/flexo/MicroscopyData/Bioengineering/LFM\ Scope/cellpose_data/training_data_sample_2022_11_01_cyto2.tar.gz -C /tmp/
+echo $(date '+%d/%m/%Y %H:%M:%S')
+
+
 nvidia-smi
 
 wandb enabled

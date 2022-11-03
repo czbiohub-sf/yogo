@@ -249,7 +249,7 @@ def do_training(args):
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 256
+    epochs = 32
     adam_lr = 3e-4
     batch_size = 32
     resize_target_size = (300, 400)
@@ -278,7 +278,7 @@ def do_training(args):
             "dataset_descriptor_file": args.dataset_descriptor_file,
         },
         notes=args.note,
-        tags=["v0.0.1"],
+        tags=["v0.0.2"],
     )
 
     train()

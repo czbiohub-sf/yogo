@@ -6,6 +6,6 @@
 # best done via SLURM
 
 (set -x;
-  cellpose --dir "$@" --chan 0 --verbose --use_gpu --diameter=37 --batch_size 16 --pretrained_model "cyto" --save_outlines;
+  cellpose --dir "$@" --chan 0 --verbose --use_gpu --diameter=37 --batch_size 16 --pretrained_model "cyto2" --save_outlines;
   python3 clean_npy_results.py "$@")
 

@@ -65,6 +65,7 @@ def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
             except csv.Error:
                 # emtpy file, no labels, just keep moving
                 return labels
+
             f.seek(0)
             if has_header:
                 next(reader, None)
