@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import csv
 import sys
 import signal
 
@@ -25,7 +26,12 @@ if __name__ == "__main__":
     for image_path in image_dir.glob("*.png"):
         label_path = label_dir / image_path.with_suffix(".csv").name
         print(label_path)
-        labels = load_labels_from_path(label_path, classes=range(4))
+
+        try:
+            labels = load_labels_from_path(label_path, classes=range(4))
+        except csv.Error as e:
+            labels = []
+            print(f"csv error for {label_path}")
 
         img = read_grayscale(str(image_path)).squeeze()
         annotated_img = draw_rects(img, labels)

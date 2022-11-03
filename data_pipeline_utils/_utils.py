@@ -1,7 +1,9 @@
+import traceback
 import multiprocessing as mp
 
 from tqdm import tqdm
 from pathlib import Path
+from functools import partial
 
 
 def normalize(x, y):
@@ -34,17 +36,28 @@ def convert_coords(xmin, xmax, ymin, ymax):
     return xcenter, ycenter, width, height
 
 
+print_lock = mp.Lock()
+
+def protected_fcn(f, *args):
+    try:
+        f(*args)
+    except:
+        with print_lock:
+            print(f"exception occurred processing {args}")
+            print(traceback.format_exc())
+
+
 def multiprocess_directory_work(files, work_fcn):
     cpu_count = mp.cpu_count()
 
     print(f"processing {len(files)} files")
     print(f"num cpus: {cpu_count}")
 
+    fcn = partial(protected_fcn, work_fcn)
+
     with mp.Pool(cpu_count) as P:
         # iterate so we get tqdm output, thats it!
         for _ in tqdm(
-            P.imap_unordered(work_fcn, files, chunksize=64), total=len(files)
+            P.imap_unordered(fcn, files, chunksize=1), total=len(files)
         ):
             pass
-        P.close()
-        P.join()
