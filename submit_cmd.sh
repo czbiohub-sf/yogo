@@ -12,7 +12,8 @@ env | grep "^SLURM" | sort
 
 nvidia-smi
 
+wandb enabled
 wandb online
 conda run "$@"
 wandb offline
-
+wandb disabled
