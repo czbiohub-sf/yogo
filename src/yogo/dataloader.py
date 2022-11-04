@@ -37,8 +37,8 @@ def get_class_counts_for_dataloader(dataloader, class_names):
     return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
 
 
-def read_grayscale(img):
-    return read_image(img, ImageReadMode.GRAY)
+def read_grayscale(fname):
+    return read_image(fname, ImageReadMode.GRAY)
 
 
 def collate_batch(batch, device="cpu", transforms=None):
@@ -53,7 +53,7 @@ def collate_batch(batch, device="cpu", transforms=None):
 
 def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
     "loads labels from label file, given by image path"
-    labels = []
+    labels: List[List[float]] = []
     # just ignore images without labels - is a missing label file
     # the best way to do this?
     try:

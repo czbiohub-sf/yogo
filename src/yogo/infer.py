@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-import sys
 import torch
 import signal
 
@@ -13,43 +12,81 @@ from matplotlib.patches import Rectangle
 from pathlib import Path
 from typing import Optional
 
+from tqdm import tqdm
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize
 
 from .model import YOGO
 from .utils import draw_rects
+from .argparsers import infer_parser
+from .dataloader import read_grayscale
 
 
-if __name__ == "__main__":
-    if len(sys.argv) not in [2, 3]:
-        print(f"usage: {sys.argv[0]} [<path_to_pth>] <path_to_image_or_images>")
-        sys.exit(1)
+def argmax(arr):
+    return max(range(len(arr)), key=arr.__getitem__)
 
-    if len(sys.argv) == 3:
-        pth = torch.load(sys.argv[1], map_location=torch.device("cpu"))
-        img_h, img_w = pth["model_state_dict"]["img_size"]
-        model = YOGO.from_pth(pth, inference=True)
-        data_path = sys.argv[2]
-    else:
-        img_h, img_w = 600, 800
-        model = YOGO((img_h, img_w), 0.01, 0.01, inference=True)
-        data_path = sys.argv[1]
+
+def save_preds(fname, res, thresh=0.5):
+    bs, pred_dim, Sy, Sx = res.shape
+    if bs != 1:
+        raise ValueError(
+            f"can only recieve batch size of 1 (for now) - batch size {bs}"
+        )
+
+    with open(fname, "w") as f:
+        for j in range(Sy):
+            for i in range(Sx):
+                pred = res[0, :, j, i]
+                # if objectness t0 is greater than threshold
+                if pred[4] > 0.5:
+                    f.write(
+                        f"{argmax(pred[5:])},{pred[0]},{pred[1]},{pred[2]},{pred[3]}\n"
+                    )
+
+
+def predict(
+    path_to_pth: str,
+    path_to_images: str,
+    output_dir: str,
+    thresh: float = 0.5,
+    visualize: bool = False,
+):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pth = torch.load(path_to_pth, map_location=torch.device("cpu"))
+    img_h, img_w = pth["model_state_dict"]["img_size"]
+    model = YOGO.from_pth(pth, inference=True)
 
     R = Resize([img_h, img_w])
 
-    data = Path(data_path)
+    data = Path(path_to_images)
     if data.is_dir():
         imgs = [str(d) for d in data.glob("*.png")]
     else:
         imgs = [str(data)]
 
-    for fname in imgs:
-        print(fname)
-        img = R(read_image(fname, ImageReadMode.GRAY))
-        fig, ax = plt.subplots()
-
+    for fname in tqdm(imgs):
+        img = R(read_grayscale(fname))
         res = model(img[None, ...])
-        drawn_img = draw_rects(img[0, ...], res[0, ...], thresh=0.5)
-        ax.imshow(drawn_img, cmap="gray")
 
-        plt.show()
+        if visualize:
+            fig, ax = plt.subplots()
+            drawn_img = draw_rects(img[0, ...], res[0, ...], thresh=0.5)
+            ax.imshow(drawn_img, cmap="gray")
+            plt.show()
+        else:
+            out_fname = Path(output_dir) / Path(fname).with_suffix(".csv").name
+            save_preds(out_fname, res, thresh=0.5)
+
+
+def do_infer(args):
+    if args.output_dir is None and not args.visualize:
+        raise ValueError(
+            f"output_dir is not set and --visualize flag is not present - nothing to do"
+        )
+    predict(args.pth_path, args.images, args.output_dir, visualize=args.visualize)
+
+
+if __name__ == "__main__":
+    parser = infer_parser()
+    args = parser.parse_args()
+    do_infer(args)

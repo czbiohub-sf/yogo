@@ -97,8 +97,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             .reshape(batch_size * Sx * Sy)
         ).bool()
 
-        formatted_preds_masked = formatted_preds[:, mask].permute((1,0))
-        formatted_labels_masked = formatted_labels[:, mask].permute((1,0))
+        formatted_preds_masked = formatted_preds[:, mask].permute((1, 0))
+        formatted_labels_masked = formatted_labels[:, mask].permute((1, 0))
 
         loss += (
             self.coord_weight

@@ -1,5 +1,6 @@
 import sys
 
+from yogo.infer import do_infer
 from yogo.train import do_training
 from yogo.argparsers import global_parser
 
@@ -21,6 +22,8 @@ def main():
             print("onnx is not installed; install yogo with `pip3 install yogo[onnx]`")
             sys.exit(1)
         do_export(args)
+    elif args.task == "infer":
+        do_infer(args)
     else:
         p.print_help()
 

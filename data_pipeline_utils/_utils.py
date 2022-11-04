@@ -38,6 +38,7 @@ def convert_coords(xmin, xmax, ymin, ymax):
 
 print_lock = mp.Lock()
 
+
 def protected_fcn(f, *args):
     try:
         f(*args)
@@ -57,7 +58,5 @@ def multiprocess_directory_work(files, work_fcn):
 
     with mp.Pool(cpu_count) as P:
         # iterate so we get tqdm output, thats it!
-        for _ in tqdm(
-            P.imap_unordered(fcn, files, chunksize=1), total=len(files)
-        ):
+        for _ in tqdm(P.imap_unordered(fcn, files, chunksize=1), total=len(files)):
             pass

@@ -18,6 +18,9 @@ def global_parser():
     export_subparser = export_parser(
         parser=subparsers.add_parser("export", help="export a model")
     )
+    infer_subparser = infer_parser(
+        parser=subparsers.add_parser("infer", help="infer images using a model")
+    )
     return parser
 
 
@@ -81,3 +84,25 @@ def export_parser(parser=None):
         default=True,
     )
     return parser
+
+
+def infer_parser(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(description="infer results over some dataset")
+
+    parser.add_argument(
+        "pth_path", type=str, help="path to .pth file defining the model"
+    )
+    parser.add_argument("images", type=str, help="path to image or images")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        help="path to directory for results - ignore to not save results",
+        default=None,
+    )
+    parser.add_argument(
+        "--visualize",
+        help="plot and display each image",
+        action=boolean_action,
+        default=False,
+    )
