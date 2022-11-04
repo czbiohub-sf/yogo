@@ -54,8 +54,6 @@ def collate_batch(batch, device="cpu", transforms=None):
 def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
-    # just ignore images without labels - is a missing label file
-    # the best way to do this?
     try:
         with open(label_path, "r") as f:
             # yuck! checking for headers is not super easy
