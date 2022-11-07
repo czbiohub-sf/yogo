@@ -1,7 +1,3 @@
-"""
-Implement YOLO loss function here
-"""
-
 import torch
 
 import torch.nn.functional as F
@@ -9,11 +5,6 @@ import torchvision.ops as ops
 
 from collections import defaultdict
 from typing import Any, List, Dict, Tuple, Union
-
-"""
-Original YOLO paper did not mention IOU?
-IOU Loss?
-"""
 
 
 class YOGOLoss(torch.nn.modules.loss._Loss):
