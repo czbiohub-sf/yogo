@@ -53,7 +53,7 @@ if __name__ == "__main__":
     try:
         label = sys.argv[3]
     except IndexError:
-        label = 0
+        label = "0"
 
     files = glob.glob(f"{sys.argv[1]}/*.npy")
     process_cellpose_results(files, sys.argv[2], label=label)
