@@ -42,7 +42,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def checkpoint_model(model, epoch, optimizer, name, ver="0.0.1"):
+def checkpoint_model(model, epoch, optimizer, name):
     torch.save(
         {
             "epoch": epoch,
@@ -203,15 +203,6 @@ def init_dataset(config):
             "training set size": f"{len(train_dataloader) * config['batch_size']} images",
             "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
             "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
-            # "train class counts": get_class_counts_for_dataloader(
-            #     train_dataloader, config["class_names"]
-            # ),
-            # "validate class counts": get_class_counts_for_dataloader(
-            #     validate_dataloader, config["class_names"]
-            # ),
-            # "test class counts": get_class_counts_for_dataloader(
-            #     test_dataloader, config["class_names"]
-            # ),
         }
     )
 
