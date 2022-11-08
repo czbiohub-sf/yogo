@@ -52,7 +52,7 @@ def predict(
     visualize: bool = False,
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    pth = torch.load(path_to_pth, map_location=torch.device("cpu"))
+    pth = torch.load(path_to_pth, map_location=device)
     img_h, img_w = pth["model_state_dict"]["img_size"]
     model = YOGO.from_pth(pth, inference=True)
 
