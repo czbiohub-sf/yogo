@@ -50,7 +50,14 @@ def do_export(args):
     dummy_input = torch.randn(1, 1, img_h, img_w, requires_grad=False)
     torch_out = net(dummy_input)
 
-    torch.onnx.export(net, dummy_input, onnx_filename, verbose=False, opset_version=14)
+    torch.onnx.export(
+        net,
+        dummy_input,
+        onnx_filename,
+        verbose=False,
+        do_constant_folding=True,
+        opset_version=14,
+    )
 
     # Load the ONNX model
     model_candidate = onnx.load(onnx_filename)
@@ -93,6 +100,8 @@ def do_export(args):
                     onnx_filename,
                     "--output_dir",
                     Path(onnx_filename).resolve().parents[0],
+                    "--data_type",
+                    "FP16",
                 ]
             )
             success_msg += f", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"

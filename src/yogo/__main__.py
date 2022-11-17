@@ -5,10 +5,12 @@ from yogo.train import do_training
 from yogo.argparsers import global_parser
 
 no_onnx = False
+onnx_err = ""
 try:
     from yogo.export_model import do_export
-except ImportError:
+except ImportError as e:
     no_onnx = True
+    onnx_err = str(e)
 
 
 def main():
@@ -20,6 +22,7 @@ def main():
     elif args.task == "export":
         if no_onnx:
             print("onnx is not installed; install yogo with `pip3 install yogo[onnx]`")
+            print(f"recieved error {onnx_err}")
             sys.exit(1)
         do_export(args)
     elif args.task == "infer":
