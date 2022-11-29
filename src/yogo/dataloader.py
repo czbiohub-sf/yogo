@@ -37,8 +37,11 @@ def get_class_counts_for_dataloader(dataloader, class_names):
     return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
 
 
-def read_grayscale(fname):
-    return read_image(fname, ImageReadMode.GRAY)
+def read_grayscale(img_path):
+    try:
+        return read_image(str(img_path), ImageReadMode.GRAY)
+    except RuntimeError as e:
+        raise RuntimeError(f"file {img_path} threw: {e}")
 
 
 def collate_batch(batch, device="cpu", transforms=None):
@@ -312,6 +315,7 @@ def get_dataloader(
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
             shuffle=True,
             drop_last=True,
+            num_workers=len(os.sched_getaffinity(0)),
             generator=torch.Generator().manual_seed(101010),
         )
     return d
