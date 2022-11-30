@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Optional
 
 from tqdm import tqdm
-from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize
 
 from .model import YOGO
