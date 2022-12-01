@@ -77,12 +77,6 @@ def export_parser(parser=None):
         action=boolean_action,
         default=True,
     )
-    parser.add_argument(
-        "--IR",
-        help="export to IR (for NCS2)",
-        action=boolean_action,
-        default=True,
-    )
     return parser
 
 

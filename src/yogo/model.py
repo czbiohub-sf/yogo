@@ -32,7 +32,7 @@ class YOGO(nn.Module):
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
-        self.register_buffer("anchor_h", torch.tensor(anchor_w))
+        self.register_buffer("anchor_h", torch.tensor(anchor_h))
         self.register_buffer("num_classes", torch.tensor(num_classes))
         # self.register_buffer("model_ver", torch.tensor(self.MODEL_VERSION))
 
@@ -69,6 +69,13 @@ class YOGO(nn.Module):
             num_classes=num_classes.item(),
             inference=inference,
         )
+
+        # set Sx, Sy
+        assert model._Cxs is None and model._Cys is None
+        dummy_input = torch.rand(1,1,*img_size)
+        model(dummy_input)
+        assert model._Cxs is not None and model._Cys is not None
+
         model.load_state_dict(params)
         return model
 
@@ -93,7 +100,9 @@ class YOGO(nn.Module):
         return total_norm
 
     def get_grid_size(self, input_shape: Tuple[int, int]) -> Tuple[int, int]:
-        "return Sx,Sy"
+        """return Sx, Sy
+        FIXME - hacky cause we have to infer, should be able to calc from model defn
+        """
         out = self(torch.rand(1, 1, *input_shape, device=self.device))
         _, _, Sy, Sx = out.shape
         return Sx, Sy
