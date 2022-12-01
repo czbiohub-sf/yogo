@@ -13,16 +13,16 @@ from pathlib import Path
 from copy import deepcopy
 from typing import List
 
-from .model import YOGO
-from .argparsers import train_parser
-from .yogo_loss import YOGOLoss
-from .utils import draw_rects, Metrics
-from .dataloader import (
+from yogo.model import YOGO
+from yogo.argparsers import train_parser
+from yogo.yogo_loss import YOGOLoss
+from yogo.utils import draw_rects, Metrics
+from yogo.dataloader import (
     load_dataset_description,
     get_dataloader,
     get_class_counts_for_dataloader,
 )
-from .cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -276,6 +276,8 @@ def do_training(args):
 
 
 if __name__ == "__main__":
+    torch.multiprocessing.set_start_method("spawn")
+
     parser = train_parser()
     args = parser.parse_args()
 
