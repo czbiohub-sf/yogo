@@ -254,7 +254,7 @@ def do_training(args):
     )
 
     wandb.init(
-        "yogo",
+        project="yogo",
         entity="bioengineering",
         config={
             "learning_rate": adam_lr,
