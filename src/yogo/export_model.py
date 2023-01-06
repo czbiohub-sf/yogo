@@ -88,28 +88,23 @@ def do_export(args):
         err_msg="onnx and pytorch outputs are far apart",
     )
 
-    success_msg = f"exported to {onnx_filename}" + simplify_msg
+    success_msg = f"exported to {onnx_filename}"
 
-    if args.IR:
-        try:
-            # export to IR
-            subprocess.run(
-                [
-                    "mo",
-                    "--input_model",
-                    onnx_filename,
-                    "--output_dir",
-                    Path(onnx_filename).resolve().parents[0],
-                    "--data_type",
-                    "FP16",
-                ]
-            )
-            success_msg += f", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
-        except Exception as e:
-            # if some error occurs, just quietly fail
-            success_msg += f"; could not export to IR: {str(e)}"
+    # export to IR
+    subprocess.run(
+        [
+            "mo",
+            "--input_model",
+            onnx_filename,
+            "--output_dir",
+            Path(onnx_filename).resolve().parents[0],
+            "--data_type",
+            "FP16",
+        ]
+    )
+    success_msg += f", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
 
-    print("\n" * 3)
+    print("\n")
     print(success_msg)
 
 
