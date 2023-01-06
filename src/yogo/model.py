@@ -72,7 +72,7 @@ class YOGO(nn.Module):
 
         # set Sx, Sy
         assert model._Cxs is None and model._Cys is None
-        dummy_input = torch.rand(1,1,*img_size)
+        dummy_input = torch.rand(1, 1, *img_size)
         model(dummy_input)
         assert model._Cxs is not None and model._Cys is not None
 
