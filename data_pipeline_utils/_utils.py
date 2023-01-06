@@ -3,12 +3,13 @@ import multiprocessing as mp
 
 from tqdm import tqdm
 from pathlib import Path
+from typing import Sequence
 from functools import partial
 
 
 def normalize(x, y):
-    height = 600
-    width = 800
+    height = 772
+    width = 1032
     return float(x) / width, float(y) / height
 
 
@@ -48,7 +49,15 @@ def protected_fcn(f, *args):
             print(traceback.format_exc())
 
 
-def multiprocess_directory_work(files, work_fcn):
+def multiprocess_directory_work(
+    files: Sequence[Any],
+    work_fcn: Callable[
+        [
+            Any,
+        ],
+        None,
+    ],
+):
     cpu_count = mp.cpu_count()
 
     print(f"processing {len(files)} files")
