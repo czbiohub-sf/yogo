@@ -5,7 +5,6 @@ import zarr
 import math
 
 from PIL import Image
-from tqdm import tqdm
 from pathlib import Path
 
 from _utils import multiprocess_directory_work
@@ -20,12 +19,12 @@ This does part '1' of the "Operations on the data"
 def convert_zarr_to_images(path_to_zarr_zip: Path):
     data = zarr.open(str(path_to_zarr_zip))
 
-    image_dir = zarr_zip.parent / "images"
+    image_dir = path_to_zarr_zip.parent / "images"
     image_dir.mkdir(parents=True, exist_ok=True)
 
     N = int(math.log(len(data), 10) + 1)
 
-    for i in tqdm(range(len(data))):
+    for i in range(len(data)):
         img = data[i][:]
         Image.fromarray(img).save(image_dir / f"img_{i:0{N}}.png")
 
@@ -39,7 +38,7 @@ if __name__ == "__main__":
     if not run_set.exists():
         raise FileNotFoundError(f"directory {sys.argv[1]} not found")
 
-    files = run_set.glob(f"./**/*.zip")
+    files = list(run_set.glob(f"./**/*.zip"))
 
     if len(files) == 0:
         raise ValueError(f"no zarr files found in directory {sys.argv[1]}")
