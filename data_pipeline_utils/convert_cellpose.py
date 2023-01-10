@@ -17,6 +17,7 @@ from utils import normalize, convert_coords, multiprocess_directory_work
 
 
 def to_yogo_labels(label, output_dir_path, f):
+    "depricated"
     outlines = load_cellpose_npy_file(f)
     file_name = Path(f).name.replace("_seg", "")
     new_csv = (output_dir_path / file_name).with_suffix(".csv")
@@ -48,7 +49,13 @@ def to_bb_labels(label, bb_csv_fd, f):
         bb_csv_fd.write(f"{image_path_str},{xmin},{xmax},{ymin},{ymax}\n")
 
 
+def load_cellpose_npy_file(f):
+    data = np.load(f, allow_pickle=True).item()
+    return utils.outlines_list(data["masks"])
+
+
 def process_cellpose_results_to_yogo(files, output_dir, label=0):
+    "depricated"
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
     work_fcn = partial(to_yogo_labels, label, output_dir_path)
@@ -60,11 +67,6 @@ def process_cellpose_results_to_bb_labels(files, bb_csv_path: Path, label=0):
     with open(str(bb_csv_path), "w") as bb_csv_fd:
         for f in files:
             to_bb_labels(label, bb_csv_fd, f)
-
-
-def load_cellpose_npy_file(f):
-    data = np.load(f, allow_pickle=True).item()
-    return utils.outlines_list(data["masks"])
 
 
 if __name__ == "__main__":
