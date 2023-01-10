@@ -33,7 +33,7 @@ def to_yogo_labels(label, output_dir_path, f):
             g.write(f"{label},{xcenter},{ycenter},{width},{height}\n")
 
 
-def to_bb_labels(label, output_path, bb_csv_fd):
+def to_bb_labels(label, bb_csv_fd, f):
     outlines = load_cellpose_npy_file(f)
     file_path = Path(f)
     image_path_str = file_path.parent / file_path.name.replace("_seg", "")
@@ -48,12 +48,18 @@ def to_bb_labels(label, output_path, bb_csv_fd):
         bb_csv_fd.write(f"{image_path_str},{xmin},{xmax},{ymin},{ymax}\n")
 
 
-def process_cellpose_results(files, output_dir, label=0):
+def process_cellpose_results_to_yogo(files, output_dir, label=0):
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
     work_fcn = partial(to_yogo_labels, label, output_dir_path)
 
     multiprocess_directory_work(files, work_fcn)
+
+
+def process_cellpose_results_to_bb_labels(files, bb_csv_path: Path, label=0):
+    with open(str(bb_csv_path), "w") as bb_csv_fd:
+        for f in files:
+            to_bb_labels(label, bb_csv_fd, f)
 
 
 def load_cellpose_npy_file(f):
@@ -63,7 +69,7 @@ def load_cellpose_npy_file(f):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print(f"usage: {sys.argv[0]} <input dir> <label dir>")
+        print(f"usage: {sys.argv[0]} <input dir> <label 0 (healthy, default), 1 (ring), 2 (troph), 3 (schizont)>")
         sys.exit(1)
 
     try:
@@ -72,4 +78,5 @@ if __name__ == "__main__":
         label = "0"
 
     files = glob.glob(f"{sys.argv[1]}/*.npy")
-    process_cellpose_results(files, sys.argv[2], label=label)
+    bb_csv = Path(sys.argv[1]).parent / "labels.csv"
+    process_cellpose_results_to_bb_labels(files, bb_csv, label=label)
