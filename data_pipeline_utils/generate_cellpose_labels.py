@@ -28,7 +28,7 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
         yield s[i : i + n]
 
 
-def label_folder(path_to_folder: Path, chunksize: int = 32) -> List[Tuple[Path, List[np.ndarray]]]:
+def get_outlines(path_to_folder: Path, chunksize: int = 32) -> List[Tuple[Path, List[np.ndarray]]]:
     model = models.Cellpose(gpu=True, model_type="cyto2", device=torch.device("cuda"))
 
     outlines: List[Tuple[Path, List[np.ndarray]]] = []
@@ -51,6 +51,24 @@ def label_folder(path_to_folder: Path, chunksize: int = 32) -> List[Tuple[Path, 
     return outlines
 
 
+def to_bb_labels(bb_csv_fd, outlines, label):
+    for file_path, image_outlines in outlines:
+        for outline in image_outlines:
+            xmin, xmax, ymin, ymax = (
+                outline[:, 0].min(),
+                outline[:, 0].max(),
+                outline[:, 1].min(),
+                outline[:, 1].max(),
+            )
+            bb_csv_fd.write(f"{str(file_path)},{xmin},{xmax},{ymin},{ymax},{label},0,0\n")
+
+
+def label_folder(path_to_csv, path_to_images, chunksize=32, label=0):
+    outlines = get_outlines(path_to_images, chunksize=chunksize)
+    with open(str(path_to_csv), "w") as f:
+        f.write("image_id,xmin,xmax,ymin,ymax,label,prob,unique_cell_id\n")
+        to_bb_labels(f, outlines, label)
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -61,5 +79,5 @@ if __name__ == "__main__":
     if not path_to_images.exists():
         raise ValueError(f"{sys.argv[1]} doesn't exist")
 
-    outlines = label_folder(path_to_images)
-    print(len(outlines))
+    path_to_csv = path_to_images.parent / "labels.csv"
+    label_folder(path_to_csv, path_to_images)
