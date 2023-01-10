@@ -7,8 +7,10 @@ import torchvision
 
 import cellpose
 
+import numpy as np
+
 from tqdm import tqdm
-from typing import Sequence, Generator, List, TypeVar
+from typing import Sequence, Generator, List, TypeVar, Tuple
 from pathlib import Path
 from cellpose import models
 from cellpose import io
@@ -21,39 +23,36 @@ from cellpose.utils import (
 T = TypeVar("T")
 
 
-def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[List[T], None, None]:
+def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, None]:
     for i in range(0, len(s), n):
         yield s[i : i + n]
 
 
-def label_folder(path_to_folder: Path, chunksize: int = 32):
+def label_folder(path_to_folder: Path, chunksize: int = 32) -> List[Tuple[Path, List[np.ndarray]]]:
     model = models.Cellpose(gpu=True, model_type="cyto2", device=torch.device("cuda"))
 
-    outlines = []
+    outlines: List[Tuple[Path, List[np.ndarray]]] = []
 
     image_filenames = list(path_to_folder.glob("*.png"))
     filename_iterator = iter_in_chunks(image_filenames, chunksize)
-    filename_iterator_num_chunks = len(image_filenames) // chunksize + 1
 
-    for img_filename_chunk in tqdm(
-        filename_iterator, total=filename_iterator_num_chunks
-    ):
+    for img_filename_chunk in filename_iterator:
         imgs = [
             cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
             for img_path in img_filename_chunk
         ]
         masks, _flows, _styles, _diams = model.eval(imgs, channels=[0, 0])
 
-        for mask in masks:
+        for file_path, mask in zip(img_filename_chunk, masks):
             refined_mask = fill_holes_and_remove_small_masks(mask)
             mask_outlines = outlines_list(refined_mask)
-            outlines.append(mask_outlines)
+            outlines.append((file_path, mask_outlines))
 
     return outlines
 
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"usage: {sys.argv[0]} <path to folder of images to label>")
         sys.exit(1)
