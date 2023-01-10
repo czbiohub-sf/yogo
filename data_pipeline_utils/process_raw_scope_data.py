@@ -16,7 +16,7 @@ This does part '1' of the "Operations on the data"
 """
 
 
-def convert_zarr_to_images(path_to_zarr_zip: Path):
+def convert_zarr_to_image_folder(path_to_zarr_zip: Path):
     data = zarr.open(str(path_to_zarr_zip))
 
     image_dir = path_to_zarr_zip.parent / "images"

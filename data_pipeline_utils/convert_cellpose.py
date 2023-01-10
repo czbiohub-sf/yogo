@@ -71,7 +71,9 @@ def process_cellpose_results_to_bb_labels(files, bb_csv_path: Path, label=0):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print(f"usage: {sys.argv[0]} <input dir> <label 0 (healthy, default), 1 (ring), 2 (troph), 3 (schizont)>")
+        print(
+            f"usage: {sys.argv[0]} <input dir> <label 0 (healthy, default), 1 (ring), 2 (troph), 3 (schizont)>"
+        )
         sys.exit(1)
 
     try:
