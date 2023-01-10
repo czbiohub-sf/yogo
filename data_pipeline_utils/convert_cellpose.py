@@ -13,7 +13,7 @@ from pathlib import Path
 from functools import partial
 from cellpose import utils, io
 
-from _utils import normalize, convert_coords, multiprocess_directory_work
+from utils import normalize, convert_coords, multiprocess_directory_work
 
 
 def to_yogo_labels(label, output_dir_path, f):

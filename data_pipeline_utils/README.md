@@ -17,18 +17,18 @@ base-folder
 `base-folder` could be fairly deep in a directory structure. Luckily, the only zip files in these folders are the `zarrfile.zip` files. So the plan will be to put the nested folders (assumed to *only* contain these `base-folder` type folders) in a specific directory (`/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM Scope/scope-parasite-data/run-sets`), and operate on that. For example,
 
 ```
-run-sets
-  day-1
-    base-folder-1
-    base-folder-2
+run-sets/
+  day-1/
+    base-folder-1/
+      images/
+      metadata.csv
     ...
-    base-folder-n
+    base-folder-n/
   ...
-  day-n
-    base-folder-1
-    base-folder-2
+  day-n/
+    base-folder-1/
     ...
-    base-folder-n
+    base-folder-n/
 ```
 
 ## Operations on the data

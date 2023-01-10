@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from _utils import normalize, convert_coords
+from utils import normalize, convert_coords
 
 
 def process(fd, label_dir):

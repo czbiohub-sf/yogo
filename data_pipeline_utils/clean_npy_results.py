@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 
-from _utils import multiprocess_directory_work
+from utils import multiprocess_directory_work
 
 
 """

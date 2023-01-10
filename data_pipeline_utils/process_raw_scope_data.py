@@ -7,7 +7,7 @@ import math
 from PIL import Image
 from pathlib import Path
 
-from _utils import multiprocess_directory_work
+from utils import multiprocess_directory_work
 
 
 """ See README.md in this directory
