@@ -20,6 +20,7 @@ from cellpose.utils import (
     outlines_list,
 )
 
+from labelling_constants import CLASSES
 from utils import normalize, convert_coords, multiprocess_directory_work
 
 T = TypeVar("T")
@@ -71,6 +72,7 @@ def to_bb_labels(bb_csv_fd, outlines, label):
 
 def to_yogo_labels(label_dir_path, outlines, label):
     for file_path, image_outlines in outlines:
+        print(file_path)
         label_file_name = str(label_dir_path / file_path.with_suffix(".csv").name)
         with open(label_file_name, "w") as f:
             f.write(f"label,xcenter,ycenter,width,height\n")
@@ -86,10 +88,16 @@ def to_yogo_labels(label_dir_path, outlines, label):
 
 
 def label_folder_for_yogo(path_to_images: Path, chunksize=32, label=0):
-    outlines = get_outlines(path_to_images, chunksize=chunksize)
+    # Write classes.txt for label studio
+    with open(str(path_to_images.parent / "classes.txt"), "w") as f:
+        for clss in CLASSES:
+            f.write(f"{clss}\n")
 
     path_to_label_dir = path_to_images.parent / "labels"
     path_to_label_dir.mkdir(exist_ok=False, parents=False)
+
+    outlines = get_outlines(path_to_images, chunksize=chunksize)
+
     to_yogo_labels(path_to_label_dir, outlines, label)
 
 
