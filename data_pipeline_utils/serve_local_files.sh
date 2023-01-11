@@ -15,7 +15,7 @@ echo "starts web server on the port PORT [8081 by default] that serves files fro
 echo
 
 echo "Scanning ${INPUT_DIR} ..."
-FIND_CMD="find ${INPUT_DIR} -type f"
+FIND_CMD="find '${INPUT_DIR}' -type f"
 if [ -z "$WILDCARD" ]; then
   echo "Files wildcard is not set. Serve all files in ${INPUT_DIR}..."
 else
