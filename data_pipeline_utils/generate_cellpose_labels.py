@@ -20,6 +20,8 @@ from cellpose.utils import (
     outlines_list,
 )
 
+from utils import normalize, convert_coords, multiprocess_directory_work
+
 T = TypeVar("T")
 
 
@@ -28,7 +30,9 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
         yield s[i : i + n]
 
 
-def get_outlines(path_to_folder: Path, chunksize: int = 32) -> List[Tuple[Path, List[np.ndarray]]]:
+def get_outlines(
+    path_to_folder: Path, chunksize: int = 32
+) -> List[Tuple[Path, List[np.ndarray]]]:
     model = models.Cellpose(gpu=True, model_type="cyto2", device=torch.device("cuda"))
 
     outlines: List[Tuple[Path, List[np.ndarray]]] = []
@@ -60,11 +64,39 @@ def to_bb_labels(bb_csv_fd, outlines, label):
                 outline[:, 1].min(),
                 outline[:, 1].max(),
             )
-            bb_csv_fd.write(f"{str(file_path)},{xmin},{xmax},{ymin},{ymax},{label},0,0\n")
+            bb_csv_fd.write(
+                f"{str(file_path)},{xmin},{xmax},{ymin},{ymax},{label},0,0\n"
+            )
 
 
-def label_folder(path_to_csv, path_to_images, chunksize=32, label=0):
+def to_yogo_labels(label_dir_path, outlines, label):
+    for file_path, image_outlines in outlines:
+        label_file_name = str(label_dir_path / file_path.with_suffix(".csv").name)
+        with open(label_file_name, "w") as f:
+            f.write(f"label,xcenter,ycenter,width,height\n")
+            for outline in image_outlines:
+                xmin, xmax, ymin, ymax = (
+                    outline[:, 0].min(),
+                    outline[:, 0].max(),
+                    outline[:, 1].min(),
+                    outline[:, 1].max(),
+                )
+                xcenter, ycenter, width, height = convert_coords(xmin, xmax, ymin, ymax)
+                f.write(f"{label},{xcenter},{ycenter},{width},{height}\n")
+
+
+def label_folder_for_yogo(path_to_images: Path, chunksize=32, label=0):
     outlines = get_outlines(path_to_images, chunksize=chunksize)
+
+    path_to_label_dir = path_to_images.parent / "labels"
+    path_to_label_dir.mkdir(exist_ok=False, parents=False)
+    to_yogo_labels(path_to_label_dir, outlines, label)
+
+
+def label_folder_for_napari(path_to_images: Path, chunksize=32, label=0):
+    outlines = get_outlines(path_to_images, chunksize=chunksize)
+
+    path_to_csv = path_to_images.parent / "labels.csv"
     with open(str(path_to_csv), "w") as f:
         f.write("image_id,xmin,xmax,ymin,ymax,label,prob,unique_cell_id\n")
         to_bb_labels(f, outlines, label)
@@ -79,5 +111,4 @@ if __name__ == "__main__":
     if not path_to_images.exists():
         raise ValueError(f"{sys.argv[1]} doesn't exist")
 
-    path_to_csv = path_to_images.parent / "labels.csv"
-    label_folder(path_to_csv, path_to_images)
+    label_folder_for_yogo(path_to_images)
