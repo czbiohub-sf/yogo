@@ -15,6 +15,16 @@ from yogo.dataloader import load_labels_from_path, read_grayscale
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
+def find_label_file(label_dir: Path, img_path: Path) -> Path:
+    extensions = (".csv", ".txt", ".tsv", "")
+    for ext in extensions:
+        label_path = label_dir / image_path.with_suffix(ext).name
+        if label_path.exists():
+            return label_path
+
+    raise FileNotFoundError(f"label file not found for {str(img_path)}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("warning: this tool is quite specific")
@@ -24,8 +34,12 @@ if __name__ == "__main__":
     image_dir = Path(sys.argv[1])
     label_dir = Path(sys.argv[2])
     for image_path in image_dir.glob("*.png"):
-        label_path = label_dir / image_path.with_suffix(".csv").name
-        print(label_path)
+        try:
+            label_path = find_label_file(label_dir, image_path)
+        except FileNotFoundError as e:
+            print(f"no label file: {e}")
+            print("continuing...")
+            continue
 
         labels = load_labels_from_path(label_path, classes=range(4))
 
