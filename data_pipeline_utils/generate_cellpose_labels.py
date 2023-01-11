@@ -35,6 +35,11 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
 def get_outlines(
     path_to_folder: Path, chunksize: int = 32
 ) -> List[Tuple[Path, List[np.ndarray]]]:
+    """ Return a list of tuples (path to image, detection outlines)
+
+    This should be run on the GPU, else it is painfully slow! Allocate some CPU too,
+    we are doing a good amount of image processing.
+    """
     model = models.Cellpose(gpu=True, model_type="cyto2", device=torch.device("cuda"))
 
     outlines: List[Tuple[Path, List[np.ndarray]]] = []
@@ -47,6 +52,8 @@ def get_outlines(
             cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
             for img_path in img_filename_chunk
         ]
+
+        # flows, styles, and diameters are not used
         masks, _flows, _styles, _diams = model.eval(imgs, channels=[0, 0])
 
         for file_path, mask in zip(img_filename_chunk, masks):
