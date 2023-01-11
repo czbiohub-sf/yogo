@@ -72,7 +72,6 @@ def to_bb_labels(bb_csv_fd, outlines, label):
 
 def to_yogo_labels(label_dir_path, outlines, label):
     for file_path, image_outlines in outlines:
-        print(file_path)
         label_file_name = str(label_dir_path / file_path.with_suffix(".csv").name)
         with open(label_file_name, "w") as f:
             f.write(f"label,xcenter,ycenter,width,height\n")
