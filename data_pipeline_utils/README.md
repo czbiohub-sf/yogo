@@ -2,8 +2,6 @@
 
 Having a clear, reproducable, and understandable data pipeline is absolutely necessary if we would like to maintain our sanity + scientific rigour. Here is the framework that I am using for our specific scenario (lots of "little" datasets, many various run conditions, e.t.c.).
 
-## 1 Minute Overview
-
 Data from the scope is collected to `Annotated Datasets and model training` / `40x PlanAch - 160 mm TL - 405 nm / run-sets`
 
 - Runs are grouped together in folders, e.g. `2022-12-14-111221-Aditi-parasites`
