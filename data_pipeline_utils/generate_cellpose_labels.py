@@ -2,6 +2,7 @@
 
 import cv2
 import sys
+import time
 import torch
 import torchvision
 
@@ -100,6 +101,7 @@ def label_folder_for_yogo(path_to_images: Path, chunksize=32, label=0):
 
 
 def label_folder_for_napari(path_to_images: Path, chunksize=32, label=0):
+    "most likely depricated!"
     outlines = get_outlines(path_to_images, chunksize=chunksize)
 
     path_to_csv = path_to_images.parent / "labels.csv"
@@ -108,13 +110,35 @@ def label_folder_for_napari(path_to_images: Path, chunksize=32, label=0):
         to_bb_labels(f, outlines, label)
 
 
+def label_runset(path_to_runset_folder: Path, chunksize=32, label=0):
+    print("finding directories to label...")
+    files = list(path_to_runset_folder.glob(f"./**/images"))
+    print(f"found {len(files)} directories to label")
+
+    for i, f in enumerate(files, start=1):
+        print(f"{i} / {len(files)} | {f.parent.name}", end="    ")
+        t0 = time.perf_counter()
+
+        label_dir = f.parent / "labels"
+        if label_dir.exists():
+            print(f"skipping {f} since label directory {label_dir} exists")
+            continue
+
+        try:
+            label_folder_for_yogo(f, chunksize=chunksize, label=label)
+        except Exception as e:
+            print(e)
+        print(f"{time.perf_counter() - t0:.0f}s")
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print(f"usage: {sys.argv[0]} <path to folder of images to label>")
+        print(f"usage: {sys.argv[0]} <path to runset>")
         sys.exit(1)
 
     path_to_images = Path(sys.argv[1])
-    if not path_to_images.exists():
-        raise ValueError(f"{sys.argv[1]} doesn't exist")
 
-    label_folder_for_yogo(path_to_images)
+    if not path_to_images.exists():
+        raise ValueError(f"{str(path_to_images)} doesn't exist")
+
+    label_runset(path_to_images)
