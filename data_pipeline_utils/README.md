@@ -2,6 +2,8 @@
 
 Having a clear, reproducable, and understandable data pipeline is absolutely necessary if we would like to maintain our sanity + scientific rigour. Here is the framework that I am using for our specific scenario (lots of "little" datasets, many various run conditions, e.t.c.).
 
+## Initial Data Formatting and Annotation
+
 Data from the scope is collected to `Annotated Datasets and model training` / `40x PlanAch - 160 mm TL - 405 nm / run-sets`
 
 - Runs are grouped together in folders, e.g. `2022-12-14-111221-Aditi-parasites`
@@ -70,3 +72,13 @@ This will create a folder of labels formatted for YOGO and for annotation. Each 
     0.png
     ...
 ```
+
+At this point, `labels` should have good bounding boxes for `images`. You can verify with
+
+`./visualize_boxes.py <path to images folder> <path to labels folder>`
+
+(make sure you've `ssh`'d into Bruno with XTerm - e.g. `ssh account@login01.czbiohub.org -Y`)
+
+All cells will be classified as healthy, though. To classify them further, we need human annotators.
+
+## Human Annotation
