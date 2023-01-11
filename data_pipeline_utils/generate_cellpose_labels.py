@@ -72,9 +72,8 @@ def to_bb_labels(bb_csv_fd, outlines, label):
 
 def to_yogo_labels(label_dir_path, outlines, label):
     for file_path, image_outlines in outlines:
-        label_file_name = str(label_dir_path / file_path.with_suffix(".csv").name)
+        label_file_name = str(label_dir_path / file_path.with_suffix(".txt").name)
         with open(label_file_name, "w") as f:
-            f.write(f"label,xcenter,ycenter,width,height\n")
             for outline in image_outlines:
                 xmin, xmax, ymin, ymax = (
                     outline[:, 0].min(),
@@ -83,7 +82,7 @@ def to_yogo_labels(label_dir_path, outlines, label):
                     outline[:, 1].max(),
                 )
                 xcenter, ycenter, width, height = convert_coords(xmin, xmax, ymin, ymax)
-                f.write(f"{label},{xcenter},{ycenter},{width},{height}\n")
+                f.write(f"{label} {xcenter} {ycenter} {width} {height}\n")
 
 
 def label_folder_for_yogo(path_to_images: Path, chunksize=32, label=0):
