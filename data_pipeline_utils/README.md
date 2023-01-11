@@ -1,43 +1,74 @@
 # Data Pipeline
 
-Having a clear, reproducable, and understandable data pipeline is absolutely necessary if we would like to maintain sanity + scientific rigour. Here is the framework that I am using for our specific scenario (lots of "little" datasets, many various run conditions, e.t.c.).
+Having a clear, reproducable, and understandable data pipeline is absolutely necessary if we would like to maintain our sanity + scientific rigour. Here is the framework that I am using for our specific scenario (lots of "little" datasets, many various run conditions, e.t.c.).
 
-## Initial Data Organization
+## 1 Minute Overview
 
-Data *for each run* (so there will be many of these base folders) will have the format (roughly) of
+Data from the scope is collected to `Annotated Datasets and model training` / `40x PlanAch - 160 mm TL - 405 nm / run-sets`
 
-```
-base-folder
-  zarrfile.zip
-  metadata.czv
-  sub\_sample\_images
-    ...
-```
+- Runs are grouped together in folders, e.g. `2022-12-14-111221-Aditi-parasites`
+- These runs are in folders specifying the chip, e.g. `2022-12-13-122015__chip0562-A4_F`
+- These runs have a [Zarrfile](https://zarr.readthedocs.io/en/stable/) storing the images, along with metadata, and subsample of images from the run. Example
 
-`base-folder` could be fairly deep in a directory structure. Luckily, the only zip files in these folders are the `zarrfile.zip` files. So the plan will be to put the nested folders (assumed to *only* contain these `base-folder` type folders) in a specific directory (`/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM Scope/scope-parasite-data/run-sets`), and operate on that. For example,
+``` console
+run-sets
+  2022-12-14-111221-Aditi-parasites
 
-```
-run-sets/
-  day-1/
-    base-folder-1/
-      images/
+    2022-12-13-122015__chip0562-A4_F          # Run Folder
+      2022-12-13-122015__chip0562-A4_F.zip    # Zarrfile
       metadata.csv
+      sub\_sample\_images
+        0.png
+        ...
+
+    2022-12-13-122015__chip0562-A4_m          # Run Folder
+      2022-12-13-122015__chip0562-A4_m.zip    # Zarrfile
+      metadata.csv
+      sub\_sample\_images
+        0.png
+        ...
+
     ...
-    base-folder-n/
-  ...
-  day-n/
-    base-folder-1/
-    ...
-    base-folder-n/
+
+  2022-12-14-154742-Aditi-parasites
+    ... etc  etc ...
 ```
 
-## Operations on the data
+YOGO and annotation requires image files, so we must convert the zarrfiles to folders of images.
 
-We want to format this data for YOGO, optionally labelling cells w/ cellpose. So the steps are
+Use `python3 process_zarr_to_images.py <path to run-sets>` - this will look for all Zarrfiles, and make a folder of images beside it. Each run folder would become
 
-1. format zarrfiles into folders of images (w/ same directory structure?)
-2. two options:
-  a. run cellpose on each of these folders optionally for labels
-  b. otherwise, get labels in a different way (such as Napari)
-3. label each folder
+```console
+2022-12-13-122015__chip0562-A4_F          # Run Folder
+  2022-12-13-122015__chip0562-A4_F.zip    # Zarrfile
+  images/                                 # folder of images from Zarrfile
+    img_0000.png
+    img_0001.png
+    ...
+  metadata.csv
+  sub\_sample\_images
+    0.png
+    ...
+```
 
+To create bounding box labels for images, we use [Cellpose](https://www.google.com/search?client=firefox-b-d&q=Cellpose).
+
+On Bruno (CZB's HPC), run `sbatch cellpose_label.sh <path to run-sets>`. This operation takes ~15 minutes per run.
+
+This will create a folder of labels formatted for YOGO and for annotation. Each run folder would become
+
+```console
+2022-12-13-122015__chip0562-A4_F          # Run Folder
+  2022-12-13-122015__chip0562-A4_F.zip    # Zarrfile
+  images/                                 # folder of images from Zarrfile
+    img_0000.png
+    img_0001.png
+    ...
+  labels/                                 # labels for images/
+    img_0000.txt
+    img_0001.txt
+  metadata.csv
+  sub\_sample\_images
+    0.png
+    ...
+```
