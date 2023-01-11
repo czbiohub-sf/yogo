@@ -9,6 +9,8 @@ import numpy as np
 
 from utils import normalize, convert_coords
 
+# Most likely depricated
+
 
 def process(fd, label_dir):
     reader = csv.DictReader(fd)

@@ -39,7 +39,5 @@ We want to format this data for YOGO, optionally labelling cells w/ cellpose. So
 2. two options:
   a. run cellpose on each of these folders optionally for labels
   b. otherwise, get labels in a different way (such as Napari)
-
-
-dataset -> label it (via cellpose or napari) -> predictions with yogo (either natively in cellpose / napari, or via CSVs) -> relabelling (in cellpose / napari) -> new dataset
+3. label each folder
 
