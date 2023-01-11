@@ -59,22 +59,24 @@ def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
     labels: List[List[float]] = []
     try:
         with open(label_path, "r") as f:
-            # yuck! checking for headers is not super easy
+            file_chunk = f.read(1024)
+            f.seek(0)
+
             try:
-                reader = csv.reader(f)
-                has_header = csv.Sniffer().has_header(f.read(1024))
+                dialect = csv.Sniffer().sniff(file_chunk)
+                has_header = csv.Sniffer().has_header(file_chunk)
+                reader = csv.reader(f, dialect)
             except csv.Error:
                 # emtpy file, no labels, just keep moving
                 return labels
 
-            f.seek(0)
             if has_header:
                 next(reader, None)
 
             for row in reader:
                 assert (
                     len(row) == 5
-                ), "should have [class,xc,yc,w,h] - got length {len(row)}"
+                ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
                 if row[0].isnumeric():
                     label_idx = row[0]
