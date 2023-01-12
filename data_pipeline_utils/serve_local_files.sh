@@ -26,8 +26,12 @@ echo "Replacing ${INPUT_DIR} to http://localhost:${PORT} ..."
 INPUT_DIR_ESCAPED=$(printf '%s\n' "$INPUT_DIR" | sed -e 's/[\/&]/\\&/g')
 eval $FIND_CMD | sed "/${INPUT_DIR_ESCAPED}/s//http:\/\/localhost:${PORT}/" > $OUTPUT_FILE
 
+export LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
+export LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT="$INPUT_DIR_ESCAPED"
+
 green=`tput setaf 2`
 reset=`tput sgr0`
+
 echo "${green}File list stored in '${OUTPUT_FILE}'. Now import it directly from Label Studio UI${reset}"
 
 echo "Running web server on the port ${PORT}"

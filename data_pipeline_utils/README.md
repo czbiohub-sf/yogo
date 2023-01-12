@@ -82,3 +82,33 @@ At this point, `labels` should have good bounding boxes for `images`. You can ve
 All cells will be classified as healthy, though. To classify them further, we need human annotators.
 
 ## Human Annotation
+
+We will use [Label Studio](https://labelstud.io/) for human annotation. Install it via instructions from the website:
+
+`pip3 install -U label-studio`
+
+### Run Label Studio
+
+1. Start image server: `./serve_local_files.sh <path to image dir> ".png"`
+2. Convert labels to Label Studio format: `label-studio-converter import yolo -i <path to run folder> -o tasks.json --image-ext ".png" --image-root-url http\://localhost\:8081/` (this can take some time). In the end, it should create a "tasks.json" file.
+3. Start Label Studio: `label-studio`
+4. Click `Create Project`
+  - Name your project something descriptive - e.g. the name of the Run Folder
+  - Go to "Labelling Setup" and click "Custom Template" on the left. Under the "Code" section, paste in the following XML and save
+```xml
+<View>
+  <Image name="image" value="$image"/>
+
+  <Header value="RectangleLabels"/>
+  <RectangleLabels name="label" toName="image">
+    <Label value="healthy" background="rgba(218, 1, 238, 1)"/>
+    <Label value="ring" background="rgba(0, 255, 0, 1)"/>
+    <Label value="schizont" background="rgba(1, 146, 243, 1)"/>
+    <Label value="trophozoite" background="rgba(241, 135, 0, 1)"/>
+  </RectangleLabels>
+</View>
+```
+  - Go to the "Data Import" tab, click "Upload Files", and import `tasks.json`
+  - Click "Save"
+
+and you are ready to annotate!
