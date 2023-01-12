@@ -87,6 +87,14 @@ We will use [Label Studio](https://labelstud.io/) for human annotation. Install 
 
 `pip3 install -U label-studio`
 
+And install [Label Studio Converter](https://github.com/heartexlabs/label-studio-converter) by cloning the repo and building from source.
+
+```console
+$ git clone https://github.com/heartexlabs/label-studio-converter.git
+$ cd label-studio-converter
+$ pip3 install .
+```
+
 ### Run Label Studio
 
 1. Start image server: `./serve_local_files.sh <path to image dir> ".png"`
