@@ -97,8 +97,8 @@ $ pip3 install .
 
 ### Run Label Studio
 
-1. Start image server by running: `./serve_local_files.sh <path to image dir> ".png"`, using the modified version in this repo, which was adapted from the original in `label-studio`.
-2. Convert labels to Label Studio format: `label-studio-converter import yolo -i <path to run folder> -o tasks.json --image-ext ".png" --image-root-url http\://localhost\:8081/` (this can take some time). In the end, it should create a "tasks.json" file. Then run `sed -i '' 's/%3A/:/g' tasks.json`
+1. Start image server by running: `./serve_local_files.sh "<path to IMAGE dir>" ".png"`, using the modified version in this repo, which was adapted from the original in `label-studio`.
+2. Convert labels to Label Studio format: `label-studio-converter import yolo -i "<path to RUN folder>" -o tasks.json --image-ext ".png" --image-root-url http\://localhost\:8081/` (this can take some time). In the end, it should create a "tasks.json" file. Then run `sed -i '' 's/%3A/:/g' tasks.json`
 3. Start Label Studio: `label-studio start`
 4. Click `Create Project`
   - Name your project something descriptive - e.g. the name of the Run Folder
@@ -106,18 +106,18 @@ $ pip3 install .
 
 ```xml
 <View>
-<Image name="image" value="$image" zoom="true" zoomControl="true"/>
-<Header value="RectangleLabels"/>
-<RectangleLabels name="label" toName="image">
-<Label value="healthy" background="rgba(150, 255, 150, 0.5)"/>
-<Label value="ring" background="rgba(240, 240, 0, 0.5)"/>
-<Label value="trophozoite" background="rgba(255, 200, 0, 0.5)"/>
-<Label value="schizont" background="rgba(255, 100, 0, 0.5)"/>
-<Label value="gametocyte" background="rgba(255, 100, 255, 0.5)"/>
-<Label value="wbc" background="rgba(1, 146, 243, 0.5)"/>
-<Label value="toner" background="rgba(20,20,20, .5)"/>
-<Label value="debris" background="rgba(100,100,100, .5)"/>
-</RectangleLabels>
+  <Image name="image" value="$image" zoom="true" zoomControl="true"/>
+  <Header value="RectangleLabels"/>
+  <RectangleLabels name="label" toName="image">
+    <Label value="healthy" background="rgba(150, 255, 150, 0.5)"/>
+    <Label value="ring" background="rgba(240, 240, 0, 0.5)"/>
+    <Label value="trophozoite" background="rgba(255, 200, 0, 0.5)"/>
+    <Label value="schizont" background="rgba(255, 100, 0, 0.5)"/>
+    <Label value="gametocyte" background="rgba(255, 100, 255, 0.5)"/>
+    <Label value="wbc" background="rgba(1, 146, 243, 0.5)"/>
+    <Label value="toner" background="rgba(20,20,20, .5)"/>
+    <Label value="debris" background="rgba(100,100,100, .5)"/>
+  </RectangleLabels>
 </View>
 ```
   - Go to the "Data Import" tab, click "Upload Files", and import `tasks.json`

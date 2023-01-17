@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This is from LabelStudio
+# This is from LabelStudio, with some minor modifications
 
 
 INPUT_DIR=$1
@@ -8,11 +8,14 @@ WILDCARD=${2}
 OUTPUT_FILE=${3:-"files.txt"}
 PORT=${4:-8081}
 
-echo "Usage: sh serve_local_files.sh INPUT_DIR WILDCARD OUTPUT_FILE PORT"
-echo "This script scans INPUT_DIR directory with WILDCARD filter [all files by default],"
-echo "generates OUTPUT_FILE [files.txt by default] with a file list,"
-echo "starts web server on the port PORT [8081 by default] that serves files from INPUT_DIR"
-echo
+if [[ $# -ne 2 || $# -ne 3 || $# -ne 4 ]]; then
+  echo "Usage: sh serve_local_files.sh INPUT_DIR WILDCARD OUTPUT_FILE PORT"
+  echo "This script scans INPUT_DIR directory with WILDCARD filter [all files by default],"
+  echo "generates OUTPUT_FILE [files.txt by default] with a file list,"
+  echo "starts web server on the port PORT [8081 by default] that serves files from INPUT_DIR"
+
+  exit 1
+fi
 
 echo "Scanning ${INPUT_DIR} ..."
 FIND_CMD="find '${INPUT_DIR}' -type f"
