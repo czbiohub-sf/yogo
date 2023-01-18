@@ -106,17 +106,23 @@ $ pip3 install .
 
 ```xml
 <View>
-<Image name="image" value="$image" zoom="true" zoomControl="true"/>
-<Header value="RectangleLabels"/>
-<RectangleLabels name="label" toName="image">
-<Label value="healthy" background="rgba(200, 255, 200, 0.1)"/>
-<Label value="ring" background="rgba(250, 250, 150, 0.1)"/>
-<Label value="trophozoite" background="rgba(255, 220, 200, 0.1)"/>
-<Label value="schizont" background="rgba(255, 180, 100, 0.1)"/>
-<Label value="gametocyte" background="rgba(255, 200, 255, 0.1)"/>
-<Label value="wbc" background="rgba(200, 250, 255, 0.1)"/>
-<Label value="misc" background="rgba(100,100,100, .1)"/>
-</RectangleLabels>
+    <Image name="image" value="$image" zoom="true" zoomControl="true" />
+    <Header value="RectangleLabels" />
+    <RectangleLabels
+        name="label"
+        toName="image"
+        canRotate="false"
+        strokeWidth="3"
+        opacity=".1"
+    >
+        <Label value="healthy" background="rgba(200, 255, 200, 1)" />
+        <Label value="ring" background="rgba(250, 250, 150, 1)" />
+        <Label value="trophozoite" background="rgba(255, 220, 200, 1)" />
+        <Label value="schizont" background="rgba(255, 180, 100, 1)" />
+        <Label value="gametocyte" background="rgba(255, 200, 255, 1)" />
+        <Label value="wbc" background="rgba(200, 250, 255, 1)" />
+        <Label value="misc" background="rgba(100, 100, 100, 1)" />
+    </RectangleLabels>
 </View>
 ```
   - Go to the "Data Import" tab, click "Upload Files", and import `tasks.json`
