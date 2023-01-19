@@ -18,7 +18,7 @@ from cellpose import io
 from cellpose.utils import (
     fill_holes_and_remove_small_masks,
     masks_to_outlines,
-    remove_edge_masks
+    remove_edge_masks,
     outlines_list,
 )
 
