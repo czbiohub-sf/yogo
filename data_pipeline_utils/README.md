@@ -98,7 +98,7 @@ $ pip3 install .
 ### Run Label Studio
 
 1. Start image server by running: `./serve_local_files.sh "<path to IMAGE dir in run folder>" ".png"`, using the modified version in this repo, which was adapted from the original in `label-studio`.
-2. Convert labels to Label Studio format: `label-studio-converter import yolo -i "<path to RUN folder>" -o tasks.json --image-ext ".png" --image-root-url http\://localhost\:8081/` (this can take some time). In the end, it should create a "tasks.json" file. Then run `sed -i '' 's/%3A/:/g' tasks.json`
+2. Convert labels to Label Studio format: `label-studio-converter import yolo -i "<path to RUN folder>" -o tasks.json --image-ext ".png" --image-root-url http\://localhost\:8081/ --out-type predictions` (this can take some time). In the end, it should create a "tasks.json" file. Then run `sed -i '' 's/%3A/:/g' tasks.json`
 3. Start Label Studio: `label-studio start`
 4. Click `Create Project`
   - Name your project something descriptive - e.g. the name of the Run Folder
