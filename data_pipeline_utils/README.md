@@ -4,7 +4,7 @@ Having a clear, reproducable, and understandable data pipeline is absolutely nec
 
 ## Initial Data Formatting and Annotation
 
-Data from the scope is collected to `Annotated Datasets and model training` / `40x PlanAch - 160 mm TL - 405 nm / run-sets`
+Data from the scope is collected to `Annotated Datasets and model training` / `40x PlanAch - 160 mm TL - 405 nm` / `run-sets`
 
 - Runs are grouped together in folders, e.g. `2022-12-14-111221-Aditi-parasites`
 - These runs are in folders specifying the chip, e.g. `2022-12-13-122015__chip0562-A4_F`
