@@ -18,6 +18,7 @@ from cellpose import io
 from cellpose.utils import (
     fill_holes_and_remove_small_masks,
     masks_to_outlines,
+    remove_edge_masks
     outlines_list,
 )
 
@@ -54,11 +55,12 @@ def get_outlines(
         ]
 
         # flows, styles, and diameters are not used
-        masks, _flows, _styles, _diams = model.eval(imgs, channels=[0, 0])
+        per_img_masks, _flows, _styles, _diams = model.eval(imgs, channels=[0, 0])
 
-        for file_path, mask in zip(img_filename_chunk, masks):
-            refined_mask = fill_holes_and_remove_small_masks(mask)
-            mask_outlines = outlines_list(refined_mask)
+        for file_path, masks in zip(img_filename_chunk, per_img_masks):
+            masks = fill_holes_and_remove_small_masks(masks)
+            masks = remove_edge_masks(masks)
+            mask_outlines = outlines_list(masks)
             outlines.append((file_path, mask_outlines))
 
     return outlines
