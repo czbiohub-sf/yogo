@@ -178,10 +178,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
 
 def load_dataset_description(
-    dataset_description,
+    dataset_description: str,
 ) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
     with open(dataset_description, "r") as desc:
-        yaml_data = yaml.safe_load(desc)
+        with open(dataset_description, "r") as f:
+            yaml_data = yaml.safe_load(desc)
 
         classes = yaml_data["class_names"]
 

@@ -28,7 +28,7 @@ def class_names_from_classes_dot_txt(path_to_classes_dot_txt: Path) -> List[str]
 def gen_labels(path_to_runset_folder: Path):
     files = [Path(p).parent for p in path_to_runset_folder.glob(f"./**/images")]
 
-    dataset_paths: List[Dict[Dict[str, str]]] = list()
+    dataset_paths: Dict[Dict[str, str]] = dict()
 
     class_names: List[str] = []
 
@@ -52,14 +52,10 @@ def gen_labels(path_to_runset_folder: Path):
                 f"image path or label path doesn't exist: {images_path}, {label_path}"
             )
 
-        dataset_paths.append(
-            {
-                folder_path.name: {
-                    "image_path": str(images_path),
-                    "label_path": str(label_path),
-                }
-            }
-        )
+        dataset_paths[folder_path.name] = {
+            "image_path": str(images_path),
+            "label_path": str(label_path),
+        }
 
     dataset_defs = {
         "class_names": class_names,
