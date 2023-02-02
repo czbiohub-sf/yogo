@@ -43,4 +43,4 @@ if __name__ == "__main__":
     if len(files) == 0:
         raise ValueError(f"no zarr files found in directory {sys.argv[1]}")
 
-    multiprocess_directory_work(files, convert_zarr_to_images)
+    multiprocess_directory_work(files, convert_zarr_to_image_folder)

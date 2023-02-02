@@ -36,7 +36,7 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
 def get_outlines(
     path_to_folder: Path, chunksize: int = 32
 ) -> List[Tuple[Path, List[np.ndarray]]]:
-    """ Return a list of tuples (path to image, detection outlines)
+    """Return a list of tuples (path to image, detection outlines)
 
     This should be run on the GPU, else it is painfully slow! Allocate some CPU too,
     we are doing a good amount of image processing.
