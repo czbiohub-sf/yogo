@@ -243,7 +243,7 @@ def do_training(args):
     epochs = 32
     adam_lr = 3e-4
     batch_size = 32
-    resize_target_size = (772, 1032)
+    resize_target_size = (300, 400)
 
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
@@ -269,7 +269,7 @@ def do_training(args):
             "dataset_descriptor_file": args.dataset_descriptor_file,
         },
         notes=args.note,
-        tags=["v0.0.3"],
+        tags=["v0.0.2"],
     )
 
     train()
