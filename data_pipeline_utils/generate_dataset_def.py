@@ -72,6 +72,7 @@ def gen_labels(path_to_runset_folder: Path):
 
     with open("dataset_defs.yml", "w") as f:
         yml.dump(dataset_defs, f)
+        print(f"dumped to dataset_defs.yml")
 
 
 if __name__ == "__main__":
