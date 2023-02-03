@@ -165,7 +165,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     # raise exception here? logic being that we want to know very quickly that we don't have
                     # all the labels we need. Open to changes, though.
                     raise FileNotFoundError(
-                        f"{self.label_folder_path / img_file_path.with_suffix(".txt").name} doesn't exist"
+                        f"{self.label_folder_path / img_file_path.with_suffix('.txt').name} doesn't exist"
                     ) from e
                 labels = load_labels_from_path(label_path, self.classes)
                 samples.append((str(img_file_path), labels))
