@@ -153,9 +153,20 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         samples: List[Tuple[str, List[List[float]]]] = []
         for img_file_path in self.image_folder_path.glob("*"):
             if is_valid_file(str(img_file_path)):
-                label_path = (
-                    self.label_folder_path / img_file_path.with_suffix(".csv").name
-                )
+                try:
+                    label_path = next(
+                        self.label_folder_path / img_file_path.with_suffix(sfx).name
+                        for sfx in [".txt", ".csv"]
+                        if (
+                            self.label_folder_path / img_file_path.with_suffix(sfx).name
+                        ).exists()
+                    )
+                except Exception as e:
+                    # raise exception here? logic being that we want to know very quickly that we don't have
+                    # all the labels we need. Open to changes, though.
+                    raise FileNotFoundError(
+                        f"{self.label_folder_path / img_file_path.with_suffix(".txt").name} doesn't exist"
+                    ) from e
                 labels = load_labels_from_path(label_path, self.classes)
                 samples.append((str(img_file_path), labels))
         return samples
@@ -281,7 +292,7 @@ def get_datasets(
 
 
 def get_dataloader(
-    root_dir: str,
+    dataset_descriptor_file: str,
     batch_size: int,
     training: bool = True,
     img_size: Tuple[int, int] = (300, 400),
@@ -289,7 +300,7 @@ def get_dataloader(
     split_fractions_override: Optional[Dict[str, float]] = None,
 ):
     split_datasets = get_datasets(
-        root_dir,
+        dataset_descriptor_file,
         batch_size,
         img_size=img_size,
         training=training,
