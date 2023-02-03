@@ -57,7 +57,9 @@ def get_outlines(
                 imgs.append(potential_image)
             else:
                 # TODO is this the right thing? ignore weird files? I think so...
-                print(f"File {img_path} cannot be interpreted as an image (cv2.imread failed)")
+                print(
+                    f"File {img_path} cannot be interpreted as an image (cv2.imread failed)"
+                )
 
         per_img_masks, _flows, _styles, _diams = model.eval(imgs, channels=[0, 0])
 
@@ -96,12 +98,14 @@ def to_yogo_labels(label_dir_path, outlines, label):
                     outline[:, 1].max(),
                 )
                 try:
-                    xcenter, ycenter, width, height = convert_coords(xmin, xmax, ymin, ymax)
-                except ValueError:
+                    xcenter, ycenter, width, height = convert_coords(
+                        xmin, xmax, ymin, ymax
+                    )
+                except ValueError as e:
                     # xmin == xmax or ymin == ymax, so just ignore that label
+                    print(f"exception {e} found; ignoring label")
                     continue
                 f.write(f"{label} {xcenter} {ycenter} {width} {height}\n")
-
 
 
 def label_folder_for_yogo(path_to_images: Path, chunksize=32, label=0):
@@ -146,6 +150,7 @@ def label_runset(path_to_runset_folder: Path, chunksize=32, label=0):
             label_folder_for_yogo(f, chunksize=chunksize, label=label)
         except Exception as e:
             import traceback
+
             traceback.print_exc()
 
         print(f"{time.perf_counter() - t0:.0f}s")
