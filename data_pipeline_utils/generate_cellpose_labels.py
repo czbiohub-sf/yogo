@@ -49,12 +49,15 @@ def get_outlines(
     filename_iterator = iter_in_chunks(image_filenames, chunksize)
 
     for img_filename_chunk in filename_iterator:
-        imgs = [
-            cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
-            for img_path in img_filename_chunk
-        ]
+        imgs = []
+        for img_path in img_filename_chunk:
+            # for some pathological reason, if imread fails it returns None
+            potential_image = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+            if potential_image is not None:
+                imgs.append(potential_image)
+            else:
+                print(f"File {img_path} cannot be interpreted as an image (cv2.imread failed)")
 
-        # flows, styles, and diameters are not used
         per_img_masks, _flows, _styles, _diams = model.eval(imgs, channels=[0, 0])
 
         for file_path, masks in zip(img_filename_chunk, per_img_masks):
@@ -136,7 +139,9 @@ def label_runset(path_to_runset_folder: Path, chunksize=32, label=0):
         try:
             label_folder_for_yogo(f, chunksize=chunksize, label=label)
         except Exception as e:
-            print(e)
+            import traceback
+            traceback.print_exc()
+
         print(f"{time.perf_counter() - t0:.0f}s")
 
 

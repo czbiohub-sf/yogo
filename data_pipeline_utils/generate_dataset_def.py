@@ -59,7 +59,7 @@ def gen_labels(path_to_runset_folder: Path):
 
     dataset_defs = {
         "class_names": class_names,
-        "dataset_split_fractions": {"train": 0.75, "test": 0.25, "val": 0.05},
+        "dataset_split_fractions": {"train": 0.75, "test": 0.20, "val": 0.05},
         "dataset_paths": dataset_paths,
     }
 

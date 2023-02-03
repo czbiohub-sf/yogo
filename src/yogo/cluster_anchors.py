@@ -103,6 +103,12 @@ def plot_boxes(boxes, color_period=0) -> None:
 def get_dataset_bounding_boxes(
     bb_dirs: Sequence[Union[Path, str]], center_box=False
 ) -> Union[CenterBox, CornerBox]:
+    vs = []
+    for d in bb_dirs:
+        g = get_bounding_boxes(str(d), center_box=center_box)
+        print(g.shape)
+        vs.append(g)
+    return np.vstack(tuple(g))
     return np.vstack(
         tuple(get_bounding_boxes(str(d), center_box=center_box) for d in bb_dirs)
     )
@@ -111,11 +117,16 @@ def get_dataset_bounding_boxes(
 def get_bounding_boxes(bb_dir: str, center_box=False) -> Union[CenterBox, CornerBox]:
     conv_func = lambda x: x if center_box else centers_to_corners
     bbs = []
-    for fname in glob.glob(f"{bb_dir}/*.csv"):
+    for fname in glob.glob(f"{bb_dir}/*.csv") + glob.glob(f"{bb_dir}/*.txt"):
         with open(fname, "r") as f:
             for line in f:
-                vs = np.array([float(v) for v in line.split(",")[1:]])
+                if "," in line:
+                    vs = np.array([float(v) for v in line.split(",")[1:]])
+                else:
+                    vs = np.array([float(v) for v in line.split(" ")[1:]])
                 bbs.append(conv_func(vs))
+    if len(bbs) == 0:
+        print(bb_dir, "is empty!")
     return np.array(bbs)
 
 
