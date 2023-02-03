@@ -103,12 +103,6 @@ def plot_boxes(boxes, color_period=0) -> None:
 def get_dataset_bounding_boxes(
     bb_dirs: Sequence[Union[Path, str]], center_box=False
 ) -> Union[CenterBox, CornerBox]:
-    vs = []
-    for d in bb_dirs:
-        g = get_bounding_boxes(str(d), center_box=center_box)
-        print(g.shape)
-        vs.append(g)
-    return np.vstack(tuple(g))
     return np.vstack(
         tuple(get_bounding_boxes(str(d), center_box=center_box) for d in bb_dirs)
     )
