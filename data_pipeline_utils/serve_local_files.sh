@@ -4,29 +4,24 @@
 
 
 INPUT_DIR=$1
-WILDCARD=${2}
-OUTPUT_FILE=${3:-"files.txt"}
-PORT=${4:-8081}
+PORT=${2:-8081}
 
 echo "Scanning ${INPUT_DIR} ..."
-FIND_CMD="find '${INPUT_DIR}' -type f"
-if [ -z "$WILDCARD" ]; then
-  echo "Files wildcard is not set. Serve all files in ${INPUT_DIR}..."
-else
-  FIND_CMD="${FIND_CMD} -name ${WILDCARD}"
-fi
 
-echo "Replacing ${INPUT_DIR} to http://localhost:${PORT} ..."
-INPUT_DIR_ESCAPED=$(printf '%s\n' "$INPUT_DIR" | sed -e 's/[\/&]/\\&/g')
-
-export LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
-export LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT="$INPUT_DIR_ESCAPED"
+echo "serving files from ${INPUT_DIR} to http://localhost:${PORT} ..."
 
 green=`tput setaf 2`
 reset=`tput sgr0`
 
-echo "${green}File list stored in '${OUTPUT_FILE}'. Now import it directly from Label Studio UI${reset}"
+if [ ! -d "$INPUT_DIR" ]; then
+  echo "couldn't find $INPUT_DIR; double check that it exists, and that the path is correct"
+  exit 1
+fi
+
+export LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
+# does this have to be INPUT_DIR__ESCAPED? where
+# INPUT_DIR_ESCAPED=$(printf '%s\n' "$INPUT_DIR" | sed -e 's/[\/&]/\\&/g')
+export LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT="$INPUT_DIR"
 
 echo "Running web server on the port ${PORT}"
-cd "$INPUT_DIR"
-python3 -m http.server $PORT
+cd "$INPUT_DIR" && python3 -m http.server $PORT
