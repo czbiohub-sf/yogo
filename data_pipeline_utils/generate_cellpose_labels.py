@@ -129,7 +129,7 @@ def label_folder_for_napari(path_to_images: Path, chunksize=32, label=0):
         to_bb_labels(f, outlines, label)
 
 
-def label_runset(path_to_runset_folder: Path, chunksize=32, label=1):
+def label_runset(path_to_runset_folder: Path, chunksize=32, label=0):
     print("finding directories to label...")
     files = list(path_to_runset_folder.glob("./**/images"))
     print(f"found {len(files)} directories to label")
@@ -162,6 +162,6 @@ if __name__ == "__main__":
     if not path_to_runset.exists():
         raise ValueError(f"{str(path_to_runset)} doesn't exist")
 
-    label_runset(path_to_runset)
+    label_runset(path_to_runset, label=CLASSES.index("healthy"))
     gen_labels(path_to_runset)
     generate_tasks_for_runset(path_to_runset)
