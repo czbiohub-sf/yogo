@@ -2,13 +2,16 @@
 
 
 import os
+import sys
+import subprocess
 
 from pathlib import Path
 from multiprocessing import Process
-from http.server import HTTPServer, ThreadingHTTPServer, SimpleHTTPRequestHandler
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 
 def run_server(directory):
+    port = 8081
     server_addy = ("localhost", 8081)
 
     class Handler(SimpleHTTPRequestHandler):
@@ -17,24 +20,29 @@ def run_server(directory):
 
     httpd = ThreadingHTTPServer(server_addy, Handler)
 
-    print('going to serve')
+    print(f"serving your files, Hot n' Fresh, from http://localhost:{port}")
     httpd.serve_forever()
 
 
-# run_server(".")
+def run_server_in_proc(directory) -> Process:
+    p = Process(target=run_server, args=("../..",), daemon=True)
+    p.start()
+    return p
 
 
-def run(server_class=HTTPServer, handler_class=SimpleHTTPRequestHandler):
-    server_address = ('', 8000)
-    httpd = server_class(server_address, handler_class)
-    httpd.serve_forever()
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} <path to runset folder>")
+        sys.exit(1)
 
-run()
+    path_to_runset_folder = Path(sys.argv[1])
 
-"""
-cd "$INPUT_DIR" && python3 -m http.server 8081
+    if not path_to_runset_folder.exists():
+        raise ValueError(f"{str(path_to_runset_folder)} doesn't exist")
 
+    os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
+    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(path_to_runset_folder)
 
-os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = True
-os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"]="$INPUT_DIR"
-"""
+    proc = run_server_in_proc(path_to_runset_folder)
+
+    subprocess.run(["label-studio", "start"])
