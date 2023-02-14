@@ -23,6 +23,7 @@ from cellpose.utils import (
 )
 
 from labelling_constants import CLASSES
+from generate_dataset_def import gen_labels
 from utils import normalize, convert_coords, multiprocess_directory_work
 
 T = TypeVar("T")
@@ -115,7 +116,7 @@ def label_folder_for_yogo(path_to_images: Path, chunksize=32, label=0):
             f.write(f"{clss}\n")
 
     path_to_label_dir = path_to_images.parent / "labels"
-    path_to_label_dir.mkdir(exist_ok=False, parents=False)
+    path_to_label_dir.mkdir(exist_ok=True, parents=True)
 
     outlines = get_outlines(path_to_images, chunksize=chunksize)
 
@@ -132,7 +133,7 @@ def label_folder_for_napari(path_to_images: Path, chunksize=32, label=0):
         to_bb_labels(f, outlines, label)
 
 
-def label_runset(path_to_runset_folder: Path, chunksize=32, label=0):
+def label_runset(path_to_runset_folder: Path, chunksize=32, label=1):
     print("finding directories to label...")
     files = list(path_to_runset_folder.glob(f"./**/images"))
     print(f"found {len(files)} directories to label")
@@ -143,8 +144,7 @@ def label_runset(path_to_runset_folder: Path, chunksize=32, label=0):
 
         label_dir = f.parent / "labels"
         if label_dir.exists():
-            print(f"skipping {f} since label directory {label_dir} exists")
-            continue
+            print(f"overwriting label directory {label_dir}...")
 
         try:
             label_folder_for_yogo(f, chunksize=chunksize, label=label)
@@ -161,9 +161,10 @@ if __name__ == "__main__":
         print(f"usage: {sys.argv[0]} <path to runset>")
         sys.exit(1)
 
-    path_to_images = Path(sys.argv[1])
+    path_to_runset = Path(sys.argv[1])
 
-    if not path_to_images.exists():
-        raise ValueError(f"{str(path_to_images)} doesn't exist")
+    if not path_to_runset.exists():
+        raise ValueError(f"{str(path_to_runset)} doesn't exist")
 
-    label_runset(path_to_images)
+    label_runset(path_to_runset)
+    gen_labels(path_to_runset)

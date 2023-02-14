@@ -8,6 +8,10 @@ from typing import List, Dict
 from ruamel import yaml
 
 """
+This file will scan through the labeled data and create the data set definition file.
+Here is an example format!
+
+```
 class_names: ["healthy", "ring", "schizont", "troph"]
 dataset_split_fractions:
   train: 0.70
@@ -17,6 +21,7 @@ dataset_paths:
   cellpose_sample:
     image_path: /tmp/training_data_sample_2022_11_01_cyto2/sample_2022_11_01
     label_path: /tmp/training_data_sample_2022_11_01_cyto2/sample_2022_11_01_labels_cyto2
+```
 """
 
 
@@ -76,9 +81,9 @@ if __name__ == "__main__":
         print(f"usage: {sys.argv[0]} <path to runset>")
         sys.exit(1)
 
-    path_to_images = Path(sys.argv[1])
+    path_to_runset = Path(sys.argv[1])
 
     if not path_to_images.exists():
         raise ValueError(f"{str(path_to_images)} doesn't exist")
 
-    gen_labels(path_to_images)
+    gen_labels(path_to_runset)

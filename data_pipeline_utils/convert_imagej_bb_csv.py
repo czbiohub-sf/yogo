@@ -9,7 +9,9 @@ import numpy as np
 
 from utils import normalize, convert_coords
 
-# Most likely depricated
+""" This is a tool to convert imagej BBs to the YOGO format,
+although this is most likely depricated in favour of cellpose.
+"""
 
 
 def process(fd, label_dir):
