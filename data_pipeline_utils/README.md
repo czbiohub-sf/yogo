@@ -4,23 +4,13 @@ We will use [Label Studio](https://labelstud.io/) for human annotation. Install 
 
 `pip3 install -U label-studio`
 
-And install [Label Studio Converter](https://github.com/heartexlabs/label-studio-converter) by cloning the repo and building from source.
+# Time to start annotating!
 
-```console
-$ git clone https://github.com/heartexlabs/label-studio-converter.git
-$ cd label-studio-converter
-$ pip3 install .
-```
-
-## Run Label Studio
-
-1. Start image server by running: `./serve_local_files.sh "<path to IMAGE dir in run folder>"`, using the modified version in this repo, which was adapted from the original in `label-studio`.
+1. Start Label Studio by running: `python3 run_label_studio.py "<path to IMAGE dir in run folder>"`. You should be dropped into Label Studio!
   - **NOTE** Make sure there aren't back-slashes in `"<path to IMAGE dir in run folder>"` - an example of a good path would be `"/im/a/path/with a space/but/its/ok"`. Since we have quotes, we don't escape the spaces.
-2. Start Label Studio: `label-studio start`
-3. Click `Create Project`
+2. In LabelStudio, click `Create Project`
   - Name your project something descriptive - e.g. the name of the Run Folder
   - Go to "Labelling Setup" and click "Custom Template" on the left. Under the "Code" section, paste in the following XML and save
-
 ```xml
 <View>
     <Image name="image" value="$image" zoom="true" zoomControl="true" />
@@ -33,7 +23,7 @@ $ pip3 install .
         opacity=".1"
     >
         <Label value="healthy" background="rgba(200, 255, 200, 1)" />
-        <Label value="ring" background="rgba(250, 250, 150, 1)" />
+        <Label value="ring" background="rgba(250, 100, 150, 1)" />
         <Label value="trophozoite" background="rgba(255, 220, 200, 1)" />
         <Label value="schizont" background="rgba(255, 180, 100, 1)" />
         <Label value="gametocyte" background="rgba(255, 200, 255, 1)" />
@@ -42,7 +32,7 @@ $ pip3 install .
     </RectangleLabels>
 </View>
 ```
-  - Go to the "Data Import" tab, click "Upload Files", and import `tasks.json`
+  - Go to the "Data Import" tab, click "Upload Files", and import the `tasks.json` in the run folder that you are annotating. An example path would be `<path to run folder> 
   - Click "Save"
 
 and you are ready to annotate!
@@ -61,9 +51,10 @@ http://localhost:8080/projects/13/data?tab=9&task=2
                                ^^ "13" is the project id
 ```
 
-
 Now, run the following, substituting in the project ID and the auth token
 
-`curl -X GET "http://localhost:8080/api/projects/<project id>/export?exportType=YOLO" -H "Authorization: Token <paste the Auth. token here>" --output annotations.zip`
+```console
+curl -X GET "http://localhost:8080/api/projects/<project id>/export?exportType=YOLO" -H "Authorization: Token <paste the Auth. token here>" --output annotations.zip
+```
 
 Once you unzip that folder, the `labels` folder will replace the original labels folder.
