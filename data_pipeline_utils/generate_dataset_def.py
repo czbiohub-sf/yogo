@@ -31,13 +31,13 @@ def class_names_from_classes_dot_txt(path_to_classes_dot_txt: Path) -> List[str]
 
 
 def gen_labels(path_to_runset_folder: Path):
-    files = [Path(p).parent for p in path_to_runset_folder.glob(f"./**/images")]
+    folders = [Path(p).parent for p in path_to_runset_folder.glob(f"./**/images")]
 
     dataset_paths: Dict[Dict[str, str]] = dict()
 
     class_names: List[str] = []
 
-    for i, folder_path in enumerate(files):
+    for i, folder_path in enumerate(folders):
         # check classes
         if len(class_names) == 0:
             class_names = class_names_from_classes_dot_txt(folder_path / "classes.txt")
@@ -84,6 +84,6 @@ if __name__ == "__main__":
     path_to_runset = Path(sys.argv[1])
 
     if not path_to_images.exists():
-        raise ValueError(f"{str(path_to_images)} doesn't exist")
+        raise ValueError(f"{str(path_to_runset)} doesn't exist")
 
     gen_labels(path_to_runset)

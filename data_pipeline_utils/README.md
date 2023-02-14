@@ -16,9 +16,8 @@ $ pip3 install .
 
 1. Start image server by running: `./serve_local_files.sh "<path to IMAGE dir in run folder>"`, using the modified version in this repo, which was adapted from the original in `label-studio`.
   - **NOTE** Make sure there aren't back-slashes in `"<path to IMAGE dir in run folder>"` - an example of a good path would be `"/im/a/path/with a space/but/its/ok"`. Since we have quotes, we don't escape the spaces.
-2. Convert labels to Label Studio format: `label-studio-converter import yolo -i "<path to RUN folder>" -o tasks.json --image-ext ".png" --image-root-url http\://localhost\:8081/ --out-type predictions` (this can take some time). In the end, it should create a "tasks.json" file. Then run `sed -i '' 's/%3A/:/g' tasks.json` on Mac, and `sed -i 's/%3A/:/g' tasks.json` on Linux
-3. Start Label Studio: `label-studio start`
-4. Click `Create Project`
+2. Start Label Studio: `label-studio start`
+3. Click `Create Project`
   - Name your project something descriptive - e.g. the name of the Run Folder
   - Go to "Labelling Setup" and click "Custom Template" on the left. Under the "Code" section, paste in the following XML and save
 

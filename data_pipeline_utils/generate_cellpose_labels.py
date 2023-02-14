@@ -24,6 +24,7 @@ from cellpose.utils import (
 
 from labelling_constants import CLASSES
 from generate_dataset_def import gen_labels
+from generate_labelstudio_tasks import generate_tasks_for_runset
 from utils import normalize, convert_coords, multiprocess_directory_work
 
 T = TypeVar("T")
@@ -168,3 +169,4 @@ if __name__ == "__main__":
 
     label_runset(path_to_runset)
     gen_labels(path_to_runset)
+    generate_tasks_for_runset(path_to_runset)
