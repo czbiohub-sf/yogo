@@ -31,7 +31,7 @@ def class_names_from_classes_dot_txt(path_to_classes_dot_txt: Path) -> List[str]
 
 
 def gen_labels(path_to_runset_folder: Path):
-    folders = [Path(p).parent for p in path_to_runset_folder.glob(f"./**/images")]
+    folders = [Path(p).parent for p in path_to_runset_folder.glob("./**/images")]
 
     dataset_paths: Dict[Dict[str, str]] = dict()
 
@@ -73,7 +73,7 @@ def gen_labels(path_to_runset_folder: Path):
 
     with open("dataset_defs.yml", "w") as f:
         yml.dump(dataset_defs, f)
-        print(f"dumped to dataset_defs.yml")
+        print("dumped to dataset_defs.yml")
 
 
 if __name__ == "__main__":

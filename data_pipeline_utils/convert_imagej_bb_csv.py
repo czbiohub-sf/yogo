@@ -5,9 +5,8 @@ import csv
 
 from pathlib import Path
 
-import numpy as np
 
-from utils import normalize, convert_coords
+from utils import convert_coords
 
 """ This is a tool to convert imagej BBs to the YOGO format,
 although this is most likely depricated in favour of cellpose.
