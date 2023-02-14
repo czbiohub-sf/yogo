@@ -10,13 +10,13 @@ from multiprocessing import Process
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 
-def run_server(directory):
+def run_server(directory: Path):
     port = 8081
     server_addy = ("localhost", 8081)
 
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, directory=directory, **kwargs)
+            super().__init__(*args, directory=str(directory), **kwargs)
 
     httpd = ThreadingHTTPServer(server_addy, Handler)
 
@@ -24,8 +24,8 @@ def run_server(directory):
     httpd.serve_forever()
 
 
-def run_server_in_proc(directory) -> Process:
-    p = Process(target=run_server, args=("../..",), daemon=True)
+def run_server_in_proc(directory: Path) -> Process:
+    p = Process(target=run_server, args=(str(directory / "images"),), daemon=True)
     p.start()
     return p
 
@@ -45,4 +45,7 @@ if __name__ == "__main__":
 
     proc = run_server_in_proc(path_to_runset_folder)
 
-    subprocess.run(["label-studio", "start"])
+    try:
+        subprocess.run(["label-studio", "start"])
+    except KeyboardInterrupt:
+        print("gee wiz, thank you for labelling today!")
