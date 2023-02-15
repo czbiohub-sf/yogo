@@ -9,7 +9,21 @@ from label_studio_converter.imports.yolo import convert_yolo_to_ls
 def generate_tasks_for_runset(path_to_runset_folder: Path):
     folders = [Path(p).parent for p in path_to_runset_folder.glob("./**/labels")]
 
-    for folder_path in folders:
+    tqdm = lambda v: v
+    if __name__ == "__main__":
+        try:
+            from tqdm import tqdm  # type: ignore
+        except ImportError:
+            print('missing tqdm')
+            pass
+    else:
+        print('not main')
+
+
+    for folder_path in tqdm(folders):
+        if not folder_path.is_dir():
+            continue
+
         convert_yolo_to_ls(
             input_dir=str(folder_path),
             out_file=str(folder_path / "tasks.json"),

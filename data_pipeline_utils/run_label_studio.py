@@ -29,12 +29,12 @@ def get_parser():
     parser = argparse.ArgumentParser(description="label studio runner!")
 
     parser.add_argument(
-        "run-folder",
+        dest="run_folder",
+        metavar="run-folder",
         type=Path,
         help="path to run folder (i.e. folder containing 'images' and 'labels'",
     )
     return parser
-
 
 
 def run_server(directory: Path):
@@ -47,7 +47,9 @@ def run_server(directory: Path):
 
     httpd = ThreadingHTTPServer(server_addy, Handler)
 
-    print(f"serving your files, Hot n' Fresh, on http://localhost:{port} from {str(directory)}")
+    print(
+        f"serving your files, Hot n' Fresh, on http://localhost:{port} from {str(directory)}"
+    )
     httpd.serve_forever()
 
 
@@ -65,9 +67,16 @@ if __name__ == "__main__":
 
     if not path_to_run_folder.exists():
         raise ValueError(f"{str(path_to_run_folder)} doesn't exist")
-    elif (not (path_to_run_folder / "images").exists()) or (not (path_to_run_folder / "labels").exists()):
-        raise FileNotFoundError(f"'images' or 'labels' folder missing in {path_to_run_folder}")
+    elif (not (path_to_run_folder / "images").exists()) or (
+        not (path_to_run_folder / "labels").exists()
+    ):
+        raise FileNotFoundError(
+            f"'images' or 'labels' folder missing in {path_to_run_folder}"
+        )
     elif not (path_to_run_folder / "tasks.json").exists():
+        print(
+            f"{(path_to_run_folder / 'tasks.json')} doesn't exist; creating it now..."
+        )
         generate_tasks_for_runset(path_to_run_folder)
 
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"

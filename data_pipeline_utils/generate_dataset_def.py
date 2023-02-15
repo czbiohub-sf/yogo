@@ -7,6 +7,8 @@ from typing import List, Dict
 
 from ruamel import yaml
 
+from labelling_constants import CLASSES
+
 """
 This file will scan through the labeled data and create the data set definition file.
 Here is an example format!
@@ -39,23 +41,14 @@ def gen_labels(path_to_runset_folder: Path):
 
     for i, folder_path in enumerate(folders):
         # check classes
-        if len(class_names) == 0:
-            class_names = class_names_from_classes_dot_txt(folder_path / "classes.txt")
-        else:
-            if class_names != class_names_from_classes_dot_txt(
-                folder_path / "classes.txt"
-            ):
-                raise RuntimeError(
-                    f"Inconsistent class definitions for path {folder_path}"
-                )
-
         images_path = folder_path / "images"
         label_path = folder_path / "labels"
 
-        if not images_path.exists() or not label_path.exists():
-            raise RuntimeError(
-                f"image path or label path doesn't exist: {images_path}, {label_path}"
+        if (not images_path.exists()) or (not label_path.exists()):
+            print(
+                f"WARNING: image path or label path doesn't exist: {images_path}, {label_path}. Continuing..."
             )
+            continue
 
         dataset_paths[folder_path.name] = {
             "image_path": str(images_path),
@@ -63,7 +56,7 @@ def gen_labels(path_to_runset_folder: Path):
         }
 
     dataset_defs = {
-        "class_names": class_names,
+        "class_names": CLASSES,
         "dataset_split_fractions": {"train": 0.75, "test": 0.20, "val": 0.05},
         "dataset_paths": dataset_paths,
     }
