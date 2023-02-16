@@ -4,7 +4,7 @@ We will use [Label Studio](https://labelstud.io/) for human annotation. Install 
 
 `pip3 install -U label-studio`
 
-## Time to start annotating!
+## Annotating
 
 1. Start Label Studio by running: `python3 run_label_studio.py
 2. In LabelStudio, click `Create Project`
