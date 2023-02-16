@@ -2,7 +2,6 @@
 
 
 import os
-import sys
 import argparse
 import subprocess
 
@@ -10,7 +9,6 @@ from pathlib import Path
 from multiprocessing import Process
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
-from label_studio_sdk import Client
 
 from generate_labelstudio_tasks import generate_tasks_for_runset
 

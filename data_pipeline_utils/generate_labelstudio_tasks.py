@@ -11,7 +11,8 @@ from label_studio_converter.imports.yolo import convert_yolo_to_ls
 def generate_tasks_for_runset(path_to_runset_folder: Path):
     folders = [Path(p).parent for p in path_to_runset_folder.glob("./**/labels")]
 
-    tqdm = lambda v: v
+    def tqdm(v):
+        return v
     if __name__ == "__main__":
         try:
             from tqdm import tqdm  # type: ignore

@@ -37,7 +37,6 @@ def gen_labels(path_to_runset_folder: Path):
 
     dataset_paths: Dict[str, Dict[str, str]] = dict()
 
-    class_names: List[str] = []
 
     for i, folder_path in enumerate(folders):
         # check classes
