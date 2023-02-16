@@ -80,6 +80,19 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
                 image_width=IMG_WIDTH,
                 image_height=IMG_HEIGHT,
             )
+        except TypeError:
+            # we aren't using our custom version, so try default
+            print(
+                "warning: couldn't give convert_yolo_to_ls image dims, so defaulting "
+                "to slow version"
+            )
+            convert_yolo_to_ls(
+                input_dir=str(folder_path),
+                out_file=str(folder_path / "tasks.json"),
+                out_type="predictions",
+                image_root_url=root_url,
+                image_ext=".png",
+            )
         except Exception as e:
             print(f"exception found for file {folder_path}: {e}. continuing...")
             continue

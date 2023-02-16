@@ -1,12 +1,12 @@
 # Human Annotation
 
-We will use [Label Studio](https://labelstud.io/) for human annotation. Install it via instructions from the website:
+We will use [Label Studio](https://labelstud.io/) for human annotation. Install it from YOGO's root directory like so:
 
-`pip3 install -U label-studio`
+`python3 -m pip install ".[label]"`
 
 ## Time to start annotating!
 
-1. Start Label Studio by running: `python3 run_label_studio.py
+1. Start Label Studio by running: `python3 run_label_studio.py`
 2. In LabelStudio, click `Create Project`
   - Name your project something descriptive - e.g. the name of the Run Folder
   - Go to "Labelling Setup" and click "Custom Template" on the left. Under the "Code" section, paste in the following XML and save
