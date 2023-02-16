@@ -52,35 +52,35 @@ def run_server(directory: Path):
 
 
 def run_server_in_proc(directory: Path) -> Process:
-    p = Process(target=run_server, args=(str(directory / "images"),), daemon=True)
+    p = Process(target=run_server, args=(directory,), daemon=True)
     p.start()
     return p
 
 
 if __name__ == "__main__":
-    parser = get_parser()
-    args = parser.parse_args()
+    # parser = get_parser()
+    # args = parser.parse_args()
 
-    path_to_run_folder = args.run_folder
+    # path_to_run_folder = args.run_folder
 
-    if not path_to_run_folder.exists():
-        raise ValueError(f"{str(path_to_run_folder)} doesn't exist")
-    elif (not (path_to_run_folder / "images").exists()) or (
-        not (path_to_run_folder / "labels").exists()
-    ):
-        raise FileNotFoundError(
-            f"'images' or 'labels' folder missing in {path_to_run_folder}"
-        )
-    elif not (path_to_run_folder / "tasks.json").exists():
-        print(
-            f"{(path_to_run_folder / 'tasks.json')} doesn't exist; creating it now..."
-        )
-        generate_tasks_for_runset(path_to_run_folder)
-
+    # if not path_to_run_folder.exists():
+    #     raise ValueError(f"{str(path_to_run_folder)} doesn't exist")
+    # elif (not (path_to_run_folder / "images").exists()) or (
+    #     not (path_to_run_folder / "labels").exists()
+    # ):
+    #     raise FileNotFoundError(
+    #         f"'images' or 'labels' folder missing in {path_to_run_folder}"
+    #     )
+    # elif not (path_to_run_folder / "tasks.json").exists():
+    #     print(
+    #         f"{(path_to_run_folder / 'tasks.json')} doesn't exist; creating it now..."
+    #     )
+    #     generate_tasks_for_runset(path_to_run_folder)
+    from labelling_constants import FLEXO_DATA_DIR
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
-    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(path_to_run_folder)
+    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = FLEXO_DATA_DIR
 
-    proc = run_server_in_proc(path_to_run_folder)
+    proc = run_server_in_proc(Path(FLEXO_DATA_DIR))
 
     try:
         subprocess.run(["label-studio", "start"])
