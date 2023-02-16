@@ -14,11 +14,10 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
         try:
             from tqdm import tqdm  # type: ignore
         except ImportError:
-            print('missing tqdm')
+            print("missing tqdm")
             pass
     else:
-        print('not main')
-
+        print("not main")
 
     for folder_path in tqdm(folders):
         if not folder_path.is_dir():
