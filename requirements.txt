@@ -1,4 +1,0 @@
-wandb
-torch
-torchvision
-matplotlib
