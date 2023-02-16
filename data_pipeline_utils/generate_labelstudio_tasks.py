@@ -69,6 +69,7 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
 
         abbreviated_path = str(path_relative_to(folder_path, FLEXO_DATA_DIR))
         root_url = f"http://localhost:8081/{pathname2url(abbreviated_path)}/images"
+
         try:
             convert_yolo_to_ls(
                 input_dir=str(folder_path),
@@ -79,8 +80,8 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
                 image_width=IMG_WIDTH,
                 image_height=IMG_HEIGHT,
             )
-        except PermissionError:
-            print(f"permission error for file {folder_path}. continuing...")
+        except Exception as e:
+            print(f"exception found for file {folder_path}: {e}. continuing...")
             continue
 
 
