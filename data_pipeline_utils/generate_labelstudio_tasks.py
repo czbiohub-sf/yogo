@@ -68,9 +68,7 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
             continue
 
         abbreviated_path = str(path_relative_to(folder_path, FLEXO_DATA_DIR))
-        root_url = str(
-            Path("http://localhost:8081") / pathname2url(abbreviated_path) / "images"
-        )
+        root_url = f"http://localhost:8081/{pathname2url(abbreviated_path)}/images"
         try:
             convert_yolo_to_ls(
                 input_dir=str(folder_path),
