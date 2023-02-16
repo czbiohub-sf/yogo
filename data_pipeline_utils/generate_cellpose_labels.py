@@ -4,20 +4,15 @@ import cv2
 import sys
 import time
 import torch
-import torchvision
 
-import cellpose
 
 import numpy as np
 
-from tqdm import tqdm
 from typing import Sequence, Generator, List, TypeVar, Tuple
 from pathlib import Path
 from cellpose import models
-from cellpose import io
 from cellpose.utils import (
     fill_holes_and_remove_small_masks,
-    masks_to_outlines,
     remove_edge_masks,
     outlines_list,
 )
@@ -25,7 +20,7 @@ from cellpose.utils import (
 from labelling_constants import CLASSES
 from generate_dataset_def import gen_labels
 from generate_labelstudio_tasks import generate_tasks_for_runset
-from utils import normalize, convert_coords, multiprocess_directory_work
+from utils import convert_coords
 
 T = TypeVar("T")
 
@@ -134,9 +129,9 @@ def label_folder_for_napari(path_to_images: Path, chunksize=32, label=0):
         to_bb_labels(f, outlines, label)
 
 
-def label_runset(path_to_runset_folder: Path, chunksize=32, label=1):
+def label_runset(path_to_runset_folder: Path, chunksize=32, label=0):
     print("finding directories to label...")
-    files = list(path_to_runset_folder.glob(f"./**/images"))
+    files = list(path_to_runset_folder.glob("./**/images"))
     print(f"found {len(files)} directories to label")
 
     for i, f in enumerate(files, start=1):
@@ -149,7 +144,7 @@ def label_runset(path_to_runset_folder: Path, chunksize=32, label=1):
 
         try:
             label_folder_for_yogo(f, chunksize=chunksize, label=label)
-        except Exception as e:
+        except Exception:
             import traceback
 
             traceback.print_exc()
@@ -167,6 +162,6 @@ if __name__ == "__main__":
     if not path_to_runset.exists():
         raise ValueError(f"{str(path_to_runset)} doesn't exist")
 
-    label_runset(path_to_runset)
+    label_runset(path_to_runset, label=CLASSES.index("healthy"))
     gen_labels(path_to_runset)
     generate_tasks_for_runset(path_to_runset)
