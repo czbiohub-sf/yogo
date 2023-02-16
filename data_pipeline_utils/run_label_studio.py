@@ -58,24 +58,6 @@ def run_server_in_proc(directory: Path) -> Process:
 
 
 if __name__ == "__main__":
-    # parser = get_parser()
-    # args = parser.parse_args()
-
-    # path_to_run_folder = args.run_folder
-
-    # if not path_to_run_folder.exists():
-    #     raise ValueError(f"{str(path_to_run_folder)} doesn't exist")
-    # elif (not (path_to_run_folder / "images").exists()) or (
-    #     not (path_to_run_folder / "labels").exists()
-    # ):
-    #     raise FileNotFoundError(
-    #         f"'images' or 'labels' folder missing in {path_to_run_folder}"
-    #     )
-    # elif not (path_to_run_folder / "tasks.json").exists():
-    #     print(
-    #         f"{(path_to_run_folder / 'tasks.json')} doesn't exist; creating it now..."
-    #     )
-    #     generate_tasks_for_runset(path_to_run_folder)
     from labelling_constants import FLEXO_DATA_DIR
 
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
