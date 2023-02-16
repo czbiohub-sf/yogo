@@ -21,7 +21,7 @@ if __name__ == "__main__":
         pass
 
 
-def path_is_relative_to(path_a: Path, path_b: Union[str,Path]) -> bool:
+def path_is_relative_to(path_a: Path, path_b: Union[str, Path]) -> bool:
     """
     Path.is_relative_to is available in pathlib since 3.9,
     but we are running 3.7. Copied from pathlib
@@ -31,7 +31,7 @@ def path_is_relative_to(path_a: Path, path_b: Union[str,Path]) -> bool:
     return path_a == path_b or path_b in path_a.parents
 
 
-def path_relative_to(path_a: Path, path_b: Union[str,Path], walk_up=False) -> Path:
+def path_relative_to(path_a: Path, path_b: Union[str, Path], walk_up=False) -> Path:
     """
     Path.relative_to is available in pathlib since 3.9,
     but we are running 3.7. Copied from pathlib
@@ -49,9 +49,8 @@ def path_relative_to(path_a: Path, path_b: Union[str,Path], walk_up=False) -> Pa
     if step and not walk_up:
         raise ValueError(f"{str(path_a)!r} is not in the subpath of {str(path_b)!r}")
 
-    parts = ('..',) * step + path_a.parts[len(path.parts):]
+    parts = ("..",) * step + path_a.parts[len(path.parts) :]
     return path_cls(*parts)
-
 
 
 def generate_tasks_for_runset(path_to_runset_folder: Path):

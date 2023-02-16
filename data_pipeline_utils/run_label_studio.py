@@ -77,6 +77,7 @@ if __name__ == "__main__":
     #     )
     #     generate_tasks_for_runset(path_to_run_folder)
     from labelling_constants import FLEXO_DATA_DIR
+
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
     os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = FLEXO_DATA_DIR
 
