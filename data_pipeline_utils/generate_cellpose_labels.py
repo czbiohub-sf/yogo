@@ -13,7 +13,6 @@ from pathlib import Path
 from cellpose import models
 from cellpose.utils import (
     fill_holes_and_remove_small_masks,
-    remove_edge_masks,
     outlines_list,
 )
 
