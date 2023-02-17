@@ -80,25 +80,3 @@ At this point, `labels` should have good bounding boxes for `images`. You can ve
 (make sure you've `ssh`'d into Bruno with XTerm - e.g. `ssh account@login01.czbiohub.org -Y`)
 
 All cells will be classified as healthy, though. To classify them further, we need human annotators. See the README for Label Studio instructions.
-
-## Exporting from Label Studio
-
-After annotating your images, it is time to export. If you use the "Export" button on the UI, LabelStudio will also export your unchanged images. We do not want that - we want just the labels. Therefore, we will use their API endpoint.
-
-Click on the symbol for your account on the upper-right of the screen (for me, it is a circle with "AJ" in the center), and go to "Account & Settings". There, copy your "Authorization Token".
-
-Note the project ID from the URL of the project. Navigate to the project from which you are exporting labels. The URL should look something like:
-
-```
-http://localhost:8080/projects/13/data?tab=9&task=2
-
-                               ^^ "13" is the project id
-```
-
-Now, run the following, substituting in the project ID and the auth token
-
-```console
-curl -X GET "http://localhost:8080/api/projects/<project id>/export?exportType=YOLO" -H "Authorization: Token <paste the Auth. token here>" --output annotations.zip
-```
-
-Once you unzip that folder, the `labels` folder will replace the original labels folder.
