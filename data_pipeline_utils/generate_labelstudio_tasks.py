@@ -2,7 +2,7 @@
 
 
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 from urllib.request import pathname2url
 
 from labelling_constants import IMG_WIDTH, IMG_HEIGHT, FLEXO_DATA_DIR
@@ -53,8 +53,21 @@ def path_relative_to(path_a: Path, path_b: Union[str, Path], walk_up=False) -> P
     return path_cls(*parts)
 
 
-def generate_tasks_for_runset(path_to_runset_folder: Path):
+def generate_tasks_for_runset(
+    path_to_runset_folder: Path, task_folder_path: Optional[Path] = None
+):
     folders = [Path(p).parent for p in path_to_runset_folder.glob("./**/labels")]
+
+    if len(folders) == 0:
+        raise ValueError(
+            f"couldn't find labels and images - double check the provided path"
+        )
+
+    tasks_path = (
+        str(path_to_runset_folder / "tasks.json")
+        if task_folder_path is None
+        else str(task_folder_path)
+    )
 
     for folder_path in tqdm(folders):
         if not folder_path.is_dir():
@@ -73,7 +86,7 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
         try:
             convert_yolo_to_ls(
                 input_dir=str(folder_path),
-                out_file=str(folder_path / "tasks.json"),
+                out_file=tasks_path,
                 out_type="predictions",
                 image_root_url=root_url,
                 image_ext=".png",
@@ -88,7 +101,7 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
             )
             convert_yolo_to_ls(
                 input_dir=str(folder_path),
-                out_file=str(folder_path / "tasks.json"),
+                out_file=tasks_path,
                 out_type="predictions",
                 image_root_url=root_url,
                 image_ext=".png",

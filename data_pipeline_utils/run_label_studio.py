@@ -9,7 +9,7 @@ from pathlib import Path
 from multiprocessing import Process
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
-
+from labelling_constants import FLEXO_DATA_DIR
 from generate_labelstudio_tasks import generate_tasks_for_runset
 
 
@@ -30,7 +30,11 @@ def get_parser():
         dest="run_folder",
         metavar="run-folder",
         type=Path,
-        help="path to run folder (i.e. folder containing 'images' and 'labels'",
+        help=(
+            "path to run folder (i.e. folder containing 'images' and 'labels'), "
+            "defaults to running on OnDemand if no argument is provided"
+        ),
+        default=FLEXO_DATA_DIR,
     )
     return parser
 
@@ -58,12 +62,19 @@ def run_server_in_proc(directory: Path) -> Process:
 
 
 if __name__ == "__main__":
-    from labelling_constants import FLEXO_DATA_DIR
+    parser = get_parser()
+    args = parser.parse_args()
+
+    path_to_run_folder = args.run_folder
 
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
-    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = FLEXO_DATA_DIR
+    os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(path_to_run_folder)
 
-    proc = run_server_in_proc(Path(FLEXO_DATA_DIR))
+    proc = run_server_in_proc(path_to_run_folder)
+
+    if not (path_to_run_folder / "tasks.json").exists():
+        generate_tasks_for_runset(path_to_run_folder, task_folder_path=Path("."))
+        print(f"tasks file written to {str(Path('./tasks.json').absolute())}")
 
     try:
         subprocess.run(["label-studio", "start"])
