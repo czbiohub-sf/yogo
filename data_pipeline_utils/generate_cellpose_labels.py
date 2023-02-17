@@ -13,7 +13,6 @@ from pathlib import Path
 from cellpose import models
 from cellpose.utils import (
     fill_holes_and_remove_small_masks,
-    remove_edge_masks,
     outlines_list,
 )
 
@@ -62,7 +61,6 @@ def get_outlines(
 
         for file_path, masks in zip(img_filename_chunk, per_img_masks):
             masks = fill_holes_and_remove_small_masks(masks)
-            masks = remove_edge_masks(masks)
             mask_outlines = outlines_list(masks)
             outlines.append((file_path, mask_outlines))
 
