@@ -10,10 +10,6 @@ A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com
 - Need to count at (almost) real-time (around 30 FPS) on restrictive hardware (Raspberry Pi 4 + Intel Neural Compute Stick 2)
 - Existing YOLOv\* models run very slowly on the Pi (300 ms+ inference, or about 3 FPS)
 
-## Results
-
-- Initial benchmark of this model was run at ~40 FPS on the Raspberry Pi 4 w/ NCS2
-
 ## Installation
 
 Install with
@@ -22,13 +18,23 @@ Install with
 python3 -m pip install yogo
 ```
 
+To perform annotations, you will need [Label Studio](https://labelstud.io/). You can install it with
+
+```console
+python3 -m pip install yogo[label]
+```
+
+or just
+
+```console
+python3 -m pip install label-studio
+```
+
 If you want to export models, run
 
 ```console
 python3 -m pip install yogo[onnx]
 ```
-
-It is difficult to install onnx on my M1, so I've just installed it on the HPC.
 
 ## Training
 

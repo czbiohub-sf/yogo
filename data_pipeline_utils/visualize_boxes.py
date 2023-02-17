@@ -86,7 +86,6 @@ if __name__ == "__main__":
         elif image_dir.parent.name == "images":
             label_dir = image_dir.parent.parent / "labels"
 
-
     image_label_pairs = make_img_label_pairs(image_dir, label_dir)
 
     for image_path, label_path in image_label_pairs:

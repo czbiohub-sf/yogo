@@ -9,7 +9,7 @@ from pathlib import Path
 from multiprocessing import Process
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
-
+from labelling_constants import FLEXO_DATA_DIR
 from generate_labelstudio_tasks import generate_tasks_for_runset
 
 
@@ -29,8 +29,13 @@ def get_parser():
     parser.add_argument(
         dest="run_folder",
         metavar="run-folder",
+        nargs="?",
         type=Path,
-        help="path to run folder (i.e. folder containing 'images' and 'labels'",
+        help=(
+            "path to run folder (i.e. folder containing 'images' and 'labels'), "
+            "defaults to running on OnDemand if no argument is provided"
+        ),
+        default=FLEXO_DATA_DIR,
     )
     return parser
 
@@ -52,7 +57,7 @@ def run_server(directory: Path):
 
 
 def run_server_in_proc(directory: Path) -> Process:
-    p = Process(target=run_server, args=(str(directory / "images"),), daemon=True)
+    p = Process(target=run_server, args=(directory,), daemon=True)
     p.start()
     return p
 
@@ -63,24 +68,15 @@ if __name__ == "__main__":
 
     path_to_run_folder = args.run_folder
 
-    if not path_to_run_folder.exists():
-        raise ValueError(f"{str(path_to_run_folder)} doesn't exist")
-    elif (not (path_to_run_folder / "images").exists()) or (
-        not (path_to_run_folder / "labels").exists()
-    ):
-        raise FileNotFoundError(
-            f"'images' or 'labels' folder missing in {path_to_run_folder}"
-        )
-    elif not (path_to_run_folder / "tasks.json").exists():
-        print(
-            f"{(path_to_run_folder / 'tasks.json')} doesn't exist; creating it now..."
-        )
-        generate_tasks_for_runset(path_to_run_folder)
-
     os.environ["LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED"] = "true"
     os.environ["LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT"] = str(path_to_run_folder)
 
     proc = run_server_in_proc(path_to_run_folder)
+
+    if path_to_run_folder != Path(FLEXO_DATA_DIR):
+        # create tasks.json here
+        generate_tasks_for_runset(path_to_run_folder, task_folder_path=Path("."))
+        print(f"tasks file written to {str(Path('./tasks.json').absolute())}")
 
     try:
         subprocess.run(["label-studio", "start"])

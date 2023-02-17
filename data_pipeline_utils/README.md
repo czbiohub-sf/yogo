@@ -1,13 +1,12 @@
 # Human Annotation
 
-We will use [Label Studio](https://labelstud.io/) for human annotation. Install it via instructions from the website:
+We will use [Label Studio](https://labelstud.io/) for human annotation. Install it from YOGO's root directory like so:
 
-`pip3 install -U label-studio`
+`python3 -m pip install ".[label]"`
 
-# Time to start annotating!
+## Time to start annotating!
 
-1. Start Label Studio by running: `python3 run_label_studio.py "<path to IMAGE dir in run folder>"`. You should be dropped into Label Studio!
-  - **NOTE** Make sure there aren't back-slashes in `"<path to IMAGE dir in run folder>"` - an example of a good path would be `"/im/a/path/with a space/but/its/ok"`. Since we have quotes, we don't escape the spaces.
+1. Start Label Studio by running: `python3 run_label_studio.py`
 2. In LabelStudio, click `Create Project`
   - Name your project something descriptive - e.g. the name of the Run Folder
   - Go to "Labelling Setup" and click "Custom Template" on the left. Under the "Code" section, paste in the following XML and save
@@ -32,29 +31,7 @@ We will use [Label Studio](https://labelstud.io/) for human annotation. Install 
     </RectangleLabels>
 </View>
 ```
-  - Go to the "Data Import" tab, click "Upload Files", and import the `tasks.json` in the run folder that you are annotating. An example path would be `<path to run folder> 
+  - Go to the "Data Import" tab, click "Upload Files", and import the `tasks.json` in the run folder that you are annotating. It will be somewhere in `/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM Scope/scope-parasite-data/run-sets`.
   - Click "Save"
 
 and you are ready to annotate!
-
-## Exporting
-
-After annotating your images, it is time to export. If you use the "Export" button on the UI, LabelStudio will also export your unchanged images. We do not want that - we want just the labels. Therefore, we will use their API endpoint.
-
-Click on the symbol for your account on the upper-right of the screen (for me, it is a circle with "AJ" in the center), and go to "Account & Settings". There, copy your "Authorization Token".
-
-Note the project ID from the URL of the project. Navigate to the project from which you are exporting labels. The URL should look something like:
-
-```
-http://localhost:8080/projects/13/data?tab=9&task=2
-
-                               ^^ "13" is the project id
-```
-
-Now, run the following, substituting in the project ID and the auth token
-
-```console
-curl -X GET "http://localhost:8080/api/projects/<project id>/export?exportType=YOLO" -H "Authorization: Token <paste the Auth. token here>" --output annotations.zip
-```
-
-Once you unzip that folder, the `labels` folder will replace the original labels folder.

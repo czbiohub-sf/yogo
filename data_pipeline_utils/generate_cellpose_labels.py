@@ -163,4 +163,7 @@ if __name__ == "__main__":
 
     label_runset(path_to_runset, label=CLASSES.index("healthy"))
     gen_labels(path_to_runset)
-    generate_tasks_for_runset(path_to_runset)
+    try:
+        generate_tasks_for_runset(path_to_runset)
+    except ValueError as v:
+        print(f"no images and labels found; cant' generate tasks: {path_to_runset}")
