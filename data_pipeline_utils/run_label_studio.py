@@ -29,6 +29,7 @@ def get_parser():
     parser.add_argument(
         dest="run_folder",
         metavar="run-folder",
+        nargs="?",
         type=Path,
         help=(
             "path to run folder (i.e. folder containing 'images' and 'labels'), "
@@ -72,7 +73,8 @@ if __name__ == "__main__":
 
     proc = run_server_in_proc(path_to_run_folder)
 
-    if not (path_to_run_folder / "tasks.json").exists():
+    if path_to_run_folder != Path(FLEXO_DATA_DIR):
+        # create tasks.json here
         generate_tasks_for_runset(path_to_run_folder, task_folder_path=Path("."))
         print(f"tasks file written to {str(Path('./tasks.json').absolute())}")
 
