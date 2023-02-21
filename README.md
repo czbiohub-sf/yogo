@@ -15,13 +15,13 @@ A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com
 Install with
 
 ```console
-python3 -m pip install yogo
+python3 -m pip install -e .
 ```
 
 To perform annotations, you will need [Label Studio](https://labelstud.io/). You can install it with
 
 ```console
-python3 -m pip install yogo[label]
+python3 -m pip install ".[label]"
 ```
 
 or just
@@ -33,7 +33,7 @@ python3 -m pip install label-studio
 If you want to export models, run
 
 ```console
-python3 -m pip install yogo[onnx]
+python3 -m pip install ".[onnx]"
 ```
 
 ## Training
