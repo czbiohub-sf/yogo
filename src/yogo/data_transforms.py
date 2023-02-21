@@ -24,6 +24,7 @@ class ImageTransformLabelIdentity(DualInputModule):
     A transform for images that leaves alone the labels,
     good for e.g. resizes
     """
+
     def __init__(self, transform):
         super().__init__()
         self.transform = transform
@@ -44,11 +45,7 @@ class RandomCrop(DualInputModule):
         top = torch.rand(1) * (1 - height)
         N, C, H, W = img_batch.shape
         img_batch_cropped = F.crop(
-            img_batch,
-            top=H * top,
-            left=0,
-            height=H * self.height,
-            width=W
+            img_batch, top=H * top, left=0, height=H * self.height, width=W
         )
 
 
@@ -60,7 +57,7 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         self.p = p
 
     def forward(
-        self, img_batch: torch.Tensor, label_batch: torch.Tensor
+        self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
     ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
@@ -81,7 +78,7 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         self.p = p
 
     def forward(
-        self, img_batch, label_batch
+        self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
     ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
