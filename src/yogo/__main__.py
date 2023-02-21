@@ -1,4 +1,5 @@
 import sys
+import torch
 
 from yogo.infer import do_infer
 from yogo.train import do_training
