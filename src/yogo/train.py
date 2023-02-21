@@ -93,6 +93,7 @@ def train():
     for epoch in range(config["epochs"]):
         # train
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
+            print(type(labels), type(labels[0]))
             global_step += 1
 
             optimizer.zero_grad(set_to_none=True)

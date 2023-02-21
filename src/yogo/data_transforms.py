@@ -1,7 +1,7 @@
 import torch
 import torchvision.transforms.functional as F
 
-from typing import Sequence, Tuple, List, Any
+from typing import Sequence, Tuple, List, Any, cast
 
 
 class DualInputModule(torch.nn.Module):
@@ -20,12 +20,36 @@ class MultiArgSequential(torch.nn.Sequential):
 
 
 class ImageTransformLabelIdentity(DualInputModule):
+    """
+    A transform for images that leaves alone the labels,
+    good for e.g. resizes
+    """
     def __init__(self, transform):
         super().__init__()
         self.transform = transform
 
     def forward(self, img_batch, labels):
         return self.transform(img_batch), labels
+
+
+class RandomCrop(DualInputModule):
+    def __init__(self, height: float):
+        if not (0 < height < 1):
+            raise ValueError(
+                f"height for RandomCrop must be between 0 and 1; got height={height}"
+            )
+        self.height = height
+
+    def forward(self, img_batch, label_batch):
+        top = torch.rand(1) * (1 - height)
+        N, C, H, W = img_batch.shape
+        img_batch_cropped = F.crop(
+            img_batch,
+            top=H * top,
+            left=0,
+            height=H * self.height,
+            width=W
+        )
 
 
 class RandomHorizontalFlipWithBBs(DualInputModule):
@@ -36,7 +60,7 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         self.p = p
 
     def forward(
-        self, img_batch, label_batch
+        self, img_batch: torch.Tensor, label_batch: torch.Tensor
     ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
