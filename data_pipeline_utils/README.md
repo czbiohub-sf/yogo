@@ -57,3 +57,9 @@ curl -X GET "http://localhost:8080/api/projects/<project id>/export?exportType=Y
 ```
 
 Send that folder to Axel. Thank you!
+
+## Troubleshooting
+
+### "Package Not Found" during installation
+
+If your `pip` version is really low (e.g. version 9), try `python3 -m pip install --upgrade pip`
