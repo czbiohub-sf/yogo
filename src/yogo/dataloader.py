@@ -241,7 +241,6 @@ def get_datasets(
     dataset_description_file: str,
     batch_size: int,
     training: bool = True,
-    img_size: Tuple[int, int] = (300, 400),
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
@@ -255,7 +254,6 @@ def get_datasets(
             classes,
             dataset_desc["image_path"],
             dataset_desc["label_path"],
-            img_size=img_size,
         )
         for dataset_desc in dataset_paths
     )
@@ -294,14 +292,13 @@ def get_dataloader(
     dataset_descriptor_file: str,
     batch_size: int,
     training: bool = True,
-    img_size: Tuple[int, int] = (300, 400),
+    vertical_crop_size: float = 0.25,
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
 ):
     split_datasets = get_datasets(
         dataset_descriptor_file,
         batch_size,
-        img_size=img_size,
         training=training,
         split_fractions_override=split_fractions_override,
     )
