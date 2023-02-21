@@ -15,7 +15,7 @@ A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com
 Install with
 
 ```console
-python3 -m pip install -e .
+python3 -m pip install .
 ```
 
 To perform annotations, you will need [Label Studio](https://labelstud.io/). You can install it with
