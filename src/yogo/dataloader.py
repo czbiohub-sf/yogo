@@ -21,6 +21,7 @@ from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 from .data_transforms import (
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
+    RandomVerticalCrop,
     ImageTransformLabelIdentity,
     MultiArgSequential,
 )
@@ -320,7 +321,7 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            ImageTransformLabelIdentity(Resize(img_size)),
+            RandomVerticalCrop(0.25),
             *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
