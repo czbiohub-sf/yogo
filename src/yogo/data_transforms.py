@@ -33,7 +33,9 @@ class ImageTransformLabelIdentity(DualInputModule):
         return self.transform(img_batch), labels
 
 
-class RandomCrop(DualInputModule):
+class RandomVerticalCrop(DualInputModule):
+    """ Random crop of a horizontal strip over the batch. """
+
     def __init__(self, height: float):
         if not (0 < height < 1):
             raise ValueError(
@@ -41,12 +43,55 @@ class RandomCrop(DualInputModule):
             )
         self.height = height
 
-    def forward(self, img_batch, label_batch):
+    def forward(
+        self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         top = torch.rand(1) * (1 - height)
         N, C, H, W = img_batch.shape
         img_batch_cropped = F.crop(
             img_batch, top=H * top, left=0, height=H * self.height, width=W
         )
+        label_batch_cropped = self._filter_label_batch(label_batch, top, H)
+        return img_batch_cropped, label_batch_cropped
+
+    def _filter_label_batch(
+        self, label_batch: List[torch.Tensor], top: float, H: int
+    ) -> List[torch.Tensor]:
+        """
+        If a cell is on the cropping border, how do we choose where to move the label to?
+
+        If xc in "crop region", what should we do?
+        - adjust xc, yc, w, h so
+        """
+        filtered_label_batch = []
+        for labels in label_batch:
+            mask = torch.logical_not(H * top < labels[:, 2] < H * (top + self.height))
+            indices = torch.nonzero(mask)
+            filtered_labels = labels[indices]
+
+            xyxy_labels = torchvision.ops.box_convert(
+                filtered_labels[:, 1:], "cxcywh", "xyxy"
+            )
+
+            xyxy_filtered = torch.maximum(
+                xyxy_labels[:, 1],
+                H * top,
+            )
+
+            xyxy_filtered = torch.minimum(
+                xyxy_filtered[:, 3],
+                H * (top + self.height),
+            )
+
+            cxcywh_filtered = torchvision.ops.box_convert(
+                xyxy_filtered,
+                "xyxy",
+                "cxcywh",
+            )
+
+            filtered_label_batch.append(cxcywh_filtered)
+
+        return filtered_label_batch
 
 
 class RandomHorizontalFlipWithBBs(DualInputModule):
