@@ -63,12 +63,6 @@ def generate_tasks_for_runset(
             f"couldn't find labels and images - double check the provided path"
         )
 
-    tasks_path = (
-        str(path_to_runset_folder / "tasks.json")
-        if task_folder_path is None
-        else str(task_folder_path)
-    )
-
     for folder_path in tqdm(folders):
         if not folder_path.is_dir():
             print(f"warning: {folder_path} is not a directory")
@@ -82,6 +76,12 @@ def generate_tasks_for_runset(
 
         abbreviated_path = str(path_relative_to(folder_path, FLEXO_DATA_DIR))
         root_url = f"http://localhost:8081/{pathname2url(abbreviated_path)}/images"
+
+        tasks_path = (
+            str(folder_path / "tasks.json")
+            if task_folder_path is None
+            else str(task_folder_path)
+        )
 
         try:
             convert_yolo_to_ls(
