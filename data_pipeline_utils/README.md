@@ -8,7 +8,7 @@ We will use [Label Studio](https://labelstud.io/) for human annotation. Install 
 
 1. Start Label Studio by running: `python3 run_label_studio.py`
 2. In LabelStudio, click `Create Project`
-  - Name your project something descriptive - e.g. the name of the Run Folder
+  - Name your project the name of the run folder, or else
   - Go to "Labelling Setup" and click "Custom Template" on the left. Under the "Code" section, paste in the following XML and save
 ```xml
 <View>
