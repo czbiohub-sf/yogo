@@ -97,7 +97,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         classes: List[str],
         image_path: Path,
         label_path: Path,
-        img_size: Tuple[int, int],
         loader: Callable = read_grayscale,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
@@ -109,7 +108,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         super().__init__(str(image_path), *args, **kwargs)
 
         self.classes = classes
-        self.img_size = img_size
         self.image_folder_path = image_path
         self.label_folder_path = label_path
         self.loader = loader
