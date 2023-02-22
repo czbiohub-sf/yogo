@@ -192,6 +192,7 @@ def init_dataset(config):
         config["dataset_descriptor_file"],
         config["batch_size"],
         device=config["device"],
+        vertical_crop_size=config["vertical_crop_size"]
     )
 
     train_dataloader = dataloaders["train"]
@@ -243,7 +244,8 @@ def do_training(args):
     epochs = 32
     adam_lr = 3e-4
     batch_size = 32
-    resize_target_size = (772, 1032)
+    vertical_crop_size = 0.25
+    resize_target_size = (round(vertical_crop_size) * 772, 1032)
 
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
@@ -264,6 +266,7 @@ def do_training(args):
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
             "resize_shape": resize_target_size,
+            "vertical_crop_size": vertical_crop_size,
             "class_names": class_names,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,

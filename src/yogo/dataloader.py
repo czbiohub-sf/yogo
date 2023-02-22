@@ -316,7 +316,7 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            RandomVerticalCrop(0.25),
+            RandomVerticalCrop(vertical_crop_size),
             *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
