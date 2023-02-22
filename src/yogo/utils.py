@@ -13,9 +13,10 @@ from typing import Tuple, List, Dict
 
 
 class Metrics:
+    # TODO num classes?
     def __init__(self, num_classes=4, device="cpu", class_names=None):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        self.confusion = ConfusionMatrix(num_classes=num_classes)
+        self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
         self.confusion.to(device)
 
         self.class_names = (
