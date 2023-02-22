@@ -59,7 +59,7 @@ def train():
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
-    num_classes = 4 # TODO FIX FIX FIX
+    num_classes = len(class_names)
 
     (
         model_save_dir,
@@ -69,11 +69,12 @@ def train():
     ) = init_dataset(config)
 
     net = YOGO(
+        num_classes=num_classes,
         img_size=config["resize_shape"],
         anchor_w=anchor_w,
         anchor_h=anchor_h,
     ).to(device)
-    Y_loss = YOGOLoss().to(device)
+    Y_loss = YOGOLoss(num_classes).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     min_period = 8 * len(train_dataloader)
@@ -95,6 +96,7 @@ def train():
         # train
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
             global_step += 1
+            print(f"yum! {global_step}")
 
             optimizer.zero_grad(set_to_none=True)
 
@@ -202,7 +204,7 @@ def init_dataset(config: WandbConfig):
     test_dataloader = dataloaders["test"]
 
     wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
+        {   # we do this here b.c. batch_size can change wrt sweeps
             "training set size": f"{len(train_dataloader) * config['batch_size']} images",
             "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
             "testing set size": f"{len(test_dataloader) * config['batch_size']} images",

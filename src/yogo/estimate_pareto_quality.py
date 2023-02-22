@@ -36,7 +36,7 @@ def pareto_quality():
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
-    num_classes=4 # TODO fix fix fix
+    num_classes=len(class_names)
 
     (
         model_save_dir,

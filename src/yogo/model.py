@@ -24,7 +24,7 @@ class YOGO(nn.Module):
 
     MODEL_VERSION = "0.0.1"
 
-    def __init__(self, img_size, anchor_w, anchor_h, num_classes=4, inference=False):
+    def __init__(self, img_size: Tuple[int,int], anchor_w: float, anchor_h: float, num_classes: int, inference: bool=False):
         super().__init__()
         self.device = "cpu"
 

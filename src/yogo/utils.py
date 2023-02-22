@@ -9,12 +9,12 @@ from typing import Optional, Union, List
 from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-from typing import Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict
 
 
 class Metrics:
     # TODO num classes?
-    def __init__(self, num_classes=4, device="cpu", class_names=None):
+    def __init__(self, num_classes: int, device: str="cpu", class_names: Optional[List[str]]=None):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
         self.confusion.to(device)
