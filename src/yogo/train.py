@@ -187,7 +187,9 @@ def train():
     )
 
 
-def init_dataset(config):
+WandbConfig = dict
+
+def init_dataset(config: WandbConfig):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
@@ -245,7 +247,7 @@ def do_training(args):
     adam_lr = 3e-4
     batch_size = 32
     vertical_crop_size = 0.25
-    resize_target_size = (round(vertical_crop_size) * 772, 1032)
+    resize_target_size = (round(vertical_crop_size * 772), 1032)
 
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
