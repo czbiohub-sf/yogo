@@ -18,7 +18,7 @@ from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
 
-from .data_transforms import (
+from yogo.data_transforms import (
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
     RandomVerticalCrop,

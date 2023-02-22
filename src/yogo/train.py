@@ -74,7 +74,7 @@ def train():
         anchor_w=anchor_w,
         anchor_h=anchor_h,
     ).to(device)
-    Y_loss = YOGOLoss(num_classes).to(device)
+    Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     min_period = 8 * len(train_dataloader)

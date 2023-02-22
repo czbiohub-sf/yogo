@@ -28,19 +28,18 @@ class Metrics:
         bs, label_shape, Sy, Sx = labels.shape
 
         mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
-
-        confusion_preds, confusion_labels = self.format_for_confusion(
-            preds, labels, raw_preds=raw_preds
-        )
-
         self.mAP.update(mAP_preds, mAP_labels)
-        self.confusion.update(confusion_preds, confusion_labels)
+
+        # confusion_preds, confusion_labels = self.format_for_confusion(
+        #    preds, labels, raw_preds=raw_preds
+        #)
+        #self.confusion.update(confusion_preds, confusion_labels)
 
     def compute(self):
-        confusion_mat = self.confusion.compute()
+        # confusion_mat = self.confusion.compute()
 
-        nc1, nc2 = confusion_mat.shape
-        assert nc1 == nc2
+        # nc1, nc2 = confusion_mat.shape
+        # assert nc1 == nc2
 
         L = []
         for i in range(nc1):
