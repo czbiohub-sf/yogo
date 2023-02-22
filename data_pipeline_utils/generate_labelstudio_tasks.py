@@ -78,8 +78,7 @@ def generate_tasks_for_runset(path_to_runset_folder: Path):
                 out_type="predictions",
                 image_root_url=root_url,
                 image_ext=".png",
-                image_width=IMG_WIDTH,
-                image_height=IMG_HEIGHT,
+                image_dims=(IMG_WIDTH,IMG_HEIGHT)
             )
         except TypeError:
             # we aren't using our custom version, so try default
