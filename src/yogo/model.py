@@ -103,7 +103,6 @@ class YOGO(nn.Module):
         """return Sx, Sy
         FIXME - hacky cause we have to infer, should be able to calc from model defn
         """
-        print(input_shape)
         out = self(torch.rand(1, 1, *input_shape, device=self.device))
         _, _, Sy, Sx = out.shape
         return Sx, Sy
