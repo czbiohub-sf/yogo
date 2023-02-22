@@ -126,12 +126,14 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         cls,
         pred_batch: torch.Tensor,
         label_batch: List[torch.Tensor],
+        num_classes: int,
         device: Union[str, torch.device] = "cpu",
     ) -> torch.Tensor:
         """
         input:
             pred_batch: shape (batch_size, preds_size, Sy, Sx)
             label_batch: List[torch.Tensor], and len(label_batch) == batch_size
+            num_classes: int
         output:
             torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)
 
@@ -147,7 +149,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
             output = torch.zeros(
-                batch_size, 1 + self.num_classes + 1, Sy, Sx, device=device
+                batch_size, 1 + num_classes + 1, Sy, Sx, device=device
             )
             for i, label_layer in enumerate(label_batch):
                 label_cells = split_labels_into_bins(label_layer, Sx, Sy)
@@ -157,7 +159,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                         # select best label by best IOU!
                         IoU = ops.box_iou(
                             ops.box_convert(
-                                pred_batch[i, : self.num_classes, j, k].unsqueeze(0),
+                                pred_batch[i, : num_classes, j, k].unsqueeze(0),
                                 "cxcywh",
                                 "xyxy",
                             ),

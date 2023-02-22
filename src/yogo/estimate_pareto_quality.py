@@ -36,6 +36,7 @@ def pareto_quality():
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
+    num_classes=4 # TODO fix fix fix
 
     (
         model_save_dir,
@@ -55,7 +56,7 @@ def pareto_quality():
     cs = CosineAnnealingWarmRestarts(optimizer, T_0=min_period, T_mult=2)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
-    metrics = Metrics(num_classes=4, device=device, class_names=class_names)
+    metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
@@ -72,7 +73,7 @@ def pareto_quality():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+            formatted_labels = Y_loss.format_labels(outputs, labels, num_classes=num_classes, device=device)
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -96,7 +97,7 @@ def pareto_quality():
         for imgs, labels in validate_dataloader:
             with torch.no_grad():
                 outputs = net(imgs)
-                formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
+                formatted_labels = Y_loss.format_labels(outputs, labels, num_classes=num_classes, device=device)
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
 
