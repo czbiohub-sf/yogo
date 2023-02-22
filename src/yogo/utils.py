@@ -42,11 +42,13 @@ class Metrics:
         # assert nc1 == nc2
 
         L = []
+        """
         for i in range(nc1):
             for j in range(nc2):
                 L.append(
                     (self.class_names[i], self.class_names[j], confusion_mat[i, j])
                 )
+        """
 
         return self.mAP.compute(), L
 

@@ -247,7 +247,7 @@ def do_training(args):
 
     epochs = 32
     adam_lr = 3e-4
-    batch_size = 32
+    batch_size = 16
     vertical_crop_size = 0.25
     resize_target_size = (round(vertical_crop_size * 772), 1032)
 

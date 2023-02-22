@@ -54,7 +54,7 @@ def profile_run(
 ):
     num_classes = len(class_names)
     net = MockedModel(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h, num_classes=num_classes).to(dev)
-    Y_loss = MockedLoss(num_classes).to(dev)
+    Y_loss = MockedLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
     metrics = Metrics(num_classes=num_classes, device=dev, class_names=class_names)
 
