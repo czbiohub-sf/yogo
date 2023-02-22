@@ -4,9 +4,11 @@ We will use [Label Studio](https://labelstud.io/) for human annotation. Install 
 
 `python3 -m pip install ".[label]"`
 
+(note: on mac, you may have to install `label-studio` via Homebrew: `brew install label-studio`)
+
 ## Annotating
 
-1. Start Label Studio by running: `python3 run_label_studio.py`. This assumes running on `OnDemand`. To run locally, mount `flexo` to your computer and run `python3 run_label_studio.py <path to run folder>`
+1. Start Label Studio by running: `python3 run_label_studio.py`. This assumes running on `OnDemand`. To run locally, mount `flexo` to your computer and run `python3 run_label_studio.py <path to run-set folder>`
 2. In LabelStudio, click `Create Project`
   - Name your project the name of the run folder, or else
   - Go to "Labelling Setup" and click "Custom Template" on the left. Under the "Code" section, paste in the following XML and save
@@ -31,7 +33,7 @@ We will use [Label Studio](https://labelstud.io/) for human annotation. Install 
     </RectangleLabels>
 </View>
 ```
-  - Go to the "Data Import" tab, click "Upload Files", and import the `tasks.json` in the run folder that you are annotating. It will be somewhere in `/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM Scope/scope-parasite-data/run-sets`.
+  - Go to the "Data Import" tab, click "Upload Files", and import the `tasks.json` in the run folder that you are annotating. It will be somewhere in `scope-parasite-data/run-sets`.
   - Click "Save"
 
 and you are ready to annotate!
