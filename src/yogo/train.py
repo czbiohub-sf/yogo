@@ -191,7 +191,6 @@ def init_dataset(config):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
-        img_size=config["resize_shape"],
         device=config["device"],
     )
 
