@@ -76,12 +76,8 @@ class RandomVerticalCrop(DualInputModule):
                     top < labels[:, 2], labels[:, 2] < (top + self.height)
                 )
             )
-            print('labels.shape', labels.shape)
-            print('mask.shape', mask.shape)
             indices = torch.nonzero(mask).squeeze()
-            print('indices.shape', indices.shape)
             filtered_labels = labels[indices, :]
-            print('filtered_labels.shape', indices.shape)
 
             xyxy_filtered = torchvision.ops.box_convert(
                 filtered_labels[:, 1:], "cxcywh", "xyxy"
