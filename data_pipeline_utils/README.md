@@ -53,7 +53,7 @@ http://localhost:8080/projects/13/data?tab=9&task=2
 Now, run the following, substituting in the project ID and the auth token
 
 ```console
-curl -X GET "http://localhost:8080/api/projects/<project id>/export?exportType=YOLO" -H "Authorization: Token <paste the Auth. token here>" --output annotations.zip
+curl -X GET "http://localhost:8080/api/projects/<project id>/export?exportType=YOLO&download_resources=false" -H "Authorization: Token <paste the Auth. token here>" --output annotations.zip
 ```
 
 Send that folder to Axel. Thank you!
@@ -62,4 +62,4 @@ Send that folder to Axel. Thank you!
 
 ### "Package Not Found" during installation
 
-If your `pip` version is really low (e.g. version 9), try `python3 -m pip install --upgrade pip`
+If your `pip` version is really low (e.g. version 9), try `python3 -m pip install --upgrade pip`. This could also be a sign of your python version being quite low (which occurs, e.g., with a base `conda` environment). Double check with `python3 --version`. It should be at least python 3.7.
