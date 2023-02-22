@@ -16,14 +16,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
     # TODO sweep over coord + no_obj_weight, look at confusion matrix for results
     def __init__(
         self,
-        num_classes: int,
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
     ) -> None:
         super().__init__()
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
-        self.num_classes = num_classes
         self.mse = torch.nn.MSELoss(reduction="none")
         # TODO sweep over label_smoothing values
         self.cel = torch.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.01)
