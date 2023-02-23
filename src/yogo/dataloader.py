@@ -325,7 +325,7 @@ def get_dataloader(
             drop_last=True,
             batch_size=batch_size,
             multiprocessing_context="spawn",
-            num_workers=len(os.sched_getaffinity(0)) // 2,
+            num_workers=len(os.sched_getaffinity(0)),
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
         )

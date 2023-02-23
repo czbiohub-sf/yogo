@@ -15,6 +15,7 @@ except ImportError as e:
 
 
 def main():
+    print('cudaver', torch.version.cuda)
     p = global_parser()
     args = p.parse_args()
 
