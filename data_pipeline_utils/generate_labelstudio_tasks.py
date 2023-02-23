@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Union, Optional
 from urllib.request import pathname2url
 
-from labelling_constants import IMG_WIDTH, IMG_HEIGHT, FLEXO_DATA_DIR
+from labelling_constants import IMG_WIDTH, IMG_HEIGHT, IMAGE_SERVER_PORT
 
 from label_studio_converter.imports.yolo import convert_yolo_to_ls
 
@@ -53,9 +53,7 @@ def path_relative_to(path_a: Path, path_b: Union[str, Path], walk_up=False) -> P
     return path_cls(*parts)
 
 
-def generate_tasks_for_runset(
-    path_to_runset_folder: Path, task_folder_path: Optional[Path] = None
-):
+def generate_tasks_for_runset(path_to_runset_folder: Path):
     folders = [Path(p).parent for p in path_to_runset_folder.glob("./**/labels")]
 
     if len(folders) == 0:
@@ -63,25 +61,15 @@ def generate_tasks_for_runset(
             f"couldn't find labels and images - double check the provided path"
         )
 
-    tasks_path = (
-        str(path_to_runset_folder / "tasks.json")
-        if task_folder_path is None
-        else str(task_folder_path)
-    )
-
     for folder_path in tqdm(folders):
         if not folder_path.is_dir():
             print(f"warning: {folder_path} is not a directory")
             continue
 
-        elif not path_is_relative_to(folder_path, FLEXO_DATA_DIR):
-            print(
-                f"warning: {folder_path} is not relative to our data dirs, {FLEXO_DATA_DIR}"
-            )
-            continue
+        abbreviated_path = str(path_relative_to(folder_path, path_to_runset_folder))
+        root_url = f"http://localhost:{IMAGE_SERVER_PORT}/{pathname2url(abbreviated_path)}/images"
 
-        abbreviated_path = str(path_relative_to(folder_path, FLEXO_DATA_DIR))
-        root_url = f"http://localhost:8081/{pathname2url(abbreviated_path)}/images"
+        tasks_path = str(folder_path / "tasks.json")
 
         try:
             convert_yolo_to_ls(
@@ -90,8 +78,7 @@ def generate_tasks_for_runset(
                 out_type="predictions",
                 image_root_url=root_url,
                 image_ext=".png",
-                image_width=IMG_WIDTH,
-                image_height=IMG_HEIGHT,
+                image_dims=(IMG_WIDTH, IMG_HEIGHT),
             )
         except TypeError:
             # we aren't using our custom version, so try default
