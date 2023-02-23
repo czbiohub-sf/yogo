@@ -66,19 +66,25 @@ class RandomVerticalCrop(DualInputModule):
         """
         If a cell is on the cropping border, how do we choose where to move the label to?
 
+        [class xc yc w h]
+
         If xc in "crop region", what should we do?
         - adjust xc, yc, w, h so
         """
         filtered_label_batch = []
         for labels in label_batch:
-            mask = torch.logical_not(
-                torch.logical_and(
+            # yc \in [top, top + height]
+            mask = torch.logical_and(
                     top < labels[:, 2], labels[:, 2] < (top + self.height)
                 )
-            )
             indices = torch.nonzero(mask).squeeze()
             filtered_labels = labels[indices, :]
 
+            # renormalize yc, h
+            filtered_labels[:, 2] = (filtered_labels[:, 2] - top) / self.height
+            filtered_labels[:, 4] *= 1 / self.height
+
+            """
             xyxy_filtered = torchvision.ops.box_convert(
                 filtered_labels[:, 1:], "cxcywh", "xyxy"
             )
@@ -100,6 +106,7 @@ class RandomVerticalCrop(DualInputModule):
             )
 
             filtered_labels[:, 1:] = cxcywh_filtered
+            """
             filtered_label_batch.append(filtered_labels)
 
         return filtered_label_batch

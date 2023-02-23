@@ -16,7 +16,7 @@ from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
+from typing import Any, List, Dict, Union, Tuple, Optional, Callable, Literal,  cast
 
 from yogo.data_transforms import (
     RandomHorizontalFlipWithBBs,
@@ -25,6 +25,9 @@ from yogo.data_transforms import (
     ImageTransformLabelIdentity,
     MultiArgSequential,
 )
+
+
+DatasetSplitName = Literal["train", "val", "test"]
 
 
 def count_dataloader_class(dataloader, class_index: int) -> int:
@@ -242,7 +245,7 @@ def get_datasets(
     batch_size: int,
     training: bool = True,
     split_fractions_override: Optional[Dict[str, float]] = None,
-) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
+) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
         classes,
         dataset_paths,
@@ -295,7 +298,7 @@ def get_dataloader(
     vertical_crop_size: float = 0.25,
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
-):
+) -> Dict[DatasetSplitName, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
         batch_size,
