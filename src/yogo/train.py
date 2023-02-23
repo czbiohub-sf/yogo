@@ -96,7 +96,7 @@ def train():
         # train
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
             global_step += 1
-            print(f"yum! {global_step}")
+            print(f"{global_step}")
 
             optimizer.zero_grad(set_to_none=True)
 
