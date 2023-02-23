@@ -1,6 +1,7 @@
 import argparse
 
 from typing import Union
+from pathlib import Path
 
 
 try:
@@ -87,7 +88,11 @@ def infer_parser(parser=None):
     parser.add_argument(
         "pth_path", type=str, help="path to .pth file defining the model"
     )
-    parser.add_argument("images", type=str, help="path to image or images")
+    parser.add_argument(
+            dest="image_data",
+            metavar="image-data",
+            type=Path,
+            help="path to image, folder of images, or zarr file")
     parser.add_argument(
         "--output_dir",
         type=str,
