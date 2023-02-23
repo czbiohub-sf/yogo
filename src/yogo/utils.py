@@ -16,8 +16,8 @@ class Metrics:
     # TODO num classes?
     def __init__(self, num_classes: int, device: str="cpu", class_names: Optional[List[str]]=None):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        self.confusion.to(device)
+        #self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
+        #self.confusion.to(device)
 
         self.class_names = (
             list(range(num_classes)) if class_names is None else class_names
@@ -54,7 +54,7 @@ class Metrics:
 
     def reset(self):
         self.mAP.reset()
-        self.confusion.reset()
+        #self.confusion.reset()
 
     @staticmethod
     def format_for_confusion(
@@ -181,3 +181,28 @@ def draw_rects(
         draw.text((r[0], r[1]), str(r[4]), (0, 0, 0))
 
     return rgb
+
+
+if __name__ == "__main__":
+    import sys
+
+    from matplotlib.pyplot import imshow, show
+    from pathlib import Path
+
+    from yogo.dataloader import get_dataloader
+    from yogo.data_transforms import RandomVerticalCrop
+
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} <path to image or dir of images>")
+        sys.exit(1)
+
+    path_to_ddf = sys.argv[1]
+    ds = get_dataloader(
+        path_to_ddf,
+        batch_size=1,
+        training= False,
+    )
+
+    for img, label in ds["val"]:
+        imshow(draw_rects(img[0,0,...], list(label[0])))
+        show()
