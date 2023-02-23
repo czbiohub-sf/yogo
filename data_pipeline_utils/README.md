@@ -1,10 +1,6 @@
 # Human Annotation
 
-We will use [Label Studio](https://labelstud.io/) for human annotation. Install it from YOGO's root directory like so:
-
-`python3 -m pip install ".[label]"`
-
-(note: on mac, you may have to install `label-studio` via Homebrew: `brew install label-studio`)
+We will use [Label Studio](https://labelstud.io/) for human annotation. First, install YOGO with label studio instructions [here](https://github.com/czbiohub/yogo#installation-for-annotations).
 
 ## Annotating
 
