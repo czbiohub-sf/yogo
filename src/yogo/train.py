@@ -68,9 +68,7 @@ def train():
     ) = init_dataset(config)
 
     net = YOGO(
-        img_size=config["resize_shape"],
-        anchor_w=anchor_w,
-        anchor_h=anchor_h,
+        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h,
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
@@ -221,14 +219,9 @@ def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"],
-            data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
         ),
-        {
-            "Actual": "Actual",
-            "Predicted": "Predicted",
-            "nPredictions": "nPredictions",
-        },
+        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
 

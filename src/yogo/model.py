@@ -96,7 +96,7 @@ class YOGO(nn.Module):
         for p in parameters:
             param_norm = p.grad.detach().data.norm(2)
             total_norm += param_norm.item() ** 2
-        total_norm = total_norm**0.5
+        total_norm = total_norm ** 0.5
         return total_norm
 
     def get_grid_size(self, input_shape: Tuple[int, int]) -> Tuple[int, int]:
@@ -128,9 +128,7 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.2),
+            nn.Conv2d(64, 128, 3, padding=1), nn.LeakyReLU(), nn.Dropout2d(p=0.2),
         )
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
@@ -138,14 +136,9 @@ class YOGO(nn.Module):
             nn.LeakyReLU(),
         )
         conv_block_6 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
+            nn.Conv2d(128, 128, 3, padding=1), nn.BatchNorm2d(128), nn.LeakyReLU(),
         )
-        conv_block_7 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.LeakyReLU(),
-        )
+        conv_block_7 = nn.Sequential(nn.Conv2d(128, 128, 3, padding=1), nn.LeakyReLU(),)
         conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
         return nn.Sequential(
             conv_block_1,

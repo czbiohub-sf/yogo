@@ -245,11 +245,9 @@ def get_datasets(
     img_size: Tuple[int, int] = (300, 400),
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (
-        classes,
-        dataset_paths,
-        split_fractions,
-    ) = load_dataset_description(dataset_description_file)
+    (classes, dataset_paths, split_fractions,) = load_dataset_description(
+        dataset_description_file
+    )
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
