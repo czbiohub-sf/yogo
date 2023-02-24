@@ -327,6 +327,7 @@ def get_dataloader(
             shuffle=True,
             drop_last=True,
             batch_size=batch_size,
+            persistent_workers=True,    # why would htis not be on by default lol
             multiprocessing_context="spawn",
             num_workers=len(os.sched_getaffinity(0)),
             generator=torch.Generator().manual_seed(101010),
