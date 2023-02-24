@@ -5,13 +5,11 @@ import wandb
 import torch
 
 import torch
-from torch import nn
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
-from typing import List
 
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
@@ -20,7 +18,6 @@ from yogo.utils import draw_rects, Metrics
 from yogo.dataloader import (
     load_dataset_description,
     get_dataloader,
-    get_class_counts_for_dataloader,
 )
 from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
@@ -68,7 +65,9 @@ def train():
     ) = init_dataset(config)
 
     net = YOGO(
-        img_size=config["resize_shape"], anchor_w=anchor_w, anchor_h=anchor_h,
+        img_size=config["resize_shape"],
+        anchor_w=anchor_w,
+        anchor_h=anchor_h,
     ).to(device)
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
@@ -219,9 +218,14 @@ def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=confusion_data,
         ),
-        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
         {"title": title},
     )
 

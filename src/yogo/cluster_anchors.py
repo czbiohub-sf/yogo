@@ -10,7 +10,6 @@ import torch
 import numpy as np
 from pathlib import Path
 
-import torchvision.ops as ops
 
 try:
     import numpy.typing as npt
@@ -109,7 +108,9 @@ def get_dataset_bounding_boxes(
 
 
 def get_bounding_boxes(bb_dir: str, center_box=False) -> Union[CenterBox, CornerBox]:
-    conv_func = lambda x: x if center_box else centers_to_corners
+    def conv_func(x):
+        return x if center_box else centers_to_corners
+
     bbs = []
     for fname in glob.glob(f"{bb_dir}/*.csv") + glob.glob(f"{bb_dir}/*.txt"):
         with open(fname, "r") as f:

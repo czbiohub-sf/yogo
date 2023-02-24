@@ -8,9 +8,7 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 import matplotlib.pyplot as plt
 
-from matplotlib.patches import Rectangle
 from pathlib import Path
-from typing import Optional
 
 from tqdm import tqdm
 from torchvision.transforms import Resize
@@ -80,7 +78,7 @@ def predict(
 def do_infer(args):
     if args.output_dir is None and not args.visualize:
         raise ValueError(
-            f"output_dir is not set and --visualize flag is not present - nothing to do"
+            "output_dir is not set and --visualize flag is not present - nothing to do"
         )
     predict(args.pth_path, args.images, args.output_dir, visualize=args.visualize)
 

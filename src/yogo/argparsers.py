@@ -1,7 +1,5 @@
 import argparse
 
-from typing import Union
-
 
 try:
     boolean_action = argparse.BooleanOptionalAction  # type: ignore
@@ -12,13 +10,9 @@ except AttributeError:
 def global_parser():
     parser = argparse.ArgumentParser(description="looking for a glance?")
     subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
-    train_subparser = train_parser(
-        parser=subparsers.add_parser("train", help="train a model")
-    )
-    export_subparser = export_parser(
-        parser=subparsers.add_parser("export", help="export a model")
-    )
-    infer_subparser = infer_parser(
+    train_parser(parser=subparsers.add_parser("train", help="train a model"))
+    export_parser(parser=subparsers.add_parser("export", help="export a model"))
+    infer_parser(
         parser=subparsers.add_parser("infer", help="infer images using a model")
     )
     return parser
@@ -29,7 +23,9 @@ def train_parser(parser=None):
         parser = argparse.ArgumentParser(description="commence a training run")
 
     parser.add_argument(
-        "dataset_descriptor_file", type=str, help="path to yml dataset descriptor file",
+        "dataset_descriptor_file",
+        type=str,
+        help="path to yml dataset descriptor file",
     )
     parser.add_argument(
         "--note",
@@ -60,10 +56,14 @@ def export_parser(parser=None):
         )
 
     parser.add_argument(
-        "input", type=str, help="path to input pth file",
+        "input",
+        type=str,
+        help="path to input pth file",
     )
     parser.add_argument(
-        "--output-filename", type=str, help="output filename",
+        "--output-filename",
+        type=str,
+        help="output filename",
     )
     parser.add_argument(
         "--simplify",

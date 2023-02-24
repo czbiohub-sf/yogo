@@ -5,11 +5,7 @@ import torch
 
 from pathlib import Path
 from functools import partial
-from operator import itemgetter
 
-import torchvision.transforms.functional as F
-
-from torch import nn
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
@@ -192,7 +188,7 @@ def load_dataset_description(
     dataset_description: str,
 ) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
     with open(dataset_description, "r") as desc:
-        with open(dataset_description, "r") as f:
+        with open(dataset_description, "r"):
             yaml_data = yaml.safe_load(desc)
 
         classes = yaml_data["class_names"]
@@ -245,9 +241,11 @@ def get_datasets(
     img_size: Tuple[int, int] = (300, 400),
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (classes, dataset_paths, split_fractions,) = load_dataset_description(
-        dataset_description_file
-    )
+    (
+        classes,
+        dataset_paths,
+        split_fractions,
+    ) = load_dataset_description(dataset_description_file)
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(

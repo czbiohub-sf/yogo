@@ -4,7 +4,6 @@
 import torch
 
 import torch
-from torch import nn
 from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
 from torch.profiler import profile, ProfilerActivity, record_function
@@ -12,13 +11,10 @@ from torch.profiler import profile, ProfilerActivity, record_function
 from .model import YOGO
 from .argparsers import train_parser
 from .yogo_loss import YOGOLoss
-from .utils import draw_rects, Metrics
+from .utils import Metrics
 from .dataloader import load_dataset_description, get_dataloader
 from .cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
-from pathlib import Path
-from copy import deepcopy
-from typing import List
 
 WARMUP = 10
 ADAM_LR = 3e-4

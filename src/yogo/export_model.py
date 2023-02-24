@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
 
-import sys
-import argparse
 import subprocess
 
 import onnx
@@ -9,7 +7,6 @@ import onnxsim
 import onnxruntime
 
 import torch
-import torchvision
 
 import numpy as np
 
@@ -17,7 +14,6 @@ from pathlib import Path
 
 from .model import YOGO
 from .argparsers import export_parser
-from .dataloader import get_dataloader
 
 
 """
@@ -67,10 +63,8 @@ def do_export(args):
             model_candidate
         )
         model = model_simplified_candidate if model_simplified_OK else model_candidate
-        simplify_msg = f" (simplified)"
     else:
         model = model_candidate
-        simplify_msg = ""
 
     # Check that the model is well formed
     onnx.checker.check_model(model)

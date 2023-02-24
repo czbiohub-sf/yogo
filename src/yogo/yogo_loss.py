@@ -1,10 +1,9 @@
 import torch
 
-import torch.nn.functional as F
 import torchvision.ops as ops
 
 from collections import defaultdict
-from typing import Any, List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union
 
 
 class YOGOLoss(torch.nn.modules.loss._Loss):
@@ -54,7 +53,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             * (
                 (1 - label_batch[:, 0, :, :])
                 * self.mse(
-                    pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]),
+                    pred_batch[:, 4, :, :],
+                    torch.zeros_like(pred_batch[:, 4, :, :]),
                 )
             ).sum()
         )
@@ -62,7 +62,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # objectness loss when there is an obj
         loss += (
             label_batch[:, 0, :, :]
-            * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]),)
+            * self.mse(
+                pred_batch[:, 4, :, :],
+                torch.ones_like(pred_batch[:, 4, :, :]),
+            )
         ).sum()
 
         # bounding box loss
@@ -92,11 +95,19 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             * (
                 ops.complete_box_iou_loss(
                     torch.clamp(
-                        ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
+                        ops.box_convert(
+                            formatted_preds_masked,
+                            "cxcywh",
+                            "xyxy",
+                        ),
                         min=0,
                         max=1,
                     ),
-                    ops.box_convert(formatted_labels_masked, "cxcywh", "xyxy",),
+                    ops.box_convert(
+                        formatted_labels_masked,
+                        "cxcywh",
+                        "xyxy",
+                    ),
                 )
             ).sum()
         )
