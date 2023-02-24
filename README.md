@@ -21,26 +21,6 @@ python3 -m pip install -e .
 
 You can also install YOGO with any/all of the options below:
 
-### Installation for Annotations
-
-To perform annotations, you will need [Label Studio](https://labelstud.io/). You can install it with
-
-```console
-python3 -m pip install -e ".[label]"
-```
-
-If you are on an M1 Mac, you then need to run
-
-```
-brew install heartexlabs/tap/label-studio
-```
-
-else, if you can run
-
-```console
-python3 -m pip install label-studio
-```
-
 ### Installation for Training
 
 If you want to export models, run
