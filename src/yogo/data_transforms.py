@@ -52,7 +52,10 @@ class RandomVerticalCrop(DualInputModule):
         _, _, H, W = img_batch.shape
 
         top_px, left_px, height_px, width_px = (
-            round(H * top), 0, round(H * self.height), W,
+            round(H * top),
+            0,
+            round(H * self.height),
+            W,
         )
         img_batch_cropped = F.crop(
             img_batch, top=top_px, left=left_px, height=height_px, width=width_px
@@ -75,14 +78,16 @@ class RandomVerticalCrop(DualInputModule):
         for labels in label_batch:
             # yc \in [top, top + height]
             mask = torch.logical_and(
-                    top < labels[:, 2], labels[:, 2] < (top + self.height)
-                )
+                top < labels[:, 2], labels[:, 2] < (top + self.height)
+            )
             indices = torch.nonzero(mask).squeeze()
-            filtered_labels = labels[indices, :]
 
-            # renormalize yc, h
-            filtered_labels[:, 2] = (filtered_labels[:, 2] - top) / self.height
-            filtered_labels[:, 4] *= 1 / self.height
+            if indices.nelement() > 0:
+                filtered_labels = labels[indices, :]
+
+                # renormalize yc, h
+                filtered_labels[:, 2] = (filtered_labels[:, 2] - top) / self.height
+                filtered_labels[:, 4] *= 1 / self.height
 
             """
             xyxy_filtered = torchvision.ops.box_convert(
