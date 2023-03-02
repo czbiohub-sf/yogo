@@ -90,42 +90,36 @@ class RandomVerticalCrop(DualInputModule):
             filtered_labels = labels[indices, :]
 
             # renormalize yc, h
-            try:
-                filtered_labels[:, 2] = (filtered_labels[:, 2] - top) / self.height
-                filtered_labels[:, 4] *= 1 / self.height
-            except Exception as e:
-                print(
-                    f"{labels.shape} top {top}, indices {type(indices), indices}, filtered_labels >> {filtered_labels}"
-                )
-                print("--++--")
-                raise e
+            filtered_labels[:, 2] = (filtered_labels[:, 2] - top) / self.height
+            filtered_labels[:, 4] *= 1 / self.height
 
-            """
-            xyxy_filtered = torchvision.ops.box_convert(
-                filtered_labels[:, 1:], "cxcywh", "xyxy"
-            )
-
-            xyxy_filtered[:, 1] = torch.maximum(
-                xyxy_filtered[:, 1],
-                top * torch.ones_like(xyxy_filtered[:, 1]),
-            )
-
-            xyxy_filtered[:, 3] = torch.minimum(
-                xyxy_filtered[:, 3],
-                (top + self.height) * torch.ones_like(xyxy_filtered[:, 3]),
-            )
-
-            cxcywh_filtered = torchvision.ops.box_convert(
-                xyxy_filtered,
-                "xyxy",
-                "cxcywh",
-            )
-
-            filtered_labels[:, 1:] = cxcywh_filtered
-            """
             filtered_label_batch.append(filtered_labels)
 
         return filtered_label_batch
+
+    def _trim_labels(self, labels, top):
+        xyxy_filtered = torchvision.ops.box_convert(
+            labels[:, 1:], "cxcywh", "xyxy"
+        )
+
+        xyxy_filtered[:, 1] = torch.maximum(
+            xyxy_filtered[:, 1],
+            top * torch.ones_like(xyxy_filtered[:, 1]),
+        )
+
+        xyxy_filtered[:, 3] = torch.minimum(
+            xyxy_filtered[:, 3],
+            (top + self.height) * torch.ones_like(xyxy_filtered[:, 3]),
+        )
+
+        cxcywh_filtered = torchvision.ops.box_convert(
+            xyxy_filtered,
+            "xyxy",
+            "cxcywh",
+        )
+
+        labels[:, 1:] = cxcywh_filtered
+        return labels
 
 
 class RandomHorizontalFlipWithBBs(DualInputModule):
