@@ -9,7 +9,8 @@ from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
-from typing import TypeAlias, Optional, Tuple, cast
+from typing_extensions import TypeAlias
+from typing import Optional, Tuple, cast
 
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
@@ -250,7 +251,7 @@ def do_training(args) -> None:
 
     epochs = 128
     adam_lr = 3e-4
-    batch_size = 32 * 4
+    batch_size = 32
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None

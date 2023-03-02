@@ -56,7 +56,6 @@ def train_parser(parser=None):
     image_resize_options.add_argument(
         "--crop",
         type=float,
-        nargs=1,
         help="crop image verically - i.e. '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
 
