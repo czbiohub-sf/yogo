@@ -46,6 +46,22 @@ def train_parser(parser=None):
         nargs="?",
         help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
     )
+    image_resize_options = parser.add_mutually_exclusive_group(required=False)
+    image_resize_options.add_argument(
+        "--resize",
+        "-r",
+        type=int,
+        nargs=2,
+        help="resize image to these dimensions. e.g. '-r 300 400' to resize to width=300, height=400"
+    )
+    image_resize_options.add_argument(
+        "--crop",
+        "-c",
+        type=float,
+        nargs=1,
+        help="crop image verically - i.e. '-c 0.25' will crop images to (floor(0.25 * height), width)"
+    )
+
     return parser
 
 
