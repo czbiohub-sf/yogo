@@ -49,7 +49,13 @@ def protected_fcn(f, *args):
 
 
 def multiprocess_directory_work(
-    files: Sequence[Any], work_fcn: Callable[[Any,], None,],
+    files: Sequence[Any],
+    work_fcn: Callable[
+        [
+            Any,
+        ],
+        None,
+    ],
 ):
     cpu_count = mp.cpu_count()
 

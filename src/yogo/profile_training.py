@@ -53,7 +53,9 @@ def profile_run(
     class_names,
 ):
     num_classes = len(class_names)
-    net = MockedModel(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h, num_classes=num_classes).to(dev)
+    net = MockedModel(
+        img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h, num_classes=num_classes
+    ).to(dev)
     Y_loss = MockedLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
     metrics = Metrics(num_classes=num_classes, device=dev, class_names=class_names)
@@ -75,7 +77,9 @@ def profile_run(
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = MockedLoss.format_labels(outputs, labels, num_classes=num_classes, device=device)
+            formatted_labels = MockedLoss.format_labels(
+                outputs, labels, num_classes=num_classes, device=device
+            )
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -118,7 +122,7 @@ if __name__ == "__main__":
         args.dataset_descriptor_file,
         BATCH_SIZE,
         device=device,
-        vertical_crop_size=vertical_crop_size
+        vertical_crop_size=vertical_crop_size,
     )
 
     train_dataloader = dataloaders["train"]

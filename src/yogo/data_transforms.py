@@ -94,8 +94,10 @@ class RandomVerticalCrop(DualInputModule):
                 filtered_labels[:, 2] = (filtered_labels[:, 2] - top) / self.height
                 filtered_labels[:, 4] *= 1 / self.height
             except Exception as e:
-                print(f'{labels.shape} top {top}, indices {type(indices), indices}, filtered_labels >> {filtered_labels}')
-                print('--++--')
+                print(
+                    f"{labels.shape} top {top}, indices {type(indices), indices}, filtered_labels >> {filtered_labels}"
+                )
+                print("--++--")
                 raise e
 
             """

@@ -36,7 +36,7 @@ def pareto_quality():
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
-    num_classes=len(class_names)
+    num_classes = len(class_names)
 
     (
         model_save_dir,
@@ -73,7 +73,9 @@ def pareto_quality():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = Y_loss.format_labels(outputs, labels, num_classes=num_classes, device=device)
+            formatted_labels = Y_loss.format_labels(
+                outputs, labels, num_classes=num_classes, device=device
+            )
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -97,7 +99,9 @@ def pareto_quality():
         for imgs, labels in validate_dataloader:
             with torch.no_grad():
                 outputs = net(imgs)
-                formatted_labels = Y_loss.format_labels(outputs, labels, num_classes=num_classes, device=device)
+                formatted_labels = Y_loss.format_labels(
+                    outputs, labels, num_classes=num_classes, device=device
+                )
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
 

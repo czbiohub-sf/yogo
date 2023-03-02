@@ -100,7 +100,9 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(outputs, labels, num_classes=num_classes, device=device)
+            formatted_labels = YOGOLoss.format_labels(
+                outputs, labels, num_classes=num_classes, device=device
+            )
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -165,7 +167,9 @@ def train():
     with torch.no_grad():
         for imgs, labels in test_dataloader:
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(outputs, labels, num_classes=num_classes, device=device)
+            formatted_labels = YOGOLoss.format_labels(
+                outputs, labels, num_classes=num_classes, device=device
+            )
             loss = Y_loss(outputs, formatted_labels)
             test_loss += loss.item()
 
@@ -190,12 +194,13 @@ def train():
 
 WandbConfig = dict
 
+
 def init_dataset(config: WandbConfig):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
         device=config["device"],
-        vertical_crop_size=config["vertical_crop_size"]
+        vertical_crop_size=config["vertical_crop_size"],
     )
 
     train_dataloader = dataloaders["train"]
@@ -203,7 +208,7 @@ def init_dataset(config: WandbConfig):
     test_dataloader = dataloaders["test"]
 
     wandb.config.update(
-        {   # we do this here b.c. batch_size can change wrt sweeps
+        {  # we do this here b.c. batch_size can change wrt sweeps
             "training set size": f"{len(train_dataloader) * config['batch_size']} images",
             "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
             "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
@@ -225,9 +230,14 @@ def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=confusion_data,
         ),
-        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
         {"title": title},
     )
 

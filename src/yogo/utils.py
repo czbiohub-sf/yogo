@@ -14,10 +14,15 @@ from typing import Optional, Tuple, List, Dict
 
 class Metrics:
     # TODO num classes?
-    def __init__(self, num_classes: int, device: str="cpu", class_names: Optional[List[str]]=None):
+    def __init__(
+        self,
+        num_classes: int,
+        device: str = "cpu",
+        class_names: Optional[List[str]] = None,
+    ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        #self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        #self.confusion.to(device)
+        # self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
+        # self.confusion.to(device)
 
         self.class_names = (
             list(range(num_classes)) if class_names is None else class_names
@@ -32,8 +37,8 @@ class Metrics:
 
         # confusion_preds, confusion_labels = self.format_for_confusion(
         #    preds, labels, raw_preds=raw_preds
-        #)
-        #self.confusion.update(confusion_preds, confusion_labels)
+        # )
+        # self.confusion.update(confusion_preds, confusion_labels)
 
     def compute(self):
         # confusion_mat = self.confusion.compute()
@@ -54,7 +59,7 @@ class Metrics:
 
     def reset(self):
         self.mAP.reset()
-        #self.confusion.reset()
+        # self.confusion.reset()
 
     @staticmethod
     def format_for_confusion(
@@ -200,9 +205,9 @@ if __name__ == "__main__":
     ds = get_dataloader(
         path_to_ddf,
         batch_size=1,
-        training= False,
+        training=False,
     )
 
     for img, label in ds["val"]:
-        imshow(draw_rects(img[0,0,...], list(label[0])))
+        imshow(draw_rects(img[0, 0, ...], list(label[0])))
         show()

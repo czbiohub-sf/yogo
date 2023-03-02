@@ -54,7 +54,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             * (
                 (1 - label_batch[:, 0, :, :])
                 * self.mse(
-                    pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]),
+                    pred_batch[:, 4, :, :],
+                    torch.zeros_like(pred_batch[:, 4, :, :]),
                 )
             ).sum()
         )
@@ -62,7 +63,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # objectness loss when there is an obj
         loss += (
             label_batch[:, 0, :, :]
-            * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]),)
+            * self.mse(
+                pred_batch[:, 4, :, :],
+                torch.ones_like(pred_batch[:, 4, :, :]),
+            )
         ).sum()
 
         # bounding box loss
@@ -92,11 +96,19 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             * (
                 ops.complete_box_iou_loss(
                     torch.clamp(
-                        ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
+                        ops.box_convert(
+                            formatted_preds_masked,
+                            "cxcywh",
+                            "xyxy",
+                        ),
                         min=0,
                         max=1,
                     ),
-                    ops.box_convert(formatted_labels_masked, "cxcywh", "xyxy",),
+                    ops.box_convert(
+                        formatted_labels_masked,
+                        "cxcywh",
+                        "xyxy",
+                    ),
                 )
             ).sum()
         )
@@ -136,9 +148,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
-            output = torch.zeros(
-                batch_size, 1 + num_classes + 1, Sy, Sx, device=device
-            )
+            output = torch.zeros(batch_size, 1 + num_classes + 1, Sy, Sx, device=device)
             for i, label_layer in enumerate(label_batch):
                 label_cells = split_labels_into_bins(label_layer, Sx, Sy)
 
