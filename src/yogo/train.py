@@ -4,12 +4,12 @@
 import wandb
 import torch
 
-import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
+from typing import TypeAlias
 
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
@@ -189,7 +189,7 @@ def train():
     )
 
 
-WandbConfig = dict
+WandbConfig: TypeAlias = dict
 
 
 def init_dataset(config: WandbConfig):
