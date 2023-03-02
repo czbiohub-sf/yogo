@@ -10,9 +10,18 @@ class DualInputModule(torch.nn.Module):
         ...
 
 
+class DualInputId(DualInputModule):
+    def __init__(self, *args: DualInputModule):
+        super().__init__()
+
+    def forward(self, img_batch, labels):
+        return img_batch, labels
+
+
 class MultiArgSequential(torch.nn.Sequential):
     def __init__(self, *args: DualInputModule, **kwargs):
-        super().__init__(*args, **kwargs)
+        # Filter out Id transforms for mild performance gain
+        super().__init__(*[t for t in args if not isinstance(t, DualInputId)], **kwargs)
 
     def forward(self, *input):
         for module in self:
@@ -98,9 +107,7 @@ class RandomVerticalCrop(DualInputModule):
         return filtered_label_batch
 
     def _trim_labels(self, labels, top):
-        xyxy_filtered = torchvision.ops.box_convert(
-            labels[:, 1:], "cxcywh", "xyxy"
-        )
+        xyxy_filtered = torchvision.ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
 
         xyxy_filtered[:, 1] = torch.maximum(
             xyxy_filtered[:, 1],

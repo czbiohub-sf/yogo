@@ -6,7 +6,7 @@ import torch
 from pathlib import Path
 from functools import partial
 
-
+from torch import nn
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
@@ -15,6 +15,8 @@ from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 from typing import Any, List, Dict, Union, Tuple, Optional, Callable, Literal, cast
 
 from yogo.data_transforms import (
+    DualInputModule,
+    DualInputId,
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
     RandomVerticalCrop,
@@ -291,7 +293,9 @@ def get_dataloader(
     dataset_descriptor_file: str,
     batch_size: int,
     training: bool = True,
-    vertical_crop_size: float = 0.25,
+    preprocess_type: Optional[str] = None,
+    vertical_crop_size: Optional[float] = None,
+    resize_shape: Optional[Tuple[int, int]] = None,
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, DataLoader]:
@@ -312,10 +316,21 @@ def get_dataloader(
         else []
     )
 
+    image_preprocess: DualInputModule
+    if preprocess_type == "crop":
+        assert vertical_crop_size is not None, "must be None if cropping"
+        image_preprocess = RandomVerticalCrop(vertical_crop_size)
+    elif preprocess_type == "resize":
+        image_preprocess = Resize(resize_shape)
+    elif preprocess_type is None:
+        image_preprocess = DualInputId()
+    else:
+        raise ValueError(f"got invalid preprocess type {preprocess_type}")
+
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            RandomVerticalCrop(vertical_crop_size),
+            image_preprocess,
             *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
