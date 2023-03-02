@@ -1,10 +1,9 @@
 import torch
 
-import torch.nn.functional as F
 import torchvision.ops as ops
 
 from collections import defaultdict
-from typing import Any, List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union
 
 
 class YOGOLoss(torch.nn.modules.loss._Loss):

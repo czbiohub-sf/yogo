@@ -4,22 +4,18 @@ import wandb
 import torch
 
 import torch
-from torch import nn
 from torch.optim import AdamW
-from torch.multiprocessing import set_start_method
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingWarmRestarts
 
 from .model import YOGO
 from .train import init_dataset
 from .yogo_loss import YOGOLoss
 from .argparsers import train_parser
-from .utils import draw_rects, Metrics
-from .dataloader import load_dataset_description, get_dataloader
+from .utils import Metrics
+from .dataloader import load_dataset_description
 from .cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
-from pathlib import Path
 from copy import deepcopy
-from typing import List
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -119,7 +115,7 @@ def pareto_quality():
                     "model_state_dict": deepcopy(net.state_dict()),
                     "optimizer_state_dict": deepcopy(optimizer.state_dict()),
                 },
-                str(model_save_dir / f"best.pth"),
+                str(model_save_dir / "best.pth"),
             )
 
         if (epoch + 1) in report_periods:

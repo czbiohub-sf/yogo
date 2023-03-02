@@ -5,11 +5,7 @@ import torch
 
 from pathlib import Path
 from functools import partial
-from operator import itemgetter
 
-import torchvision.transforms.functional as F
-
-from torch import nn
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
@@ -194,7 +190,7 @@ def load_dataset_description(
     dataset_description: str,
 ) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
     with open(dataset_description, "r") as desc:
-        with open(dataset_description, "r") as f:
+        with open(dataset_description, "r"):
             yaml_data = yaml.safe_load(desc)
 
         classes = yaml_data["class_names"]
@@ -329,7 +325,7 @@ def get_dataloader(
             batch_size=batch_size,
             persistent_workers=True,  # why would htis not be on by default lol
             multiprocessing_context="spawn",
-            num_workers=len(os.sched_getaffinity(0)) // 2,
+            num_workers=len(os.sched_getaffinity(0)) // 2,  # type: ignore
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
         )

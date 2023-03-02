@@ -5,13 +5,11 @@ import wandb
 import torch
 
 import torch
-from torch import nn
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
-from typing import List
 
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
@@ -20,7 +18,6 @@ from yogo.utils import draw_rects, Metrics
 from yogo.dataloader import (
     load_dataset_description,
     get_dataloader,
-    get_class_counts_for_dataloader,
 )
 from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
