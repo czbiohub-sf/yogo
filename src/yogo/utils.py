@@ -13,7 +13,7 @@ from typing import Optional, Tuple, List, Dict
 
 
 class Metrics:
-    # TODO num classes?
+    # TODO fix confusion
     def __init__(
         self,
         num_classes: int,
