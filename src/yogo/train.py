@@ -249,9 +249,9 @@ def do_training(args):
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 64
+    epochs = 128
     adam_lr = 3e-4
-    batch_size = 32
+    batch_size = 32 * 4
     vertical_crop_size = 0.25
     resize_target_size = (round(vertical_crop_size * 772), 1032)
 
