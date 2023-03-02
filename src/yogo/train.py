@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
-from typing import TypeAlias
+from typing import TypeAlias, Optional, Tuple, cast
 
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
@@ -197,7 +197,9 @@ def init_dataset(config: WandbConfig):
         config["dataset_descriptor_file"],
         config["batch_size"],
         device=config["device"],
+        preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
+        resize_shape=config["resize_shape"],
     )
 
     train_dataloader = dataloaders["train"]
@@ -239,7 +241,7 @@ def get_wandb_confusion(confusion_data, title):
     )
 
 
-def do_training(args):
+def do_training(args) -> None:
     device = torch.device(
         args.device
         if args.device is not None
@@ -249,15 +251,33 @@ def do_training(args):
     epochs = 128
     adam_lr = 3e-4
     batch_size = 32 * 4
-    vertical_crop_size = 0.25
-    resize_target_size = (round(vertical_crop_size * 772), 1032)
+
+    preprocess_type: Optional[str]
+    vertical_crop_size: Optional[float] = None
+
+    if args.crop:
+        vertical_crop_size = cast(float, args.crop)
+        if not (0 < vertical_crop_size < 1):
+            raise ValueError(
+                "vertical_crop_size must be between 0 and 1; got {vertical_crop_size}"
+            )
+        resize_target_size = (round(vertical_crop_size * 772), 1032)
+        preprocess_type = "crop"
+    elif args.resize:
+        resize_target_size = cast(Tuple[int, int], tuple(args.resize))
+        preprocess_type = "resize"
+    else:
+        resize_target_size = (772, 1032)
+        preprocess_type = None
 
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
     )
-    label_paths = [d["label_path"] for d in dataset_paths]
+
     anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(label_paths, center_box=True)
+        get_dataset_bounding_boxes(
+            [d["label_path"] for d in dataset_paths], center_box=True
+        )
     )
 
     wandb.init(
@@ -272,6 +292,7 @@ def do_training(args):
             "anchor_h": anchor_h,
             "resize_shape": resize_target_size,
             "vertical_crop_size": vertical_crop_size,
+            "preprocess_type": preprocess_type,
             "class_names": class_names,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
