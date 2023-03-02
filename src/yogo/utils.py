@@ -9,14 +9,20 @@ from typing import Optional, Union, List
 from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-from typing import Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict
 
 
 class Metrics:
-    def __init__(self, num_classes=4, device="cpu", class_names=None):
+    # TODO fix confusion
+    def __init__(
+        self,
+        num_classes: int,
+        device: str = "cpu",
+        class_names: Optional[List[str]] = None,
+    ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        self.confusion = ConfusionMatrix(num_classes=num_classes)
-        self.confusion.to(device)
+        # self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
+        # self.confusion.to(device)
 
         self.class_names = (
             list(range(num_classes)) if class_names is None else class_names
@@ -27,32 +33,33 @@ class Metrics:
         bs, label_shape, Sy, Sx = labels.shape
 
         mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
-
-        confusion_preds, confusion_labels = self.format_for_confusion(
-            preds, labels, raw_preds=raw_preds
-        )
-
         self.mAP.update(mAP_preds, mAP_labels)
-        self.confusion.update(confusion_preds, confusion_labels)
+
+        # confusion_preds, confusion_labels = self.format_for_confusion(
+        #    preds, labels, raw_preds=raw_preds
+        # )
+        # self.confusion.update(confusion_preds, confusion_labels)
 
     def compute(self):
-        confusion_mat = self.confusion.compute()
+        # confusion_mat = self.confusion.compute()
 
-        nc1, nc2 = confusion_mat.shape
-        assert nc1 == nc2
+        # nc1, nc2 = confusion_mat.shape
+        # assert nc1 == nc2
 
         L = []
+        """
         for i in range(nc1):
             for j in range(nc2):
                 L.append(
                     (self.class_names[i], self.class_names[j], confusion_mat[i, j])
                 )
+        """
 
         return self.mAP.compute(), L
 
     def reset(self):
         self.mAP.reset()
-        self.confusion.reset()
+        # self.confusion.reset()
 
     @staticmethod
     def format_for_confusion(
@@ -179,3 +186,28 @@ def draw_rects(
         draw.text((r[0], r[1]), str(r[4]), (0, 0, 0))
 
     return rgb
+
+
+if __name__ == "__main__":
+    import sys
+
+    from matplotlib.pyplot import imshow, show
+    from pathlib import Path
+
+    from yogo.dataloader import get_dataloader
+    from yogo.data_transforms import RandomVerticalCrop
+
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} <path to image or dir of images>")
+        sys.exit(1)
+
+    path_to_ddf = sys.argv[1]
+    ds = get_dataloader(
+        path_to_ddf,
+        batch_size=1,
+        training=False,
+    )
+
+    for img, label in ds["val"]:
+        imshow(draw_rects(img[0, 0, ...], list(label[0])))
+        show()

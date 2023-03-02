@@ -4,12 +4,13 @@
 import wandb
 import torch
 
-import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
+from typing_extensions import TypeAlias
+from typing import Optional, Tuple, cast
 
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
@@ -56,6 +57,7 @@ def train():
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
+    num_classes = len(class_names)
 
     (
         model_save_dir,
@@ -65,6 +67,7 @@ def train():
     ) = init_dataset(config)
 
     net = YOGO(
+        num_classes=num_classes,
         img_size=config["resize_shape"],
         anchor_w=anchor_w,
         anchor_h=anchor_h,
@@ -78,7 +81,7 @@ def train():
     cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
-    metrics = Metrics(num_classes=4, device=device, class_names=class_names)
+    metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
@@ -95,7 +98,9 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
+            formatted_labels = YOGOLoss.format_labels(
+                outputs, labels, num_classes=num_classes, device=device
+            )
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -120,37 +125,37 @@ def train():
             for imgs, labels in validate_dataloader:
                 outputs = net(imgs)
                 formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, device=device
+                    outputs, labels, num_classes=num_classes, device=device
                 )
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
 
             metrics.update(outputs, formatted_labels)
 
-        annotated_img = wandb.Image(
-            draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-        )
+            annotated_img = wandb.Image(
+                draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
+            )
 
-        mAP, confusion_data = metrics.compute()
-        metrics.reset()
+            mAP, confusion_data = metrics.compute()
+            metrics.reset()
 
-        wandb.log(
-            {
-                "validation bbs": annotated_img,
-                "val loss": val_loss / len(validate_dataloader),
-                "val mAP": mAP["map"],
-                "val confusion": get_wandb_confusion(
-                    confusion_data, "validation confusion matrix"
-                ),
-            },
-        )
+            wandb.log(
+                {
+                    "validation bbs": annotated_img,
+                    "val loss": val_loss / len(validate_dataloader),
+                    "val mAP": mAP["map"],
+                    "val confusion": get_wandb_confusion(
+                        confusion_data, "validation confusion matrix"
+                    ),
+                },
+            )
 
-        if mAP["map"] > best_mAP:
-            best_mAP = mAP["map"]
-            wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-            checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
-        else:
-            checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
+            if mAP["map"] > best_mAP:
+                best_mAP = mAP["map"]
+                wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
+                checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
+            else:
+                checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
 
         net.train()
 
@@ -160,35 +165,42 @@ def train():
     with torch.no_grad():
         for imgs, labels in test_dataloader:
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
+            formatted_labels = YOGOLoss.format_labels(
+                outputs, labels, num_classes=num_classes, device=device
+            )
             loss = Y_loss(outputs, formatted_labels)
             test_loss += loss.item()
 
         metrics.update(outputs, formatted_labels)
 
-    mAP, confusion_data = metrics.compute()
-    metrics.reset()
-    wandb.log(
-        {
-            "test loss": test_loss / len(test_dataloader),
-            "test mAP": mAP["map"],
-            "test confusion": get_wandb_confusion(
-                confusion_data, "test confusion matrix"
-            ),
-        },
-    )
+        mAP, confusion_data = metrics.compute()
+        metrics.reset()
+        wandb.log(
+            {
+                "test loss": test_loss / len(test_dataloader),
+                "test mAP": mAP["map"],
+                "test confusion": get_wandb_confusion(
+                    confusion_data, "test confusion matrix"
+                ),
+            },
+        )
 
-    checkpoint_model(
-        net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
-    )
+        checkpoint_model(
+            net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
+        )
 
 
-def init_dataset(config):
+WandbConfig: TypeAlias = dict
+
+
+def init_dataset(config: WandbConfig):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
-        img_size=config["resize_shape"],
         device=config["device"],
+        preprocess_type=config["preprocess_type"],
+        vertical_crop_size=config["vertical_crop_size"],
+        resize_shape=config["resize_shape"],
     )
 
     train_dataloader = dataloaders["train"]
@@ -230,24 +242,43 @@ def get_wandb_confusion(confusion_data, title):
     )
 
 
-def do_training(args):
+def do_training(args) -> None:
     device = torch.device(
         args.device
         if args.device is not None
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 32
+    epochs = 128
     adam_lr = 3e-4
     batch_size = 32
-    resize_target_size = (772, 1032)
+
+    preprocess_type: Optional[str]
+    vertical_crop_size: Optional[float] = None
+
+    if args.crop:
+        vertical_crop_size = cast(float, args.crop)
+        if not (0 < vertical_crop_size < 1):
+            raise ValueError(
+                "vertical_crop_size must be between 0 and 1; got {vertical_crop_size}"
+            )
+        resize_target_size = (round(vertical_crop_size * 772), 1032)
+        preprocess_type = "crop"
+    elif args.resize:
+        resize_target_size = cast(Tuple[int, int], tuple(args.resize))
+        preprocess_type = "resize"
+    else:
+        resize_target_size = (772, 1032)
+        preprocess_type = None
 
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
     )
-    label_paths = [d["label_path"] for d in dataset_paths]
+
     anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(label_paths, center_box=True)
+        get_dataset_bounding_boxes(
+            [d["label_path"] for d in dataset_paths], center_box=True
+        )
     )
 
     wandb.init(
@@ -261,6 +292,8 @@ def do_training(args):
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
             "resize_shape": resize_target_size,
+            "vertical_crop_size": vertical_crop_size,
+            "preprocess_type": preprocess_type,
             "class_names": class_names,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,

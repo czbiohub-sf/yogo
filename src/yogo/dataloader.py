@@ -6,20 +6,25 @@ import torch
 from pathlib import Path
 from functools import partial
 
-
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import Any, List, Dict, Union, Tuple, Optional, Callable, cast
+from typing import Any, List, Dict, Union, Tuple, Optional, Callable, Literal, cast
 
-from .data_transforms import (
+from yogo.data_transforms import (
+    DualInputModule,
+    DualInputId,
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
+    RandomVerticalCrop,
     ImageTransformLabelIdentity,
     MultiArgSequential,
 )
+
+
+DatasetSplitName = Literal["train", "val", "test"]
 
 
 def count_dataloader_class(dataloader, class_index: int) -> int:
@@ -92,7 +97,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         classes: List[str],
         image_path: Path,
         label_path: Path,
-        img_size: Tuple[int, int],
         loader: Callable = read_grayscale,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
@@ -104,7 +108,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         super().__init__(str(image_path), *args, **kwargs)
 
         self.classes = classes
-        self.img_size = img_size
         self.image_folder_path = image_path
         self.label_folder_path = label_path
         self.loader = loader
@@ -238,9 +241,8 @@ def get_datasets(
     dataset_description_file: str,
     batch_size: int,
     training: bool = True,
-    img_size: Tuple[int, int] = (300, 400),
     split_fractions_override: Optional[Dict[str, float]] = None,
-) -> Dict[str, Subset[ConcatDataset[ObjectDetectionDataset]]]:
+) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
         classes,
         dataset_paths,
@@ -252,7 +254,6 @@ def get_datasets(
             classes,
             dataset_desc["image_path"],
             dataset_desc["label_path"],
-            img_size=img_size,
         )
         for dataset_desc in dataset_paths
     )
@@ -291,14 +292,15 @@ def get_dataloader(
     dataset_descriptor_file: str,
     batch_size: int,
     training: bool = True,
-    img_size: Tuple[int, int] = (300, 400),
+    preprocess_type: Optional[str] = None,
+    vertical_crop_size: Optional[float] = None,
+    resize_shape: Optional[Tuple[int, int]] = None,
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
-):
+) -> Dict[DatasetSplitName, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
         batch_size,
-        img_size=img_size,
         training=training,
         split_fractions_override=split_fractions_override,
     )
@@ -313,10 +315,21 @@ def get_dataloader(
         else []
     )
 
+    image_preprocess: DualInputModule
+    if preprocess_type == "crop":
+        assert vertical_crop_size is not None, "must be None if cropping"
+        image_preprocess = RandomVerticalCrop(vertical_crop_size)
+    elif preprocess_type == "resize":
+        image_preprocess = Resize(resize_shape)
+    elif preprocess_type is None:
+        image_preprocess = DualInputId()
+    else:
+        raise ValueError(f"got invalid preprocess type {preprocess_type}")
+
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            ImageTransformLabelIdentity(Resize(img_size)),
+            image_preprocess,
             *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
@@ -324,8 +337,9 @@ def get_dataloader(
             shuffle=True,
             drop_last=True,
             batch_size=batch_size,
+            persistent_workers=True,  # why would htis not be on by default lol
             multiprocessing_context="spawn",
-            num_workers=len(os.sched_getaffinity(0)) // 2,
+            num_workers=len(os.sched_getaffinity(0)) // 2,  # type: ignore
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
         )

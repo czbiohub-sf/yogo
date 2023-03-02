@@ -8,12 +8,12 @@ from torch.optim import AdamW
 from torch.multiprocessing import set_start_method
 from torch.profiler import profile, ProfilerActivity, record_function
 
-from .model import YOGO
-from .argparsers import train_parser
-from .yogo_loss import YOGOLoss
-from .utils import Metrics
-from .dataloader import load_dataset_description, get_dataloader
-from .cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from yogo.model import YOGO
+from yogo.argparsers import train_parser
+from yogo.yogo_loss import YOGOLoss
+from yogo.utils import draw_rects, Metrics
+from yogo.dataloader import load_dataset_description, get_dataloader
+from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
 
 
 WARMUP = 10
@@ -48,10 +48,13 @@ def profile_run(
     img_size,
     class_names,
 ):
-    net = MockedModel(img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h).to(dev)
+    num_classes = len(class_names)
+    net = MockedModel(
+        img_size=img_size, anchor_w=anchor_w, anchor_h=anchor_h, num_classes=num_classes
+    ).to(dev)
     Y_loss = MockedLoss().to(dev)
     optimizer = AdamW(net.parameters(), lr=ADAM_LR)
-    metrics = Metrics(num_classes=4, device=dev, class_names=class_names)
+    metrics = Metrics(num_classes=num_classes, device=dev, class_names=class_names)
 
     Sx, Sy = net.get_grid_size(img_size)
 
@@ -70,7 +73,9 @@ def profile_run(
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = MockedLoss.format_labels(outputs, labels, device=device)
+            formatted_labels = MockedLoss.format_labels(
+                outputs, labels, num_classes=num_classes, device=device
+            )
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -98,7 +103,7 @@ if __name__ == "__main__":
     )
     label_paths = [d["label_path"] for d in dataset_paths]
     anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(label_paths, center_box=True), kmeans=True
+        get_dataset_bounding_boxes(label_paths, center_box=True)
     )
 
     # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -106,14 +111,16 @@ if __name__ == "__main__":
     # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
     torch.backends.cuda.matmul.allow_tf32 = True
 
-    # TODO: EPOCH and BATCH_SIZE and img_size in yml file?
-    resize_target_size = (300, 400)
+    vertical_crop_size = 0.25
+    resize_target_size = (round(vertical_crop_size * 772), 1032)
+
     dataloaders = get_dataloader(
         args.dataset_descriptor_file,
         BATCH_SIZE,
-        img_size=resize_target_size,
         device=device,
+        vertical_crop_size=vertical_crop_size,
     )
+
     train_dataloader = dataloaders["train"]
     validate_dataloader = dataloaders["val"]
     test_dataloader = dataloaders["test"]

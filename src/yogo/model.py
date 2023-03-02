@@ -24,7 +24,14 @@ class YOGO(nn.Module):
 
     MODEL_VERSION = "0.0.1"
 
-    def __init__(self, img_size, anchor_w, anchor_h, num_classes=4, inference=False):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        anchor_w: float,
+        anchor_h: float,
+        num_classes: int,
+        inference: bool = False,
+    ):
         super().__init__()
         self.device = "cpu"
 
@@ -109,22 +116,19 @@ class YOGO(nn.Module):
 
     def gen_model(self, num_classes) -> nn.Module:
         conv_block_1 = nn.Sequential(
-            nn.Conv2d(1, 16, 3, padding=1, bias=False),
+            nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
             nn.Dropout2d(p=0.2),
         )
         conv_block_2 = nn.Sequential(
             nn.Conv2d(16, 32, 3, padding=1),
             nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
             nn.Dropout2d(p=0.2),
         )
         conv_block_3 = nn.Sequential(
-            nn.Conv2d(32, 64, 3, padding=1),
+            nn.Conv2d(32, 64, 3, stride=2, padding=1),
             nn.LeakyReLU(),
-            nn.MaxPool2d(2, stride=2),
             nn.Dropout2d(p=0.2),
         )
         conv_block_4 = nn.Sequential(

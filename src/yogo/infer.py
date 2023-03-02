@@ -35,6 +35,7 @@ def save_preds(fname, res, thresh=0.5):
             for i in range(Sx):
                 pred = res[0, :, j, i]
                 # if objectness t0 is greater than threshold
+                # xc yc w h 'objectness' *classes
                 if pred[4] > 0.5:
                     f.write(
                         f"{argmax(pred[5:])},{pred[0]},{pred[1]},{pred[2]},{pred[3]}\n"
