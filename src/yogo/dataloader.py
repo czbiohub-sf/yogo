@@ -6,7 +6,6 @@ import torch
 from pathlib import Path
 from functools import partial
 
-from torch import nn
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
