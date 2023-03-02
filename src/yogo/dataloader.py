@@ -329,7 +329,7 @@ def get_dataloader(
             batch_size=batch_size,
             persistent_workers=True,  # why would htis not be on by default lol
             multiprocessing_context="spawn",
-            num_workers=len(os.sched_getaffinity(0)),
+            num_workers=len(os.sched_getaffinity(0)) // 2,
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
         )
