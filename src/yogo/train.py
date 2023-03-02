@@ -131,30 +131,30 @@ def train():
 
             metrics.update(outputs, formatted_labels)
 
-        annotated_img = wandb.Image(
-            draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-        )
+            annotated_img = wandb.Image(
+                draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
+            )
 
-        mAP, confusion_data = metrics.compute()
-        metrics.reset()
+            mAP, confusion_data = metrics.compute()
+            metrics.reset()
 
-        wandb.log(
-            {
-                "validation bbs": annotated_img,
-                "val loss": val_loss / len(validate_dataloader),
-                "val mAP": mAP["map"],
-                "val confusion": get_wandb_confusion(
-                    confusion_data, "validation confusion matrix"
-                ),
-            },
-        )
+            wandb.log(
+                {
+                    "validation bbs": annotated_img,
+                    "val loss": val_loss / len(validate_dataloader),
+                    "val mAP": mAP["map"],
+                    "val confusion": get_wandb_confusion(
+                        confusion_data, "validation confusion matrix"
+                    ),
+                },
+            )
 
-        if mAP["map"] > best_mAP:
-            best_mAP = mAP["map"]
-            wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-            checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
-        else:
-            checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
+            if mAP["map"] > best_mAP:
+                best_mAP = mAP["map"]
+                wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
+                checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
+            else:
+                checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
 
         net.train()
 
@@ -172,21 +172,21 @@ def train():
 
         metrics.update(outputs, formatted_labels)
 
-    mAP, confusion_data = metrics.compute()
-    metrics.reset()
-    wandb.log(
-        {
-            "test loss": test_loss / len(test_dataloader),
-            "test mAP": mAP["map"],
-            "test confusion": get_wandb_confusion(
-                confusion_data, "test confusion matrix"
-            ),
-        },
-    )
+        mAP, confusion_data = metrics.compute()
+        metrics.reset()
+        wandb.log(
+            {
+                "test loss": test_loss / len(test_dataloader),
+                "test mAP": mAP["map"],
+                "test confusion": get_wandb_confusion(
+                    confusion_data, "test confusion matrix"
+                ),
+            },
+        )
 
-    checkpoint_model(
-        net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
-    )
+        checkpoint_model(
+            net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
+        )
 
 
 WandbConfig: TypeAlias = dict
