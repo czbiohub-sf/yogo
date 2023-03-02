@@ -77,17 +77,26 @@ class RandomVerticalCrop(DualInputModule):
         filtered_label_batch = []
         for labels in label_batch:
             # yc \in [top, top + height]
+            if labels.nelement() == 0:
+                filtered_label_batch.append(labels)
+                continue
+
             mask = torch.logical_and(
                 top < labels[:, 2], labels[:, 2] < (top + self.height)
             )
-            indices = torch.nonzero(mask).squeeze()
+            indices = torch.nonzero(mask)
+            indices = torch.squeeze(indices, dim=1)
 
-            if indices.nelement() > 0:
-                filtered_labels = labels[indices, :]
+            filtered_labels = labels[indices, :]
 
-                # renormalize yc, h
+            # renormalize yc, h
+            try:
                 filtered_labels[:, 2] = (filtered_labels[:, 2] - top) / self.height
                 filtered_labels[:, 4] *= 1 / self.height
+            except Exception as e:
+                print(f'{labels.shape} top {top}, indices {type(indices), indices}, filtered_labels >> {filtered_labels}')
+                print('--++--')
+                raise e
 
             """
             xyxy_filtered = torchvision.ops.box_convert(
