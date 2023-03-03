@@ -58,6 +58,7 @@ def train():
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
     num_classes = len(class_names)
+    classify = not config["no_classify"]
 
     (
         model_save_dir,
@@ -72,7 +73,7 @@ def train():
         anchor_w=anchor_w,
         anchor_h=anchor_h,
     ).to(device)
-    Y_loss = YOGOLoss().to(device)
+    Y_loss = YOGOLoss(classify=classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     min_period = 8 * len(train_dataloader)
@@ -249,7 +250,7 @@ def do_training(args) -> None:
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 128
+    epochs = 32
     adam_lr = 3e-4
     batch_size = 32
 
@@ -295,6 +296,7 @@ def do_training(args) -> None:
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
             "class_names": class_names,
+            "no_classify": args.no_classify,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
         },
