@@ -249,7 +249,7 @@ def do_training(args) -> None:
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 128
+    epochs = 32
     adam_lr = 3e-4
     batch_size = 32
 
