@@ -58,6 +58,7 @@ def train():
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
     num_classes = len(class_names)
+    classify = not config["no_classify"]
 
     (
         model_save_dir,
@@ -72,7 +73,7 @@ def train():
         anchor_w=anchor_w,
         anchor_h=anchor_h,
     ).to(device)
-    Y_loss = YOGOLoss(classify=not no_classify).to(device)
+    Y_loss = YOGOLoss(classify=classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     min_period = 8 * len(train_dataloader)
