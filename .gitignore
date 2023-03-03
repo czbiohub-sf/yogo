@@ -19,3 +19,4 @@ dataset_defs
 
 src/yogo.egg-info
 data_pipeline_utils/tasks.json
+training_profile.json
