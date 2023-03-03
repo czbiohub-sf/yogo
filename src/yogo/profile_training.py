@@ -110,7 +110,7 @@ def train():
 
                 outputs = net(imgs)
                 formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, num_classes=num_classes, device=device
+                    outputs, labels, device=device
                 )
                 loss = Y_loss(outputs, formatted_labels)
                 loss.backward()
@@ -137,7 +137,7 @@ def train():
             for imgs, labels in validate_dataloader:
                 outputs = net(imgs)
                 formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, num_classes=num_classes, device=device
+                    outputs, labels, device=device
                 )
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
@@ -178,7 +178,7 @@ def train():
         for imgs, labels in test_dataloader:
             outputs = net(imgs)
             formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, num_classes=num_classes, device=device
+                outputs, labels, device=device
             )
             loss = Y_loss(outputs, formatted_labels)
             test_loss += loss.item()

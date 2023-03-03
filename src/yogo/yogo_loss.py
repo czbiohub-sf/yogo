@@ -129,7 +129,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         cls,
         pred_batch: torch.Tensor,
         label_batch: List[torch.Tensor],
-        num_classes: int,
         device: Union[str, torch.device] = "cpu",
     ) -> torch.Tensor:
         """
@@ -150,6 +149,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         of the minimum tensor size (instead of having a list)
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
+        # preds_size is len([xc, yc, w, h, t0, *classes]), so num_classes == preds_size - 5
+        num_classes = preds_size - 5
         with torch.no_grad():
             output = torch.zeros(batch_size, 1 + num_classes + 1, Sy, Sx, device=device)
             for i, label_layer in enumerate(label_batch):
