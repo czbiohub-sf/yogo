@@ -17,7 +17,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self,
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
-        classify: bool = True
+        classify: bool = True,
     ) -> None:
         super().__init__()
         self.coord_weight = coord_weight

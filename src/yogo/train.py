@@ -72,7 +72,7 @@ def train():
         anchor_w=anchor_w,
         anchor_h=anchor_h,
     ).to(device)
-    Y_loss = YOGOLoss().to(device)
+    Y_loss = YOGOLoss(classify=not no_classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     min_period = 8 * len(train_dataloader)
@@ -295,6 +295,7 @@ def do_training(args) -> None:
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
             "class_names": class_names,
+            "no_classify": args.no_classify,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
         },

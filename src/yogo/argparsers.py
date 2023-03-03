@@ -46,6 +46,12 @@ def train_parser(parser=None):
         nargs="?",
         help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
     )
+    parser.add_argument(
+        "--no-classify",
+        default=False,
+        action=boolean_action,
+        help="turn off classification loss - good only for pretraining just a cell detector",
+    )
     image_resize_options = parser.add_mutually_exclusive_group(required=False)
     image_resize_options.add_argument(
         "--resize",
