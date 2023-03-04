@@ -70,7 +70,7 @@ def pareto_quality():
 
             outputs = net(imgs)
             formatted_labels = Y_loss.format_labels(
-                outputs, labels, num_classes=num_classes, device=device
+                outputs, labels, device=device
             )
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
@@ -96,7 +96,7 @@ def pareto_quality():
             with torch.no_grad():
                 outputs = net(imgs)
                 formatted_labels = Y_loss.format_labels(
-                    outputs, labels, num_classes=num_classes, device=device
+                    outputs, labels, device=device
                 )
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
