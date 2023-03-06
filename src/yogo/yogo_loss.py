@@ -48,29 +48,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
 
-        loss = torch.tensor(0, dtype=torch.float32, device=self.device)
-
-        # objectness loss when there is no obj
-        loss += (
-            self.no_obj_weight
-            * (
-                (1 - label_batch[:, 0, :, :])
-                * self.mse(
-                    pred_batch[:, 4, :, :],
-                    torch.zeros_like(pred_batch[:, 4, :, :]),
-                )
-            ).sum()
-        )
-
-        # objectness loss when there is an obj
-        loss += (
-            label_batch[:, 0, :, :]
-            * self.mse(
-                pred_batch[:, 4, :, :],
-                torch.ones_like(pred_batch[:, 4, :, :]),
-            )
-        ).sum()
-
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
@@ -106,14 +83,33 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                         min=0,
                         max=1,
                     ),
-                    ops.box_convert(
-                        formatted_labels_masked,
-                        "cxcywh",
-                        "xyxy",
-                    ),
+                    formatted_labels_masked
                 )
             ).sum()
         )
+
+        loss = torch.tensor(0, dtype=torch.float32, device=self.device)
+
+        # objectness loss when there is no obj
+        loss += (
+            self.no_obj_weight
+            * (
+                (1 - label_batch[:, 0, :, :])
+                * self.mse(
+                    pred_batch[:, 4, :, :],
+                    torch.zeros_like(pred_batch[:, 4, :, :]),
+                )
+            ).sum()
+        )
+
+        # objectness loss when there is an obj
+        loss += (
+            label_batch[:, 0, :, :]
+            * self.mse(
+                pred_batch[:, 4, :, :],
+                torch.ones_like(pred_batch[:, 4, :, :]),
+            )
+        ).sum()
 
         # classification loss
         if self._classify:
@@ -165,7 +161,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                                 "cxcywh",
                                 "xyxy",
                             ),
-                            ops.box_convert(labels[:, 1:], "cxcywh", "xyxy"),
+                            labels[:, 1:],
                         )
                         pred_square_idx = torch.argmax(IoU)
                         output[i, 0, j, k] = 1

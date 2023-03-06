@@ -6,6 +6,8 @@ import torch
 from pathlib import Path
 from functools import partial
 
+import torchvision.ops as ops
+
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
@@ -51,11 +53,11 @@ def collate_batch(batch, device="cpu", transforms=None):
     batched_inputs = torch.stack(inputs)
     return transforms(
         batched_inputs.to(device, non_blocking=True),
-        [torch.tensor(l).to(device, non_blocking=True) for l in labels],
+        [labels_for_img.to(device, non_blocking=True) for labels_for_img in labels],
     )
 
 
-def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
+def load_labels_from_path(label_path: Path, classes) -> torch.Tensor:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -88,6 +90,8 @@ def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
     except FileNotFoundError:
         pass
 
+    labels = torch.Tensor(labels)
+    labels[:, 1:] = ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
     return labels
 
 
@@ -112,7 +116,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.label_folder_path = label_path
         self.loader = loader
 
-        self.samples = self.make_dataset(
+        self.samples: List[Tuple[str, List[List[float]]]] = self.make_dataset(
             is_valid_file=is_valid_file, extensions=extensions
         )
 
@@ -170,7 +174,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 samples.append((str(img_file_path), labels))
         return samples
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, List[List[float]]]:
         """From torchvision.datasets.folder.DatasetFolder
         Args:
             index (int): Index
