@@ -67,12 +67,16 @@ def train():
         test_dataloader,
     ) = init_dataset(config)
 
-    net = YOGO(
-        num_classes=num_classes,
-        img_size=config["resize_shape"],
-        anchor_w=anchor_w,
-        anchor_h=anchor_h,
-    ).to(device)
+    if config.pretrained_path:
+        net = YOGO.from_pretrained(config.pretrained_path).to(device)
+    else:
+        net = YOGO(
+            num_classes=num_classes,
+            img_size=config["resize_shape"],
+            anchor_w=anchor_w,
+            anchor_h=anchor_h,
+        ).to(device)
+
     Y_loss = YOGOLoss(classify=classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
@@ -296,6 +300,7 @@ def do_training(args) -> None:
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
             "class_names": class_names,
+            "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,

@@ -47,7 +47,9 @@ def train_parser(parser=None):
     parser.add_argument(
         "--batch-size", type=uint, help="batch size for training", default=None
     )
-    parser.add_argument("--epochs", type=uint, help="number of epochs", default=None)
+    parser.add_argument(
+        "--epochs", type=uint, help="number of epochs to train", default=None
+    )
     parser.add_argument(
         "--note",
         type=str,
