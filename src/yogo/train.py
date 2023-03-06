@@ -250,9 +250,9 @@ def do_training(args) -> None:
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 32
+    epochs = args.epochs or 64
+    batch_size = args.batch_size or 32
     adam_lr = 3e-4
-    batch_size = 32
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
