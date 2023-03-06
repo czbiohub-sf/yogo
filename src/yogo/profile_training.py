@@ -237,14 +237,9 @@ def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"],
-            data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
         ),
-        {
-            "Actual": "Actual",
-            "Predicted": "Predicted",
-            "nPredictions": "nPredictions",
-        },
+        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
 

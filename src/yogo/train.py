@@ -68,7 +68,7 @@ def train():
     ) = init_dataset(config)
 
     if config.pretrained_path:
-        net = YOGO.from_pretrained(config.pretrained_path).to(device)
+        net = YOGO.from_pth(config.pretrained_path).to(device)
     else:
         net = YOGO(
             num_classes=num_classes,
@@ -235,14 +235,9 @@ def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"],
-            data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
         ),
-        {
-            "Actual": "Actual",
-            "Predicted": "Predicted",
-            "nPredictions": "nPredictions",
-        },
+        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
 

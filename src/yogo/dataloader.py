@@ -243,17 +243,13 @@ def get_datasets(
     training: bool = True,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (
-        classes,
-        dataset_paths,
-        split_fractions,
-    ) = load_dataset_description(dataset_description_file)
+    (classes, dataset_paths, split_fractions,) = load_dataset_description(
+        dataset_description_file
+    )
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            classes,
-            dataset_desc["image_path"],
-            dataset_desc["label_path"],
+            classes, dataset_desc["image_path"], dataset_desc["label_path"],
         )
         for dataset_desc in dataset_paths
     )
@@ -329,8 +325,7 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            image_preprocess,
-            *augmentations if designation == "train" else [],
+            image_preprocess, *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
             dataset,
