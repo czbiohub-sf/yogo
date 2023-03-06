@@ -40,10 +40,11 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def checkpoint_model(model, epoch, optimizer, name):
+def checkpoint_model(model, epoch, optimizer, name, step):
     torch.save(
         {
             "epoch": epoch,
+            "step": step,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
         },
@@ -68,7 +69,7 @@ def train():
     ) = init_dataset(config)
 
     if config.pretrained_path:
-        net = YOGO.from_pth(config.pretrained_path).to(device)
+        net, global_step = YOGO.from_pth(config.pretrained_path).to(device)
     else:
         net = YOGO(
             num_classes=num_classes,
@@ -76,6 +77,7 @@ def train():
             anchor_w=anchor_w,
             anchor_h=anchor_h,
         ).to(device)
+        global_step = 0
 
     Y_loss = YOGOLoss(classify=classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
@@ -94,7 +96,6 @@ def train():
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
     best_mAP = 0
-    global_step = 0
     for epoch in range(config["epochs"]):
         # train
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
@@ -158,9 +159,21 @@ def train():
             if mAP["map"] > best_mAP:
                 best_mAP = mAP["map"]
                 wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-                checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
+                checkpoint_model(
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "best.pth",
+                    global_step=global_step,
+                )
             else:
-                checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
+                checkpoint_model(
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "latest.pth",
+                    global_step=global_step,
+                )
 
         net.train()
 
@@ -191,7 +204,11 @@ def train():
         )
 
         checkpoint_model(
-            net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
+            net,
+            epoch,
+            optimizer,
+            model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth",
+            global_step,
         )
 
 

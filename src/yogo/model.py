@@ -69,6 +69,7 @@ class YOGO(nn.Module):
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
+        global_step = params["global_step"]
 
         model = cls(
             (img_size[0], img_size[1]),
@@ -79,7 +80,7 @@ class YOGO(nn.Module):
         )
 
         model.load_state_dict(params)
-        return model
+        return model, global_step
 
     def to(self, device):
         self.device = device
