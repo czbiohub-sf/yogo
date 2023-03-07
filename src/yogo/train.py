@@ -165,7 +165,7 @@ def train():
                     epoch,
                     optimizer,
                     model_save_dir / "best.pth",
-                    global_step=global_step,
+                    global_step,
                 )
             else:
                 checkpoint_model(
@@ -173,7 +173,7 @@ def train():
                     epoch,
                     optimizer,
                     model_save_dir / "latest.pth",
-                    global_step=global_step,
+                    global_step,
                 )
 
         net.train()
