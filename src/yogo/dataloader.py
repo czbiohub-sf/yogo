@@ -24,6 +24,17 @@ from yogo.data_transforms import (
 )
 
 
+YOGO_CLASS_ORDERING = [
+    "healthy",
+    "ring",
+    "trophozoite",
+    "schizont",
+    "gametocyte",
+    "wbc",
+    "misc",
+]
+
+
 DatasetSplitName = Literal["train", "val", "test"]
 
 
@@ -55,7 +66,7 @@ def collate_batch(batch, device="cpu", transforms=None):
     )
 
 
-def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
+def load_labels_from_path(label_path: Path, dataset_classes: List[str]) -> List[List[float]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -79,11 +90,17 @@ def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
                     len(row) == 5
                 ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
+                """
+                dataset_classes is the ordering of classes that are given by
+                label-studio. So we get the class of the prediction from
+                `int(row[0])`, and get the index of that from YOGO_CLASS_ORDERING
+                """
                 if row[0].isnumeric():
-                    label_idx = row[0]
+                    label_idx = YOGO_CLASS_ORDERING.index(dataset_classes[int(row[0])])
                 else:
-                    label_idx = classes.index(row[0])
+                    label_idx = YOGO_CLASS_ORDERING.index(row[0])
 
+                # float for everything so we can make tensors of labels
                 labels.append([float(label_idx)] + [float(v) for v in row[1:]])
     except FileNotFoundError:
         pass
@@ -94,7 +111,7 @@ def load_labels_from_path(label_path: Path, classes) -> List[List[float]]:
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
-        classes: List[str],
+        dataset_classes: List[str],
         image_path: Path,
         label_path: Path,
         loader: Callable = read_grayscale,
@@ -107,19 +124,20 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # the image_path is just for repr
         super().__init__(str(image_path), *args, **kwargs)
 
-        self.classes = classes
+        self.classes = YOGO_CLASS_ORDERING
         self.image_folder_path = image_path
         self.label_folder_path = label_path
         self.loader = loader
 
         self.samples = self.make_dataset(
-            is_valid_file=is_valid_file, extensions=extensions
+            is_valid_file=is_valid_file, extensions=extensions, dataset_classes=dataset_classes
         )
 
     def make_dataset(
         self,
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
+        dataset_classes: List[str] = YOGO_CLASS_ORDERING,
     ) -> List[Tuple[str, List[List[float]]]]:
         """
         torchvision.datasets.folder.make_dataset doc string states:
@@ -166,7 +184,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     raise FileNotFoundError(
                         f"{self.label_folder_path / img_file_path.with_suffix('.txt').name} doesn't exist"
                     ) from e
-                labels = load_labels_from_path(label_path, self.classes)
+                labels = load_labels_from_path(label_path, dataset_classes)
                 samples.append((str(img_file_path), labels))
         return samples
 
@@ -244,14 +262,14 @@ def get_datasets(
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
-        classes,
+        dataset_classes,
         dataset_paths,
         split_fractions,
     ) = load_dataset_description(dataset_description_file)
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            classes,
+            dataset_classes,
             dataset_desc["image_path"],
             dataset_desc["label_path"],
         )
