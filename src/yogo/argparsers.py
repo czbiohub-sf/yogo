@@ -1,5 +1,7 @@
 import argparse
 
+from pathlib import Path
+
 
 try:
     boolean_action = argparse.BooleanOptionalAction  # type: ignore
@@ -18,14 +20,33 @@ def global_parser():
     return parser
 
 
+def uint(val: int):
+    try:
+        v = int(val)
+        if v <= 0:
+            return v
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
+
+
 def train_parser(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser(description="commence a training run")
 
     parser.add_argument(
-        "dataset_descriptor_file",
-        type=str,
-        help="path to yml dataset descriptor file",
+        "dataset_descriptor_file", type=str, help="path to yml dataset descriptor file",
+    )
+    parser.add_argument(
+        "--from-pretrained",
+        type=Path,
+        help="start training from the provided pth file",
+        default=None,
+    )
+    parser.add_argument(
+        "--batch-size", type=uint, help="batch size for training", default=None
+    )
+    parser.add_argument(
+        "--epochs", type=uint, help="number of epochs to train", default=None
     )
     parser.add_argument(
         "--note",
@@ -52,6 +73,7 @@ def train_parser(parser=None):
         action=boolean_action,
         help="turn off classification loss - good only for pretraining just a cell detector",
     )
+
     image_resize_options = parser.add_mutually_exclusive_group(required=False)
     image_resize_options.add_argument(
         "--resize",
@@ -75,14 +97,10 @@ def export_parser(parser=None):
         )
 
     parser.add_argument(
-        "input",
-        type=str,
-        help="path to input pth file",
+        "input", type=str, help="path to input pth file",
     )
     parser.add_argument(
-        "--output-filename",
-        type=str,
-        help="output filename",
+        "--output-filename", type=str, help="output filename",
     )
     parser.add_argument(
         "--simplify",
