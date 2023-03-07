@@ -3,6 +3,8 @@
 import torch
 import signal
 
+from pathlib import Path
+
 # lets us ctrl-c to exit while matplotlib is showing stuff
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -13,14 +15,13 @@ from pathlib import Path
 from tqdm import tqdm
 from torchvision.transforms import Resize
 
-from .model import YOGO
-from .utils import draw_rects
-from .argparsers import infer_parser
-from .dataloader import read_grayscale
+from yogo.model import YOGO
+from yogo.utils import draw_rects
+from yogo.argparsers import infer_parser
+from yogo.dataloader import read_grayscale
 
 
-def argmax(arr):
-    return max(range(len(arr)), key=arr.__getitem__)
+def argmax(arr): return max(range(len(arr)), key=arr.__getitem__)
 
 
 def save_preds(fname, res, thresh=0.5):
@@ -52,7 +53,7 @@ def predict(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     pth = torch.load(path_to_pth, map_location=device)
     img_h, img_w = pth["model_state_dict"]["img_size"]
-    model = YOGO.from_pth(pth, inference=True)
+    model, _ = YOGO.from_pth(Path(path_to_pth), inference=True)
 
     R = Resize([img_h, img_w])
 

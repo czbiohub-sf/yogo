@@ -131,3 +131,4 @@ def infer_parser(parser=None):
         action=boolean_action,
         default=False,
     )
+    return parser

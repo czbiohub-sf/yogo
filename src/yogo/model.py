@@ -1,7 +1,8 @@
 import torch
 from torch import nn
 
-from typing import Tuple
+from typing_extensions import Self
+from typing import Tuple, Optional
 from pathlib import Path
 
 
@@ -45,12 +46,12 @@ class YOGO(nn.Module):
 
         self.inference = inference
 
-        self._Cxs = None
-        self._Cys = None
+        self._Cxs: Optional[torch.Tensor] = None
+        self._Cys: Optional[torch.Tensor] = None
 
     @classmethod
-    def from_pth(cls, pth_path: Path, inference: bool = False):
-        loaded_pth = torch.load(pth_path)
+    def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple[Self, int]:
+        loaded_pth = torch.load(pth_path, map_location="cpu")
         params = loaded_pth["model_state_dict"]
 
         try:
