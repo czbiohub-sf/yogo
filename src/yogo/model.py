@@ -69,7 +69,11 @@ class YOGO(nn.Module):
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
-        global_step = params["global_step"]
+
+        try:
+            global_step = params["global_step"]
+        except KeyError:
+            global_step = 0
 
         model = cls(
             (img_size[0], img_size[1]),

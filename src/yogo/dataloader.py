@@ -168,24 +168,29 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         # maps file name to a list of tuples of bounding boxes + classes
         samples: List[Tuple[str, List[List[float]]]] = []
-        for img_file_path in self.image_folder_path.glob("*"):
-            if is_valid_file(str(img_file_path)):
-                try:
-                    label_path = next(
-                        self.label_folder_path / img_file_path.with_suffix(sfx).name
-                        for sfx in [".txt", ".csv"]
-                        if (
-                            self.label_folder_path / img_file_path.with_suffix(sfx).name
-                        ).exists()
+        for label_file_path in self.label_folder_path.glob("*"):
+            image_paths =  [
+                self.image_folder_path / label_file_path.with_suffix(sfx).name
+                for sfx in [".png", ".jpg"]
+            ]
+
+            try:
+                image_file_path = next(
+                    ip for ip in image_paths
+                    if (
+                        ip.exists() and is_valid_file(str(ip))
                     )
-                except Exception as e:
-                    # raise exception here? logic being that we want to know very quickly that we don't have
-                    # all the labels we need. Open to changes, though.
-                    raise FileNotFoundError(
-                        f"{self.label_folder_path / img_file_path.with_suffix('.txt').name} doesn't exist"
-                    ) from e
-                labels = load_labels_from_path(label_path, dataset_classes)
-                samples.append((str(img_file_path), labels))
+                )
+            except StopIteration as e:
+                # raise exception here? logic being that we want to know very quickly that we don't have
+                # all the labels we need. Open to changes, though.
+                raise FileNotFoundError(
+                    f"None of the following images exist: {image_paths}"
+                ) from e
+
+            labels = load_labels_from_path(label_file_path, dataset_classes)
+            samples.append((str(image_file_path), labels))
+
         return samples
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
@@ -280,7 +285,7 @@ def get_datasets(
         split_fractions = split_fractions_override
 
     dataset_sizes = {
-        designation: int(split_fractions[designation] * len(full_dataset))
+        designation: round(split_fractions[designation] * len(full_dataset))
         for designation in ["train", "val"]
     }
     test_dataset_size = {"test": len(full_dataset) - sum(dataset_sizes.values())}
@@ -352,7 +357,7 @@ def get_dataloader(
         d[designation] = DataLoader(
             dataset,
             shuffle=True,
-            drop_last=True,
+            drop_last=False,
             batch_size=batch_size,
             persistent_workers=True,  # why would htis not be on by default lol
             multiprocessing_context="spawn",

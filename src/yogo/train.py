@@ -69,7 +69,8 @@ def train():
     ) = init_dataset(config)
 
     if config.pretrained_path:
-        net, global_step = YOGO.from_pth(config.pretrained_path).to(device)
+        net, global_step = YOGO.from_pth(config.pretrained_path)
+        net.to(device)
     else:
         net = YOGO(
             num_classes=num_classes,
