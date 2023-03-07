@@ -48,6 +48,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
 
+        loss = torch.tensor(0, dtype=torch.float32, device=self.device)
+
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
@@ -87,8 +89,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 )
             ).sum()
         )
-
-        loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
         # objectness loss when there is no obj
         loss += (
