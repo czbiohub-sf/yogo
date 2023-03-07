@@ -153,20 +153,19 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 label_cells = split_labels_into_bins(label_layer, Sx, Sy)
 
                 for (k, j), labels in label_cells.items():
-                    if len(labels) > 0:
-                        # select best label by best IOU!
-                        IoU = ops.box_iou(
-                            ops.box_convert(
-                                pred_batch[i, :4, j, k].unsqueeze(0),
-                                "cxcywh",
-                                "xyxy",
-                            ),
-                            labels[:, 1:],
-                        )
-                        pred_square_idx = torch.argmax(IoU)
-                        output[i, 0, j, k] = 1
-                        output[i, 1:5, j, k] = labels[pred_square_idx][1:]
-                        output[i, 5, j, k] = labels[pred_square_idx][0]
+                    # select best label by best IOU!
+                    IoU = ops.box_iou(
+                        ops.box_convert(
+                            pred_batch[i, :4, j, k].unsqueeze(0),
+                            "cxcywh",
+                            "xyxy",
+                        ),
+                        labels[:, 1:],
+                    )
+                    pred_square_idx = torch.argmax(IoU)
+                    output[i, 0, j, k] = 1
+                    output[i, 1:5, j, k] = labels[pred_square_idx][1:]
+                    output[i, 5, j, k] = labels[pred_square_idx][0]
 
             return output
 
