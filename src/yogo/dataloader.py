@@ -51,13 +51,62 @@ def collate_batch(batch, device="cpu", transforms=None):
     # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
+    batched_labels = torch.stack(labels)
     return transforms(
         batched_inputs.to(device, non_blocking=True),
-        [labels_for_img.to(device, non_blocking=True) for labels_for_img in labels],
+        batched_labels.to(device, non_blocking=True),
     )
 
 
-def load_labels_from_path(label_path: Path, classes) -> torch.Tensor:
+def split_labels_into_bins(
+    labels: torch.Tensor, Sx, Sy
+) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    # it is really a single-element long tensor
+    d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
+    for label in labels:
+        i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
+        j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()
+        d[(i, j)].append(label)
+    return {k: torch.vstack(vs) for k, vs in d.items()}
+
+
+def format_labels(
+    labels: torch.Tensor, Sx: int, Sy: int, num_classes: int,
+) -> torch.Tensor:
+    """                                                                                
+    input:                                                                             
+        Sx: int,
+        Sy: int,
+        label_batch: List[torch.Tensor], and len(label_batch) == batch_size            
+        num_classes: int                                                               
+    output:                                                                            
+        torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)                   
+                                                                                       
+    dimension masked_label is [mask, xc, yc, w, h, *classes], where mask == 1          
+    if there is a label associated with (Sy,Sx) at the given batch, else 0. If         
+    mask is 0, then the rest of the label values are "don't care" values (just         
+    setting to 0 is fine).                                                             
+                                                                                       
+    TODO: maybe we can drop some sync points by converting label_batch to tensor?      
+    Have a parameter for "num labels" or smth, and have all tensors be the size        
+    of the minimum tensor size (instead of having a list)                              
+    """
+    # preds_size is len([xc, yc, w, h, t0, *classes]), so num_classes == preds_size - 5
+    num_classes = preds_size - 5
+    with torch.no_grad():
+        output = torch.zeros(1 + num_classes + 1, Sy, Sx)
+        label_cells = split_labels_into_bins(labels, Sx, Sy)
+
+        for (k, j), cell_label in label_cells.items():
+            pred_square_idx = 0  # this is a remnant of Sx,Sy being small; remove?
+            output[0, j, k] = 1
+            output[1:5, j, k] = cell_label[pred_square_idx][1:]
+            output[5, j, k] = cell_label[pred_square_idx][0]
+
+        return output
+
+
+def load_labels_from_path(label_path: Path, classes, Sx, Sy) -> torch.Tensor:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -92,7 +141,7 @@ def load_labels_from_path(label_path: Path, classes) -> torch.Tensor:
 
     labels = torch.Tensor(labels)
     labels[:, 1:] = ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
-    return labels
+    return format_labels(labels, Sx, Sy, len(classes))
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -247,17 +296,13 @@ def get_datasets(
     training: bool = True,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (
-        classes,
-        dataset_paths,
-        split_fractions,
-    ) = load_dataset_description(dataset_description_file)
+    (classes, dataset_paths, split_fractions,) = load_dataset_description(
+        dataset_description_file
+    )
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            classes,
-            dataset_desc["image_path"],
-            dataset_desc["label_path"],
+            classes, dataset_desc["image_path"], dataset_desc["label_path"],
         )
         for dataset_desc in dataset_paths
     )
@@ -333,8 +378,7 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            image_preprocess,
-            *augmentations if designation == "train" else [],
+            image_preprocess, *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
             dataset,
