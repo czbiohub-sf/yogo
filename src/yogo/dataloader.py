@@ -71,25 +71,28 @@ def split_labels_into_bins(
 
 
 def format_labels(
-    labels: torch.Tensor, Sx: int, Sy: int, num_classes: int,
+    labels: torch.Tensor,
+    Sx: int,
+    Sy: int,
+    num_classes: int,
 ) -> torch.Tensor:
-    """                                                                                
-    input:                                                                             
+    """
+    input:
         Sx: int,
         Sy: int,
-        label_batch: List[torch.Tensor], and len(label_batch) == batch_size            
-        num_classes: int                                                               
-    output:                                                                            
-        torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)                   
-                                                                                       
-    dimension masked_label is [mask, xc, yc, w, h, *classes], where mask == 1          
-    if there is a label associated with (Sy,Sx) at the given batch, else 0. If         
-    mask is 0, then the rest of the label values are "don't care" values (just         
-    setting to 0 is fine).                                                             
-                                                                                       
-    TODO: maybe we can drop some sync points by converting label_batch to tensor?      
-    Have a parameter for "num labels" or smth, and have all tensors be the size        
-    of the minimum tensor size (instead of having a list)                              
+        label_batch: List[torch.Tensor], and len(label_batch) == batch_size
+        num_classes: int
+    output:
+        torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)
+
+    dimension masked_label is [mask, xc, yc, w, h, *classes], where mask == 1
+    if there is a label associated with (Sy,Sx) at the given batch, else 0. If
+    mask is 0, then the rest of the label values are "don't care" values (just
+    setting to 0 is fine).
+
+    TODO: maybe we can drop some sync points by converting label_batch to tensor?
+    Have a parameter for "num labels" or smth, and have all tensors be the size
+    of the minimum tensor size (instead of having a list)
     """
     # preds_size is len([xc, yc, w, h, t0, *classes]), so num_classes == preds_size - 5
     num_classes = preds_size - 5
@@ -296,13 +299,17 @@ def get_datasets(
     training: bool = True,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (classes, dataset_paths, split_fractions,) = load_dataset_description(
-        dataset_description_file
-    )
+    (
+        classes,
+        dataset_paths,
+        split_fractions,
+    ) = load_dataset_description(dataset_description_file)
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            classes, dataset_desc["image_path"], dataset_desc["label_path"],
+            classes,
+            dataset_desc["image_path"],
+            dataset_desc["label_path"],
         )
         for dataset_desc in dataset_paths
     )
@@ -378,7 +385,8 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            image_preprocess, *augmentations if designation == "train" else [],
+            image_preprocess,
+            *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
             dataset,
