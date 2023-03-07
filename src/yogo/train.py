@@ -232,9 +232,9 @@ def init_dataset(config: WandbConfig):
 
     wandb.config.update(
         {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader) * config['batch_size']} images",
-            "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
-            "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
+            "training set size": f"{len(train_dataloader.dataset)} images",
+            "validation set size": f"{len(validate_dataloader.dataset)} images",
+            "testing set size": f"{len(test_dataloader.dataset)} images",
         }
     )
 
