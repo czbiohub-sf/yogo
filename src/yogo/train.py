@@ -60,13 +60,6 @@ def train():
     num_classes = len(class_names)
     classify = not config["no_classify"]
 
-    (
-        model_save_dir,
-        train_dataloader,
-        validate_dataloader,
-        test_dataloader,
-    ) = init_dataset(config)
-
     net = YOGO(
         num_classes=num_classes,
         img_size=config["resize_shape"],
@@ -76,18 +69,25 @@ def train():
     Y_loss = YOGOLoss(classify=classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
-    min_period = 8 * len(train_dataloader)
-    anneal_period = config["epochs"] * len(train_dataloader) - min_period
-    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
-    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
-    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
-
     metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
+
+    (
+        model_save_dir,
+        train_dataloader,
+        validate_dataloader,
+        test_dataloader,
+    ) = init_dataset(config)
+
+    min_period = 8 * len(train_dataloader)
+    anneal_period = config["epochs"] * len(train_dataloader) - min_period
+    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
+    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
+    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
     best_mAP = 0
     global_step = 0
@@ -99,10 +99,7 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, device=device
-            )
-            loss = Y_loss(outputs, formatted_labels)
+            loss = Y_loss(outputs, labels)
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -125,13 +122,10 @@ def train():
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
                 outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, device=device
-                )
-                loss = Y_loss(outputs, formatted_labels)
+                loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            metrics.update(outputs, formatted_labels)
+            metrics.update(outputs, labels)
 
             annotated_img = wandb.Image(
                 draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
@@ -166,13 +160,10 @@ def train():
     with torch.no_grad():
         for imgs, labels in test_dataloader:
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, device=device
-            )
-            loss = Y_loss(outputs, formatted_labels)
+            loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        metrics.update(outputs, formatted_labels)
+        metrics.update(outputs, labels)
 
         mAP, confusion_data = metrics.compute()
         metrics.reset()
@@ -198,6 +189,8 @@ def init_dataset(config: WandbConfig):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
+        Sx=config["Sx"],
+        Sy=config["Sy"],
         device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],

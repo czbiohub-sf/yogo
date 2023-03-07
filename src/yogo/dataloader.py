@@ -5,6 +5,7 @@ import torch
 
 from pathlib import Path
 from functools import partial
+from collections import defaultdict
 
 import torchvision.ops as ops
 
@@ -94,8 +95,6 @@ def format_labels(
     Have a parameter for "num labels" or smth, and have all tensors be the size
     of the minimum tensor size (instead of having a list)
     """
-    # preds_size is len([xc, yc, w, h, t0, *classes]), so num_classes == preds_size - 5
-    num_classes = preds_size - 5
     with torch.no_grad():
         output = torch.zeros(1 + num_classes + 1, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
@@ -153,6 +152,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         classes: List[str],
         image_path: Path,
         label_path: Path,
+        Sx,
+        Sy,
         loader: Callable = read_grayscale,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
@@ -169,11 +170,13 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.loader = loader
 
         self.samples: List[Tuple[str, List[List[float]]]] = self.make_dataset(
-            is_valid_file=is_valid_file, extensions=extensions
+            Sx, Sy, extensions=extensions, is_valid_file=is_valid_file,
         )
 
     def make_dataset(
         self,
+        Sx: int,
+        Sy: int,
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
     ) -> List[Tuple[str, List[List[float]]]]:
@@ -222,7 +225,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     raise FileNotFoundError(
                         f"{self.label_folder_path / img_file_path.with_suffix('.txt').name} doesn't exist"
                     ) from e
-                labels = load_labels_from_path(label_path, self.classes)
+                labels = load_labels_from_path(label_path, self.classes, Sx, Sy)
                 samples.append((str(img_file_path), labels))
         return samples
 
@@ -296,6 +299,8 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
 def get_datasets(
     dataset_description_file: str,
     batch_size: int,
+    Sx,
+    Sy,
     training: bool = True,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
@@ -310,6 +315,8 @@ def get_datasets(
             classes,
             dataset_desc["image_path"],
             dataset_desc["label_path"],
+            Sx,
+            Sy
         )
         for dataset_desc in dataset_paths
     )
@@ -347,6 +354,8 @@ def get_datasets(
 def get_dataloader(
     dataset_descriptor_file: str,
     batch_size: int,
+    Sx: int,
+    Sy: int,
     training: bool = True,
     preprocess_type: Optional[str] = None,
     vertical_crop_size: Optional[float] = None,
@@ -357,6 +366,8 @@ def get_dataloader(
     split_datasets = get_datasets(
         dataset_descriptor_file,
         batch_size,
+        Sx,
+        Sy,
         training=training,
         split_fractions_override=split_fractions_override,
     )
