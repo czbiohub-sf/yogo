@@ -170,7 +170,10 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.loader = loader
 
         self.samples: List[Tuple[str, List[List[float]]]] = self.make_dataset(
-            Sx, Sy, extensions=extensions, is_valid_file=is_valid_file,
+            Sx,
+            Sy,
+            extensions=extensions,
+            is_valid_file=is_valid_file,
         )
 
     def make_dataset(
@@ -312,11 +315,7 @@ def get_datasets(
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            classes,
-            dataset_desc["image_path"],
-            dataset_desc["label_path"],
-            Sx,
-            Sy
+            classes, dataset_desc["image_path"], dataset_desc["label_path"], Sx, Sy
         )
         for dataset_desc in dataset_paths
     )

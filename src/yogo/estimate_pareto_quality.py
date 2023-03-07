@@ -69,9 +69,7 @@ def pareto_quality():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = Y_loss.format_labels(
-                outputs, labels, device=device
-            )
+            formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
             loss.backward()
             optimizer.step()
@@ -95,9 +93,7 @@ def pareto_quality():
         for imgs, labels in validate_dataloader:
             with torch.no_grad():
                 outputs = net(imgs)
-                formatted_labels = Y_loss.format_labels(
-                    outputs, labels, device=device
-                )
+                formatted_labels = Y_loss.format_labels(outputs, labels, device=device)
                 loss = Y_loss(outputs, formatted_labels)
                 val_loss += loss.item()
 

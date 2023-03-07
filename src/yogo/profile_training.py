@@ -92,15 +92,10 @@ def train():
     best_mAP = 0
     global_step = 0
     with torch.profiler.profile(
-        schedule=torch.profiler.schedule(
-            wait=16,
-            warmup=2,
-            active=4,
-            repeat=1
-        ),
+        schedule=torch.profiler.schedule(wait=16, warmup=2, active=4, repeat=1),
         on_trace_ready=lambda p: p.export_chrome_trace("training_profile.json"),
-        with_stack=True
-        ) as profiler:
+        with_stack=True,
+    ) as profiler:
         for epoch in range(config["epochs"]):
             # train
             for i, (imgs, labels) in enumerate(train_dataloader, 1):
@@ -177,9 +172,7 @@ def train():
     with torch.no_grad():
         for imgs, labels in test_dataloader:
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, device=device
-            )
+            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
             loss = Y_loss(outputs, formatted_labels)
             test_loss += loss.item()
 
