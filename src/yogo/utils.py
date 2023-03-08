@@ -53,7 +53,7 @@ class Metrics:
                 # annoyingly, wandb will sort the matrix by row/col names. sad!
                 # fix the order we want by prepending the index of the class.
                 L.append(
-                    (f"{i} - self.class_names[i]", f"{j} - self.class_names[j]", confusion_mat[i, j])
+                    (f"{i} - {self.class_names[i]}", f"{j} - {self.class_names[j]}", confusion_mat[i, j])
                 )
 
         return self.mAP.compute(), L
