@@ -155,19 +155,11 @@ def train():
                 best_mAP = mAP["map"]
                 wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
                 checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "best.pth",
-                    global_step,
+                    net, epoch, optimizer, model_save_dir / "best.pth", global_step,
                 )
             else:
                 checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "latest.pth",
-                    global_step,
+                    net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
                 )
 
         net.train()

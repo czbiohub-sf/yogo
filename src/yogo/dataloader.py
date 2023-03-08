@@ -83,10 +83,7 @@ def split_labels_into_bins(
 
 
 def format_labels(
-    labels: torch.Tensor,
-    Sx: int,
-    Sy: int,
-    num_classes: int,
+    labels: torch.Tensor, Sx: int, Sy: int, num_classes: int,
 ) -> torch.Tensor:
     """
     input:
@@ -119,7 +116,9 @@ def format_labels(
         return output
 
 
-def load_labels_from_path(label_path: Path, dataset_classes: List[str], Sx: int, Sy: int) -> List[List[float]]:
+def load_labels_from_path(
+    label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
+) -> List[List[float]]:
 
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
@@ -161,7 +160,7 @@ def load_labels_from_path(label_path: Path, dataset_classes: List[str], Sx: int,
 
     labels = torch.Tensor(labels)
     labels[:, 1:] = ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
-    return format_labels(labels, Sx, Sy, len(classes))
+    return format_labels(labels, Sx, Sy, len(dataset_classes))
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -188,8 +187,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.loader = loader
 
         self.samples = self.make_dataset(
-        Sx, Sy,
-            is_valid_file=is_valid_file, extensions=extensions, dataset_classes=dataset_classes
+            Sx,
+            Sy,
+            is_valid_file=is_valid_file,
+            extensions=extensions,
+            dataset_classes=dataset_classes,
         )
 
     def make_dataset(
@@ -230,17 +232,14 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # maps file name to a list of tuples of bounding boxes + classes
         samples: List[Tuple[str, List[List[float]]]] = []
         for label_file_path in self.label_folder_path.glob("*"):
-            image_paths =  [
+            image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
                 for sfx in [".png", ".jpg"]
             ]
 
             try:
                 image_file_path = next(
-                    ip for ip in image_paths
-                    if (
-                        ip.exists() and is_valid_file(str(ip))
-                    )
+                    ip for ip in image_paths if (ip.exists() and is_valid_file(str(ip)))
                 )
             except StopIteration as e:
                 # raise exception here? logic being that we want to know very quickly that we don't have
@@ -328,11 +327,9 @@ def get_datasets(
     training: bool = True,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (
-        dataset_classes,
-        dataset_paths,
-        split_fractions,
-    ) = load_dataset_description(dataset_description_file)
+    (dataset_classes, dataset_paths, split_fractions,) = load_dataset_description(
+        dataset_description_file
+    )
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
@@ -340,7 +337,7 @@ def get_datasets(
             dataset_desc["image_path"],
             dataset_desc["label_path"],
             Sx,
-            Sy
+            Sy,
         )
         for dataset_desc in dataset_paths
     )

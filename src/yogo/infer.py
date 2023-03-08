@@ -21,7 +21,8 @@ from yogo.argparsers import infer_parser
 from yogo.dataloader import read_grayscale
 
 
-def argmax(arr): return max(range(len(arr)), key=arr.__getitem__)
+def argmax(arr):
+    return max(range(len(arr)), key=arr.__getitem__)
 
 
 def save_preds(fname, res, thresh=0.5):
