@@ -202,11 +202,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     path_to_ddf = sys.argv[1]
-    ds = get_dataloader(
-        path_to_ddf,
-        batch_size=1,
-        training=False,
-    )
+    ds = get_dataloader(path_to_ddf, batch_size=1, training=False,)
 
     for img, label in ds["val"]:
         imshow(draw_rects(img[0, 0, ...], list(label[0])))

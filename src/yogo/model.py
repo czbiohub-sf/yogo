@@ -1,7 +1,9 @@
 import torch
 from torch import nn
 
-from typing import Tuple
+from typing_extensions import Self
+from typing import Tuple, Optional
+from pathlib import Path
 
 
 class YOGO(nn.Module):
@@ -41,15 +43,15 @@ class YOGO(nn.Module):
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_h))
         self.register_buffer("num_classes", torch.tensor(num_classes))
-        # self.register_buffer("model_ver", torch.tensor(self.MODEL_VERSION))
 
         self.inference = inference
 
-        self._Cxs = None
-        self._Cys = None
+        self._Cxs: Optional[torch.Tensor] = None
+        self._Cys: Optional[torch.Tensor] = None
 
     @classmethod
-    def from_pth(cls, loaded_pth, inference=False):
+    def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple[Self, int]:
+        loaded_pth = torch.load(pth_path, map_location="cpu")
         params = loaded_pth["model_state_dict"]
 
         try:
@@ -69,6 +71,11 @@ class YOGO(nn.Module):
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
 
+        try:
+            global_step = params["global_step"]
+        except KeyError:
+            global_step = 0
+
         model = cls(
             (img_size[0], img_size[1]),
             anchor_w.item(),
@@ -77,14 +84,8 @@ class YOGO(nn.Module):
             inference=inference,
         )
 
-        # set Sx, Sy
-        assert model._Cxs is None and model._Cys is None
-        dummy_input = torch.rand(1, 1, *img_size)
-        model(dummy_input)
-        assert model._Cxs is not None and model._Cys is not None
-
         model.load_state_dict(params)
-        return model
+        return model, global_step
 
     def to(self, device):
         self.device = device
@@ -103,7 +104,7 @@ class YOGO(nn.Module):
         for p in parameters:
             param_norm = p.grad.detach().data.norm(2)
             total_norm += param_norm.item() ** 2
-        total_norm = total_norm**0.5
+        total_norm = total_norm ** 0.5
         return total_norm
 
     def get_grid_size(self, input_shape: Tuple[int, int]) -> Tuple[int, int]:
@@ -122,9 +123,7 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_2 = nn.Sequential(
-            nn.Conv2d(16, 32, 3, padding=1),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.2),
+            nn.Conv2d(16, 32, 3, padding=1), nn.LeakyReLU(), nn.Dropout2d(p=0.2),
         )
         conv_block_3 = nn.Sequential(
             nn.Conv2d(32, 64, 3, stride=2, padding=1),
@@ -132,9 +131,7 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.2),
+            nn.Conv2d(64, 128, 3, padding=1), nn.LeakyReLU(), nn.Dropout2d(p=0.2),
         )
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
@@ -142,14 +139,9 @@ class YOGO(nn.Module):
             nn.LeakyReLU(),
         )
         conv_block_6 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
+            nn.Conv2d(128, 128, 3, padding=1), nn.BatchNorm2d(128), nn.LeakyReLU(),
         )
-        conv_block_7 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.LeakyReLU(),
-        )
+        conv_block_7 = nn.Sequential(nn.Conv2d(128, 128, 3, padding=1), nn.LeakyReLU(),)
         conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
         return nn.Sequential(
             conv_block_1,

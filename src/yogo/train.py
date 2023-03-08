@@ -40,10 +40,11 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def checkpoint_model(model, epoch, optimizer, name):
+def checkpoint_model(model, epoch, optimizer, name, step):
     torch.save(
         {
             "epoch": epoch,
+            "step": step,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
         },
@@ -60,12 +61,18 @@ def train():
     num_classes = len(class_names)
     classify = not config["no_classify"]
 
-    net = YOGO(
-        num_classes=num_classes,
-        img_size=config["resize_shape"],
-        anchor_w=anchor_w,
-        anchor_h=anchor_h,
-    ).to(device)
+    if config.pretrained_path:
+        net, global_step = YOGO.from_pth(config.pretrained_path)
+        net.to(device)
+    else:
+        net = YOGO(
+            num_classes=num_classes,
+            img_size=config["resize_shape"],
+            anchor_w=anchor_w,
+            anchor_h=anchor_h,
+        ).to(device)
+        global_step = 0
+
     Y_loss = YOGOLoss(classify=classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
@@ -90,7 +97,6 @@ def train():
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
     best_mAP = 0
-    global_step = 0
     for epoch in range(config["epochs"]):
         # train
         for i, (imgs, labels) in enumerate(train_dataloader, 1):
@@ -148,9 +154,21 @@ def train():
             if mAP["map"] > best_mAP:
                 best_mAP = mAP["map"]
                 wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-                checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
+                checkpoint_model(
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "best.pth",
+                    global_step,
+                )
             else:
-                checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
+                checkpoint_model(
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "latest.pth",
+                    global_step,
+                )
 
         net.train()
 
@@ -178,7 +196,11 @@ def train():
         )
 
         checkpoint_model(
-            net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
+            net,
+            epoch,
+            optimizer,
+            model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth",
+            global_step,
         )
 
 
@@ -203,9 +225,9 @@ def init_dataset(config: WandbConfig):
 
     wandb.config.update(
         {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader) * config['batch_size']} images",
-            "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
-            "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
+            "training set size": f"{len(train_dataloader.dataset)} images",
+            "validation set size": f"{len(validate_dataloader.dataset)} images",
+            "testing set size": f"{len(test_dataloader.dataset)} images",
         }
     )
 
@@ -224,14 +246,9 @@ def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"],
-            data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
         ),
-        {
-            "Actual": "Actual",
-            "Predicted": "Predicted",
-            "nPredictions": "nPredictions",
-        },
+        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
 
@@ -243,9 +260,9 @@ def do_training(args) -> None:
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 32
+    epochs = args.epochs or 64
+    batch_size = args.batch_size or 32
     adam_lr = 3e-4
-    batch_size = 32
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -289,6 +306,7 @@ def do_training(args) -> None:
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
             "class_names": class_names,
+            "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,

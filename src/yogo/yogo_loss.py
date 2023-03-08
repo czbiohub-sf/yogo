@@ -50,6 +50,23 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
+        # objectness loss when there is no obj
+        loss += (
+            self.no_obj_weight
+            * (
+                (1 - label_batch[:, 0, :, :])
+                * self.mse(
+                    pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]),
+                )
+            ).sum()
+        )
+
+        # objectness loss when there is an obj
+        loss += (
+            label_batch[:, 0, :, :]
+            * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]),)
+        ).sum()
+
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
@@ -77,11 +94,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             * (
                 ops.complete_box_iou_loss(
                     torch.clamp(
-                        ops.box_convert(
-                            formatted_preds_masked,
-                            "cxcywh",
-                            "xyxy",
-                        ),
+                        ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
                         min=0,
                         max=1,
                     ),
@@ -89,27 +102,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 )
             ).sum()
         )
-
-        # objectness loss when there is no obj
-        loss += (
-            self.no_obj_weight
-            * (
-                (1 - label_batch[:, 0, :, :])
-                * self.mse(
-                    pred_batch[:, 4, :, :],
-                    torch.zeros_like(pred_batch[:, 4, :, :]),
-                )
-            ).sum()
-        )
-
-        # objectness loss when there is an obj
-        loss += (
-            label_batch[:, 0, :, :]
-            * self.mse(
-                pred_batch[:, 4, :, :],
-                torch.ones_like(pred_batch[:, 4, :, :]),
-            )
-        ).sum()
 
         # classification loss
         if self._classify:

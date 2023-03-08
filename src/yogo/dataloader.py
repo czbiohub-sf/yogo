@@ -27,6 +27,17 @@ from yogo.data_transforms import (
 )
 
 
+YOGO_CLASS_ORDERING = [
+    "healthy",
+    "ring",
+    "trophozoite",
+    "schizont",
+    "gametocyte",
+    "wbc",
+    "misc",
+]
+
+
 DatasetSplitName = Literal["train", "val", "test"]
 
 
@@ -108,7 +119,8 @@ def format_labels(
         return output
 
 
-def load_labels_from_path(label_path: Path, classes, Sx, Sy) -> torch.Tensor:
+def load_labels_from_path(label_path: Path, dataset_classes: List[str], Sx: int, Sy: int) -> List[List[float]]:
+
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -132,11 +144,17 @@ def load_labels_from_path(label_path: Path, classes, Sx, Sy) -> torch.Tensor:
                     len(row) == 5
                 ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
+                """
+                dataset_classes is the ordering of classes that are given by
+                label-studio. So we get the class of the prediction from
+                `int(row[0])`, and get the index of that from YOGO_CLASS_ORDERING
+                """
                 if row[0].isnumeric():
-                    label_idx = row[0]
+                    label_idx = YOGO_CLASS_ORDERING.index(dataset_classes[int(row[0])])
                 else:
-                    label_idx = classes.index(row[0])
+                    label_idx = YOGO_CLASS_ORDERING.index(row[0])
 
+                # float for everything so we can make tensors of labels
                 labels.append([float(label_idx)] + [float(v) for v in row[1:]])
     except FileNotFoundError:
         pass
@@ -149,7 +167,7 @@ def load_labels_from_path(label_path: Path, classes, Sx, Sy) -> torch.Tensor:
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
-        classes: List[str],
+        dataset_classes: List[str],
         image_path: Path,
         label_path: Path,
         Sx,
@@ -164,16 +182,14 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # the image_path is just for repr
         super().__init__(str(image_path), *args, **kwargs)
 
-        self.classes = classes
+        self.classes = YOGO_CLASS_ORDERING
         self.image_folder_path = image_path
         self.label_folder_path = label_path
         self.loader = loader
 
-        self.samples: List[Tuple[str, List[List[float]]]] = self.make_dataset(
-            Sx,
-            Sy,
-            extensions=extensions,
-            is_valid_file=is_valid_file,
+        self.samples = self.make_dataset(
+        Sx, Sy,
+            is_valid_file=is_valid_file, extensions=extensions, dataset_classes=dataset_classes
         )
 
     def make_dataset(
@@ -182,6 +198,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Sy: int,
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
+        dataset_classes: List[str] = YOGO_CLASS_ORDERING,
     ) -> List[Tuple[str, List[List[float]]]]:
         """
         torchvision.datasets.folder.make_dataset doc string states:
@@ -212,24 +229,28 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         # maps file name to a list of tuples of bounding boxes + classes
         samples: List[Tuple[str, List[List[float]]]] = []
-        for img_file_path in self.image_folder_path.glob("*"):
-            if is_valid_file(str(img_file_path)):
-                try:
-                    label_path = next(
-                        self.label_folder_path / img_file_path.with_suffix(sfx).name
-                        for sfx in [".txt", ".csv"]
-                        if (
-                            self.label_folder_path / img_file_path.with_suffix(sfx).name
-                        ).exists()
+        for label_file_path in self.label_folder_path.glob("*"):
+            image_paths =  [
+                self.image_folder_path / label_file_path.with_suffix(sfx).name
+                for sfx in [".png", ".jpg"]
+            ]
+
+            try:
+                image_file_path = next(
+                    ip for ip in image_paths
+                    if (
+                        ip.exists() and is_valid_file(str(ip))
                     )
-                except Exception as e:
-                    # raise exception here? logic being that we want to know very quickly that we don't have
-                    # all the labels we need. Open to changes, though.
-                    raise FileNotFoundError(
-                        f"{self.label_folder_path / img_file_path.with_suffix('.txt').name} doesn't exist"
-                    ) from e
-                labels = load_labels_from_path(label_path, self.classes, Sx, Sy)
-                samples.append((str(img_file_path), labels))
+                )
+            except StopIteration as e:
+                # raise exception here? logic being that we want to know very quickly that we don't have
+                # all the labels we need. Open to changes, though.
+                raise FileNotFoundError(
+                    f"None of the following images exist: {image_paths}"
+                ) from e
+            labels = load_labels_from_path(label_file_path, dataset_classes, Sx, Sy)
+            samples.append((str(image_file_path), labels))
+
         return samples
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, List[List[float]]]:
@@ -308,14 +329,18 @@ def get_datasets(
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
-        classes,
+        dataset_classes,
         dataset_paths,
         split_fractions,
     ) = load_dataset_description(dataset_description_file)
 
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            classes, dataset_desc["image_path"], dataset_desc["label_path"], Sx, Sy
+            dataset_classes,
+            dataset_desc["image_path"],
+            dataset_desc["label_path"],
+            Sx,
+            Sy
         )
         for dataset_desc in dataset_paths
     )
@@ -324,7 +349,7 @@ def get_datasets(
         split_fractions = split_fractions_override
 
     dataset_sizes = {
-        designation: int(split_fractions[designation] * len(full_dataset))
+        designation: round(split_fractions[designation] * len(full_dataset))
         for designation in ["train", "val"]
     }
     test_dataset_size = {"test": len(full_dataset) - sum(dataset_sizes.values())}
@@ -395,13 +420,12 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            image_preprocess,
-            *augmentations if designation == "train" else [],
+            image_preprocess, *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
             dataset,
             shuffle=True,
-            drop_last=True,
+            drop_last=False,
             batch_size=batch_size,
             persistent_workers=True,  # why would htis not be on by default lol
             multiprocessing_context="spawn",
