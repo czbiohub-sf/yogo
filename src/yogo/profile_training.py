@@ -104,10 +104,7 @@ def train():
                 optimizer.zero_grad(set_to_none=True)
 
                 outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, device=device
-                )
-                loss = Y_loss(outputs, formatted_labels)
+                loss = Y_loss(outputs, labels)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
@@ -131,13 +128,10 @@ def train():
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
                 outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, device=device
-                )
-                loss = Y_loss(outputs, formatted_labels)
+                loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            metrics.update(outputs, formatted_labels)
+            metrics.update(outputs, labels)
 
             annotated_img = wandb.Image(
                 draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
@@ -172,11 +166,10 @@ def train():
     with torch.no_grad():
         for imgs, labels in test_dataloader:
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(outputs, labels, device=device)
-            loss = Y_loss(outputs, formatted_labels)
+            loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        metrics.update(outputs, formatted_labels)
+        metrics.update(outputs, labels)
 
         mAP, confusion_data = metrics.compute()
         metrics.reset()
@@ -202,6 +195,8 @@ def init_dataset(config: WandbConfig):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
+        config["Sx"],
+        config["Sy"],
         device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
