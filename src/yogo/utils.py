@@ -50,8 +50,10 @@ class Metrics:
         L = []
         for i in range(nc1):
             for j in range(nc2):
+                # annoyingly, wandb will sort the matrix by row/col names. sad!
+                # fix the order we want by prepending the index of the class.
                 L.append(
-                    (self.class_names[i], self.class_names[j], confusion_mat[i, j])
+                    (f"{i} - self.class_names[i]", f"{j} - self.class_names[j]", confusion_mat[i, j])
                 )
 
         return self.mAP.compute(), L
