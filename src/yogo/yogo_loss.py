@@ -128,7 +128,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         output:
             torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)
 
-        dimension masked_label is [mask, xc, yc, w, h, *classes], where mask == 1
+        dimension masked_label is [mask, xc, yc, w, h, class], where mask == 1
         if there is a label associated with (Sy,Sx) at the given batch, else 0. If
         mask is 0, then the rest of the label values are "don't care" values (just
         setting to 0 is fine).
@@ -139,7 +139,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, preds_size, Sy, Sx = pred_batch.shape
         with torch.no_grad():
-            output = torch.zeros(batch_size, 1 + num_classes + 1, Sy, Sx, device=device)
+            mask_len = 1
+            location_len = 4
+            class_len = 1
+            output = torch.zeros(batch_size, mask_len + location_len + class_len, Sy, Sx, device=device)
             for i, label_layer in enumerate(label_batch):
                 label_cells = split_labels_into_bins(label_layer, Sx, Sy)
 

@@ -23,7 +23,7 @@ def global_parser():
 def uint(val: int):
     try:
         v = int(val)
-        if v <= 0:
+        if v >= 0:
             return v
     except ValueError:
         raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
