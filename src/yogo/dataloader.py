@@ -83,14 +83,13 @@ def split_labels_into_bins(
 
 
 def format_labels(
-    labels: torch.Tensor, Sx: int, Sy: int, num_classes: int,
+    labels: torch.Tensor, Sx: int, Sy: int
 ) -> torch.Tensor:
     """
     input:
         Sx: int,
         Sy: int,
         label_batch: List[torch.Tensor], and len(label_batch) == batch_size
-        num_classes: int
     output:
         torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)
 
@@ -104,7 +103,7 @@ def format_labels(
     of the minimum tensor size (instead of having a list)
     """
     with torch.no_grad():
-        output = torch.zeros(1 + num_classes + 1, Sy, Sx)
+        output = torch.zeros(1 + 4 + 1, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
 
         for (k, j), cell_label in label_cells.items():
@@ -118,7 +117,7 @@ def format_labels(
 
 def load_labels_from_path(
     label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
-) -> List[List[float]]:
+) -> torch.Tensor:
 
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
@@ -133,7 +132,9 @@ def load_labels_from_path(
                 reader = csv.reader(f, dialect)
             except csv.Error:
                 # emtpy file, no labels, just keep moving
-                return labels
+                labels_tensor = torch.Tensor(labels)
+                labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
+                return format_labels(labels_tensor, Sx, Sy)
 
             if has_header:
                 next(reader, None)
@@ -158,9 +159,9 @@ def load_labels_from_path(
     except FileNotFoundError:
         pass
 
-    labels = torch.Tensor(labels)
-    labels[:, 1:] = ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
-    return format_labels(labels, Sx, Sy, len(dataset_classes))
+    labels_tensor = torch.Tensor(labels)
+    labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
+    return format_labels(labels_tensor, Sx, Sy)
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -201,7 +202,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
         dataset_classes: List[str] = YOGO_CLASS_ORDERING,
-    ) -> List[Tuple[str, List[List[float]]]]:
+    ) -> List[Tuple[str, torch.Tensor]]:
         """
         torchvision.datasets.folder.make_dataset doc string states:
             "Generates a list of samples of a form (path_to_sample, class)"
@@ -230,7 +231,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         is_valid_file = cast(Callable[[str], bool], is_valid_file)
 
         # maps file name to a list of tuples of bounding boxes + classes
-        samples: List[Tuple[str, List[List[float]]]] = []
+        samples: List[Tuple[str, torch.Tensor]] = []
         for label_file_path in self.label_folder_path.glob("*"):
             image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
@@ -252,7 +253,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         return samples
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, List[List[float]]]:
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """From torchvision.datasets.folder.DatasetFolder
         Args:
             index (int): Index
