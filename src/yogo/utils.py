@@ -89,7 +89,7 @@ class Metrics:
         confusion_preds = torch.masked_select(confusion_preds, mask).unsqueeze_(1)
         confusion_labels = torch.masked_select(confusion_labels, mask).unsqueeze_(1)
 
-        return torch.argmax(confusion_preds, dim=1, keepdim=True), confusion_labels
+        return confusion_preds, confusion_labels
 
     @staticmethod
     def format_for_mAP(
