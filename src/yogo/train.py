@@ -206,7 +206,7 @@ def train():
             net,
             epoch,
             optimizer,
-            model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth",
+            model_save_dir / f"latest.pth",
             global_step,
         )
 
