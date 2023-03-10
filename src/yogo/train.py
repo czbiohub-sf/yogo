@@ -102,14 +102,10 @@ def train():
     cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
-    print('created lr scheduler')
-
     with torch.autograd.detect_anomaly(check_nan=True):
         best_mAP = 0
-        print('starting training')
         for epoch in range(config["epochs"]):
             # train
-            print('epoch ', epoch)
             for i, (imgs, labels) in enumerate(train_dataloader, 1):
                 print(f'training loop step {i}')
                 global_step += 1
@@ -118,7 +114,6 @@ def train():
 
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
-                print('loss is ', loss)
                 loss.backward()
 
                 optimizer.step()

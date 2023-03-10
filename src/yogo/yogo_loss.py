@@ -48,17 +48,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
              Sy
         )
         """
-        pred_nan = torch.isnan(pred_batch).any()
-        label_nan = torch.isnan(label_batch).any()
-        if pred_nan:
-            print('pred nan: ', pred_batch)
-        else:
-            print('pred is not nan')
-        if label_nan:
-            print('label nan: ', label_batch)
-        else:
-            print('pred is not nan')
-
         batch_size, _, Sy, Sx = pred_batch.shape
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
