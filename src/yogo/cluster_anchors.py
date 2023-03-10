@@ -8,14 +8,9 @@ from __future__ import annotations
 import glob
 import torch
 import numpy as np
+import numpy.typing as npt
+
 from pathlib import Path
-
-
-try:
-    import numpy.typing as npt
-except ImportError:
-    pass
-
 from typing import cast, Union, Tuple, Sequence
 
 import matplotlib.pyplot as plt

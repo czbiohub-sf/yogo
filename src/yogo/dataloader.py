@@ -3,6 +3,7 @@ import csv
 import yaml
 import torch
 
+from tqdm import tqdm
 from pathlib import Path
 from functools import partial
 from collections import defaultdict
@@ -65,19 +66,23 @@ def collate_batch(batch, device="cpu", transforms=None):
     batched_inputs = torch.stack(inputs)
     batched_labels = torch.stack(labels)
     return transforms(
-        batched_inputs.to(device, non_blocking=True),
-        batched_labels.to(device, non_blocking=True),
+        batched_inputs.to(device),
+        batched_labels.to(device),
     )
 
 
 def split_labels_into_bins(
     labels: torch.Tensor, Sx, Sy
 ) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
-    # it is really a single-element long tensor
+    """
+    labels shape is [N,5]; N is batch size, 5 is [label, x, y, x, y]
+    """
     d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
+    _, five = labels.shape
+    assert five == 5
     for label in labels:
-        i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
-        j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()
+        i = torch.div((label[1] + label[3]) / 2, (1 / Sx), rounding_mode="trunc").long()
+        j = torch.div((label[2] + label[4]) / 2, (1 / Sy), rounding_mode="trunc").long()
         d[(i, j)].append(label)
     return {k: torch.vstack(vs) for k, vs in d.items()}
 
@@ -85,32 +90,15 @@ def split_labels_into_bins(
 def format_labels(
     labels: torch.Tensor, Sx: int, Sy: int
 ) -> torch.Tensor:
-    """
-    input:
-        Sx: int,
-        Sy: int,
-        label_batch: List[torch.Tensor], and len(label_batch) == batch_size
-    output:
-        torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)
-
-    dimension masked_label is [mask, xc, yc, w, h, *classes], where mask == 1
-    if there is a label associated with (Sy,Sx) at the given batch, else 0. If
-    mask is 0, then the rest of the label values are "don't care" values (just
-    setting to 0 is fine).
-
-    TODO: maybe we can drop some sync points by converting label_batch to tensor?
-    Have a parameter for "num labels" or smth, and have all tensors be the size
-    of the minimum tensor size (instead of having a list)
-    """
     with torch.no_grad():
         output = torch.zeros(1 + 4 + 1, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
 
         for (k, j), cell_label in label_cells.items():
-            pred_square_idx = 0  # this is a remnant of Sx,Sy being small; remove?
-            output[0, j, k] = 1
-            output[1:5, j, k] = cell_label[pred_square_idx][1:]
-            output[5, j, k] = cell_label[pred_square_idx][0]
+            pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
+            output[0, j, k] = 1  # mask that there is a prediction here
+            output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
+            output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
 
         return output
 
@@ -160,8 +148,9 @@ def load_labels_from_path(
     labels_tensor = torch.Tensor(labels)
     if labels_tensor.nelement() == 0:
         return torch.zeros(1 + 4 + 1, Sy, Sx)
-
+    labels_tensor_save = labels_tensor.clone()
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
+    
     return format_labels(labels_tensor, Sx, Sy)
 
 
@@ -341,7 +330,7 @@ def get_datasets(
             Sx,
             Sy,
         )
-        for dataset_desc in dataset_paths
+        for dataset_desc in tqdm(dataset_paths)
     )
 
     if split_fractions_override is not None:
@@ -428,7 +417,7 @@ def get_dataloader(
             batch_size=batch_size,
             persistent_workers=True,  # why would htis not be on by default lol
             multiprocessing_context="spawn",
-            num_workers=len(os.sched_getaffinity(0)) // 2,  # type: ignore
+            num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
         )

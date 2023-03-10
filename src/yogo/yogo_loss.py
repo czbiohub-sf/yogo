@@ -23,10 +23,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
-        # TODO sweep over label_smoothing values
         self._classify = classify
+
+        # TODO sweep over label_smoothing values
         if self._classify:
             self.cel = torch.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.01)
+
         self.device = "cpu"
 
     def to(self, device):
@@ -46,7 +48,18 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
              Sy
         )
         """
-        batch_size, preds_size, Sy, Sx = pred_batch.shape
+        pred_nan = torch.isnan(pred_batch).any()
+        label_nan = torch.isnan(label_batch).any()
+        if pred_nan:
+            print('pred nan: ', pred_batch)
+        else:
+            print('pred is not nan')
+        if label_nan:
+            print('label nan: ', label_batch)
+        else:
+            print('pred is not nan')
+
+        batch_size, _, Sy, Sx = pred_batch.shape
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -86,17 +99,18 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             .reshape(batch_size * Sx * Sy)
         ).bool()
 
+        # TODO try .T
         formatted_preds_masked = formatted_preds[:, mask].permute((1, 0))
         formatted_labels_masked = formatted_labels[:, mask].permute((1, 0))
 
+        # NAN here!
         loss += (
             self.coord_weight
             * (
                 ops.complete_box_iou_loss(
-                    torch.clamp(
-                        ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
-                        min=0,
-                        max=1,
+                    ops.clip_boxes_to_image(
+                        boxes=ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
+                        size=(1,1)
                     ),
                     formatted_labels_masked,
                 )
