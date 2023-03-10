@@ -82,7 +82,11 @@ class RandomVerticalCrop(DualInputModule):
 
         If xc in "crop region", what should we do?
         - adjust xc, yc, w, h so
+
+        TODO Convert to [class x y x y]
         """
+        raise NotImplementedError("TODO Convert to [class x y x y]")
+
         filtered_label_batch = []
         for labels in label_batch:
             # yc \in [top, top + height]
@@ -135,12 +139,11 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
     ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
-        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        labels have shape (len([obj mask *[x y x y] class]), Sy, Sx) == (6, Sy, Sx)
         """
         if torch.rand(1) < self.p:
             for labels in label_batch:
-                if len(labels) > 0:
-                    labels[:, 1] = 1 - labels[:, 1]
+                labels[:, 1, ...], labels[:, 3, ...] = 1 - labels[:, 3, ...], 1 - labels[:, 1, ...]
             return F.hflip(img_batch), label_batch
         return img_batch, label_batch
 
@@ -160,7 +163,6 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         """
         if torch.rand(1) < self.p:
             for labels in label_batch:
-                if len(labels) > 0:
-                    labels[:, 2] = 1 - labels[:, 2]
+                labels[:, 2, ...], labels[:, 4, ...] = 1 - labels[:, 4, ...], 1 - labels[:, 2, ...]
             return F.vflip(img_batch), label_batch
         return img_batch, label_batch
