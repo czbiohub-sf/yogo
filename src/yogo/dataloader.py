@@ -132,9 +132,7 @@ def load_labels_from_path(
                 reader = csv.reader(f, dialect)
             except csv.Error:
                 # emtpy file, no labels, just keep moving
-                labels_tensor = torch.Tensor(labels)
-                labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
-                return format_labels(labels_tensor, Sx, Sy)
+                return torch.zeros(1 + 4 + 1, Sy, Sx)
 
             if has_header:
                 next(reader, None)
@@ -160,6 +158,9 @@ def load_labels_from_path(
         pass
 
     labels_tensor = torch.Tensor(labels)
+    if labels_tensor.nelement() == 0:
+        return torch.zeros(1 + 4 + 1, Sy, Sx)
+
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
     return format_labels(labels_tensor, Sx, Sy)
 
