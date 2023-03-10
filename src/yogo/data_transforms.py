@@ -11,9 +11,6 @@ class DualInputModule(torch.nn.Module):
 
 
 class DualInputId(DualInputModule):
-    def __init__(self, *args: DualInputModule):
-        super().__init__()
-
     def forward(self, img_batch, labels):
         return img_batch, labels
 
@@ -136,14 +133,15 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         self.p = p
 
     def forward(
-        self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        self, img_batch: torch.Tensor, label_batch: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         labels have shape (len([obj mask *[x y x y] class]), Sy, Sx) == (6, Sy, Sx)
         """
         if torch.rand(1) < self.p:
-            for labels in label_batch:
-                labels[:, 1, ...], labels[:, 3, ...] = 1 - labels[:, 3, ...], 1 - labels[:, 1, ...]
+            label_batch[:, 1, :, :], label_batch[:, 3, :, :] = (
+                1 - label_batch[:, 3, :, :], 1 - label_batch[:, 1, :, :]
+            )
             return F.hflip(img_batch), label_batch
         return img_batch, label_batch
 
@@ -156,13 +154,14 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         self.p = p
 
     def forward(
-        self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        self, img_batch: torch.Tensor, label_batch: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        labels have shape (len([obj mask *[x y x y] class]), Sy, Sx) == (6, Sy, Sx)
         """
         if torch.rand(1) < self.p:
-            for labels in label_batch:
-                labels[:, 2, ...], labels[:, 4, ...] = 1 - labels[:, 4, ...], 1 - labels[:, 2, ...]
+            label_batch[:, 2, :, :], label_batch[:, 4, :, :] = (
+                1 - label_batch[:, 4, :, :], 1 - label_batch[:, 2, :, :]
+            )
             return F.vflip(img_batch), label_batch
         return img_batch, label_batch
