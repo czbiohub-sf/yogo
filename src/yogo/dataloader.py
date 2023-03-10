@@ -63,12 +63,10 @@ def read_grayscale(img_path):
 def collate_batch(batch, device="cpu", transforms=None):
     # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
-    batched_inputs = torch.stack(inputs)
-    batched_labels = torch.stack(labels)
-    return transforms(
-        batched_inputs.to(device),
-        batched_labels.to(device),
-    )
+    batched_inputs = torch.stack(inputs).to(device, non_blocking=True)
+    batched_labels = torch.stack(labels).to(device, non_blocking=True)
+
+    return transforms(batched_inputs, batched_labels)
 
 
 def split_labels_into_bins(
@@ -78,8 +76,6 @@ def split_labels_into_bins(
     labels shape is [N,5]; N is batch size, 5 is [label, x, y, x, y]
     """
     d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
-    _, five = labels.shape
-    assert five == 5
     for label in labels:
         i = torch.div((label[1] + label[3]) / 2, (1 / Sx), rounding_mode="trunc").long()
         j = torch.div((label[2] + label[4]) / 2, (1 / Sy), rounding_mode="trunc").long()
