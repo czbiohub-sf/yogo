@@ -97,9 +97,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             self.coord_weight
             * (
                 ops.complete_box_iou_loss(
-                    ops.clip_boxes_to_image(
-                        boxes=ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
-                        size=(1,1)
+                    torch.clamp(
+                        ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
+                        min=0,
+                        max=1
                     ),
                     formatted_labels_masked,
                 )
