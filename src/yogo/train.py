@@ -102,76 +102,75 @@ def train():
     cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
-    with torch.autograd.detect_anomaly(check_nan=True):
-        best_mAP = 0
-        for epoch in range(config["epochs"]):
-            # train
-            for i, (imgs, labels) in enumerate(train_dataloader, 1):
-                print(f'training loop step {i}')
-                global_step += 1
+    best_mAP = 0
+    for epoch in range(config["epochs"]):
+        # train
+        for i, (imgs, labels) in enumerate(train_dataloader, 1):
+            print(f'training loop step {i}')
+            global_step += 1
 
-                optimizer.zero_grad(set_to_none=True)
+            optimizer.zero_grad(set_to_none=True)
 
+            outputs = net(imgs)
+            loss = Y_loss(outputs, labels)
+            loss.backward()
+
+            optimizer.step()
+            scheduler.step()
+
+            wandb.log(
+                {
+                    "train loss": loss.item(),
+                    "epoch": epoch,
+                    "LR": scheduler.get_last_lr()[0],
+                },
+                commit=False,
+                step=global_step,
+            )
+
+        wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
+
+        # do validation things
+        val_loss = 0.0
+        net.eval()
+        with torch.no_grad():
+            for imgs, labels in validate_dataloader:
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
-                loss.backward()
+                val_loss += loss.item()
 
-                optimizer.step()
-                scheduler.step()
+            metrics.update(outputs, labels)
 
-                wandb.log(
-                    {
-                        "train loss": loss.item(),
-                        "epoch": epoch,
-                        "LR": scheduler.get_last_lr()[0],
-                    },
-                    commit=False,
-                    step=global_step,
+            annotated_img = wandb.Image(
+                draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.1)
+            )
+
+            mAP, confusion_data = metrics.compute()
+            metrics.reset()
+
+            wandb.log(
+                {
+                    "validation bbs": annotated_img,
+                    "val loss": val_loss / len(validate_dataloader),
+                    "val mAP": mAP["map"],
+                    "val confusion": get_wandb_confusion(
+                        confusion_data, "validation confusion matrix"
+                    ),
+                },
+            )
+
+            if mAP["map"] > best_mAP:
+                best_mAP = mAP["map"]
+                wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
+                checkpoint_model(
+                    net, epoch, optimizer, model_save_dir / "best.pth", global_step,
+                )
+            else:
+                checkpoint_model(
+                    net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
                 )
 
-            wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
-
-            # do validation things
-            val_loss = 0.0
-            net.eval()
-            with torch.no_grad():
-                for imgs, labels in validate_dataloader:
-                    outputs = net(imgs)
-                    loss = Y_loss(outputs, labels)
-                    val_loss += loss.item()
-
-                metrics.update(outputs, labels)
-
-                annotated_img = wandb.Image(
-                    draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-                )
-
-                mAP, confusion_data = metrics.compute()
-                metrics.reset()
-
-                wandb.log(
-                    {
-                        "validation bbs": annotated_img,
-                        "val loss": val_loss / len(validate_dataloader),
-                        "val mAP": mAP["map"],
-                        "val confusion": get_wandb_confusion(
-                            confusion_data, "validation confusion matrix"
-                        ),
-                    },
-                )
-
-                if mAP["map"] > best_mAP:
-                    best_mAP = mAP["map"]
-                    wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-                    checkpoint_model(
-                        net, epoch, optimizer, model_save_dir / "best.pth", global_step,
-                    )
-                else:
-                    checkpoint_model(
-                        net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
-                    )
-
-            net.train()
+        net.train()
 
     # do test things
     net.eval()
