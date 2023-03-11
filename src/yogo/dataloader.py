@@ -42,17 +42,6 @@ YOGO_CLASS_ORDERING = [
 DatasetSplitName = Literal["train", "val", "test"]
 
 
-def count_dataloader_class(dataloader, class_index: int) -> int:
-    s = 0
-    for _, labels in dataloader:
-        s += sum((l[:, 0] == class_index).sum().item() for l in labels if len(l) > 0)
-    return s
-
-
-def get_class_counts_for_dataloader(dataloader, class_names):
-    return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
-
-
 def read_grayscale(img_path):
     try:
         return read_image(str(img_path), ImageReadMode.GRAY)
@@ -65,7 +54,6 @@ def collate_batch(batch, device="cpu", transforms=None):
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs).to(device, non_blocking=True)
     batched_labels = torch.stack(labels).to(device, non_blocking=True)
-
     return transforms(batched_inputs, batched_labels)
 
 
@@ -142,10 +130,11 @@ def load_labels_from_path(
         pass
 
     labels_tensor = torch.Tensor(labels)
+
     if labels_tensor.nelement() == 0:
         return torch.zeros(1 + 4 + 1, Sy, Sx)
+
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
-    
     return format_labels(labels_tensor, Sx, Sy)
 
 
