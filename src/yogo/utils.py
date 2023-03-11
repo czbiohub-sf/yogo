@@ -154,10 +154,10 @@ def draw_rects(
         rects = [r for r in rects.reshape(pred_dim, Sx * Sy).T if r[4] > thresh]
         formatted_rects = [
             [
-                int(w * r[0]),
-                int(h * r[1]),
-                int(w * r[2]),
-                int(h * r[3]),
+                int(w * (r[0] - r[2] / 2)),
+                int(h * (r[1] - r[3] / 2)),
+                int(w * (r[0] + r[2] / 2)),
+                int(h * (r[1] + r[3] / 2)),
                 torch.argmax(r[5:]).item(),
             ]
             for r in rects
