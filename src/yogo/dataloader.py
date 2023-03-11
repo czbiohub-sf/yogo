@@ -276,7 +276,8 @@ def load_dataset_description(
 
         if not sum(split_fractions.values()) == 1:
             raise ValueError(
-                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
+                "invalid split fractions for dataset: split fractions must add to 1, "
+                f"got {split_fractions}"
             )
 
         check_dataset_paths(dataset_paths)
@@ -296,10 +297,8 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
 
 def get_datasets(
     dataset_description_file: str,
-    batch_size: int,
     Sx,
     Sy,
-    training: bool = True,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (dataset_classes, dataset_paths, split_fractions,) = load_dataset_description(
@@ -361,10 +360,8 @@ def get_dataloader(
 ) -> Dict[DatasetSplitName, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
-        batch_size,
         Sx,
         Sy,
-        training=training,
         split_fractions_override=split_fractions_override,
     )
     augmentations = (
