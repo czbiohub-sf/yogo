@@ -5,9 +5,6 @@ import signal
 
 from pathlib import Path
 
-# lets us ctrl-c to exit while matplotlib is showing stuff
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-
 import matplotlib.pyplot as plt
 
 from pathlib import Path
@@ -19,6 +16,10 @@ from yogo.model import YOGO
 from yogo.utils import draw_rects
 from yogo.argparsers import infer_parser
 from yogo.dataloader import read_grayscale
+
+
+# lets us ctrl-c to exit while matplotlib is showing stuff
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def argmax(arr):
