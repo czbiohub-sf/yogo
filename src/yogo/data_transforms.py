@@ -2,7 +2,7 @@ import torch
 import torchvision
 import torchvision.transforms.functional as F
 
-from typing import Sequence, Tuple, List, Any, cast
+from typing import Tuple, List
 
 
 class DualInputModule(torch.nn.Module):
@@ -139,11 +139,10 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         labels have shape (len([obj mask *[x y x y] class]), Sy, Sx) == (6, Sy, Sx)
         """
         if torch.rand(1) < self.p:
-            label_batch_clone = label_batch.clone()
-            mask = label_batch[:, 0, :, :] == 1
-            label_batch[:, 1, :, :] = torch.where(mask, 1 - label_batch_clone[:, 3, :, :], label_batch_clone[:, 1, :, :])
-            label_batch[:, 3, :, :] = torch.where(mask, 1 - label_batch_clone[:, 1, :, :], label_batch_clone[:, 3, :, :])
-            del label_batch_clone
+            label_batch[:, 2, :, :], label_batch[:, 4, :, :] = (
+                1 - label_batch[:, 4, :, :],
+                1 - label_batch[:, 2, :, :]
+            )
             return F.hflip(img_batch), label_batch
         return img_batch, label_batch
 
@@ -162,10 +161,9 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         labels have shape (len([obj mask *[x y x y] class]), Sy, Sx) == (6, Sy, Sx)
         """
         if torch.rand(1) < self.p:
-            label_batch_clone = label_batch.clone()
-            mask = label_batch[:, 0, :, :] == 1
-            label_batch[:, 2, :, :] = torch.where(mask, 1 - label_batch_clone[:, 4, :, :], label_batch[:, 4, :, :])
-            label_batch[:, 4, :, :] = torch.where(mask, 1 - label_batch_clone[:, 2, :, :], label_batch[:, 2, :, :])
-            del label_batch_clone
+            label_batch[:, 1, :, :], label_batch[:, 3, :, :] = (
+                1 - label_batch[:, 3, :, :],
+                1 - label_batch[:, 1, :, :],
+            )
             return F.vflip(img_batch), label_batch
         return img_batch, label_batch
