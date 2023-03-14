@@ -248,8 +248,7 @@ def load_dataset_description(
     dataset_description: str,
 ) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
     with open(dataset_description, "r") as desc:
-        with open(dataset_description, "r"):
-            yaml_data = yaml.safe_load(desc)
+        yaml_data = yaml.safe_load(desc)
 
         classes = yaml_data["class_names"]
 
