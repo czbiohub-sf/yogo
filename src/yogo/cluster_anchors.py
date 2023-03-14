@@ -11,7 +11,7 @@ import numpy as np
 import numpy.typing as npt
 
 from pathlib import Path
-from typing import cast, Union, Tuple, Sequence
+from typing import cast, Union, Tuple, Sequence, List
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
@@ -152,7 +152,7 @@ def k_means(data: CornerBox, k=3, plot=False) -> CornerBox:
     return means
 
 
-def best_anchor(data: CenterBox) -> Tuple[float, float]:
+def _calculate_best_anchor(data: CenterBox) -> Tuple[float, float]:
     def centered_wh_iou(b1: CenterBox, b2: CenterBox):
         "get iou, assuming b1 and b2 are centerd on eachother"
         intr = np.minimum(b1[..., 2], b2[..., 2]) * np.minimum(b1[..., 3], b2[..., 3])
@@ -167,3 +167,9 @@ def best_anchor(data: CenterBox) -> Tuple[float, float]:
     corners = k_means(centers_to_corners(data), k=1)[0]
     centers = corners_to_centers(corners)
     return cast(Tuple[float, float], (centers[2], centers[3]))
+
+
+def best_anchor(label_paths: List[Union[Path, str]]) -> Tuple[float, float]:
+    bbs = get_dataset_bounding_boxes(label_paths, center_box=True)
+    anchor_w, anchor_h = _calculate_best_anchor(bbs)
+    return anchor_w, anchor_h

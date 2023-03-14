@@ -288,11 +288,7 @@ def do_training(args) -> None:
     )
 
     print('getting best anchor')
-    anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(
-            [d["label_path"] for d in dataset_paths], center_box=True
-        )
-    )
+    anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
     print('initting wandb')
     wandb.init(
