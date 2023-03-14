@@ -7,6 +7,7 @@ from tqdm import tqdm
 from pathlib import Path
 from functools import partial
 from collections import defaultdict
+from multiprocessing import Pool
 
 import torchvision.ops as ops
 
@@ -138,6 +139,32 @@ def load_labels_from_path(
     return format_labels(labels_tensor, Sx, Sy)
 
 
+def process_label_file_into_unformatted_labels(
+    dataset_obj: "ObjectDetectionDataset",
+    dataset_classes: List[str],
+    is_valid_file: Callable[[str,], bool],
+    label_file_path: Path
+) -> Tuple[str, torch.Tensor]:
+    image_paths = [
+        dataset_obj.image_folder_path / label_file_path.with_suffix(sfx).name
+        for sfx in [".png", ".jpg"]
+    ]
+
+    try:
+        image_file_path = next(
+            ip for ip in image_paths if (ip.exists() and is_valid_file(str(ip)))
+        )
+    except StopIteration as e:
+        # raise exception here? logic being that we want to know very quickly that we don't have
+        # all the labels we need. Open to changes, though.
+        raise FileNotFoundError(
+            f"None of the following images exist: {image_paths}"
+        ) from e
+
+    labels = load_labels_from_path(label_file_path, dataset_classes, Sx, Sy)
+    return str(image_file_path), labels
+
+
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
@@ -204,28 +231,22 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         is_valid_file = cast(Callable[[str], bool], is_valid_file)
 
+        processor = partial(
+            process_label_file_into_unformatted_labels,
+            self,
+            dataset_classes,
+            is_valid_file,
+        )
+
+
         # maps file name to a list of tuples of bounding boxes + classes
-        samples: List[Tuple[str, torch.Tensor]] = []
-        for label_file_path in self.label_folder_path.glob("*"):
-            image_paths = [
-                self.image_folder_path / label_file_path.with_suffix(sfx).name
-                for sfx in [".png", ".jpg"]
-            ]
-
-            try:
-                image_file_path = next(
-                    ip for ip in image_paths if (ip.exists() and is_valid_file(str(ip)))
-                )
-            except StopIteration as e:
-                # raise exception here? logic being that we want to know very quickly that we don't have
-                # all the labels we need. Open to changes, though.
-                raise FileNotFoundError(
-                    f"None of the following images exist: {image_paths}"
-                ) from e
-            labels = load_labels_from_path(label_file_path, dataset_classes, Sx, Sy)
-            samples.append((str(image_file_path), labels))
-
-        return samples
+        # TODO multiprocess pool imap?
+        with Pool() as p:
+            return list(p.imap_unordered(
+                processor,
+                self.label_folder_path.glob("*"),
+                chunksize=16
+            ))
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """From torchvision.datasets.folder.DatasetFolder
@@ -396,6 +417,7 @@ def get_dataloader(
             drop_last=False,
             batch_size=batch_size,
             persistent_workers=True,  # why would htis not be on by default lol
+            worker_init_fn=lambda worker_id: print(torch.multiprocessing.get_sharing_strategy()),
             multiprocessing_context="spawn",
             num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
             generator=torch.Generator().manual_seed(101010),
