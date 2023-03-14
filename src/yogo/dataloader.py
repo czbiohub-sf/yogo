@@ -142,7 +142,8 @@ def load_labels_from_path(
 def process_label_file_into_unformatted_labels(
     dataset_obj: "ObjectDetectionDataset",
     dataset_classes: List[str],
-    is_valid_file: Callable[[str,], bool],
+    Sx: int,
+    Sy: int,
     label_file_path: Path
 ) -> Tuple[str, torch.Tensor]:
     image_paths = [
@@ -152,7 +153,7 @@ def process_label_file_into_unformatted_labels(
 
     try:
         image_file_path = next(
-            ip for ip in image_paths if (ip.exists() and is_valid_file(str(ip)))
+            ip for ip in image_paths if ip.exists()
         )
     except StopIteration as e:
         # raise exception here? logic being that we want to know very quickly that we don't have
@@ -235,7 +236,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
             process_label_file_into_unformatted_labels,
             self,
             dataset_classes,
-            is_valid_file,
+            Sx,
+            Sy
         )
 
 
