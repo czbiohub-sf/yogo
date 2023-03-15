@@ -96,6 +96,8 @@ def train():
         for epoch in range(config["epochs"]):
             # train
             for i, (imgs, labels) in enumerate(train_dataloader, 1):
+                imgs.to(device)
+                labels.to(device)
                 global_step += 1
 
                 optimizer.zero_grad(set_to_none=True)
