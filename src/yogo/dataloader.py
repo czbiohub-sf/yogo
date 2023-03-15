@@ -163,6 +163,10 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.label_folder_path = label_path
         self.loader = loader
 
+        # https://pytorch.org/docs/stable/data.html#multi-process-data-loading
+        # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
+        # essentially, to avoid dataloader workers from copying tonnes of mem,
+        # we can't store samples in lists. Hence, the tensor and numpy array.
         paths, tensors = self.make_dataset(
             Sx,
             Sy,
