@@ -20,7 +20,7 @@ from yogo.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
-from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from yogo.cluster_anchors import best_anchor
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -105,8 +105,10 @@ def train():
     best_mAP = 0
     for epoch in range(config["epochs"]):
         # train
-        for i, (imgs, labels) in enumerate(train_dataloader, 1):
-            print(f'training loop step {i}')
+        for imgs, labels in train_dataloader:
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            print(f'training loop step {global_step}')
             global_step += 1
 
             optimizer.zero_grad(set_to_none=True)
@@ -135,6 +137,8 @@ def train():
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
+                imgs = imgs.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
@@ -142,7 +146,7 @@ def train():
             metrics.update(outputs, labels)
 
             annotated_img = wandb.Image(
-                draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.1)
+                draw_rects(imgs[0, 0, ...].clone(), outputs[0, ...].clone(), thresh=0.1)
             )
 
             mAP, confusion_data = metrics.compute()
@@ -177,6 +181,8 @@ def train():
     test_loss = 0.0
     with torch.no_grad():
         for imgs, labels in test_dataloader:
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
@@ -319,6 +325,7 @@ def do_training(args) -> None:
 
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method("spawn")
+    # torch.multiprocessing.set_sharing_strategy("file_system")
 
     parser = train_parser()
     args = parser.parse_args()

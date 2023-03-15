@@ -52,8 +52,8 @@ def read_grayscale(img_path):
 def collate_batch(batch, device="cpu", transforms=None):
     # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
-    batched_inputs = torch.stack(inputs).to(device, non_blocking=True)
-    batched_labels = torch.stack(labels).to(device, non_blocking=True)
+    batched_inputs = torch.stack(inputs)
+    batched_labels = torch.stack(labels)
     return transforms(batched_inputs, batched_labels)
 
 
