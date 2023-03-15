@@ -179,6 +179,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self._paths = np.array(paths).astype(np.string_)
         self._imgs = torch.stack(tensors)
 
+        self._start = 0
+        self._end = len(self)
+
     def make_dataset(
         self,
         Sx: int,
@@ -252,6 +255,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         sample = self.loader(img_path)
         return sample, target
 
+    def __iter__(self):
+        return iter(range(self.start, self.end))
+
     def __len__(self) -> int:
         "From torchvision.datasets.folder.DatasetFolder"
         return len(self._paths)
@@ -306,6 +312,17 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
                 f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
             )
 
+
+def worker_init(idx):
+    worker_info = torch.utils.data.get_worker_info()
+    dataset = worker_info.dataset  # the dataset copy in this worker process
+    overall_start = dataset._start
+    overall_end = dataset._end
+    # configure the dataset to only process the split workload
+    per_worker = int(math.ceil((overall_end - overall_start) / float(worker_info.num_workers)))
+    worker_id = worker_info.id
+    dataset.start = overall_start + worker_id * per_worker
+    dataset.end = min(dataset._start + per_worker, overall_end)
 
 def get_datasets(
     dataset_description_file: str,
