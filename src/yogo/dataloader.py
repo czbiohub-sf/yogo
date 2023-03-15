@@ -314,6 +314,7 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
 
 
 def worker_init(idx):
+    # https://pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset
     worker_info = torch.utils.data.get_worker_info()
     dataset = worker_info.dataset  # the dataset copy in this worker process
     overall_start = dataset._start
@@ -428,6 +429,7 @@ def get_dataloader(
             batch_size=batch_size,
             persistent_workers=True,
             multiprocessing_context="spawn",
+            worker_init_fn=worker_init,
             # optimal # of workers?
             num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
             generator=torch.Generator().manual_seed(101010),
