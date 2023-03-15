@@ -17,6 +17,7 @@ from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, Metrics
 from yogo.dataloader import (
+    YOGO_CLASS_ORDERING,
     load_dataset_description,
     get_dataloader,
 )
@@ -64,6 +65,11 @@ def train():
     if config.pretrained_path:
         net, global_step = YOGO.from_pth(config.pretrained_path)
         net.to(device)
+        if any(net.img_size.cpu().numpy() != config["resize_shape"]):
+            raise RuntimeError(
+                "mismatch in pretrained network image resize shape and current resize shape: "
+                f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
+            )
     else:
         net = YOGO(
             num_classes=num_classes,
@@ -310,7 +316,7 @@ def do_training(args) -> None:
             "resize_shape": resize_target_size,
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
-            "class_names": class_names,
+            "class_names": YOGO_CLASS_ORDERING,
             "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
             "run group": args.group,
