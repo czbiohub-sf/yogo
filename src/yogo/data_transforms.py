@@ -141,9 +141,9 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         Need to flip labels around the tensor axes too!
         """
         if torch.rand(1) < self.p:
-            label_batch[:, 2, :, :], label_batch[:, 4, :, :] = (
-                1 - label_batch[:, 4, :, :],
-                1 - label_batch[:, 2, :, :]
+            label_batch[:, 1, :, :], label_batch[:, 3, :, :] = (
+                1 - label_batch[:, 3, :, :],
+                1 - label_batch[:, 1, :, :],
             )
             return F.hflip(img_batch), torch.flip(label_batch, dims=(3,))
         return img_batch, label_batch
@@ -165,9 +165,9 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         Need to flip labels around the tensor axes too!
         """
         if torch.rand(1) < self.p:
-            label_batch[:, 1, :, :], label_batch[:, 3, :, :] = (
-                1 - label_batch[:, 3, :, :],
-                1 - label_batch[:, 1, :, :],
+            label_batch[:, 2, :, :], label_batch[:, 4, :, :] = (
+                1 - label_batch[:, 4, :, :],
+                1 - label_batch[:, 2, :, :]
             )
             return F.vflip(img_batch), torch.flip(label_batch, dims=(2,))
         return img_batch, label_batch
