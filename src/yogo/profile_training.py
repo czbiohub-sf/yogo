@@ -6,6 +6,7 @@ import torch
 
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
+from torch.profiler import profile, record_function, ProfilerActivity
 
 from pathlib import Path
 from copy import deepcopy
@@ -40,17 +41,6 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def checkpoint_model(model, epoch, optimizer, name):
-    torch.save(
-        {
-            "epoch": epoch,
-            "model_state_dict": deepcopy(model.state_dict()),
-            "optimizer_state_dict": deepcopy(optimizer.state_dict()),
-        },
-        str(name),
-    )
-
-
 def train():
     config = wandb.config
     device = config["device"]
@@ -58,13 +48,6 @@ def train():
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
     num_classes = len(class_names)
-
-    (
-        model_save_dir,
-        train_dataloader,
-        validate_dataloader,
-        test_dataloader,
-    ) = init_dataset(config)
 
     net = YOGO(
         num_classes=num_classes,
@@ -75,13 +58,6 @@ def train():
     Y_loss = YOGOLoss().to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
-    min_period = 8 * len(train_dataloader)
-    anneal_period = config["epochs"] * len(train_dataloader) - min_period
-
-    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
-    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
-    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
-
     metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
 
     # TODO: generalize so we can tune Sx / Sy!
@@ -89,25 +65,45 @@ def train():
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
+    (
+        model_save_dir,
+        train_dataloader,
+        validate_dataloader,
+        test_dataloader,
+    ) = init_dataset(config)
+
+    min_period = 8 * len(train_dataloader)
+    anneal_period = config["epochs"] * len(train_dataloader) - min_period
+
+    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
+    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
+    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+
+    def cb(prof):
+        print(prof.key_averages().table(sort_by="cpu_memory_usage", row_limit=10))
+        prof.export_chrome_trace("training_profile.json")
+
     best_mAP = 0
     global_step = 0
     with torch.profiler.profile(
+        activities=[ProfilerActivity.CPU],
+        record_shapes=True,
+        profile_memory=True,
         schedule=torch.profiler.schedule(wait=16, warmup=2, active=4, repeat=1),
-        on_trace_ready=lambda p: p.export_chrome_trace("training_profile.json"),
+        on_trace_ready=cb,
         with_stack=True,
     ) as profiler:
         for epoch in range(config["epochs"]):
             # train
             for i, (imgs, labels) in enumerate(train_dataloader, 1):
+                imgs.to(device)
+                labels.to(device)
                 global_step += 1
 
                 optimizer.zero_grad(set_to_none=True)
 
                 outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, num_classes=num_classes, device=device
-                )
-                loss = Y_loss(outputs, formatted_labels)
+                loss = Y_loss(outputs, labels)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
@@ -125,77 +121,6 @@ def train():
 
         wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
 
-        # do validation things
-        val_loss = 0.0
-        net.eval()
-        with torch.no_grad():
-            for imgs, labels in validate_dataloader:
-                outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, num_classes=num_classes, device=device
-                )
-                loss = Y_loss(outputs, formatted_labels)
-                val_loss += loss.item()
-
-            metrics.update(outputs, formatted_labels)
-
-            annotated_img = wandb.Image(
-                draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
-            )
-
-            mAP, confusion_data = metrics.compute()
-            metrics.reset()
-
-            wandb.log(
-                {
-                    "validation bbs": annotated_img,
-                    "val loss": val_loss / len(validate_dataloader),
-                    "val mAP": mAP["map"],
-                    "val confusion": get_wandb_confusion(
-                        confusion_data, "validation confusion matrix"
-                    ),
-                },
-            )
-
-            if mAP["map"] > best_mAP:
-                best_mAP = mAP["map"]
-                wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-                checkpoint_model(net, epoch, optimizer, model_save_dir / "best.pth")
-            else:
-                checkpoint_model(net, epoch, optimizer, model_save_dir / "latest.pth")
-
-        net.train()
-
-    # do test things
-    net.eval()
-    test_loss = 0.0
-    with torch.no_grad():
-        for imgs, labels in test_dataloader:
-            outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, num_classes=num_classes, device=device
-            )
-            loss = Y_loss(outputs, formatted_labels)
-            test_loss += loss.item()
-
-        metrics.update(outputs, formatted_labels)
-
-        mAP, confusion_data = metrics.compute()
-        metrics.reset()
-        wandb.log(
-            {
-                "test loss": test_loss / len(test_dataloader),
-                "test mAP": mAP["map"],
-                "test confusion": get_wandb_confusion(
-                    confusion_data, "test confusion matrix"
-                ),
-            },
-        )
-
-        checkpoint_model(
-            net, epoch, optimizer, model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth"
-        )
-
 
 WandbConfig: TypeAlias = dict
 
@@ -204,6 +129,8 @@ def init_dataset(config: WandbConfig):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
+        config["Sx"],
+        config["Sy"],
         device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
@@ -251,9 +178,9 @@ def do_training(args) -> None:
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = 128
+    epochs = args.epochs or 64
+    batch_size = args.batch_size or 32
     adam_lr = 3e-4
-    batch_size = 32
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None

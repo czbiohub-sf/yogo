@@ -13,15 +13,15 @@ from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast
 
 from yogo.model import YOGO
-from yogo.argparsers import train_parser
 from yogo.yogo_loss import YOGOLoss
+from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, Metrics
 from yogo.dataloader import (
     YOGO_CLASS_ORDERING,
     load_dataset_description,
     get_dataloader,
 )
-from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from yogo.cluster_anchors import best_anchor
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -62,13 +62,6 @@ def train():
     num_classes = len(class_names)
     classify = not config["no_classify"]
 
-    (
-        model_save_dir,
-        train_dataloader,
-        validate_dataloader,
-        test_dataloader,
-    ) = init_dataset(config)
-
     if config.pretrained_path:
         net, global_step = YOGO.from_pth(config.pretrained_path)
         net.to(device)
@@ -86,14 +79,12 @@ def train():
         ).to(device)
         global_step = 0
 
+    print('created network')
+
     Y_loss = YOGOLoss(classify=classify).to(device)
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
-    min_period = 8 * len(train_dataloader)
-    anneal_period = config["epochs"] * len(train_dataloader) - min_period
-    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
-    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
-    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+    print('created loss and optimizer')
 
     metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
 
@@ -102,20 +93,37 @@ def train():
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
+    print('initializing dataset...')
+    (
+        model_save_dir,
+        train_dataloader,
+        validate_dataloader,
+        test_dataloader,
+    ) = init_dataset(config)
+    print('dataset initialized...')
+
+    min_period = 8 * len(train_dataloader)
+    anneal_period = config["epochs"] * len(train_dataloader) - min_period
+    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
+    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
+    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+
     best_mAP = 0
     for epoch in range(config["epochs"]):
         # train
-        for i, (imgs, labels) in enumerate(train_dataloader, 1):
+        for imgs, labels in train_dataloader:
+            # TODO need pin_memory?
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            print(f'training loop step {global_step}')
             global_step += 1
 
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, num_classes=num_classes, device=device
-            )
-            loss = Y_loss(outputs, formatted_labels)
+            loss = Y_loss(outputs, labels)
             loss.backward()
+
             optimizer.step()
             scheduler.step()
 
@@ -136,17 +144,16 @@ def train():
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
+                imgs = imgs.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
-                formatted_labels = YOGOLoss.format_labels(
-                    outputs, labels, num_classes=num_classes, device=device
-                )
-                loss = Y_loss(outputs, formatted_labels)
+                loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            metrics.update(outputs, formatted_labels)
+            metrics.update(outputs, labels)
 
             annotated_img = wandb.Image(
-                draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.5)
+                draw_rects(imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5)
             )
 
             mAP, confusion_data = metrics.compute()
@@ -181,14 +188,13 @@ def train():
     test_loss = 0.0
     with torch.no_grad():
         for imgs, labels in test_dataloader:
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
             outputs = net(imgs)
-            formatted_labels = YOGOLoss.format_labels(
-                outputs, labels, num_classes=num_classes, device=device
-            )
-            loss = Y_loss(outputs, formatted_labels)
+            loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        metrics.update(outputs, formatted_labels)
+        metrics.update(outputs, labels)
 
         mAP, confusion_data = metrics.compute()
         metrics.reset()
@@ -218,6 +224,8 @@ def init_dataset(config: WandbConfig):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
+        Sx=config["Sx"],
+        Sy=config["Sy"],
         device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
@@ -287,14 +295,15 @@ def do_training(args) -> None:
         resize_target_size = (772, 1032)
         preprocess_type = None
 
-    _, dataset_paths, _ = load_dataset_description(args.dataset_descriptor_file)
-
-    anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(
-            [d["label_path"] for d in dataset_paths], center_box=True
-        )
+    print('loading dataset description')
+    class_names, dataset_paths, _ = load_dataset_description(
+        args.dataset_descriptor_file
     )
 
+    print('getting best anchor')
+    anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
+
+    print('initting wandb')
     wandb.init(
         project="yogo",
         entity="bioengineering",

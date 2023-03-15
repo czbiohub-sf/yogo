@@ -5,9 +5,6 @@ import signal
 
 from pathlib import Path
 
-# lets us ctrl-c to exit while matplotlib is showing stuff
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-
 import matplotlib.pyplot as plt
 
 from pathlib import Path
@@ -21,7 +18,12 @@ from yogo.argparsers import infer_parser
 from yogo.dataloader import read_grayscale
 
 
-def argmax(arr): return max(range(len(arr)), key=arr.__getitem__)
+# lets us ctrl-c to exit while matplotlib is showing stuff
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+
+def argmax(arr):
+    return max(range(len(arr)), key=arr.__getitem__)
 
 
 def save_preds(fname, res, thresh=0.5):

@@ -2,7 +2,7 @@ import torch
 import torchvision
 import torchvision.transforms.functional as F
 
-from typing import Sequence, Tuple, List, Any, cast
+from typing import Tuple, List
 
 
 class DualInputModule(torch.nn.Module):
@@ -11,9 +11,6 @@ class DualInputModule(torch.nn.Module):
 
 
 class DualInputId(DualInputModule):
-    def __init__(self, *args: DualInputModule):
-        super().__init__()
-
     def forward(self, img_batch, labels):
         return img_batch, labels
 
@@ -82,7 +79,11 @@ class RandomVerticalCrop(DualInputModule):
 
         If xc in "crop region", what should we do?
         - adjust xc, yc, w, h so
+
+        TODO Convert to [class x y x y]
         """
+        raise NotImplementedError("TODO Convert to [class x y x y]")
+
         filtered_label_batch = []
         for labels in label_batch:
             # yc \in [top, top + height]
@@ -132,16 +133,20 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         self.p = p
 
     def forward(
-        self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        self, img_batch: torch.Tensor, label_batch: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        labels have shape (batch size, len([obj mask *[x y x y] class]), Sy, Sx) == (batch size, 6, Sy, Sx)
+
+        Need to flip labels around the tensor axes too!
         """
+        assert img_batch.ndim == 4 and label_batch.ndim == 4
         if torch.rand(1) < self.p:
-            for labels in label_batch:
-                if len(labels) > 0:
-                    labels[:, 1] = 1 - labels[:, 1]
-            return F.hflip(img_batch), label_batch
+            label_batch[:, 1, :, :], label_batch[:, 3, :, :] = (
+                1 - label_batch[:, 3, :, :],
+                1 - label_batch[:, 1, :, :],
+            )
+            return F.hflip(img_batch), torch.flip(label_batch, dims=(3,))
         return img_batch, label_batch
 
 
@@ -153,14 +158,18 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         self.p = p
 
     def forward(
-        self, img_batch: torch.Tensor, label_batch: List[torch.Tensor]
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        self, img_batch: torch.Tensor, label_batch: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Expecting labels w/ form (class, xc, yc, w, h) w/ normalized coords
+        labels have shape (batch size, len([obj mask *[x y x y] class]), Sy, Sx) == (batch size, 6, Sy, Sx)
+
+        Need to flip labels around the tensor axes too!
         """
+        assert img_batch.ndim == 4 and label_batch.ndim == 4
         if torch.rand(1) < self.p:
-            for labels in label_batch:
-                if len(labels) > 0:
-                    labels[:, 2] = 1 - labels[:, 2]
-            return F.vflip(img_batch), label_batch
+            label_batch[:, 2, :, :], label_batch[:, 4, :, :] = (
+                1 - label_batch[:, 4, :, :],
+                1 - label_batch[:, 2, :, :]
+            )
+            return F.vflip(img_batch), torch.flip(label_batch, dims=(2,))
         return img_batch, label_batch

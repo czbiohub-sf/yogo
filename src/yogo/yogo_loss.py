@@ -23,10 +23,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.mse = torch.nn.MSELoss(reduction="none")
-        # TODO sweep over label_smoothing values
         self._classify = classify
+
+        # TODO sweep over label_smoothing values
         if self._classify:
             self.cel = torch.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.01)
+
         self.device = "cpu"
 
     def to(self, device):
@@ -46,7 +48,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
              Sy
         )
         """
-        batch_size, preds_size, Sy, Sx = pred_batch.shape
+        batch_size, _, Sy, Sx = pred_batch.shape
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -86,6 +88,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             .reshape(batch_size * Sx * Sy)
         ).bool()
 
+        # TODO try .T
         formatted_preds_masked = formatted_preds[:, mask].permute((1, 0))
         formatted_labels_masked = formatted_labels[:, mask].permute((1, 0))
 
@@ -96,9 +99,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     torch.clamp(
                         ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
                         min=0,
-                        max=1,
+                        max=1
                     ),
-                    ops.box_convert(formatted_labels_masked, "cxcywh", "xyxy",),
+                    formatted_labels_masked,
                 )
             ).sum()
         )
@@ -111,65 +114,3 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             ).sum()
 
         return loss / batch_size
-
-    @classmethod
-    def format_labels(
-        cls,
-        pred_batch: torch.Tensor,
-        label_batch: List[torch.Tensor],
-        num_classes: int,
-        device: Union[str, torch.device] = "cpu",
-    ) -> torch.Tensor:
-        """
-        input:
-            pred_batch: shape (batch_size, preds_size, Sy, Sx)
-            label_batch: List[torch.Tensor], and len(label_batch) == batch_size
-            num_classes: int
-        output:
-            torch.Tensor of shape (batch_size, masked_label_len, Sy, Sx)
-
-        dimension masked_label is [mask, xc, yc, w, h, class], where mask == 1
-        if there is a label associated with (Sy,Sx) at the given batch, else 0. If
-        mask is 0, then the rest of the label values are "don't care" values (just
-        setting to 0 is fine).
-
-        TODO: maybe we can drop some sync points by converting label_batch to tensor?
-        Have a parameter for "num labels" or smth, and have all tensors be the size
-        of the minimum tensor size (instead of having a list)
-        """
-        batch_size, preds_size, Sy, Sx = pred_batch.shape
-        with torch.no_grad():
-            mask_len = 1
-            location_len = 4
-            class_len = 1
-            output = torch.zeros(batch_size, mask_len + location_len + class_len, Sy, Sx, device=device)
-            for i, label_layer in enumerate(label_batch):
-                label_cells = split_labels_into_bins(label_layer, Sx, Sy)
-
-                for (k, j), labels in label_cells.items():
-                    if len(labels) > 0:
-                        # select best label by best IOU!
-                        IoU = ops.box_iou(
-                            ops.box_convert(
-                                pred_batch[i, :4, j, k].unsqueeze(0), "cxcywh", "xyxy",
-                            ),
-                            ops.box_convert(labels[:, 1:], "cxcywh", "xyxy"),
-                        )
-                        pred_square_idx = torch.argmax(IoU)
-                        output[i, 0, j, k] = 1
-                        output[i, 1:5, j, k] = labels[pred_square_idx][1:]
-                        output[i, 5, j, k] = labels[pred_square_idx][0]
-
-            return output
-
-
-def split_labels_into_bins(
-    labels: torch.Tensor, Sx, Sy
-) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
-    # it is really a single-element long tensor
-    d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
-    for label in labels:
-        i = torch.div(label[1], (1 / Sx), rounding_mode="trunc").long()
-        j = torch.div(label[2], (1 / Sy), rounding_mode="trunc").long()
-        d[(i, j)].append(label)
-    return {k: torch.vstack(vs) for k, vs in d.items()}

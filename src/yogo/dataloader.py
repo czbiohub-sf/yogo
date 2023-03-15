@@ -1,10 +1,15 @@
 import os
 import csv
-import yaml
 import torch
+import numpy as np
 
+from tqdm import tqdm
+from ruamel import yaml
 from pathlib import Path
 from functools import partial
+from collections import defaultdict
+
+import torchvision.ops as ops
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
@@ -24,6 +29,7 @@ from yogo.data_transforms import (
 )
 
 
+LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 YOGO_CLASS_ORDERING = [
     "healthy",
     "ring",
@@ -38,17 +44,6 @@ YOGO_CLASS_ORDERING = [
 DatasetSplitName = Literal["train", "val", "test"]
 
 
-def count_dataloader_class(dataloader, class_index: int) -> int:
-    s = 0
-    for _, labels in dataloader:
-        s += sum((l[:, 0] == class_index).sum().item() for l in labels if len(l) > 0)
-    return s
-
-
-def get_class_counts_for_dataloader(dataloader, class_names):
-    return {c: count_dataloader_class(dataloader, i) for i, c in enumerate(class_names)}
-
-
 def read_grayscale(img_path):
     try:
         return read_image(str(img_path), ImageReadMode.GRAY)
@@ -57,16 +52,48 @@ def read_grayscale(img_path):
 
 
 def collate_batch(batch, device="cpu", transforms=None):
+    # TODO https://pytorch.org/docs/stable/data.html#memory-pinning
     # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
-    return transforms(
-        batched_inputs.to(device, non_blocking=True),
-        [torch.tensor(l).to(device, non_blocking=True) for l in labels],
-    )
+    batched_labels = torch.stack(labels)
+    return transforms(batched_inputs, batched_labels)
 
 
-def load_labels_from_path(label_path: Path, dataset_classes: List[str]) -> List[List[float]]:
+def split_labels_into_bins(
+    labels: torch.Tensor, Sx, Sy
+) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    """
+    labels shape is [N,5]; N is batch size, 5 is [label, x, y, x, y]
+    """
+    d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
+    for label in labels:
+        i = torch.div((label[1] + label[3]) / 2, (1 / Sx), rounding_mode="trunc").long()
+        j = torch.div((label[2] + label[4]) / 2, (1 / Sy), rounding_mode="trunc").long()
+        d[(i, j)].append(label)
+    return {k: torch.vstack(vs) for k, vs in d.items()}
+
+
+def format_labels(
+    labels: torch.Tensor, Sx: int, Sy: int
+) -> torch.Tensor:
+    with torch.no_grad():
+        output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+        label_cells = split_labels_into_bins(labels, Sx, Sy)
+
+        for (k, j), cell_label in label_cells.items():
+            pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
+            output[0, j, k] = 1  # mask that there is a prediction here
+            output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
+            output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
+
+        return output
+
+
+def label_file_to_tensor(
+    label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
+) -> torch.Tensor:
+
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -80,7 +107,7 @@ def load_labels_from_path(label_path: Path, dataset_classes: List[str]) -> List[
                 reader = csv.reader(f, dialect)
             except csv.Error:
                 # emtpy file, no labels, just keep moving
-                return labels
+                return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
             if has_header:
                 next(reader, None)
@@ -105,7 +132,13 @@ def load_labels_from_path(label_path: Path, dataset_classes: List[str]) -> List[
     except FileNotFoundError:
         pass
 
-    return labels
+    labels_tensor = torch.Tensor(labels)
+
+    if labels_tensor.nelement() == 0:
+        return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+
+    labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
+    return format_labels(labels_tensor, Sx, Sy)
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -114,6 +147,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         dataset_classes: List[str],
         image_path: Path,
         label_path: Path,
+        Sx,
+        Sy,
         loader: Callable = read_grayscale,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
@@ -129,16 +164,29 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.label_folder_path = label_path
         self.loader = loader
 
-        self.samples = self.make_dataset(
-            is_valid_file=is_valid_file, extensions=extensions, dataset_classes=dataset_classes
+        # https://pytorch.org/docs/stable/data.html#multi-process-data-loading
+        # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
+        # essentially, to avoid dataloader workers from copying tonnes of mem,
+        # we can't store samples in lists. Hence, the tensor and numpy array.
+        paths, tensors = self.make_dataset(
+            Sx,
+            Sy,
+            is_valid_file=is_valid_file,
+            extensions=extensions,
+            dataset_classes=dataset_classes,
         )
+
+        self._paths = np.array(paths).astype(np.string_)
+        self._imgs = torch.stack(tensors)
 
     def make_dataset(
         self,
+        Sx: int,
+        Sy: int,
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
         dataset_classes: List[str] = YOGO_CLASS_ORDERING,
-    ) -> List[Tuple[str, List[List[float]]]]:
+    ) -> Tuple[List[str], List[torch.Tensor]]:
         """
         torchvision.datasets.folder.make_dataset doc string states:
             "Generates a list of samples of a form (path_to_sample, class)"
@@ -167,19 +215,17 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         is_valid_file = cast(Callable[[str], bool], is_valid_file)
 
         # maps file name to a list of tuples of bounding boxes + classes
-        samples: List[Tuple[str, List[List[float]]]] = []
+        paths: List[str] = []
+        tensors: List[torch.Tuple] = []
         for label_file_path in self.label_folder_path.glob("*"):
-            image_paths =  [
+            image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
                 for sfx in [".png", ".jpg"]
             ]
 
             try:
                 image_file_path = next(
-                    ip for ip in image_paths
-                    if (
-                        ip.exists() and is_valid_file(str(ip))
-                    )
+                    ip for ip in image_paths if (ip.exists() and is_valid_file(str(ip)))
                 )
             except StopIteration as e:
                 # raise exception here? logic being that we want to know very quickly that we don't have
@@ -187,13 +233,13 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 raise FileNotFoundError(
                     f"None of the following images exist: {image_paths}"
                 ) from e
+            labels = label_file_to_tensor(label_file_path, dataset_classes, Sx, Sy)
+            paths.append(str(image_file_path))
+            tensors.append(labels)
 
-            labels = load_labels_from_path(label_file_path, dataset_classes)
-            samples.append((str(image_file_path), labels))
+        return paths, tensors
 
-        return samples
-
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """From torchvision.datasets.folder.DatasetFolder
         Args:
             index (int): Index
@@ -201,21 +247,21 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Returns:
             tuple: (sample, target) where target is class_index of the target class.
         """
-        path, target = self.samples[index]
-        sample = self.loader(path)
+        img_path = str(self._paths[index], encoding="utf-8")
+        target = self._imgs[index, ...]
+        sample = self.loader(img_path)
         return sample, target
 
     def __len__(self) -> int:
         "From torchvision.datasets.folder.DatasetFolder"
-        return len(self.samples)
+        return len(self._paths)
 
 
 def load_dataset_description(
     dataset_description: str,
 ) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
     with open(dataset_description, "r") as desc:
-        with open(dataset_description, "r"):
-            yaml_data = yaml.safe_load(desc)
+        yaml_data = yaml.safe_load(desc)
 
         classes = yaml_data["class_names"]
 
@@ -242,7 +288,8 @@ def load_dataset_description(
 
         if not sum(split_fractions.values()) == 1:
             raise ValueError(
-                f"invalid split fractions for dataset: split fractions must add to 1, got {split_fractions}"
+                "invalid split fractions for dataset: split fractions must add to 1, "
+                f"got {split_fractions}"
             )
 
         check_dataset_paths(dataset_paths)
@@ -262,23 +309,24 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
 
 def get_datasets(
     dataset_description_file: str,
-    batch_size: int,
-    training: bool = True,
+    Sx,
+    Sy,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (
-        dataset_classes,
-        dataset_paths,
-        split_fractions,
-    ) = load_dataset_description(dataset_description_file)
+    (dataset_classes, dataset_paths, split_fractions,) = load_dataset_description(
+        dataset_description_file
+    )
 
+    # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dataset_classes,
             dataset_desc["image_path"],
             dataset_desc["label_path"],
+            Sx,
+            Sy,
         )
-        for dataset_desc in dataset_paths
+        for dataset_desc in tqdm(dataset_paths)
     )
 
     if split_fractions_override is not None:
@@ -314,6 +362,8 @@ def get_datasets(
 def get_dataloader(
     dataset_descriptor_file: str,
     batch_size: int,
+    Sx: int,
+    Sy: int,
     training: bool = True,
     preprocess_type: Optional[str] = None,
     vertical_crop_size: Optional[float] = None,
@@ -323,8 +373,8 @@ def get_dataloader(
 ) -> Dict[DatasetSplitName, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
-        batch_size,
-        training=training,
+        Sx,
+        Sy,
         split_fractions_override=split_fractions_override,
     )
     augmentations = (
@@ -359,9 +409,10 @@ def get_dataloader(
             shuffle=True,
             drop_last=False,
             batch_size=batch_size,
-            persistent_workers=True,  # why would htis not be on by default lol
+            persistent_workers=True,
             multiprocessing_context="spawn",
-            num_workers=len(os.sched_getaffinity(0)) // 2,  # type: ignore
+            # optimal # of workers?
+            num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
         )

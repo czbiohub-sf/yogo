@@ -179,7 +179,6 @@ class YOGO(nn.Module):
             classification = x[:, 5:, :, :]
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
-        # Order of meanings:
         #  center of bounding box in x
         #  center of bounding box in y
         #  width of bounding box
