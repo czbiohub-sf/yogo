@@ -1,10 +1,10 @@
 import os
 import csv
-import yaml
 import torch
 import numpy as np
 
 from tqdm import tqdm
+from ruamel import yaml
 from pathlib import Path
 from functools import partial
 from collections import defaultdict
