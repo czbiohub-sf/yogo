@@ -159,7 +159,7 @@ def draw_rects(
     if isinstance(rects, torch.Tensor):
         pred_dim, Sy, Sx = rects.shape
         if thresh is None:
-            thresh = 0.0
+            thresh = 0.5
         rects = [r for r in rects.reshape(pred_dim, Sx * Sy).T if r[4] > thresh]
         formatted_rects = [
             [
