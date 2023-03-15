@@ -3,7 +3,7 @@ command:
   - run
   - yogo
   - train
-  - ../dataset_defs/full_aditi_data.yml
+  - ../dataset_defs/full-aditi-data.yml
   - --note
   - "Sweeping along batchsize & learning rate"
   - --no-classify
