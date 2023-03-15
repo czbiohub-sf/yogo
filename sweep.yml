@@ -1,24 +1,24 @@
 command:
   - conda
   - run
-  - python3
-  - ${program}
-  - ../full_100x_dataset.yml
+  - yogo
+  - train
+  - ../dataset_defs/full-aditi-data.yml
   - --note
   - "Sweeping along batchsize & learning rate"
-method: grid
+  - --no-classify
+method: random
 metric:
   goal: maximize
   name: val mAP
 parameters:
-  model_arch:
-    values: 
-      - gen_model_original
-      - gen_model_wider
-      - gen_model_deeper
-      - gen_model_smaller
-      - gen_model_dropout
-      - gen_model_bigger_SxSy_1
-      - gen_model_bigger_SxSy_2
-      - gen_model_smaller_SxSy
-program: train.py
+  learning_rate:
+    min: 0.0000001
+    max: 0.01
+  optimizer_type:
+    values: ["adam", "lion"]
+  weight_decay:
+    min: 0.001
+    max: 0.1
+  batch_size:
+    values: [64, 128]
