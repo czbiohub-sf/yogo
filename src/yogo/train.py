@@ -123,11 +123,11 @@ def train():
     ) = init_dataset(config)
     print("dataset initialized...")
 
-    min_period = 8 * len(train_dataloader)
-    anneal_period = config["epochs"] * len(train_dataloader) - min_period
-    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
-    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
-    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+    scheduler = CosineAnnealingLR(
+        optimizer,
+        T_max=config["epochs"] * len(train_dataloader),
+        eta_min=config["learning_rate"] / 10
+    )
 
     best_mAP = 0
     for epoch in range(config["epochs"]):
