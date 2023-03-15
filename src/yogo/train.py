@@ -327,6 +327,10 @@ if __name__ == "__main__":
     torch.multiprocessing.set_start_method("spawn")
     # torch.multiprocessing.set_sharing_strategy("file_system")
 
+    # Potentially the end of my pain?
+    # https://pytorch.org/docs/stable/data.html#multi-process-data-loading
+    # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
+
     parser = train_parser()
     args = parser.parse_args()
 

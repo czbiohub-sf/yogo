@@ -2,6 +2,7 @@ import os
 import csv
 import yaml
 import torch
+import numpy as np
 
 from tqdm import tqdm
 from pathlib import Path
@@ -161,13 +162,16 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.label_folder_path = label_path
         self.loader = loader
 
-        self.samples = self.make_dataset(
+        paths, tensors = self.make_dataset(
             Sx,
             Sy,
             is_valid_file=is_valid_file,
             extensions=extensions,
             dataset_classes=dataset_classes,
         )
+
+        self._paths = np.array(paths).astype(np.string_)
+        self._imgs = torch.stack(tensors)
 
     def make_dataset(
         self,
@@ -176,7 +180,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
         dataset_classes: List[str] = YOGO_CLASS_ORDERING,
-    ) -> List[Tuple[str, torch.Tensor]]:
+    ) -> Tuple[List[str], List[torch.Tensor]]:
         """
         torchvision.datasets.folder.make_dataset doc string states:
             "Generates a list of samples of a form (path_to_sample, class)"
@@ -205,7 +209,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         is_valid_file = cast(Callable[[str], bool], is_valid_file)
 
         # maps file name to a list of tuples of bounding boxes + classes
-        samples: List[Tuple[str, torch.Tensor]] = []
+        paths: List[str] = []
+        tensors: List[torch.Tuple] = []
         for label_file_path in self.label_folder_path.glob("*"):
             image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
@@ -223,9 +228,10 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     f"None of the following images exist: {image_paths}"
                 ) from e
             labels = load_labels_from_path(label_file_path, dataset_classes, Sx, Sy)
-            samples.append((str(image_file_path), labels))
+            paths.append(str(image_file_path))
+            tensors.append(labels)
 
-        return samples
+        return paths, tensors
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """From torchvision.datasets.folder.DatasetFolder
@@ -235,13 +241,14 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Returns:
             tuple: (sample, target) where target is class_index of the target class.
         """
-        path, target = self.samples[index]
-        sample = self.loader(path)
+        img_path = str(self._paths[index], encoding="utf-8")
+        target = self._imgs[index, ...]
+        sample = self.loader(img_path)
         return sample, target
 
     def __len__(self) -> int:
         "From torchvision.datasets.folder.DatasetFolder"
-        return len(self.samples)
+        return len(self._paths)
 
 
 def load_dataset_description(
