@@ -4,13 +4,14 @@
 import wandb
 import torch
 
-from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast
+
+from lion_pytorch import Lion
 
 from yogo.model import YOGO
 from yogo.yogo_loss import YOGOLoss
@@ -76,7 +77,12 @@ def train():
     print('created network')
 
     Y_loss = YOGOLoss(classify=classify).to(device)
-    optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
+    optimizer = Lion(
+        net.parameters(),
+        lr=config["learning_rate"],
+        weight_decay=1e-2,
+        betas=(0.95,0.98)
+    )
 
     print('created loss and optimizer')
 
@@ -267,8 +273,8 @@ def do_training(args) -> None:
     )
 
     epochs = args.epochs or 64
-    batch_size = args.batch_size or 32
-    adam_lr = 3e-4
+    batch_size = args.batch_size or 64
+    lion_lr = 1e-4
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -301,7 +307,7 @@ def do_training(args) -> None:
         project="yogo",
         entity="bioengineering",
         config={
-            "learning_rate": adam_lr,
+            "learning_rate": lion_lr,
             "epochs": epochs,
             "batch_size": batch_size,
             "device": str(device),
