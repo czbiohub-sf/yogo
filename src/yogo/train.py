@@ -101,7 +101,7 @@ def train():
     optimizer = get_optimizer(
         config["optimizer_type"],
         parameters=net.parameters(),
-        lr=config["learning_rate"],
+        learning_rate=config["learning_rate"],
         weight_decay=weight_decay,
     )
 
