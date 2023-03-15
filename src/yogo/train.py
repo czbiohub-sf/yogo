@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-
+import os
 import wandb
 import torch
 
@@ -322,6 +322,7 @@ def do_training(args) -> None:
             "no_classify": args.no_classify,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
+            "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },
         notes=args.note,
         tags=["v0.0.3"],
