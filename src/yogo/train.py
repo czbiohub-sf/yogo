@@ -136,8 +136,6 @@ def train():
             # TODO need pin_memory?
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            print(f"training loop step {global_step}")
-            global_step += 1
 
             optimizer.zero_grad(set_to_none=True)
 
@@ -148,6 +146,7 @@ def train():
             optimizer.step()
             scheduler.step()
 
+            global_step += 1
             wandb.log(
                 {
                     "train loss": loss.item(),
