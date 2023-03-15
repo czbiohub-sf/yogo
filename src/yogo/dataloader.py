@@ -52,6 +52,7 @@ def read_grayscale(img_path):
 
 
 def collate_batch(batch, device="cpu", transforms=None):
+    # TODO https://pytorch.org/docs/stable/data.html#memory-pinning
     # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
@@ -316,6 +317,7 @@ def get_datasets(
         dataset_description_file
     )
 
+    # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dataset_classes,
@@ -407,8 +409,9 @@ def get_dataloader(
             shuffle=True,
             drop_last=False,
             batch_size=batch_size,
-            persistent_workers=True,  # why would htis not be on by default lol
+            persistent_workers=True,
             multiprocessing_context="spawn",
+            # optimal # of workers?
             num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
