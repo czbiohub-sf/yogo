@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 
 import torch
+
+import torchvision.ops as ops
 import torchvision.transforms as T
 
 from PIL import Image, ImageDraw
@@ -126,7 +128,7 @@ class Metrics:
 
                 labels.append(
                     {
-                        "boxes": row_ordered_img_labels[mask, 1:5],
+                        "boxes": ops.box_convert(row_ordered_img_labels[mask, 1:5], "xyxy", "cxcywh"),
                         "labels": row_ordered_img_labels[mask, 5],
                     }
                 )
