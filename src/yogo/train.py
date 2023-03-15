@@ -112,6 +112,7 @@ def train():
     for epoch in range(config["epochs"]):
         # train
         for imgs, labels in train_dataloader:
+            # TODO need pin_memory?
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             print(f'training loop step {global_step}')
@@ -152,7 +153,7 @@ def train():
             metrics.update(outputs, labels)
 
             annotated_img = wandb.Image(
-                draw_rects(imgs[0, 0, ...].clone(), outputs[0, ...].clone(), thresh=0.1)
+                draw_rects(imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5)
             )
 
             mAP, confusion_data = metrics.compute()
