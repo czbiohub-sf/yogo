@@ -29,6 +29,7 @@ from yogo.data_transforms import (
 )
 
 
+LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 YOGO_CLASS_ORDERING = [
     "healthy",
     "ring",
@@ -76,7 +77,7 @@ def format_labels(
     labels: torch.Tensor, Sx: int, Sy: int
 ) -> torch.Tensor:
     with torch.no_grad():
-        output = torch.zeros(1 + 4 + 1, Sy, Sx)
+        output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
 
         for (k, j), cell_label in label_cells.items():
@@ -88,7 +89,7 @@ def format_labels(
         return output
 
 
-def load_labels_from_path(
+def label_file_to_tensor(
     label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
 ) -> torch.Tensor:
 
@@ -105,7 +106,7 @@ def load_labels_from_path(
                 reader = csv.reader(f, dialect)
             except csv.Error:
                 # emtpy file, no labels, just keep moving
-                return torch.zeros(1 + 4 + 1, Sy, Sx)
+                return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
             if has_header:
                 next(reader, None)
@@ -133,7 +134,7 @@ def load_labels_from_path(
     labels_tensor = torch.Tensor(labels)
 
     if labels_tensor.nelement() == 0:
-        return torch.zeros(1 + 4 + 1, Sy, Sx)
+        return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
     return format_labels(labels_tensor, Sx, Sy)
@@ -227,7 +228,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 raise FileNotFoundError(
                     f"None of the following images exist: {image_paths}"
                 ) from e
-            labels = load_labels_from_path(label_file_path, dataset_classes, Sx, Sy)
+            labels = label_file_to_tensor(label_file_path, dataset_classes, Sx, Sy)
             paths.append(str(image_file_path))
             tensors.append(labels)
 
