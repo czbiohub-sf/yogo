@@ -11,9 +11,6 @@
 
 env | grep "^SLURM" | sort
 
-# curious about transfer time
-
-
 nvcc --version
 
 nvidia-smi

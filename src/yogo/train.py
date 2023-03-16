@@ -12,7 +12,7 @@ from lion_pytorch import Lion
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast, Literal, Iterator
+from typing import Optional, Tuple, cast, Literal, Iterator, List
 
 from yogo.model import YOGO
 from yogo.yogo_loss import YOGOLoss
@@ -107,7 +107,7 @@ def train():
 
     print("created loss and optimizer")
 
-    metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
+    metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names, classify=classify)
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
@@ -170,7 +170,7 @@ def train():
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            metrics.update(outputs, labels)
+                metrics.update(outputs, labels)
 
             annotated_img = wandb.Image(
                 draw_rects(
@@ -178,6 +178,7 @@ def train():
                 )
             )
 
+            # mAP, confusion_data, precision_recall = metrics.compute()
             mAP, confusion_data = metrics.compute()
             metrics.reset()
 
@@ -187,8 +188,11 @@ def train():
                     "val loss": val_loss / len(validate_dataloader),
                     "val mAP": mAP["map"],
                     "val confusion": get_wandb_confusion(
-                        confusion_data, "validation confusion matrix"
+                        confusion_data, class_names, "validation confusion matrix"
                     ),
+                    #"val precision recall": get_wandb_precision_recall(
+                    #    *precision_recall, "validation precision recall"
+                    #),
                 },
             )
 
@@ -215,11 +219,12 @@ def train():
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
+            metrics.update(outputs, labels)
 
-        metrics.update(outputs, labels)
-
+        #mAP, confusion_data, precision_recall = metrics.compute()
         mAP, confusion_data = metrics.compute()
         metrics.reset()
+
         wandb.log(
             {
                 "test loss": test_loss / len(test_dataloader),
@@ -227,6 +232,9 @@ def train():
                 "test confusion": get_wandb_confusion(
                     confusion_data, "test confusion matrix"
                 ),
+                #"test precision recall": get_wandb_precision_recall(
+                #    *precision_recall, "test precision recall"
+                #),
             },
         )
 
@@ -273,13 +281,40 @@ def init_dataset(config: WandbConfig):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-def get_wandb_confusion(confusion_data, title):
+def get_wandb_confusion(confusion_data: torch.Tensor, class_names: List[str], title: str = "confusion matrix"):
+    nc1, nc2 = confusion_data.shape
+    assert nc1 == nc2 == len(class_names)
+
+    L = []
+    for i in range(nc1):
+        for j in range(nc2):
+            # annoyingly, wandb will sort the matrix by row/col names. sad!
+            # fix the order we want by prepending the index of the class.
+            L.append(
+                (
+                    f"{i} - {class_names[i]}",
+                    f"{j} - {class_names[j]}",
+                    confusion_data[i, j],
+                )
+            )
+
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"], data=L,
         ),
         {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
+        {"title": title},
+    )
+
+
+def get_wandb_precision_recall(precision: List[float], recall: List[float], title: str = "precision vs. recall"):
+    return wandb.plot_table(
+        "wandb/area-under-curve/v0",
+        wandb.Table(
+            columns=["recall", "precision"], data=list(zip(precision, recall))
+        ),
+        {"x": "recall", "y": "precision"},
         {"title": title},
     )
 
