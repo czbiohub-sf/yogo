@@ -10,6 +10,7 @@ from typing import Optional, Union, List
 
 from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
+from torchmetrics.classification import MulticlassPrecisionRecallCurve
 
 from typing import Optional, Tuple, List, Dict
 
@@ -25,13 +26,15 @@ class Metrics:
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
         self.confusion.to(device)
 
+        self.precision_recall = MulticlassPrecisionRecallCurve(num_classes=num_classes)
+
         self.num_classes = num_classes
         self.class_names = (
             list(range(num_classes)) if class_names is None else class_names
         )
         assert self.num_classes == len(self.class_names)
 
-    def update(self, preds, labels, raw_preds=True):
+    def update(self, preds, labels):
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
@@ -39,11 +42,11 @@ class Metrics:
         self.mAP.update(mAP_preds, mAP_labels)
 
         confusion_preds, confusion_labels = self.format_for_confusion(
-            batch_preds=preds, batch_labels=labels, raw_preds=raw_preds
+            batch_preds=preds, batch_labels=labels
         )
         self.confusion.update(confusion_preds, confusion_labels)
 
-    def compute(self):
+    def compute_confusion(self):
         confusion_mat = self.confusion.compute()
 
         nc1, nc2 = confusion_mat.shape
@@ -55,43 +58,84 @@ class Metrics:
                 # annoyingly, wandb will sort the matrix by row/col names. sad!
                 # fix the order we want by prepending the index of the class.
                 L.append(
-                    (f"{i} - {self.class_names[i]}", f"{j} - {self.class_names[j]}", confusion_mat[i, j])
+                    (
+                        f"{i} - {self.class_names[i]}",
+                        f"{j} - {self.class_names[j]}",
+                        confusion_mat[i, j],
+                    )
                 )
 
-        return self.mAP.compute(), L
+        return L
+
+    def compute(self): return self.mAP.compute(), self.compute_confusion()
 
     def reset(self):
         self.mAP.reset()
-        # self.confusion.reset()
+        self.confusion.reset()
 
-    def format_for_confusion(
-        self, batch_preds, batch_labels, raw_preds=True
-    ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
+    def _format_preds_and_labels(
+        self,
+        batch_preds: torch.Tensor,
+        batch_labels: torch.Tensor,
+        objectness_thresh: float = 0,
+        IoU_thresh: float = 0,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ A very important utility function for filtering predictions on labels
+
+        Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
+        We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
+
+        batch_preds and batch_labels are the batch label and prediction tensors.
+        objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell
+        IoU_thresh is the threshold of IoU for prediction and label bbs. 
+
+        Returns (tensor of predictions shape=[N, x y x y t0 *classes], tensor of labels shape=[N, mask x y x y class])
+        """
+        if IoU_thresh != 0:
+            # it isn't immediately obvious to me how exactly to do this. Filter out rows of IoU matrix?
+            # what happens if number of predicted_boxes != number of label_boxes? 
+            raise NotImplementedError("axel hasn't implemented objectness_threshold yet!")
+        if not (0 <= objectness_thresh < 1):
+            raise ValueError(f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}")
+
         bs, pred_shape, Sy, Sx = batch_preds.shape
         bs, label_shape, Sy, Sx = batch_labels.shape
 
-        # TODO I think it would be faster to mask and then format tensors,
-        # but masking on interior dims is tricky (maybe?) idk just do it
-        # this way unless it is proved that it is too slow
-        confusion_preds = (
-            batch_preds.permute(1, 0, 2, 3)[5:, ...]
-            .reshape(self.num_classes, bs * Sx * Sy)
+        # xc yc w h to *classes
+        reformatted_preds = (
+            batch_preds.permute(1, 0, 2, 3)
+            .reshape(pred_shape, bs * Sx * Sy)
             .T
         )
-        confusion_preds = torch.argmax(confusion_preds, dim=1, keepdim=True)
 
-        reshaped_pred = (
+        # mask x y x y class
+        reformatted_labels = (
             batch_labels.permute(1, 0, 2, 3)
             .reshape(label_shape, bs * Sx * Sy)
-            .permute(1, 0)
+            .T
         )
-        confusion_labels = reshaped_pred[:, 5:]
-        mask = reshaped_pred[:, 0:1].bool()
 
-        confusion_preds = torch.masked_select(confusion_preds, mask).unsqueeze_(1)
-        confusion_labels = torch.masked_select(confusion_labels, mask).unsqueeze_(1)
+        # masked labels is *actual predictions*
+        label_mask = reformatted_labels[:, 0:1].bool()
+        masked_labels = torch.masked_select(reformatted_labels, label_mask)
 
-        return confusion_preds, confusion_labels
+        # filter on objectness
+        preds_with_objects = torch.masked_select(reformatted_preds, (reformatted_preds[:, 4] > objectness_thresh).bool())
+
+        preds_with_objects[:, 0:4] = ops.box_convert(preds_with_objects[:, 0:4], "xcycwh", "xyxy")
+
+        # choose predictions from argmaxed IoU along label dim to get best prediction per label
+        prediction_indices = ops.box_iou(masked_labels[:, 1:5], preds_with_objects[:, 0:4]).argmax(dim=0)
+
+        masked_predictions = preds_with_objects[prediction_indices]
+
+        return masked_predictions, masked_labels
+
+    def format_for_confusion(
+        self, batch_preds, batch_labels
+    ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
+        preds, labels = self._format_preds_and_labels(batch_preds, batch_labels)
+        return preds[:, 0:4], labels[:, 1:5]
 
     @staticmethod
     def format_for_mAP(
@@ -128,7 +172,9 @@ class Metrics:
 
                 labels.append(
                     {
-                        "boxes": ops.box_convert(row_ordered_img_labels[mask, 1:5], "xyxy", "cxcywh"),
+                        "boxes": ops.box_convert(
+                            row_ordered_img_labels[mask, 1:5], "xyxy", "cxcywh"
+                        ),
                         "labels": row_ordered_img_labels[mask, 5],
                     }
                 )
