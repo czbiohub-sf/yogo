@@ -293,7 +293,7 @@ def do_training(args) -> None:
 
     epochs = args.epochs or 64
     batch_size = args.batch_size or 32
-    learning_rate = 3e-4
+    learning_rate = 1e-4
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -326,9 +326,9 @@ def do_training(args) -> None:
         project="yogo",
         entity="bioengineering",
         config={
-            "optimizer_type": "adam",
+            "optimizer_type": "lion",
             "learning_rate": learning_rate,
-            "weight_decay": 1e-2,
+            "weight_decay": 3e-2,
             "epochs": epochs,
             "batch_size": batch_size,
             "device": str(device),
