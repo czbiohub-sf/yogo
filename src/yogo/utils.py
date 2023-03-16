@@ -19,17 +19,21 @@ class Metrics:
         num_classes: int,
         device: str = "cpu",
         class_names: Optional[List[str]] = None,
+        classify: bool = True
     ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        self.confusion.to(device)
-
         self.precision_recall = MulticlassPrecisionRecallCurve(num_classes=num_classes)
+
+        self.mAP.to(device)
+        self.confusion.to(device)
+        # self.precision_recall.to(device)
 
         self.num_classes = num_classes
         self.class_names = (
             list(range(num_classes)) if class_names is None else class_names
         )
+        self.classify = classify
         assert self.num_classes == len(self.class_names)
 
     def update(self, preds, labels):
@@ -39,37 +43,25 @@ class Metrics:
         mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
         self.mAP.update(mAP_preds, mAP_labels)
 
-        confusion_preds, confusion_labels = self.format_for_confusion(
-            batch_preds=preds, batch_labels=labels
+        formatted_preds, formatted_labels = self._format_preds_and_labels(preds, labels)
+
+        self.confusion.update(
+            formatted_preds[:, 5:].argmax(dim=1),
+            formatted_labels[:, 5:].squeeze()
         )
-        self.confusion.update(confusion_preds, confusion_labels)
+        # self.precision_recall.update(
+        #     formatted_preds[:, 5:],
+        #     formatted_labels[:, 5:].squeeze().long()
+        # )
 
-    def compute_confusion(self):
-        confusion_mat = self.confusion.compute()
-
-        nc1, nc2 = confusion_mat.shape
-        assert nc1 == nc2 == self.num_classes
-
-        L = []
-        for i in range(nc1):
-            for j in range(nc2):
-                # annoyingly, wandb will sort the matrix by row/col names. sad!
-                # fix the order we want by prepending the index of the class.
-                L.append(
-                    (
-                        f"{i} - {self.class_names[i]}",
-                        f"{j} - {self.class_names[j]}",
-                        confusion_mat[i, j],
-                    )
-                )
-
-        return L
-
-    def compute(self): return self.mAP.compute(), self.compute_confusion()
+    def compute(self):
+        # prec, recall, _ = self.precision_recall.compute() 
+        return self.mAP.compute(), self.confusion.compute()#, (prec, recall)
 
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
+        # self.precision_recall.reset()
 
     def _format_preds_and_labels(
         self,
@@ -92,7 +84,7 @@ class Metrics:
         if IoU_thresh != 0:
             # it isn't immediately obvious to me how exactly to do this. Filter out rows of IoU matrix?
             # what happens if number of predicted_boxes != number of label_boxes? 
-            raise NotImplementedError("axel hasn't implemented objectness_threshold yet!")
+            raise NotImplementedError("axel hasn't implemented `IoU_thresh` yet!")
         if not (0 <= objectness_thresh < 1):
             raise ValueError(f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}")
 
@@ -128,18 +120,8 @@ class Metrics:
 
         return masked_predictions, masked_labels
 
-    def format_for_confusion(
-        self, batch_preds, batch_labels
-    ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
-        preds, labels = self._format_preds_and_labels(batch_preds, batch_labels)
-        # preds are of shape [N, (x y x y t0 *classes)], and labels are of
-        # shape [N, (mask x y x y class_idx)]. We want the class probabilities
-        # from preds and class indexes from labels
-        return preds[:, 5:].softmax(dim=1).argmax(dim=1), labels[:, 5:].squeeze()
-
-    @staticmethod
     def format_for_mAP(
-        batch_preds, batch_labels
+        self, batch_preds, batch_labels
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
         bs, label_shape, Sy, Sx = batch_labels.shape
         bs, pred_shape, Sy, Sx = batch_preds.shape
@@ -182,7 +164,13 @@ class Metrics:
                     {
                         "boxes": row_ordered_img_preds[mask, :4],
                         "scores": row_ordered_img_preds[mask, 4],
-                        "labels": row_ordered_img_preds[mask, 5:].softmax(dim=1).argmax(dim=1),
+                        # bastardization of mAP - if we are only doing object detection, lets only get
+                        # penalized for our detection failures. This is definitely hacky!
+                        "labels": (
+                            row_ordered_img_preds[mask, 5:].argmax(dim=1)
+                            if self.classify
+                            else row_ordered_img_labels[mask, 5]
+                        ),
                     }
                 )
 
