@@ -1,26 +1,29 @@
 #! /usr/bin/env python3
 
-
+import os
 import wandb
 import torch
 
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
+from lion_pytorch import Lion
+
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast
+from typing import Optional, Tuple, cast, Literal, Iterator
 
 from yogo.model import YOGO
 from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, Metrics
 from yogo.dataloader import (
+    YOGO_CLASS_ORDERING,
     load_dataset_description,
     get_dataloader,
 )
-from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from yogo.cluster_anchors import best_anchor
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -52,18 +55,37 @@ def checkpoint_model(model, epoch, optimizer, name, step):
     )
 
 
+def get_optimizer(
+    optimizer_type: Literal["lion", "adam"],
+    parameters: Iterator[torch.Tensor],
+    learning_rate: float,
+    weight_decay: float,
+) -> torch.optim.Optimizer:
+    if optimizer_type == "lion":
+        return Lion(parameters, lr=learning_rate, weight_decay=weight_decay, betas=(0.95, 0.98))
+    elif optimizer_type == "adam":
+        return AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
+    raise ValueError(f"got invalid optimizer_type {optimizer_type}")
+
+
 def train():
     config = wandb.config
     device = config["device"]
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
+    weight_decay=config["weight_decay"]
     num_classes = len(class_names)
     classify = not config["no_classify"]
 
     if config.pretrained_path:
         net, global_step = YOGO.from_pth(config.pretrained_path)
         net.to(device)
+        if any(net.img_size.cpu().numpy() != config["resize_shape"]):
+            raise RuntimeError(
+                "mismatch in pretrained network image resize shape and current resize shape: "
+                f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
+            )
     else:
         net = YOGO(
             num_classes=num_classes,
@@ -73,12 +95,17 @@ def train():
         ).to(device)
         global_step = 0
 
-    print('created network')
+    print("created network")
 
     Y_loss = YOGOLoss(classify=classify).to(device)
-    optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
+    optimizer = get_optimizer(
+        config["optimizer_type"],
+        parameters=net.parameters(),
+        learning_rate=config["learning_rate"],
+        weight_decay=weight_decay,
+    )
 
-    print('created loss and optimizer')
+    print("created loss and optimizer")
 
     metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
 
@@ -87,27 +114,28 @@ def train():
     Sx, Sy = net.get_grid_size(config["resize_shape"])
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
-    print('initializing dataset...')
+    print("initializing dataset...")
     (
         model_save_dir,
         train_dataloader,
         validate_dataloader,
         test_dataloader,
     ) = init_dataset(config)
-    print('dataset initialized...')
+    print("dataset initialized...")
 
-    min_period = 8 * len(train_dataloader)
-    anneal_period = config["epochs"] * len(train_dataloader) - min_period
-    lin = LinearLR(optimizer, start_factor=0.01, end_factor=1, total_iters=min_period)
-    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
-    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+    scheduler = CosineAnnealingLR(
+        optimizer,
+        T_max=config["epochs"] * len(train_dataloader),
+        eta_min=config["learning_rate"] / 10
+    )
 
     best_mAP = 0
     for epoch in range(config["epochs"]):
         # train
-        for i, (imgs, labels) in enumerate(train_dataloader, 1):
-            print(f'training loop step {i}')
-            global_step += 1
+        for imgs, labels in train_dataloader:
+            # TODO need pin_memory?
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
 
             optimizer.zero_grad(set_to_none=True)
 
@@ -118,6 +146,7 @@ def train():
             optimizer.step()
             scheduler.step()
 
+            global_step += 1
             wandb.log(
                 {
                     "train loss": loss.item(),
@@ -135,6 +164,8 @@ def train():
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
+                imgs = imgs.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
@@ -142,7 +173,9 @@ def train():
             metrics.update(outputs, labels)
 
             annotated_img = wandb.Image(
-                draw_rects(imgs[0, 0, ...], outputs[0, ...], thresh=0.1)
+                draw_rects(
+                    imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5
+                )
             )
 
             mAP, confusion_data = metrics.compute()
@@ -177,6 +210,8 @@ def train():
     test_loss = 0.0
     with torch.no_grad():
         for imgs, labels in test_dataloader:
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
@@ -196,11 +231,7 @@ def train():
         )
 
         checkpoint_model(
-            net,
-            epoch,
-            optimizer,
-            model_save_dir / f"{wandb.run.name}_{epoch}_{i}.pth",
-            global_step,
+            net, epoch, optimizer, model_save_dir / f"latest.pth", global_step,
         )
 
 
@@ -262,7 +293,7 @@ def do_training(args) -> None:
 
     epochs = args.epochs or 64
     batch_size = args.batch_size or 32
-    adam_lr = 3e-4
+    learning_rate = 3e-4
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -282,20 +313,22 @@ def do_training(args) -> None:
         resize_target_size = (772, 1032)
         preprocess_type = None
 
-    print('loading dataset description')
+    print("loading dataset description")
     class_names, dataset_paths, _ = load_dataset_description(
         args.dataset_descriptor_file
     )
 
-    print('getting best anchor')
+    print("getting best anchor")
     anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
-    print('initting wandb')
+    print("initting wandb")
     wandb.init(
         project="yogo",
         entity="bioengineering",
         config={
-            "learning_rate": adam_lr,
+            "optimizer_type": "adam",
+            "learning_rate": learning_rate,
+            "weight_decay": 1e-2,
             "epochs": epochs,
             "batch_size": batch_size,
             "device": str(device),
@@ -304,11 +337,12 @@ def do_training(args) -> None:
             "resize_shape": resize_target_size,
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
-            "class_names": class_names,
+            "class_names": YOGO_CLASS_ORDERING,
             "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
             "run group": args.group,
             "dataset_descriptor_file": args.dataset_descriptor_file,
+            "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },
         notes=args.note,
         tags=["v0.0.3"],

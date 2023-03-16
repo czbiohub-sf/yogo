@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 
 import torch
+
+import torchvision.ops as ops
 import torchvision.transforms as T
 
 from PIL import Image, ImageDraw
@@ -13,7 +15,6 @@ from typing import Optional, Tuple, List, Dict
 
 
 class Metrics:
-    # TODO fix confusion
     def __init__(
         self,
         num_classes: int,
@@ -21,12 +22,14 @@ class Metrics:
         class_names: Optional[List[str]] = None,
     ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        # self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        # self.confusion.to(device)
+        self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
+        self.confusion.to(device)
 
+        self.num_classes = num_classes
         self.class_names = (
             list(range(num_classes)) if class_names is None else class_names
         )
+        assert self.num_classes == len(self.class_names)
 
     def update(self, preds, labels, raw_preds=True):
         bs, pred_shape, Sy, Sx = preds.shape
@@ -35,25 +38,25 @@ class Metrics:
         mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
         self.mAP.update(mAP_preds, mAP_labels)
 
-        # confusion_preds, confusion_labels = self.format_for_confusion(
-        #    preds, labels, raw_preds=raw_preds
-        # )
-        # self.confusion.update(confusion_preds, confusion_labels)
+        confusion_preds, confusion_labels = self.format_for_confusion(
+            batch_preds=preds, batch_labels=labels, raw_preds=raw_preds
+        )
+        self.confusion.update(confusion_preds, confusion_labels)
 
     def compute(self):
-        # confusion_mat = self.confusion.compute()
+        confusion_mat = self.confusion.compute()
 
-        # nc1, nc2 = confusion_mat.shape
-        # assert nc1 == nc2
+        nc1, nc2 = confusion_mat.shape
+        assert nc1 == nc2 == self.num_classes
 
         L = []
-        """
         for i in range(nc1):
             for j in range(nc2):
+                # annoyingly, wandb will sort the matrix by row/col names. sad!
+                # fix the order we want by prepending the index of the class.
                 L.append(
-                    (self.class_names[i], self.class_names[j], confusion_mat[i, j])
+                    (f"{i} - {self.class_names[i]}", f"{j} - {self.class_names[j]}", confusion_mat[i, j])
                 )
-        """
 
         return self.mAP.compute(), L
 
@@ -61,26 +64,34 @@ class Metrics:
         self.mAP.reset()
         # self.confusion.reset()
 
-    @staticmethod
     def format_for_confusion(
-        batch_preds, batch_labels, raw_preds=True
+        self, batch_preds, batch_labels, raw_preds=True
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
         bs, pred_shape, Sy, Sx = batch_preds.shape
         bs, label_shape, Sy, Sx = batch_labels.shape
 
-        if raw_preds:
-            batch_preds[:, 5:, :, :] = torch.softmax(batch_preds[:, 5:, :, :], dim=1)
+        # TODO I think it would be faster to mask and then format tensors,
+        # but masking on interior dims is tricky (maybe?) idk just do it
+        # this way unless it is proved that it is too slow
+        confusion_preds = (
+            batch_preds.permute(1, 0, 2, 3)[5:, ...]
+            .reshape(self.num_classes, bs * Sx * Sy)
+            .T
+        )
+        confusion_preds = torch.argmax(confusion_preds, dim=1, keepdim=True)
 
-        confusion_batch_preds = (
-            batch_preds.permute(1, 0, 2, 3)[5:, ...].reshape(-1, bs * Sx * Sy).T
-        )
-        confusion_labels = (
-            batch_labels.permute(1, 0, 2, 3)[5, :, :, :]
-            .reshape(1, bs * Sx * Sy)
+        reshaped_pred = (
+            batch_labels.permute(1, 0, 2, 3)
+            .reshape(label_shape, bs * Sx * Sy)
             .permute(1, 0)
-            .long()
         )
-        return confusion_batch_preds, confusion_labels
+        confusion_labels = reshaped_pred[:, 5:]
+        mask = reshaped_pred[:, 0:1].bool()
+
+        confusion_preds = torch.masked_select(confusion_preds, mask).unsqueeze_(1)
+        confusion_labels = torch.masked_select(confusion_labels, mask).unsqueeze_(1)
+
+        return confusion_preds, confusion_labels
 
     @staticmethod
     def format_for_mAP(
@@ -117,7 +128,7 @@ class Metrics:
 
                 labels.append(
                     {
-                        "boxes": row_ordered_img_labels[mask, 1:5],
+                        "boxes": ops.box_convert(row_ordered_img_labels[mask, 1:5], "xyxy", "cxcywh"),
                         "labels": row_ordered_img_labels[mask, 5],
                     }
                 )
@@ -150,7 +161,7 @@ def draw_rects(
     if isinstance(rects, torch.Tensor):
         pred_dim, Sy, Sx = rects.shape
         if thresh is None:
-            thresh = 0.0
+            thresh = 0.5
         rects = [r for r in rects.reshape(pred_dim, Sx * Sy).T if r[4] > thresh]
         formatted_rects = [
             [

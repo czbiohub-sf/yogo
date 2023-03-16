@@ -1,9 +1,10 @@
 import os
 import csv
-import yaml
 import torch
+import numpy as np
 
 from tqdm import tqdm
+from ruamel import yaml
 from pathlib import Path
 from functools import partial
 from collections import defaultdict
@@ -29,6 +30,7 @@ from yogo.data_transforms import (
 )
 
 
+LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 YOGO_CLASS_ORDERING = [
     "healthy",
     "ring",
@@ -51,10 +53,11 @@ def read_grayscale(img_path):
 
 
 def collate_batch(batch, device="cpu", transforms=None):
+    # TODO https://pytorch.org/docs/stable/data.html#memory-pinning
     # perform image transforms here so we can transform in batches! :)
     inputs, labels = zip(*batch)
-    batched_inputs = torch.stack(inputs).to(device, non_blocking=True)
-    batched_labels = torch.stack(labels).to(device, non_blocking=True)
+    batched_inputs = torch.stack(inputs)
+    batched_labels = torch.stack(labels)
     return transforms(batched_inputs, batched_labels)
 
 
@@ -76,7 +79,7 @@ def format_labels(
     labels: torch.Tensor, Sx: int, Sy: int
 ) -> torch.Tensor:
     with torch.no_grad():
-        output = torch.zeros(1 + 4 + 1, Sy, Sx)
+        output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
 
         for (k, j), cell_label in label_cells.items():
@@ -88,7 +91,7 @@ def format_labels(
         return output
 
 
-def load_labels_from_path(
+def label_file_to_tensor(
     label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
 ) -> torch.Tensor:
 
@@ -105,7 +108,7 @@ def load_labels_from_path(
                 reader = csv.reader(f, dialect)
             except csv.Error:
                 # emtpy file, no labels, just keep moving
-                return torch.zeros(1 + 4 + 1, Sy, Sx)
+                return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
             if has_header:
                 next(reader, None)
@@ -133,7 +136,7 @@ def load_labels_from_path(
     labels_tensor = torch.Tensor(labels)
 
     if labels_tensor.nelement() == 0:
-        return torch.zeros(1 + 4 + 1, Sy, Sx)
+        return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
     return format_labels(labels_tensor, Sx, Sy)
@@ -189,13 +192,20 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.label_folder_path = label_path
         self.loader = loader
 
-        self.samples = self.make_dataset(
+        # https://pytorch.org/docs/stable/data.html#multi-process-data-loading
+        # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
+        # essentially, to avoid dataloader workers from copying tonnes of mem,
+        # we can't store samples in lists. Hence, the tensor and numpy array.
+        paths, tensors = self.make_dataset(
             Sx,
             Sy,
             is_valid_file=is_valid_file,
             extensions=extensions,
             dataset_classes=dataset_classes,
         )
+
+        self._paths = np.array(paths).astype(np.string_)
+        self._imgs = torch.stack(tensors)
 
     def make_dataset(
         self,
@@ -204,7 +214,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
         dataset_classes: List[str] = YOGO_CLASS_ORDERING,
-    ) -> List[Tuple[str, torch.Tensor]]:
+    ) -> Tuple[List[str], List[torch.Tensor]]:
         """
         torchvision.datasets.folder.make_dataset doc string states:
             "Generates a list of samples of a form (path_to_sample, class)"
@@ -242,13 +252,12 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
 
         # maps file name to a list of tuples of bounding boxes + classes
-        # TODO multiprocess pool imap?
         with Pool() as p:
-            return list(p.imap_unordered(
+            return zip(*p.imap_unordered(
                 processor,
                 self.label_folder_path.glob("*"),
                 chunksize=16
-            ))
+            )))
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         """From torchvision.datasets.folder.DatasetFolder
@@ -258,13 +267,14 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Returns:
             tuple: (sample, target) where target is class_index of the target class.
         """
-        path, target = self.samples[index]
-        sample = self.loader(path)
+        img_path = str(self._paths[index], encoding="utf-8")
+        target = self._imgs[index, ...]
+        sample = self.loader(img_path)
         return sample, target
 
     def __len__(self) -> int:
         "From torchvision.datasets.folder.DatasetFolder"
-        return len(self.samples)
+        return len(self._paths)
 
 
 def load_dataset_description(
@@ -327,6 +337,7 @@ def get_datasets(
         dataset_description_file
     )
 
+    # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dataset_classes,
@@ -418,9 +429,9 @@ def get_dataloader(
             shuffle=True,
             drop_last=False,
             batch_size=batch_size,
-            persistent_workers=True,  # why would htis not be on by default lol
-            worker_init_fn=lambda worker_id: print(torch.multiprocessing.get_sharing_strategy()),
+            persistent_workers=True,
             multiprocessing_context="spawn",
+            # optimal # of workers?
             num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
             generator=torch.Generator().manual_seed(101010),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
