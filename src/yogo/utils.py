@@ -62,7 +62,7 @@ class Metrics:
 
     def reset(self):
         self.mAP.reset()
-        # self.confusion.reset()
+        self.confusion.reset()
 
     def format_for_confusion(
         self, batch_preds, batch_labels, raw_preds=True
