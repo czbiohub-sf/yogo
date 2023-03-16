@@ -27,7 +27,7 @@ class Metrics:
 
         self.mAP.to(device)
         self.confusion.to(device)
-        # self.precision_recall.to(device)
+        self.precision_recall.to(device)
 
         self.num_classes = num_classes
         self.class_names = (
@@ -49,19 +49,19 @@ class Metrics:
             formatted_preds[:, 5:].argmax(dim=1),
             formatted_labels[:, 5:].squeeze()
         )
-        # self.precision_recall.update(
-        #     formatted_preds[:, 5:],
-        #     formatted_labels[:, 5:].squeeze().long()
-        # )
+        self.precision_recall.update(
+            formatted_preds[:, 5:],
+            formatted_labels[:, 5:].squeeze().long()
+        )
 
     def compute(self):
-        # prec, recall, _ = self.precision_recall.compute() 
+        prec, recall, _ = self.precision_recall.compute() 
         return self.mAP.compute(), self.confusion.compute()#, (prec, recall)
 
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
-        # self.precision_recall.reset()
+        self.precision_recall.reset()
 
     def _format_preds_and_labels(
         self,

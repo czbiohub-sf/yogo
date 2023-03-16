@@ -190,9 +190,9 @@ def train():
                     "val confusion": get_wandb_confusion(
                         confusion_data, class_names, "validation confusion matrix"
                     ),
-                    #"val precision recall": get_wandb_precision_recall(
-                    #    *precision_recall, "validation precision recall"
-                    #),
+                    "val precision recall": get_wandb_precision_recall(
+                        *precision_recall, "validation precision recall"
+                    ),
                 },
             )
 
@@ -232,9 +232,9 @@ def train():
                 "test confusion": get_wandb_confusion(
                     confusion_data, "test confusion matrix"
                 ),
-                #"test precision recall": get_wandb_precision_recall(
-                #    *precision_recall, "test precision recall"
-                #),
+                "test precision recall": get_wandb_precision_recall(
+                    *precision_recall, "test precision recall"
+                ),
             },
         )
 
