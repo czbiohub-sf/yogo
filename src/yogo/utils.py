@@ -43,7 +43,6 @@ class Metrics:
             batch_preds=preds, batch_labels=labels
         )
         self.confusion.update(confusion_preds, confusion_labels)
-        print("woa!")
 
     def compute_confusion(self):
         confusion_mat = self.confusion.compute()
@@ -136,7 +135,7 @@ class Metrics:
         # preds are of shape [N, (x y x y t0 *classes)], and labels are of
         # shape [N, (mask x y x y class_idx)]. We want the class probabilities
         # from preds and class indexes from labels
-        return preds[:, 5:], labels[:, 5:].squeeze()
+        return preds[:, 5:].softmax(dim=1).argmax(dim=1), labels[:, 5:].squeeze()
 
     @staticmethod
     def format_for_mAP(
@@ -183,7 +182,7 @@ class Metrics:
                     {
                         "boxes": row_ordered_img_preds[mask, :4],
                         "scores": row_ordered_img_preds[mask, 4],
-                        "labels": torch.argmax(row_ordered_img_preds[mask, 5:], dim=1),
+                        "labels": row_ordered_img_preds[mask, 5:].softmax(dim=1).argmax(dim=1),
                     }
                 )
 
