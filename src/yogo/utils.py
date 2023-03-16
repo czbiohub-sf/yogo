@@ -6,13 +6,11 @@ import torchvision.ops as ops
 import torchvision.transforms as T
 
 from PIL import Image, ImageDraw
-from typing import Optional, Union, List
+from typing import Optional, Union, Tuple, List, Dict
 
 from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchmetrics.classification import MulticlassPrecisionRecallCurve
-
-from typing import Optional, Tuple, List, Dict
 
 
 class Metrics:
@@ -38,13 +36,14 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
+        mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
+        self.mAP.update(mAP_preds, mAP_labels)
+
         confusion_preds, confusion_labels = self.format_for_confusion(
             batch_preds=preds, batch_labels=labels
         )
         self.confusion.update(confusion_preds, confusion_labels)
-
-        mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
-        self.mAP.update(mAP_preds, mAP_labels)
+        print("woa!")
 
     def compute_confusion(self):
         confusion_mat = self.confusion.compute()
@@ -116,16 +115,15 @@ class Metrics:
         )
 
         # masked labels is *actual predictions*
-        label_mask = reformatted_labels[:, 0:1].bool()
-        masked_labels = torch.masked_select(reformatted_labels, label_mask)
+        masked_labels = reformatted_labels[reformatted_labels[:, 0].bool()]
 
         # filter on objectness
-        preds_with_objects = torch.masked_select(reformatted_preds, (reformatted_preds[:, 4] > objectness_thresh).bool())
+        preds_with_objects = reformatted_preds[reformatted_preds[:, 4] > objectness_thresh]
 
-        preds_with_objects[:, 0:4] = ops.box_convert(preds_with_objects[:, 0:4], "xcycwh", "xyxy")
+        preds_with_objects[:, 0:4] = ops.box_convert(preds_with_objects[:, 0:4], "cxcywh", "xyxy")
 
         # choose predictions from argmaxed IoU along label dim to get best prediction per label
-        prediction_indices = ops.box_iou(masked_labels[:, 1:5], preds_with_objects[:, 0:4]).argmax(dim=0)
+        prediction_indices = ops.box_iou(masked_labels[:, 1:5], preds_with_objects[:, 0:4]).argmax(dim=1)
 
         masked_predictions = preds_with_objects[prediction_indices]
 
@@ -135,7 +133,10 @@ class Metrics:
         self, batch_preds, batch_labels
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
         preds, labels = self._format_preds_and_labels(batch_preds, batch_labels)
-        return preds[:, 0:4], labels[:, 1:5]
+        # preds are of shape [N, (x y x y t0 *classes)], and labels are of
+        # shape [N, (mask x y x y class_idx)]. We want the class probabilities
+        # from preds and class indexes from labels
+        return preds[:, 5:], labels[:, 5:].squeeze()
 
     @staticmethod
     def format_for_mAP(
