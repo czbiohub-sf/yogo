@@ -95,7 +95,7 @@ class Metrics:
         assert bs1 == bs2, "sanity check"
 
         masked_predictions, masked_labels = [], []
-        for b in range(bs):
+        for b in range(bs1):
             # xc yc w h to *classes
             reformatted_preds = batch_preds.view(pred_shape[b, ...], Sx * Sy).T
 
