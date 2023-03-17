@@ -62,7 +62,9 @@ def get_optimizer(
     weight_decay: float,
 ) -> torch.optim.Optimizer:
     if optimizer_type == "lion":
-        return Lion(parameters, lr=learning_rate, weight_decay=weight_decay, betas=(0.95, 0.98))
+        return Lion(
+            parameters, lr=learning_rate, weight_decay=weight_decay, betas=(0.95, 0.98)
+        )
     elif optimizer_type == "adam":
         return AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
     raise ValueError(f"got invalid optimizer_type {optimizer_type}")
@@ -74,7 +76,7 @@ def train():
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
-    weight_decay=config["weight_decay"]
+    weight_decay = config["weight_decay"]
     num_classes = len(class_names)
     classify = not config["no_classify"]
 
@@ -107,7 +109,12 @@ def train():
 
     print("created loss and optimizer")
 
-    metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names, classify=classify)
+    metrics = Metrics(
+        num_classes=num_classes,
+        device=device,
+        class_names=class_names,
+        classify=classify,
+    )
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
@@ -126,7 +133,7 @@ def train():
     scheduler = CosineAnnealingLR(
         optimizer,
         T_max=config["epochs"] * len(train_dataloader),
-        eta_min=config["learning_rate"] / 10
+        eta_min=config["learning_rate"] / 10,
     )
 
     best_mAP = 0
@@ -190,9 +197,9 @@ def train():
                     "val confusion": get_wandb_confusion(
                         confusion_data, class_names, "validation confusion matrix"
                     ),
-                    #"val precision recall": get_wandb_precision_recall(
+                    # "val precision recall": get_wandb_precision_recall(
                     #    *precision_recall, "validation precision recall"
-                    #),
+                    # ),
                 },
             )
 
@@ -222,7 +229,7 @@ def train():
 
         metrics.update(outputs.detach(), labels.detach())
 
-        #mAP, confusion_data, precision_recall = metrics.compute()
+        # mAP, confusion_data, precision_recall = metrics.compute()
         mAP, confusion_data = metrics.compute()
         metrics.reset()
 
@@ -233,9 +240,9 @@ def train():
                 "test confusion": get_wandb_confusion(
                     confusion_data, "test confusion matrix"
                 ),
-                #"test precision recall": get_wandb_precision_recall(
+                # "test precision recall": get_wandb_precision_recall(
                 #    *precision_recall, "test precision recall"
-                #),
+                # ),
             },
         )
 
@@ -282,7 +289,11 @@ def init_dataset(config: WandbConfig):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-def get_wandb_confusion(confusion_data: torch.Tensor, class_names: List[str], title: str = "confusion matrix"):
+def get_wandb_confusion(
+    confusion_data: torch.Tensor,
+    class_names: List[str],
+    title: str = "confusion matrix",
+):
     nc1, nc2 = confusion_data.shape
     assert nc1 == nc2 == len(class_names)
 
@@ -301,20 +312,18 @@ def get_wandb_confusion(confusion_data: torch.Tensor, class_names: List[str], ti
 
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
-        wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"], data=L,
-        ),
+        wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=L,),
         {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
 
 
-def get_wandb_precision_recall(precision: List[float], recall: List[float], title: str = "precision vs. recall"):
+def get_wandb_precision_recall(
+    precision: List[float], recall: List[float], title: str = "precision vs. recall"
+):
     return wandb.plot_table(
         "wandb/area-under-curve/v0",
-        wandb.Table(
-            columns=["recall", "precision"], data=list(zip(precision, recall))
-        ),
+        wandb.Table(columns=["recall", "precision"], data=list(zip(precision, recall))),
         {"x": "recall", "y": "precision"},
         {"title": title},
     )

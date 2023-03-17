@@ -20,7 +20,7 @@ class Metrics:
         num_classes: int,
         device: str = "cpu",
         class_names: Optional[List[str]] = None,
-        classify: bool = True
+        classify: bool = True,
     ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
@@ -47,8 +47,7 @@ class Metrics:
         formatted_preds, formatted_labels = self._format_preds_and_labels(preds, labels)
 
         self.confusion.update(
-            formatted_preds[:, 5:].argmax(dim=1),
-            formatted_labels[:, 5:].squeeze()
+            formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
         )
         # self.precision_recall.update(
         #     formatted_preds[:, 5:],
@@ -56,8 +55,8 @@ class Metrics:
         # )
 
     def compute(self):
-        # prec, recall, _ = self.precision_recall.compute() 
-        return self.mAP.compute(), self.confusion.compute()#, (prec, recall)
+        # prec, recall, _ = self.precision_recall.compute()
+        return self.mAP.compute(), self.confusion.compute()  # , (prec, recall)
 
     def reset(self):
         self.mAP.reset()
@@ -84,11 +83,12 @@ class Metrics:
         """
         if IoU_thresh != 0:
             # it isn't immediately obvious to me how exactly to do this. Filter out rows of IoU matrix?
-            # what happens if number of predicted_boxes != number of label_boxes? 
+            # what happens if number of predicted_boxes != number of label_boxes?
             raise NotImplementedError("axel hasn't implemented `IoU_thresh` yet!")
         if not (0 <= objectness_thresh < 1):
-            raise ValueError(f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}")
-
+            raise ValueError(
+                f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
+            )
 
         bs1, pred_shape, Sy, Sx = batch_preds.shape
         bs2, label_shape, Sy, Sx = batch_labels.shape
@@ -106,12 +106,18 @@ class Metrics:
             img_masked_labels = reformatted_labels[reformatted_labels[:, 0].bool()]
 
             # filter on objectness
-            preds_with_objects = reformatted_preds[reformatted_preds[:, 4] > objectness_thresh]
+            preds_with_objects = reformatted_preds[
+                reformatted_preds[:, 4] > objectness_thresh
+            ]
 
-            preds_with_objects[:, 0:4] = ops.box_convert(preds_with_objects[:, 0:4], "cxcywh", "xyxy")
+            preds_with_objects[:, 0:4] = ops.box_convert(
+                preds_with_objects[:, 0:4], "cxcywh", "xyxy"
+            )
 
             # choose predictions from argmaxed IoU along label dim to get best prediction per label
-            prediction_indices = ops.box_iou(img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]).argmax(dim=1)
+            prediction_indices = ops.box_iou(
+                img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]
+            ).argmax(dim=1)
 
             masked_predictions.append(preds_with_objects[prediction_indices])
             masked_labels.append(img_masked_labels)

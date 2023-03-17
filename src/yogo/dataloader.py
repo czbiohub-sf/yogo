@@ -74,9 +74,7 @@ def split_labels_into_bins(
     return {k: torch.vstack(vs) for k, vs in d.items()}
 
 
-def format_labels(
-    labels: torch.Tensor, Sx: int, Sy: int
-) -> torch.Tensor:
+def format_labels(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
     with torch.no_grad():
         output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)

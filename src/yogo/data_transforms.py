@@ -169,7 +169,7 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         if torch.rand(1) < self.p:
             label_batch[:, 2, :, :], label_batch[:, 4, :, :] = (
                 1 - label_batch[:, 4, :, :],
-                1 - label_batch[:, 2, :, :]
+                1 - label_batch[:, 2, :, :],
             )
             return F.vflip(img_batch), torch.flip(label_batch, dims=(2,))
         return img_batch, label_batch

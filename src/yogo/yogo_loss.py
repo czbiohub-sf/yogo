@@ -99,7 +99,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     torch.clamp(
                         ops.box_convert(formatted_preds_masked, "cxcywh", "xyxy",),
                         min=0,
-                        max=1
+                        max=1,
                     ),
                     formatted_labels_masked,
                 )
