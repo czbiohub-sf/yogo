@@ -328,7 +328,7 @@ def do_training(args) -> None:
 
     epochs = args.epochs or 64
     batch_size = args.batch_size or 32
-    learning_rate = 3e-4
+    learning_rate = args.lr or 3e-4
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
