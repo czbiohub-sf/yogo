@@ -91,7 +91,6 @@ def format_labels(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
 def label_file_to_tensor(
     label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
 ) -> torch.Tensor:
-
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -312,9 +311,11 @@ def get_datasets(
     Sy,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (dataset_classes, dataset_paths, split_fractions,) = load_dataset_description(
-        dataset_description_file
-    )
+    (
+        dataset_classes,
+        dataset_paths,
+        split_fractions,
+    ) = load_dataset_description(dataset_description_file)
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
@@ -401,7 +402,8 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            image_preprocess, *augmentations if designation == "train" else [],
+            image_preprocess,
+            *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
             dataset,

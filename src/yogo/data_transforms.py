@@ -111,7 +111,8 @@ class RandomVerticalCrop(DualInputModule):
         xyxy_filtered = torchvision.ops.box_convert(labels[:, 1:], "cxcywh", "xyxy")
 
         xyxy_filtered[:, 1] = torch.maximum(
-            xyxy_filtered[:, 1], top * torch.ones_like(xyxy_filtered[:, 1]),
+            xyxy_filtered[:, 1],
+            top * torch.ones_like(xyxy_filtered[:, 1]),
         )
 
         xyxy_filtered[:, 3] = torch.minimum(
@@ -119,7 +120,11 @@ class RandomVerticalCrop(DualInputModule):
             (top + self.height) * torch.ones_like(xyxy_filtered[:, 3]),
         )
 
-        cxcywh_filtered = torchvision.ops.box_convert(xyxy_filtered, "xyxy", "cxcywh",)
+        cxcywh_filtered = torchvision.ops.box_convert(
+            xyxy_filtered,
+            "xyxy",
+            "cxcywh",
+        )
 
         labels[:, 1:] = cxcywh_filtered
         return labels

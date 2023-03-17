@@ -70,14 +70,14 @@ class Metrics:
         objectness_thresh: float = 0,
         IoU_thresh: float = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """ A very important utility function for filtering predictions on labels
+        """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
         We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
 
         batch_preds and batch_labels are the batch label and prediction tensors.
         objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell
-        IoU_thresh is the threshold of IoU for prediction and label bbs. 
+        IoU_thresh is the threshold of IoU for prediction and label bbs.
 
         Returns (tensor of predictions shape=[N, x y x y t0 *classes], tensor of labels shape=[N, mask x y x y class])
         """
@@ -251,7 +251,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     path_to_ddf = sys.argv[1]
-    ds = get_dataloader(path_to_ddf, batch_size=1, training=False,)
+    ds = get_dataloader(
+        path_to_ddf,
+        batch_size=1,
+        training=False,
+    )
 
     for img, label in ds["val"]:
         imshow(draw_rects(img[0, 0, ...], list(label[0])))

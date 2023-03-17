@@ -207,11 +207,19 @@ def train():
                 best_mAP = mAP["map"]
                 wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
                 checkpoint_model(
-                    net, epoch, optimizer, model_save_dir / "best.pth", global_step,
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "best.pth",
+                    global_step,
                 )
             else:
                 checkpoint_model(
-                    net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "latest.pth",
+                    global_step,
                 )
 
         net.train()
@@ -247,7 +255,11 @@ def train():
         )
 
         checkpoint_model(
-            net, epoch, optimizer, model_save_dir / f"latest.pth", global_step,
+            net,
+            epoch,
+            optimizer,
+            model_save_dir / f"latest.pth",
+            global_step,
         )
 
 
@@ -312,8 +324,15 @@ def get_wandb_confusion(
 
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
-        wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=L,),
-        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
+        wandb.Table(
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=L,
+        ),
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
         {"title": title},
     )
 
