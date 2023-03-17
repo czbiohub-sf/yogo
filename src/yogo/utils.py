@@ -133,7 +133,8 @@ class Metrics:
                     # fewer predicted objects than labels.
                     print(
                         "warning (utils._format_preds_and_labels) fewer predicted objects "
-                        "than labels, defaulting to label mask."
+                        f"({objectness_mask.sum()}) than labels ({len(img_masked_labels)}), "
+                        "defaulting to label mask."
                     )
                 # filter on label tensor idx
                 final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
