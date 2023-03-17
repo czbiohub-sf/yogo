@@ -97,10 +97,10 @@ class Metrics:
         masked_predictions, masked_labels = [], []
         for b in range(bs1):
             # xc yc w h to *classes
-            reformatted_preds = batch_preds.view(pred_shape[b, ...], Sx * Sy).T
+            reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).T
 
             # mask x y x y class
-            reformatted_labels = batch_label .view(label_shape[b, ...], Sx * Sy).T
+            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).T
 
             # masked labels is *actual predictions*
             img_masked_labels = reformatted_labels[reformatted_labels[:, 0].bool()]
