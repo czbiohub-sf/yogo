@@ -235,7 +235,7 @@ def train():
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-        metrics.update(outputs.detach(), labels.detach())
+            metrics.update(outputs.detach(), labels.detach())
 
         # mAP, confusion_data, precision_recall = metrics.compute()
         mAP, confusion_data = metrics.compute()
