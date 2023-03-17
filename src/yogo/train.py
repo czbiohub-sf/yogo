@@ -170,7 +170,7 @@ def train():
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-                metrics.update(outputs.detach(), labels.detach())
+            metrics.update(outputs.detach(), labels.detach())
 
             annotated_img = wandb.Image(
                 draw_rects(
@@ -219,7 +219,8 @@ def train():
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
-            metrics.update(outputs.detach(), labels.detach())
+
+        metrics.update(outputs.detach(), labels.detach())
 
         #mAP, confusion_data, precision_recall = metrics.compute()
         mAP, confusion_data = metrics.compute()
