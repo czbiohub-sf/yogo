@@ -14,6 +14,7 @@ from torchmetrics.classification import MulticlassPrecisionRecallCurve
 
 
 class Metrics:
+    @torch.no_grad()
     def __init__(
         self,
         num_classes: int,
@@ -88,37 +89,34 @@ class Metrics:
         if not (0 <= objectness_thresh < 1):
             raise ValueError(f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}")
 
-        bs, pred_shape, Sy, Sx = batch_preds.shape
-        bs, label_shape, Sy, Sx = batch_labels.shape
 
-        # xc yc w h to *classes
-        reformatted_preds = (
-            batch_preds.permute(1, 0, 2, 3)
-            .reshape(pred_shape, bs * Sx * Sy)
-            .T
-        )
+        bs1, pred_shape, Sy, Sx = batch_preds.shape
+        bs2, label_shape, Sy, Sx = batch_labels.shape
+        assert bs1 == bs2, "sanity check"
 
-        # mask x y x y class
-        reformatted_labels = (
-            batch_labels.permute(1, 0, 2, 3)
-            .reshape(label_shape, bs * Sx * Sy)
-            .T
-        )
+        masked_predictions, masked_labels = [], []
+        for b in range(bs):
+            # xc yc w h to *classes
+            reformatted_preds = batch_preds.view(pred_shape[b, ...], Sx * Sy).T
 
-        # masked labels is *actual predictions*
-        masked_labels = reformatted_labels[reformatted_labels[:, 0].bool()]
+            # mask x y x y class
+            reformatted_labels = batch_label .view(label_shape[b, ...], Sx * Sy).T
 
-        # filter on objectness
-        preds_with_objects = reformatted_preds[reformatted_preds[:, 4] > objectness_thresh]
+            # masked labels is *actual predictions*
+            img_masked_labels = reformatted_labels[reformatted_labels[:, 0].bool()]
 
-        preds_with_objects[:, 0:4] = ops.box_convert(preds_with_objects[:, 0:4], "cxcywh", "xyxy")
+            # filter on objectness
+            preds_with_objects = reformatted_preds[reformatted_preds[:, 4] > objectness_thresh]
 
-        # choose predictions from argmaxed IoU along label dim to get best prediction per label
-        prediction_indices = ops.box_iou(masked_labels[:, 1:5], preds_with_objects[:, 0:4]).argmax(dim=1)
+            preds_with_objects[:, 0:4] = ops.box_convert(preds_with_objects[:, 0:4], "cxcywh", "xyxy")
 
-        masked_predictions = preds_with_objects[prediction_indices]
+            # choose predictions from argmaxed IoU along label dim to get best prediction per label
+            prediction_indices = ops.box_iou(img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]).argmax(dim=1)
 
-        return masked_predictions, masked_labels
+            masked_predictions.append(preds_with_objects[prediction_indices])
+            masked_labels.append(img_masked_labels)
+
+        return torch.cat(masked_predictions), torch.cat(masked_labels)
 
     def format_for_mAP(
         self, batch_preds, batch_labels
