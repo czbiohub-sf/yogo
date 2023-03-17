@@ -109,7 +109,13 @@ def train():
 
     print("created loss and optimizer")
 
-    metrics = Metrics(
+    val_metrics = Metrics(
+        num_classes=num_classes,
+        device=device,
+        class_names=class_names,
+        classify=classify,
+    )
+    test_metrics = Metrics(
         num_classes=num_classes,
         device=device,
         class_names=class_names,
@@ -177,7 +183,7 @@ def train():
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            metrics.update(outputs.detach(), labels.detach())
+            val_metrics.update(outputs.detach(), labels.detach())
 
             annotated_img = wandb.Image(
                 draw_rects(
@@ -185,9 +191,9 @@ def train():
                 )
             )
 
-            # mAP, confusion_data, precision_recall = metrics.compute()
-            mAP, confusion_data = metrics.compute()
-            metrics.reset()
+            # mAP, confusion_data, precision_recall = val_metrics.compute()
+            mAP, confusion_data = val_metrics.compute()
+            val_metrics.reset()
 
             wandb.log(
                 {
@@ -227,11 +233,11 @@ def train():
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
 
-            metrics.update(outputs.detach(), labels.detach())
+            test_metrics.update(outputs.detach(), labels.detach())
 
-        # mAP, confusion_data, precision_recall = metrics.compute()
-        mAP, confusion_data = metrics.compute()
-        metrics.reset()
+        # mAP, confusion_data, precision_recall = test_metrics.compute()
+        mAP, confusion_data = test_metrics.compute()
+        test_metrics.reset()
 
         wandb.log(
             {
