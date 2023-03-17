@@ -52,6 +52,14 @@ def train_parser(parser=None):
         "--epochs", type=uint, help="number of epochs to train", default=None
     )
     parser.add_argument(
+        "--optimizer",
+        default="adam",
+        const="adam",
+        nargs="?",
+        choices=["adam", "lion"],
+        help="optimizer for training run",
+    )
+    parser.add_argument(
         "--note",
         type=str,
         nargs="?",
