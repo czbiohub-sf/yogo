@@ -238,7 +238,7 @@ def train():
                 "test loss": test_loss / len(test_dataloader),
                 "test mAP": mAP["map"],
                 "test confusion": get_wandb_confusion(
-                    confusion_data, "test confusion matrix"
+                    confusion_data, class_names, "test confusion matrix"
                 ),
                 # "test precision recall": get_wandb_precision_recall(
                 #    *precision_recall, "test precision recall"
