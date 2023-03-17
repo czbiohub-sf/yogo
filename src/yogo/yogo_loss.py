@@ -2,9 +2,6 @@ import torch
 
 import torchvision.ops as ops
 
-from collections import defaultdict
-from typing import List, Dict, Tuple, Union
-
 
 class YOGOLoss(torch.nn.modules.loss._Loss):
     __constants__ = ["coord_weight", "no_obj_weight", "num_classes"]

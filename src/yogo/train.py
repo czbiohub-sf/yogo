@@ -5,7 +5,7 @@ import wandb
 import torch
 
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from lion_pytorch import Lion
 
@@ -258,7 +258,7 @@ def train():
             net,
             epoch,
             optimizer,
-            model_save_dir / f"latest.pth",
+            model_save_dir / "latest.pth",
             global_step,
         )
 

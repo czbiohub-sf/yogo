@@ -16,7 +16,7 @@ from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import Any, List, Dict, Union, Tuple, Optional, Callable, Literal, cast
+from typing import List, Dict, Union, Tuple, Optional, Callable, Literal, cast
 
 from yogo.data_transforms import (
     DualInputModule,

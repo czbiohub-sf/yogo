@@ -241,10 +241,8 @@ if __name__ == "__main__":
     import sys
 
     from matplotlib.pyplot import imshow, show
-    from pathlib import Path
 
     from yogo.dataloader import get_dataloader
-    from yogo.data_transforms import RandomVerticalCrop
 
     if len(sys.argv) != 2:
         print(f"usage: {sys.argv[0]} <path to image or dir of images>")
