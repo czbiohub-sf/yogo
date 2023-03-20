@@ -214,7 +214,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         # maps file name to a list of tuples of bounding boxes + classes
         paths: List[str] = []
-        tensors: List[torch.Tuple] = []
+        tensors: List[torch.Tensor] = []
         for label_file_path in self.label_folder_path.glob("*"):
             image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
