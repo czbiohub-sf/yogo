@@ -166,7 +166,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
         # essentially, to avoid dataloader workers from copying tonnes of mem,
         # we can't store samples in lists. Hence, the tensor and numpy array.
-        paths, tensors = self.make_dataset(
+        img_paths, tensors = self.make_dataset(
             Sx,
             Sy,
             is_valid_file=is_valid_file,
@@ -174,8 +174,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
             dataset_classes=dataset_classes,
         )
 
-        self._paths = np.array(paths).astype(np.string_)
-        self._imgs = torch.stack(tensors)
+        self._paths = np.array(img_paths).astype(np.string_)
+        self._label_tensors = torch.stack(tensors)
 
     def make_dataset(
         self,
@@ -246,7 +246,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
             tuple: (sample, target) where target is class_index of the target class.
         """
         img_path = str(self._paths[index], encoding="utf-8")
-        target = self._imgs[index, ...]
+        target = self._label_tensors[index, ...]
         sample = self.loader(img_path)
         return sample, target
 
