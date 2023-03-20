@@ -239,18 +239,11 @@ def train():
         mAP, confusion_data = test_metrics.compute()
         test_metrics.reset()
 
-        wandb.log(
-            {
-                "test loss": test_loss / len(test_dataloader),
-                "test mAP": mAP["map"],
-                "test confusion": get_wandb_confusion(
-                    confusion_data, class_names, "test confusion matrix"
-                ),
-                # "test precision recall": get_wandb_precision_recall(
-                #    *precision_recall, "test precision recall"
-                # ),
-            },
-        )
+        wandb.summary["test loss"] = test_loss / len(test_dataloader)
+        wandb.summary["test mAP"] = mAP["map"]
+        wandb.summary["test confusion"] = get_wandb_confusion(
+            confusion_data, class_names, "test confusion matrix"
+        ),
 
         checkpoint_model(
             net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
