@@ -254,6 +254,71 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         "From torchvision.datasets.folder.DatasetFolder"
         return len(self._paths)
 
+class ObjectDetectionZarrDataset(datasets.VisionDataset):
+    def __init__(
+        self,
+        dataset_classes: List[str],
+        zarr_path: Path,
+        label_path: Path,
+        Sx,
+        Sy,
+        *args,
+        **kwargs,
+    ):
+        # the super().__init__ just sets transforms
+        # the image_path is just for repr
+        super().__init__(str(image_path), *args, **kwargs)
+
+        self.zarr_path = zarr_path
+        self.label_folder_path = label_path
+        self.classes = YOGO_CLASS_ORDERING
+
+        self._image_store = zarr.open(zarr_path)
+
+        # https://pytorch.org/docs/stable/data.html#multi-process-data-loading
+        # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
+        # essentially, to avoid dataloader workers from copying tonnes of mem,
+        # we can't store samples in lists. Hence, the tensor and numpy array.
+        tensors = self.make_dataset(
+            Sx,
+            Sy,
+            self.image_store,
+            dataset_classes=dataset_classes,
+        )
+
+        self._label_tensors = torch.stack(tensors)
+
+    def make_dataset(
+        self,
+        Sx: int,
+        Sy: int,
+        image_store,
+        dataset_classes: List[str] = YOGO_CLASS_ORDERING,
+    ) -> Tuple[List[str], List[torch.Tensor]]:
+        paths: List[str] = []
+        tensors: List[torch.Tuple] = []
+
+        # TODO check that labels are within self._image_store.initialized
+        for label_file_path in self.label_folder_path.glob("*"):
+            labels = label_file_to_tensor(label_file_path, dataset_classes, Sx, Sy)
+            tensors.append(labels)
+
+        return tensors
+
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """From torchvision.datasets.folder.DatasetFolder
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        # image_store is indexed backwards for zarr chunking
+        return torch.Tensor(self._image_store[..., index]), self._label_tensors[index, ...]
+
+    def __len__(self) -> int:
+        "From torchvision.datasets.folder.DatasetFolder"
+        return len(self._paths)
 
 def load_dataset_description(
     dataset_description: str,
