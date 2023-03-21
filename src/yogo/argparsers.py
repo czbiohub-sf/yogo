@@ -34,7 +34,9 @@ def train_parser(parser=None):
         parser = argparse.ArgumentParser(description="commence a training run")
 
     parser.add_argument(
-        "dataset_descriptor_file", type=str, help="path to yml dataset descriptor file",
+        "dataset_descriptor_file",
+        type=str,
+        help="path to yml dataset descriptor file",
     )
     parser.add_argument(
         "--from-pretrained",
@@ -46,7 +48,18 @@ def train_parser(parser=None):
         "--batch-size", type=uint, help="batch size for training", default=None
     )
     parser.add_argument(
+        "--lr", type=float, help="learning rate for training", default=None
+    )
+    parser.add_argument(
         "--epochs", type=uint, help="number of epochs to train", default=None
+    )
+    parser.add_argument(
+        "--optimizer",
+        default="adam",
+        const="adam",
+        nargs="?",
+        choices=["adam", "lion"],
+        help="optimizer for training run",
     )
     parser.add_argument(
         "--note",
@@ -97,10 +110,14 @@ def export_parser(parser=None):
         )
 
     parser.add_argument(
-        "input", type=str, help="path to input pth file",
+        "input",
+        type=str,
+        help="path to input pth file",
     )
     parser.add_argument(
-        "--output-filename", type=str, help="output filename",
+        "--output-filename",
+        type=str,
+        help="output filename",
     )
     parser.add_argument(
         "--simplify",

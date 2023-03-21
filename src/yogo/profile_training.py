@@ -6,17 +6,16 @@ import torch
 
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
-from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import ProfilerActivity
 
 from pathlib import Path
-from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast
 
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
 from yogo.yogo_loss import YOGOLoss
-from yogo.utils import draw_rects, Metrics
+from yogo.utils import Metrics
 from yogo.dataloader import (
     load_dataset_description,
     get_dataloader,
@@ -83,7 +82,6 @@ def train():
         print(prof.key_averages().table(sort_by="cpu_memory_usage", row_limit=10))
         prof.export_chrome_trace("training_profile.json")
 
-    best_mAP = 0
     global_step = 0
     with torch.profiler.profile(
         activities=[ProfilerActivity.CPU],
@@ -118,6 +116,7 @@ def train():
                     commit=False,
                     step=global_step,
                 )
+            metrics.update(imgs, labels)
 
         wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
 
@@ -164,9 +163,14 @@ def get_wandb_confusion(confusion_data, title):
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
         wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"], data=confusion_data,
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=confusion_data,
         ),
-        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
         {"title": title},
     )
 

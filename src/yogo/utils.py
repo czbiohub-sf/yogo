@@ -14,12 +14,13 @@ from torchmetrics.classification import MulticlassPrecision, MulticlassRecall
 
 
 class Metrics:
+    @torch.no_grad()
     def __init__(
         self,
         num_classes: int,
         device: str = "cpu",
         class_names: Optional[List[str]] = None,
-        classify: bool = True
+        classify: bool = True,
     ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
@@ -46,11 +47,12 @@ class Metrics:
             *self.format_for_mAP(preds, labels)
         )
 
-        formatted_preds, formatted_labels = self._format_preds_and_labels(preds, labels)
+        formatted_preds, formatted_labels = self._format_preds_and_labels(
+            preds, labels, use_IoU=True
+        )
 
         self.confusion.update(
-            formatted_preds[:, 5:].argmax(dim=1),
-            formatted_labels[:, 5:].squeeze()
+            formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
         )
 
         self.precision.update(
@@ -71,6 +73,7 @@ class Metrics:
             self.recall.compute()
         )
 
+
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
@@ -88,58 +91,83 @@ class Metrics:
         self,
         batch_preds: torch.Tensor,
         batch_labels: torch.Tensor,
-        objectness_thresh: float = 0,
-        IoU_thresh: float = 0,
+        use_IoU: bool = True,
+        objectness_thresh: float = 0.3,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """ A very important utility function for filtering predictions on labels
+        """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
         We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
 
-        batch_preds and batch_labels are the batch label and prediction tensors.
-        objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell
-        IoU_thresh is the threshold of IoU for prediction and label bbs.
+        batch_preds and batch_labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!.
+        use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
+        objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
+            only be used with use_IoU == True
 
         Returns (tensor of predictions shape=[N, x y x y t0 *classes], tensor of labels shape=[N, mask x y x y class])
         """
-        if IoU_thresh != 0:
-            # it isn't immediately obvious to me how exactly to do this. Filter out rows of IoU matrix?
-            # what happens if number of predicted_boxes != number of label_boxes?
-            raise NotImplementedError("axel hasn't implemented `IoU_thresh` yet!")
         if not (0 <= objectness_thresh < 1):
-            raise ValueError(f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}")
+            raise ValueError(
+                f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
+            )
 
-        bs, pred_shape, Sy, Sx = batch_preds.shape
-        bs, label_shape, Sy, Sx = batch_labels.shape
+        (
+            bs1,
+            pred_shape,
+            Sy,
+            Sx,
+        ) = batch_preds.shape  # pred_shape is xc yc w h to *classes
+        (
+            bs2,
+            label_shape,
+            Sy,
+            Sx,
+        ) = batch_labels.shape  # label_shape is mask x y x y class
+        assert bs1 == bs2, f"sanity check, pred batch size should equal"
 
-        # xc yc w h to *classes
-        reformatted_preds = (
-            batch_preds.permute(1, 0, 2, 3)
-            .reshape(pred_shape, bs * Sx * Sy)
-            .T
-        )
+        masked_predictions, masked_labels = [], []
+        for b in range(bs1):
+            reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).T
+            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).T
 
-        # mask x y x y class
-        reformatted_labels = (
-            batch_labels.permute(1, 0, 2, 3)
-            .reshape(label_shape, bs * Sx * Sy)
-            .T
-        )
+            # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
+            labels_mask = reformatted_labels[:, 0].bool()
+            objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
 
-        # masked labels is *actual predictions*
-        masked_labels = reformatted_labels[reformatted_labels[:, 0].bool()]
+            img_masked_labels = reformatted_labels[labels_mask]
 
-        # filter on objectness
-        preds_with_objects = reformatted_preds[reformatted_preds[:, 4] > objectness_thresh]
+            if use_IoU and objectness_mask.sum() >= len(img_masked_labels):
+                # filter on objectness
+                preds_with_objects = reformatted_preds[objectness_mask]
 
-        preds_with_objects[:, 0:4] = ops.box_convert(preds_with_objects[:, 0:4], "cxcywh", "xyxy")
+                preds_with_objects[:, 0:4] = ops.box_convert(
+                    preds_with_objects[:, 0:4], "cxcywh", "xyxy"
+                )
 
-        # choose predictions from argmaxed IoU along label dim to get best prediction per label
-        prediction_indices = ops.box_iou(masked_labels[:, 1:5], preds_with_objects[:, 0:4]).argmax(dim=1)
+                # choose predictions from argmaxed IoU along label dim to get best prediction per label
+                prediction_indices = ops.box_iou(
+                    img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]
+                ).argmax(dim=1)
+                final_preds = preds_with_objects[prediction_indices]
+            else:
+                if use_IoU:
+                    # we know that objectness_mask.sum() < len(img_masked_labels) - i.e. there are
+                    # fewer predicted objects than labels.
+                    print(
+                        "warning (utils._format_preds_and_labels) fewer predicted objects "
+                        f"({objectness_mask.sum()}) than labels ({len(img_masked_labels)}), "
+                        "defaulting to label mask."
+                    )
+                # filter on label tensor idx
+                final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
+                final_preds[:, 0:4] = ops.box_convert(
+                    final_preds[:, 0:4], "cxcywh", "xyxy"
+                )
 
-        masked_predictions = preds_with_objects[prediction_indices]
+            masked_predictions.append(final_preds)
+            masked_labels.append(img_masked_labels)
 
-        return masked_predictions, masked_labels
+        return torch.cat(masked_predictions), torch.cat(masked_labels)
 
     def format_for_mAP(
         self, batch_preds, batch_labels
@@ -258,10 +286,8 @@ if __name__ == "__main__":
     import sys
 
     from matplotlib.pyplot import imshow, show
-    from pathlib import Path
 
     from yogo.dataloader import get_dataloader
-    from yogo.data_transforms import RandomVerticalCrop
 
     if len(sys.argv) != 2:
         print(f"usage: {sys.argv[0]} <path to image or dir of images>")

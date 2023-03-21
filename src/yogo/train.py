@@ -5,7 +5,7 @@ import wandb
 import torch
 
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from lion_pytorch import Lion
 
@@ -62,7 +62,9 @@ def get_optimizer(
     weight_decay: float,
 ) -> torch.optim.Optimizer:
     if optimizer_type == "lion":
-        return Lion(parameters, lr=learning_rate, weight_decay=weight_decay, betas=(0.95, 0.98))
+        return Lion(
+            parameters, lr=learning_rate, weight_decay=weight_decay, betas=(0.95, 0.98)
+        )
     elif optimizer_type == "adam":
         return AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
     raise ValueError(f"got invalid optimizer_type {optimizer_type}")
@@ -74,7 +76,7 @@ def train():
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
-    weight_decay=config["weight_decay"]
+    weight_decay = config["weight_decay"]
     num_classes = len(class_names)
     classify = not config["no_classify"]
 
@@ -107,7 +109,18 @@ def train():
 
     print("created loss and optimizer")
 
-    metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names, classify=classify)
+    val_metrics = Metrics(
+        num_classes=num_classes,
+        device=device,
+        class_names=class_names,
+        classify=classify,
+    )
+    test_metrics = Metrics(
+        num_classes=num_classes,
+        device=device,
+        class_names=class_names,
+        classify=classify,
+    )
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
@@ -126,7 +139,7 @@ def train():
     scheduler = CosineAnnealingLR(
         optimizer,
         T_max=config["epochs"] * len(train_dataloader),
-        eta_min=config["learning_rate"] / 10
+        eta_min=config["learning_rate"] / 10,
     )
 
     best_mAP = 0
@@ -177,7 +190,7 @@ def train():
                 )
             )
 
-            mAP, confusion_data, precision, recall = metrics.forward(outputs, labels)
+            mAP, confusion_data, precision, recall = val_metrics.forward(outputs.detach(), labels.detach())
 
             wandb.log(
                 {
@@ -215,25 +228,21 @@ def train():
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
-            metrics.update(outputs, labels)
+            test_metrics.update(outputs.detach(), labels.detach())
 
-        mAP, confusion_data, precision, recall = metrics.compute()
-        metrics.reset()
+        mAP, confusion_data, precision, recall = test_metrics.compute()
+        test_metrics.reset()
 
-        wandb.log(
-            {
-                "test loss": test_loss / len(test_dataloader),
-                "test mAP": mAP["map"],
-                "test confusion": get_wandb_confusion(
-                    confusion_data, "test confusion matrix"
-                ),
-                "test precision": precision,
-                "test recall": recall,
-            },
+        wandb.summary["test loss"] = test_loss / len(test_dataloader)
+        wandb.summary["test mAP"] = mAP["map"]
+        wandb.summary["test confusion"] = get_wandb_confusion(
+            confusion_data, class_names, "test confusion matrix"
         )
+        wandb.summary["test precision"] = precision
+        wandb.summary["test recall"] = recall
 
         checkpoint_model(
-            net, epoch, optimizer, model_save_dir / f"latest.pth", global_step,
+            net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
         )
 
 
@@ -275,9 +284,15 @@ def init_dataset(config: WandbConfig):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-def get_wandb_confusion(confusion_data: torch.Tensor, class_names: List[str], title: str = "confusion matrix"):
+def get_wandb_confusion(
+    confusion_data: torch.Tensor,
+    class_names: List[str],
+    title: str = "confusion matrix",
+):
     nc1, nc2 = confusion_data.shape
-    assert nc1 == nc2 == len(class_names)
+    assert (
+        nc1 == nc2 == len(class_names)
+    ), f"nc1 != nc2 != len(class_names)! (nc1 = {nc1}, nc2 = {nc2}, class_names = {class_names})"
 
     L = []
     for i in range(nc1):
@@ -294,9 +309,7 @@ def get_wandb_confusion(confusion_data: torch.Tensor, class_names: List[str], ti
 
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
-        wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"], data=L,
-        ),
+        wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=L,),
         {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
@@ -310,7 +323,8 @@ def do_training(args) -> None:
 
     epochs = args.epochs or 64
     batch_size = args.batch_size or 32
-    learning_rate = 3e-4
+    learning_rate = args.lr or 3e-4
+    optimizer_type = args.optimizer or "adam"
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -343,7 +357,7 @@ def do_training(args) -> None:
         project="yogo",
         entity="bioengineering",
         config={
-            "optimizer_type": "adam",
+            "optimizer_type": optimizer_type,
             "learning_rate": learning_rate,
             "weight_decay": 1e-2,
             "epochs": epochs,

@@ -16,7 +16,7 @@ from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import Any, List, Dict, Union, Tuple, Optional, Callable, Literal, cast
+from typing import List, Dict, Union, Tuple, Optional, Callable, Literal, cast
 
 from yogo.data_transforms import (
     DualInputModule,
@@ -74,9 +74,7 @@ def split_labels_into_bins(
     return {k: torch.vstack(vs) for k, vs in d.items()}
 
 
-def format_labels(
-    labels: torch.Tensor, Sx: int, Sy: int
-) -> torch.Tensor:
+def format_labels(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
     with torch.no_grad():
         output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
@@ -93,7 +91,6 @@ def format_labels(
 def label_file_to_tensor(
     label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
 ) -> torch.Tensor:
-
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -142,6 +139,7 @@ def label_file_to_tensor(
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
+    # TODO Make Zarr DataLoader too! :)
     def __init__(
         self,
         dataset_classes: List[str],
@@ -216,7 +214,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         # maps file name to a list of tuples of bounding boxes + classes
         paths: List[str] = []
-        tensors: List[torch.Tuple] = []
+        tensors: List[torch.Tensor] = []
         for label_file_path in self.label_folder_path.glob("*"):
             image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
@@ -313,9 +311,11 @@ def get_datasets(
     Sy,
     split_fractions_override: Optional[Dict[str, float]] = None,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    (dataset_classes, dataset_paths, split_fractions,) = load_dataset_description(
-        dataset_description_file
-    )
+    (
+        dataset_classes,
+        dataset_paths,
+        split_fractions,
+    ) = load_dataset_description(dataset_description_file)
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
@@ -402,7 +402,8 @@ def get_dataloader(
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
-            image_preprocess, *augmentations if designation == "train" else [],
+            image_preprocess,
+            *augmentations if designation == "train" else [],
         )
         d[designation] = DataLoader(
             dataset,
