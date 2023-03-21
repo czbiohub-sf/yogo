@@ -81,6 +81,7 @@ def train():
     classify = not config["no_classify"]
 
     if config.pretrained_path:
+        print(f"loading pretrained path from {config.pretrained_path}")
         net, global_step = YOGO.from_pth(config.pretrained_path)
         net.to(device)
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
@@ -170,8 +171,6 @@ def train():
                 step=global_step,
             )
 
-        wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
-
         # do validation things
         val_loss = 0.0
         net.eval()
@@ -183,17 +182,16 @@ def train():
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            val_metrics.update(outputs.detach(), labels.detach())
-
+            # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_rects(
                     imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5
                 )
             )
 
-            # mAP, confusion_data, precision_recall = val_metrics.compute()
-            mAP, confusion_data = val_metrics.compute()
-            val_metrics.reset()
+            mAP, confusion_data, precision, recall = val_metrics.forward(
+                outputs.detach(), labels.detach()
+            )
 
             wandb.log(
                 {
@@ -203,21 +201,29 @@ def train():
                     "val confusion": get_wandb_confusion(
                         confusion_data, class_names, "validation confusion matrix"
                     ),
-                    # "val precision recall": get_wandb_precision_recall(
-                    #    *precision_recall, "validation precision recall"
-                    # ),
+                    "val precision": precision,
+                    "val recall": recall,
                 },
+                step=global_step,
             )
 
             if mAP["map"] > best_mAP:
                 best_mAP = mAP["map"]
                 wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
                 checkpoint_model(
-                    net, epoch, optimizer, model_save_dir / "best.pth", global_step,
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "best.pth",
+                    global_step,
                 )
             else:
                 checkpoint_model(
-                    net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "latest.pth",
+                    global_step,
                 )
 
         net.train()
@@ -232,28 +238,29 @@ def train():
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
-
             test_metrics.update(outputs.detach(), labels.detach())
 
-        # mAP, confusion_data, precision_recall = test_metrics.compute()
-        mAP, confusion_data = test_metrics.compute()
+        mAP, confusion_data, precision, recall = test_metrics.compute()
         test_metrics.reset()
 
+        wandb.summary["test loss"] = test_loss / len(test_dataloader)
+        wandb.summary["test mAP"] = mAP["map"]
+        wandb.summary["test precision"] = precision
+        wandb.summary["test recall"] = recall
         wandb.log(
             {
-                "test loss": test_loss / len(test_dataloader),
-                "test mAP": mAP["map"],
                 "test confusion": get_wandb_confusion(
                     confusion_data, class_names, "test confusion matrix"
-                ),
-                # "test precision recall": get_wandb_precision_recall(
-                #    *precision_recall, "test precision recall"
-                # ),
-            },
+                )
+            }
         )
 
         checkpoint_model(
-            net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
+            net,
+            epoch,
+            optimizer,
+            model_save_dir / "latest.pth",
+            global_step,
         )
 
 
@@ -320,19 +327,15 @@ def get_wandb_confusion(
 
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
-        wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=L,),
-        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
-        {"title": title},
-    )
-
-
-def get_wandb_precision_recall(
-    precision: List[float], recall: List[float], title: str = "precision vs. recall"
-):
-    return wandb.plot_table(
-        "wandb/area-under-curve/v0",
-        wandb.Table(columns=["recall", "precision"], data=list(zip(precision, recall))),
-        {"x": "recall", "y": "precision"},
+        wandb.Table(
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=L,
+        ),
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
         {"title": title},
     )
 

@@ -10,7 +10,7 @@ from typing import Optional, Union, Tuple, List, Dict
 
 from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from torchmetrics.classification import MulticlassPrecisionRecallCurve
+from torchmetrics.classification import MulticlassPrecision, MulticlassRecall
 
 
 class Metrics:
@@ -24,11 +24,14 @@ class Metrics:
     ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        self.precision_recall = MulticlassPrecisionRecallCurve(num_classes=num_classes)
+        # TODO review https://torchmetrics.readthedocs.io/en/stable/classification/precision.html
+        self.precision = MulticlassPrecision(num_classes=num_classes, thresholds=4)
+        self.recall = MulticlassRecall(num_classes=num_classes, thresholds=4)
 
         self.mAP.to(device)
         self.confusion.to(device)
-        # self.precision_recall.to(device)
+        self.precision.to(device)
+        self.recall.to(device)
 
         self.num_classes = num_classes
         self.class_names = (
@@ -41,8 +44,7 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
-        self.mAP.update(mAP_preds, mAP_labels)
+        self.mAP.update(*self.format_for_mAP(preds, labels))
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(
             preds, labels, use_IoU=True
@@ -51,19 +53,35 @@ class Metrics:
         self.confusion.update(
             formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
         )
-        # self.precision_recall.update(
-        #     formatted_preds[:, 5:],
-        #     formatted_labels[:, 5:].squeeze().long()
-        # )
+
+        self.precision.update(
+            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
+        )
+
+        self.recall.update(
+            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
+        )
 
     def compute(self):
-        # prec, recall, _ = self.precision_recall.compute()
-        return self.mAP.compute(), self.confusion.compute()  # , (prec, recall)
+        return (
+            self.mAP.compute(),
+            self.confusion.compute(),
+            self.precision.compute(),
+            self.recall.compute(),
+        )
 
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
-        # self.precision_recall.reset()
+        self.precision.reset()
+        self.recall.reset()
+
+    def forward(self, preds, labels):
+        # prob inefficient but its OK
+        self.update(preds, labels)
+        res = self.compute()
+        self.reset()
+        return res
 
     def _format_preds_and_labels(
         self,
@@ -128,6 +146,7 @@ class Metrics:
                 ).argmax(dim=1)
                 final_preds = preds_with_objects[prediction_indices]
             else:
+                """
                 if use_IoU:
                     # we know that objectness_mask.sum() < len(img_masked_labels) - i.e. there are
                     # fewer predicted objects than labels.
@@ -136,6 +155,7 @@ class Metrics:
                         f"({objectness_mask.sum()}) than labels ({len(img_masked_labels)}), "
                         "defaulting to label mask."
                     )
+                """
                 # filter on label tensor idx
                 final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
                 final_preds[:, 0:4] = ops.box_convert(
@@ -272,7 +292,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     path_to_ddf = sys.argv[1]
-    ds = get_dataloader(path_to_ddf, batch_size=1, training=False,)
+    ds = get_dataloader(
+        path_to_ddf,
+        batch_size=1,
+        training=False,
+    )
 
     for img, label in ds["val"]:
         imshow(draw_rects(img[0, 0, ...], list(label[0])))

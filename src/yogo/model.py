@@ -72,7 +72,7 @@ class YOGO(nn.Module):
         num_classes = params["num_classes"]
 
         try:
-            global_step = params["global_step"]
+            global_step = params["step"]
         except KeyError:
             global_step = 0
 
