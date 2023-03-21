@@ -81,6 +81,7 @@ def train():
     classify = not config["no_classify"]
 
     if config.pretrained_path:
+        print(f"loading pretrained path from {config.pretrained_path}")
         net, global_step = YOGO.from_pth(config.pretrained_path)
         net.to(device)
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
@@ -170,8 +171,6 @@ def train():
                 step=global_step,
             )
 
-        wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
-
         # do validation things
         val_loss = 0.0
         net.eval()
@@ -203,6 +202,7 @@ def train():
                     "val precision": precision,
                     "val recall": recall,
                 },
+                step=global_step
             )
 
             if mAP["map"] > best_mAP:
