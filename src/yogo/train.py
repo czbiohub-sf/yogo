@@ -183,17 +183,14 @@ def train():
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-            val_metrics.update(outputs.detach(), labels.detach())
-
+            # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_rects(
                     imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5
                 )
             )
 
-            # mAP, confusion_data, precision_recall = val_metrics.compute()
-            mAP, confusion_data = val_metrics.compute()
-            val_metrics.reset()
+            mAP, confusion_data, precision, recall = val_metrics.forward(outputs.detach(), labels.detach())
 
             wandb.log(
                 {
@@ -203,9 +200,8 @@ def train():
                     "val confusion": get_wandb_confusion(
                         confusion_data, class_names, "validation confusion matrix"
                     ),
-                    # "val precision recall": get_wandb_precision_recall(
-                    #    *precision_recall, "validation precision recall"
-                    # ),
+                    "val precision": precision,
+                    "val recall": recall,
                 },
             )
 
@@ -232,18 +228,18 @@ def train():
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
             test_loss += loss.item()
-
             test_metrics.update(outputs.detach(), labels.detach())
 
-        # mAP, confusion_data, precision_recall = test_metrics.compute()
-        mAP, confusion_data = test_metrics.compute()
+        mAP, confusion_data, precision, recall = test_metrics.compute()
         test_metrics.reset()
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
         wandb.summary["test confusion"] = get_wandb_confusion(
             confusion_data, class_names, "test confusion matrix"
-        ),
+        )
+        wandb.summary["test precision"] = precision
+        wandb.summary["test recall"] = recall
 
         checkpoint_model(
             net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
@@ -317,18 +313,6 @@ def get_wandb_confusion(
         {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
-
-
-def get_wandb_precision_recall(
-    precision: List[float], recall: List[float], title: str = "precision vs. recall"
-):
-    return wandb.plot_table(
-        "wandb/area-under-curve/v0",
-        wandb.Table(columns=["recall", "precision"], data=list(zip(precision, recall))),
-        {"x": "recall", "y": "precision"},
-        {"title": title},
-    )
-
 
 def do_training(args) -> None:
     device = torch.device(
