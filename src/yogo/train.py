@@ -189,7 +189,9 @@ def train():
                 )
             )
 
-            mAP, confusion_data, precision, recall = val_metrics.forward(outputs.detach(), labels.detach())
+            mAP, confusion_data, precision, recall = val_metrics.forward(
+                outputs.detach(), labels.detach()
+            )
 
             wandb.log(
                 {
@@ -202,18 +204,26 @@ def train():
                     "val precision": precision,
                     "val recall": recall,
                 },
-                step=global_step
+                step=global_step,
             )
 
             if mAP["map"] > best_mAP:
                 best_mAP = mAP["map"]
                 wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
                 checkpoint_model(
-                    net, epoch, optimizer, model_save_dir / "best.pth", global_step,
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "best.pth",
+                    global_step,
                 )
             else:
                 checkpoint_model(
-                    net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "latest.pth",
+                    global_step,
                 )
 
         net.train()
@@ -235,14 +245,22 @@ def train():
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
-        wandb.log({"test confusion": get_wandb_confusion(
-            confusion_data, class_names, "test confusion matrix"
-        )})
+        wandb.log(
+            {
+                "test confusion": get_wandb_confusion(
+                    confusion_data, class_names, "test confusion matrix"
+                )
+            }
+        )
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
 
         checkpoint_model(
-            net, epoch, optimizer, model_save_dir / "latest.pth", global_step,
+            net,
+            epoch,
+            optimizer,
+            model_save_dir / "latest.pth",
+            global_step,
         )
 
 
@@ -309,10 +327,18 @@ def get_wandb_confusion(
 
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
-        wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=L,),
-        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
+        wandb.Table(
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=L,
+        ),
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
         {"title": title},
     )
+
 
 def do_training(args) -> None:
     device = torch.device(

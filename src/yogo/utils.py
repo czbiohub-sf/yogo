@@ -44,9 +44,7 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        self.mAP.update(
-            *self.format_for_mAP(preds, labels)
-        )
+        self.mAP.update(*self.format_for_mAP(preds, labels))
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(
             preds, labels, use_IoU=True
@@ -57,13 +55,11 @@ class Metrics:
         )
 
         self.precision.update(
-            formatted_preds[:, 5:],
-            formatted_labels[:, 5:].squeeze().long()
+            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
         )
 
         self.recall.update(
-            formatted_preds[:, 5:],
-            formatted_labels[:, 5:].squeeze().long()
+            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
         )
 
     def compute(self):
@@ -71,9 +67,8 @@ class Metrics:
             self.mAP.compute(),
             self.confusion.compute(),
             self.precision.compute(),
-            self.recall.compute()
+            self.recall.compute(),
         )
-
 
     def reset(self):
         self.mAP.reset()
@@ -297,7 +292,11 @@ if __name__ == "__main__":
         sys.exit(1)
 
     path_to_ddf = sys.argv[1]
-    ds = get_dataloader(path_to_ddf, batch_size=1, training=False,)
+    ds = get_dataloader(
+        path_to_ddf,
+        batch_size=1,
+        training=False,
+    )
 
     for img, label in ds["val"]:
         imshow(draw_rects(img[0, 0, ...], list(label[0])))
