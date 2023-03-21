@@ -12,12 +12,12 @@ from lion_pytorch import Lion
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast, Literal, Iterator, List
+from typing import Optional, Tuple, cast, Literal, Iterator
 
 from yogo.model import YOGO
 from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
-from yogo.utils import draw_rects, Metrics
+from yogo.utils import draw_rects, get_wandb_confusion, Metrics
 from yogo.dataloader import (
     YOGO_CLASS_ORDERING,
     load_dataset_description,
@@ -41,6 +41,9 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # TODO
 # measure forward / backward pass timing w/
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
+
+
+WandbConfig: TypeAlias = dict
 
 
 def checkpoint_model(model, epoch, optimizer, name, step):
@@ -183,19 +186,19 @@ def train():
                 val_loss += loss.item()
 
             # just use the final imgs and labels for val!
-            annotated_img = wandb.Image(
-                draw_rects(
-                    imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5
-                )
-            )
-
             mAP, confusion_data, precision, recall = val_metrics.forward(
                 outputs.detach(), labels.detach()
             )
 
             wandb.log(
                 {
-                    "validation bbs": annotated_img,
+                    "validation bbs": wandb.Image(
+                        draw_rects(
+                            imgs[0, 0, ...].detach(),
+                            outputs[0, ...].detach(),
+                            thresh=0.5
+                        )
+                    ),
                     "val loss": val_loss / len(validate_dataloader),
                     "val mAP": mAP["map"],
                     "val confusion": get_wandb_confusion(
@@ -241,7 +244,6 @@ def train():
             test_metrics.update(outputs.detach(), labels.detach())
 
         mAP, confusion_data, precision, recall = test_metrics.compute()
-        test_metrics.reset()
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
@@ -264,7 +266,6 @@ def train():
         )
 
 
-WandbConfig: TypeAlias = dict
 
 
 def init_dataset(config: WandbConfig):
@@ -291,53 +292,16 @@ def init_dataset(config: WandbConfig):
         }
     )
 
-    if wandb.run.name is not None:
-        model_save_dir = Path(f"trained_models/{wandb.run.name}")
-    else:
+    if wandb.run.name is None:
         model_save_dir = Path(
             f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
         )
+    else:
+        model_save_dir = Path(f"trained_models/{wandb.run.name}")
+
     model_save_dir.mkdir(exist_ok=True, parents=True)
 
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
-
-
-def get_wandb_confusion(
-    confusion_data: torch.Tensor,
-    class_names: List[str],
-    title: str = "confusion matrix",
-):
-    nc1, nc2 = confusion_data.shape
-    assert (
-        nc1 == nc2 == len(class_names)
-    ), f"nc1 != nc2 != len(class_names)! (nc1 = {nc1}, nc2 = {nc2}, class_names = {class_names})"
-
-    L = []
-    for i in range(nc1):
-        for j in range(nc2):
-            # annoyingly, wandb will sort the matrix by row/col names. sad!
-            # fix the order we want by prepending the index of the class.
-            L.append(
-                (
-                    f"{i} - {class_names[i]}",
-                    f"{j} - {class_names[j]}",
-                    confusion_data[i, j],
-                )
-            )
-
-    return wandb.plot_table(
-        "wandb/confusion_matrix/v1",
-        wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"],
-            data=L,
-        ),
-        {
-            "Actual": "Actual",
-            "Predicted": "Predicted",
-            "nPredictions": "nPredictions",
-        },
-        {"title": title},
-    )
 
 
 def do_training(args) -> None:
