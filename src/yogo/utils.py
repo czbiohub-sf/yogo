@@ -24,6 +24,7 @@ class Metrics:
     ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
+        # TODO review https://torchmetrics.readthedocs.io/en/stable/classification/precision.html
         self.precision = MulticlassPrecision(num_classes=num_classes, thresholds=4)
         self.recall = MulticlassRecall(num_classes=num_classes, thresholds=4)
 
