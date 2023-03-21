@@ -170,17 +170,14 @@ def train():
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
 
-                metrics.update(outputs, labels)
-
+            # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_rects(
                     imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5
                 )
             )
 
-            # mAP, confusion_data, precision_recall = metrics.compute()
-            mAP, confusion_data = metrics.compute()
-            metrics.reset()
+            mAP, confusion_data, precision, recall = metrics.forward(outputs, labels)
 
             wandb.log(
                 {
@@ -190,9 +187,8 @@ def train():
                     "val confusion": get_wandb_confusion(
                         confusion_data, class_names, "validation confusion matrix"
                     ),
-                    "val precision recall": get_wandb_precision_recall(
-                        *precision_recall, "validation precision recall"
-                    ),
+                    "val precision": precision,
+                    "val recall": recall,
                 },
             )
 
@@ -221,8 +217,7 @@ def train():
             test_loss += loss.item()
             metrics.update(outputs, labels)
 
-        #mAP, confusion_data, precision_recall = metrics.compute()
-        mAP, confusion_data = metrics.compute()
+        mAP, confusion_data, precision, recall = metrics.compute()
         metrics.reset()
 
         wandb.log(
@@ -232,9 +227,8 @@ def train():
                 "test confusion": get_wandb_confusion(
                     confusion_data, "test confusion matrix"
                 ),
-                "test precision recall": get_wandb_precision_recall(
-                    *precision_recall, "test precision recall"
-                ),
+                "test precision": precision,
+                "test recall": recall,
             },
         )
 
@@ -306,18 +300,6 @@ def get_wandb_confusion(confusion_data: torch.Tensor, class_names: List[str], ti
         {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
         {"title": title},
     )
-
-
-def get_wandb_precision_recall(precision: List[float], recall: List[float], title: str = "precision vs. recall"):
-    return wandb.plot_table(
-        "wandb/area-under-curve/v0",
-        wandb.Table(
-            columns=["recall", "precision"], data=list(zip(precision, recall))
-        ),
-        {"x": "recall", "y": "precision"},
-        {"title": title},
-    )
-
 
 def do_training(args) -> None:
     device = torch.device(

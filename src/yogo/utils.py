@@ -10,7 +10,7 @@ from typing import Optional, Union, Tuple, List, Dict
 
 from torchmetrics import ConfusionMatrix
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from torchmetrics.classification import MulticlassPrecisionRecallCurve
+from torchmetrics.classification import MulticlassPrecision, MulticlassRecall
 
 
 class Metrics:
@@ -23,11 +23,13 @@ class Metrics:
     ):
         self.mAP = MeanAveragePrecision(box_format="cxcywh")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        self.precision_recall = MulticlassPrecisionRecallCurve(num_classes=num_classes)
+        self.precision = MulticlassPrecision(num_classes=num_classes, thresholds=4)
+        self.recall = MulticlassRecall(num_classes=num_classes, thresholds=4)
 
         self.mAP.to(device)
         self.confusion.to(device)
-        self.precision_recall.to(device)
+        self.precision.to(device)
+        self.recall.to(device)
 
         self.num_classes = num_classes
         self.class_names = (
@@ -40,8 +42,9 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        mAP_preds, mAP_labels = self.format_for_mAP(preds, labels)
-        self.mAP.update(mAP_preds, mAP_labels)
+        self.mAP.update(
+            *self.format_for_mAP(preds, labels)
+        )
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(preds, labels)
 
@@ -49,19 +52,37 @@ class Metrics:
             formatted_preds[:, 5:].argmax(dim=1),
             formatted_labels[:, 5:].squeeze()
         )
-        self.precision_recall.update(
+
+        self.precision.update(
+            formatted_preds[:, 5:],
+            formatted_labels[:, 5:].squeeze().long()
+        )
+
+        self.recall.update(
             formatted_preds[:, 5:],
             formatted_labels[:, 5:].squeeze().long()
         )
 
     def compute(self):
-        prec, recall, _ = self.precision_recall.compute() 
-        return self.mAP.compute(), self.confusion.compute()#, (prec, recall)
+        return (
+            self.mAP.compute(),
+            self.confusion.compute(),
+            self.precision.compute(),
+            self.recall.compute()
+        )
 
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
-        self.precision_recall.reset()
+        self.precision.reset()
+        self.recall.reset()
+
+    def forward(self, preds, labels):
+        # prob inefficient but its OK
+        self.update(preds, labels)
+        res = self.compute()
+        self.reset()
+        return res
 
     def _format_preds_and_labels(
         self,
@@ -77,13 +98,13 @@ class Metrics:
 
         batch_preds and batch_labels are the batch label and prediction tensors.
         objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell
-        IoU_thresh is the threshold of IoU for prediction and label bbs. 
+        IoU_thresh is the threshold of IoU for prediction and label bbs.
 
         Returns (tensor of predictions shape=[N, x y x y t0 *classes], tensor of labels shape=[N, mask x y x y class])
         """
         if IoU_thresh != 0:
             # it isn't immediately obvious to me how exactly to do this. Filter out rows of IoU matrix?
-            # what happens if number of predicted_boxes != number of label_boxes? 
+            # what happens if number of predicted_boxes != number of label_boxes?
             raise NotImplementedError("axel hasn't implemented `IoU_thresh` yet!")
         if not (0 <= objectness_thresh < 1):
             raise ValueError(f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}")
