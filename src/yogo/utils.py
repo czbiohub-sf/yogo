@@ -151,6 +151,7 @@ class Metrics:
                 ).argmax(dim=1)
                 final_preds = preds_with_objects[prediction_indices]
             else:
+                """
                 if use_IoU:
                     # we know that objectness_mask.sum() < len(img_masked_labels) - i.e. there are
                     # fewer predicted objects than labels.
@@ -159,6 +160,7 @@ class Metrics:
                         f"({objectness_mask.sum()}) than labels ({len(img_masked_labels)}), "
                         "defaulting to label mask."
                     )
+                """
                 # filter on label tensor idx
                 final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
                 final_preds[:, 0:4] = ops.box_convert(
