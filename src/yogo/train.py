@@ -235,9 +235,9 @@ def train():
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
-        wandb.summary["test confusion"] = get_wandb_confusion(
+        wandb.log({"test confusion": get_wandb_confusion(
             confusion_data, class_names, "test confusion matrix"
-        )
+        )})
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
 
