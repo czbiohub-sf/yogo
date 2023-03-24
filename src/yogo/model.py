@@ -5,8 +5,6 @@ from typing_extensions import Self
 from typing import Tuple, Optional
 from pathlib import Path
 
-# from model_funcs import base_model
-
 
 class YOGO(nn.Module):
     """
@@ -55,11 +53,7 @@ class YOGO(nn.Module):
 
         Sx, Sy = self.get_grid_size(img_size)
 
-        self._Cxs = (
-            torch.linspace(0, 1 - 1 / Sx, Sx)
-            .expand(Sy, -1)
-            .to(self.device)
-        )
+        self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
         self._Cys = (
             torch.linspace(0, 1 - 1 / Sy, Sy)
             .expand(1, -1)
@@ -67,7 +61,6 @@ class YOGO(nn.Module):
             .expand(Sy, Sx)
             .to(self.device)
         )
-
 
     @classmethod
     def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple[Self, int]:
