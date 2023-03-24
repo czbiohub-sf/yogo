@@ -46,8 +46,21 @@ class YOGO(nn.Module):
 
         self.inference = inference
 
-        self._Cxs: Optional[torch.Tensor] = None
-        self._Cys: Optional[torch.Tensor] = None
+        Sx, Sy = self.get_grid_size(img_size)
+
+        self._Cxs = (
+            torch.linspace(0, 1 - 1 / Sx, Sx)
+            .expand(Sy, -1)
+            .to(self.device, non_blocking=True)
+        )
+        self._Cys = (
+            torch.linspace(0, 1 - 1 / Sy, Sy)
+            .expand(1, -1)
+            .transpose(0, 1)
+            .expand(Sy, Sx)
+            .to(self.device, non_blocking=True)
+        )
+
 
     @classmethod
     def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple[Self, int]:
@@ -111,7 +124,7 @@ class YOGO(nn.Module):
         """return Sx, Sy
         FIXME - hacky cause we have to infer, should be able to calc from model defn
         """
-        out = self(torch.rand(1, 1, *input_shape, device=self.device))
+        out = self.model(torch.rand(1, 1, *input_shape, device=self.device))
         _, _, Sy, Sx = out.shape
         return Sx, Sy
 
@@ -166,21 +179,7 @@ class YOGO(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.model(x.float())
 
-        bs, preds, Sy, Sx = x.shape
-
-        if self._Cxs is None or self._Cys is None:
-            self._Cxs = (
-                torch.linspace(0, 1 - 1 / Sx, Sx)
-                .expand(Sy, -1)
-                .to(self.device, non_blocking=True)
-            )
-            self._Cys = (
-                torch.linspace(0, 1 - 1 / Sy, Sy)
-                .expand(1, -1)
-                .transpose(0, 1)
-                .expand(Sy, Sx)
-                .to(self.device, non_blocking=True)
-            )
+        _, _, Sy, Sx = x.shape
 
         if self.inference:
             classification = torch.softmax(x[:, 5:, :, :], dim=1)
