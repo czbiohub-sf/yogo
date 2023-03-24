@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import wandb
 import torch
 
 import torchvision.ops as ops
