@@ -86,6 +86,12 @@ def train_parser(parser=None):
         action=boolean_action,
         help="turn off classification loss - good only for pretraining just a cell detector",
     )
+    parser.add_argument(
+        "--normalize-imgs",
+        type=bool,
+        default=False,
+        help="normalize images into [0,1]"
+    )
 
     image_resize_options = parser.add_mutually_exclusive_group(required=False)
     image_resize_options.add_argument(
@@ -99,7 +105,6 @@ def train_parser(parser=None):
         type=float,
         help="crop image verically - i.e. '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
-
     return parser
 
 

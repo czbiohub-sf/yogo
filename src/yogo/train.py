@@ -398,6 +398,7 @@ def do_training(args) -> None:
             "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
             "run group": args.group,
+            "normalize_imgs": args.normalize_imgs,
             "dataset_descriptor_file": args.dataset_descriptor_file,
             "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },

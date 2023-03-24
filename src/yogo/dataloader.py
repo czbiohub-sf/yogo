@@ -147,6 +147,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         label_path: Path,
         Sx,
         Sy,
+        normalize_images: bool = False,
         loader: Callable = read_grayscale,
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
@@ -161,6 +162,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.image_folder_path = image_path
         self.label_folder_path = label_path
         self.loader = loader
+        self.normalize_images = normalize_images
 
         # https://pytorch.org/docs/stable/data.html#multi-process-data-loading
         # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
@@ -248,6 +250,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         img_path = str(self._paths[index], encoding="utf-8")
         target = self._imgs[index, ...]
         sample = self.loader(img_path)
+        if self.normalize_images:
+            sample /= 255
         return sample, target
 
     def __len__(self) -> int:
@@ -307,9 +311,10 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
 
 def get_datasets(
     dataset_description_file: str,
-    Sx,
-    Sy,
+    Sx: int,
+    Sy: int,
     split_fractions_override: Optional[Dict[str, float]] = None,
+    normalize_images: bool = False,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
     (
         dataset_classes,
@@ -325,6 +330,7 @@ def get_datasets(
             dataset_desc["label_path"],
             Sx,
             Sy,
+            normalize_images=normalize_images
         )
         for dataset_desc in tqdm(dataset_paths)
     )
@@ -370,12 +376,14 @@ def get_dataloader(
     resize_shape: Optional[Tuple[int, int]] = None,
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
+    normalize_images: bool = False,
 ) -> Dict[DatasetSplitName, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
         Sx,
         Sy,
         split_fractions_override=split_fractions_override,
+        normalize_images=normalize_images,
     )
     augmentations = (
         [
