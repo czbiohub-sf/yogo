@@ -5,6 +5,8 @@ from typing_extensions import Self
 from typing import Tuple, Optional
 from pathlib import Path
 
+# from model_funcs import base_model
+
 
 class YOGO(nn.Module):
     """
@@ -33,11 +35,16 @@ class YOGO(nn.Module):
         anchor_h: float,
         num_classes: int,
         inference: bool = False,
+        model_func: nn.Module = None,
     ):
         super().__init__()
         self.device = "cpu"
 
-        self.model = self.gen_model(num_classes=num_classes)
+        self.model = (
+            self.gen_model(num_classes=num_classes)
+            if model_func is None
+            else model_func(num_classes=num_classes)
+        )
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
@@ -51,14 +58,14 @@ class YOGO(nn.Module):
         self._Cxs = (
             torch.linspace(0, 1 - 1 / Sx, Sx)
             .expand(Sy, -1)
-            .to(self.device, non_blocking=True)
+            .to(self.device)
         )
         self._Cys = (
             torch.linspace(0, 1 - 1 / Sy, Sy)
             .expand(1, -1)
             .transpose(0, 1)
             .expand(Sy, Sx)
-            .to(self.device, non_blocking=True)
+            .to(self.device)
         )
 
 
@@ -102,7 +109,9 @@ class YOGO(nn.Module):
 
     def to(self, device):
         self.device = device
-        super().to(device, non_blocking=True, dtype=torch.float32)
+        super().to(device, dtype=torch.float32)
+        self._Cxs = self._Cxs.to(device)
+        self._Cys = self._Cys.to(device)
         return self
 
     def num_params(self) -> int:
@@ -156,7 +165,7 @@ class YOGO(nn.Module):
             nn.LeakyReLU(),
         )
         conv_block_6 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
+            nn.Conv2d(128, 128, 3, padding=1, bias=False),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(),
         )

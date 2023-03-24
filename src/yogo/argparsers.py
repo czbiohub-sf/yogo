@@ -88,9 +88,9 @@ def train_parser(parser=None):
     )
     parser.add_argument(
         "--normalize-imgs",
-        type=bool,
         default=False,
-        help="normalize images into [0,1]"
+        action=boolean_action,
+        help="normalize images into [0,1]",
     )
 
     image_resize_options = parser.add_mutually_exclusive_group(required=False)
