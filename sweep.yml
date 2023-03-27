@@ -5,19 +5,30 @@ command:
   - train
   - ../dataset_defs/full-aditi-data.yml
   - --note
-  - "Sweeping along batchsize & learning rate"
+  - "Sweeping along models"
   - --no-classify
+  - --normalize-imgs
 method: random
 metric:
   goal: maximize
   name: val mAP
 parameters:
   learning_rate:
+    distribution: log_uniform_values
     min: 0.0000001
     max: 0.01
   optimizer_type:
     values: ["adam", "lion"]
+  model:
+    values: [
+        "model_no_dropout",
+        "model_smaller_SxSy",
+        "model_big_simple",
+        "model_big_normalized",
+        "model_big_normalized_dropout",
+    ]
   weight_decay:
+    distribution: log_uniform_values
     min: 0.001
     max: 0.1
   batch_size:
