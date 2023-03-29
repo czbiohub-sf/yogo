@@ -51,6 +51,9 @@ def train_parser(parser=None):
         "--lr", type=float, help="learning rate for training", default=None
     )
     parser.add_argument(
+        "--weight-decay", type=float, help="weight decay for training", default=None
+    )
+    parser.add_argument(
         "--epochs", type=uint, help="number of epochs to train", default=None
     )
     parser.add_argument(
