@@ -394,7 +394,7 @@ def do_training(args) -> None:
             "device": str(device),
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
-            "model": "model_big_normalized_dropout",
+            "model": "model_big_normalized",
             "resize_shape": resize_target_size,
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
