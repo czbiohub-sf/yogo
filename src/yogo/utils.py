@@ -141,21 +141,17 @@ class Metrics:
                 )
 
                 # choose predictions from argmaxed IoU along label dim to get best prediction per label
-                prediction_indices = ops.box_iou(
+                prediction_matrix = ops.box_iou(
                     img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]
-                ).argmax(dim=1)
+                )
+                n, m = prediction_matrix.shape
+                if m > 0:
+                    prediction_indices = prediction_matrix.argmax(dim=1)
+                else:
+                    # no predictions!
+                    prediction_indices = []
                 final_preds = preds_with_objects[prediction_indices]
             else:
-                """
-                if use_IoU:
-                    # we know that objectness_mask.sum() < len(img_masked_labels) - i.e. there are
-                    # fewer predicted objects than labels.
-                    print(
-                        "warning (utils._format_preds_and_labels) fewer predicted objects "
-                        f"({objectness_mask.sum()}) than labels ({len(img_masked_labels)}), "
-                        "defaulting to label mask."
-                    )
-                """
                 # filter on label tensor idx
                 final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
                 final_preds[:, 0:4] = ops.box_convert(
