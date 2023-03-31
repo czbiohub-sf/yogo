@@ -15,6 +15,7 @@ from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast, Literal, Iterator, List
 
 from yogo.model import YOGO
+from yogo.model_funcs import get_model_func
 from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, Metrics
@@ -43,13 +44,14 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def checkpoint_model(model, epoch, optimizer, name, step):
+def checkpoint_model(model, epoch, optimizer, name, step, model_version: Optional[str]=None):
     torch.save(
         {
             "epoch": epoch,
             "step": step,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
+            "model_version": model_version,
         },
         str(name),
     )
@@ -79,6 +81,7 @@ def train():
     weight_decay = config["weight_decay"]
     num_classes = len(class_names)
     classify = not config["no_classify"]
+    model = get_model_func(config["model"])
 
     if config.pretrained_path:
         print(f"loading pretrained path from {config.pretrained_path}")
@@ -95,6 +98,7 @@ def train():
             img_size=config["resize_shape"],
             anchor_w=anchor_w,
             anchor_h=anchor_h,
+            model_func=model,
         ).to(device)
         global_step = 0
 
@@ -219,6 +223,7 @@ def train():
                     optimizer,
                     model_save_dir / "best.pth",
                     global_step,
+                    model_version=config["model"]
                 )
             else:
                 checkpoint_model(
@@ -227,6 +232,7 @@ def train():
                     optimizer,
                     model_save_dir / "latest.pth",
                     global_step,
+                    model_version=config["model"]
                 )
 
         net.train()
@@ -264,6 +270,7 @@ def train():
             optimizer,
             model_save_dir / "latest.pth",
             global_step,
+            model_version=config["model"]
         )
 
 
@@ -395,6 +402,7 @@ def do_training(args) -> None:
             "device": str(device),
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
+            "model": "model_big_normalized",
             "resize_shape": resize_target_size,
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
