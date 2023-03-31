@@ -26,23 +26,22 @@ def argmax(arr):
     return max(range(len(arr)), key=arr.__getitem__)
 
 
-def save_preds(fname, res, thresh=0.5):
-    bs, pred_dim, Sy, Sx = res.shape
+def save_preds(fname, batch_preds, thresh=0.5):
+    bs, pred_shape, Sy, Sx = batch_preds.shape
     if bs != 1:
         raise ValueError(
             f"can only recieve batch size of 1 (for now) - batch size {bs}"
         )
 
+    reformatted_preds = batch_preds[0, ...].view(pred_shape, Sx * Sy).T
+    objectness_mask = (reformatted_preds[:, 4] > thresh).bool()
+    preds = reformatted_preds[objectness_mask]
+    pred_string = "\n".join(
+        f"{argmax(pred[5:])},{pred[0]},{pred[1]},{pred[2]},{pred[3]}"
+        for pred in preds
+    )
     with open(fname, "w") as f:
-        for j in range(Sy):
-            for i in range(Sx):
-                pred = res[0, :, j, i]
-                # if objectness t0 is greater than threshold
-                # xc yc w h 'objectness' *classes
-                if pred[4] > 0.5:
-                    f.write(
-                        f"{argmax(pred[5:])},{pred[0]},{pred[1]},{pred[2]},{pred[3]}\n"
-                    )
+        f.write(pred_string)
 
 
 def predict(
@@ -53,11 +52,11 @@ def predict(
     visualize: bool = False,
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    pth = torch.load(path_to_pth, map_location=device)
+    pth = torch.load(path_to_pth, map_location="cpu")
     img_h, img_w = pth["model_state_dict"]["img_size"]
     model, _ = YOGO.from_pth(Path(path_to_pth), inference=True)
-
     R = Resize([img_h, img_w])
+    model.to(device)
 
     data = Path(path_to_images)
     if data.is_dir():
@@ -65,9 +64,9 @@ def predict(
     else:
         imgs = [str(data)]
 
-    for fname in tqdm(imgs):
+    for fname in imgs:
         img = R(read_grayscale(fname))
-        res = model(img[None, ...])
+        res = model(img[None, ...].to(device))
 
         if visualize:
             fig, ax = plt.subplots()
