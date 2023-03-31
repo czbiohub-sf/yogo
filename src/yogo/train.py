@@ -44,13 +44,14 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def checkpoint_model(model, epoch, optimizer, name, step):
+def checkpoint_model(model, epoch, optimizer, name, step, model_version: Optional[str]=None):
     torch.save(
         {
             "epoch": epoch,
             "step": step,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
+            "model_version": model_version,
         },
         str(name),
     )
@@ -97,6 +98,7 @@ def train():
             img_size=config["resize_shape"],
             anchor_w=anchor_w,
             anchor_h=anchor_h,
+            model_func=model,
         ).to(device)
         global_step = 0
 
@@ -221,6 +223,7 @@ def train():
                     optimizer,
                     model_save_dir / "best.pth",
                     global_step,
+                    model_version=config["model"]
                 )
             else:
                 checkpoint_model(
@@ -229,6 +232,7 @@ def train():
                     optimizer,
                     model_save_dir / "latest.pth",
                     global_step,
+                    model_version=config["model"]
                 )
 
         net.train()
@@ -266,6 +270,7 @@ def train():
             optimizer,
             model_save_dir / "latest.pth",
             global_step,
+            model_version=config["model"]
         )
 
 

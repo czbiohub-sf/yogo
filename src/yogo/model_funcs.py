@@ -289,4 +289,5 @@ def get_model_func(model_name: Optional[str]) -> Optional[Callable[[int,], nn.Mo
     try:
         return models[model_name]
     except KeyError:
+        print(f"provided model {model_name} doesn't exist; defaulting to None")
         return None

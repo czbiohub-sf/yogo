@@ -1,9 +1,11 @@
 import torch
 from torch import nn
 
+from pathlib import Path
 from typing_extensions import Self
 from typing import Tuple, Optional
-from pathlib import Path
+
+from yogo.model_funcs import get_model_func
 
 
 class YOGO(nn.Module):
@@ -23,8 +25,6 @@ class YOGO(nn.Module):
     A better way to do this would be to have an "inference" method, that you could plug
     onto the end of forward if we are running inference.
     """
-
-    MODEL_VERSION = "0.0.1"
 
     def __init__(
         self,
@@ -67,27 +67,11 @@ class YOGO(nn.Module):
         loaded_pth = torch.load(pth_path, map_location="cpu")
         params = loaded_pth["model_state_dict"]
 
-        try:
-            model_ver = params["model_ver"]
-        except KeyError:
-            # just assume that the pth file is compatible
-            # TODO remove after it is probable that no more pth files w/o versions exist
-            model_ver = cls.MODEL_VERSION
-
-        if model_ver != cls.MODEL_VERSION:
-            raise ValueError(
-                f"pth version is {model_ver}, but the model is version {cls.MODEL_VERSION}"
-            )
-
         img_size = params["img_size"]
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
-
-        try:
-            global_step = params["step"]
-        except KeyError:
-            global_step = 0
+        model_version = params.get("model_version", None)
 
         model = cls(
             (img_size[0], img_size[1]),
@@ -95,9 +79,11 @@ class YOGO(nn.Module):
             anchor_h.item(),
             num_classes=num_classes.item(),
             inference=inference,
+            model_func=get_model_func(model_version)
         )
 
         model.load_state_dict(params)
+        global_step = params.get("step", 0)
         return model, global_step
 
     def to(self, device):
