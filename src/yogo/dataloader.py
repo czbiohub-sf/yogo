@@ -330,7 +330,7 @@ def get_datasets(
             dataset_desc["label_path"],
             Sx,
             Sy,
-            normalize_images=normalize_images
+            normalize_images=normalize_images,
         )
         for dataset_desc in tqdm(dataset_paths)
     )
