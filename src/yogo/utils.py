@@ -225,7 +225,10 @@ class Metrics:
 
 
 def draw_rects(
-    img: torch.Tensor, rects: Union[torch.Tensor, List], thresh: Optional[float] = None
+    img: torch.Tensor,
+    rects: Union[torch.Tensor, List],
+    thresh: Optional[float] = None,
+    labels: Optional[List[str]] = None,
 ) -> Image:
     """
     img is the torch tensor representing an image
@@ -275,7 +278,10 @@ def draw_rects(
 
     for r in formatted_rects:
         draw.rectangle(r[:4], outline="red")
-        draw.text((r[0], r[1]), str(r[4]), (0, 0, 0))
+        if labels is not None:
+            draw.text((r[0], r[1]), labels[int(r[4])], (0, 0, 0))
+        else:
+            draw.text((r[0], r[1]), str(r[4]), (0, 0, 0))
 
     return rgb
 

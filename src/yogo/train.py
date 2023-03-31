@@ -185,7 +185,10 @@ def train():
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_rects(
-                    imgs[0, 0, ...].detach(), outputs[0, ...].detach(), thresh=0.5
+                    imgs[0, 0, ...].detach(),
+                    outputs[0, ...].detach(),
+                    thresh=0.5,
+                    labels=class_names,
                 )
             )
 
