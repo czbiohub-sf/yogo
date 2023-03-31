@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from tqdm import tqdm
+from typing import Sequence, TypeVar, Generator
 from torchvision.transforms import Resize
 
 from yogo.model import YOGO
@@ -22,26 +23,31 @@ from yogo.dataloader import read_grayscale
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
+T = TypeVar("T")
+
+
 def argmax(arr):
     return max(range(len(arr)), key=arr.__getitem__)
 
 
-def save_preds(fname, batch_preds, thresh=0.5):
+def save_preds(fnames, batch_preds, thresh=0.5):
     bs, pred_shape, Sy, Sx = batch_preds.shape
-    if bs != 1:
-        raise ValueError(
-            f"can only recieve batch size of 1 (for now) - batch size {bs}"
-        )
 
-    reformatted_preds = batch_preds[0, ...].view(pred_shape, Sx * Sy).T
-    objectness_mask = (reformatted_preds[:, 4] > thresh).bool()
-    preds = reformatted_preds[objectness_mask]
-    pred_string = "\n".join(
-        f"{argmax(pred[5:])},{pred[0]},{pred[1]},{pred[2]},{pred[3]}"
-        for pred in preds
-    )
-    with open(fname, "w") as f:
-        f.write(pred_string)
+    for fname, batch_pred in zip(fnames, batch_preds):
+        reformatted_preds = batch_pred.view(pred_shape, Sx * Sy).T
+        objectness_mask = (reformatted_preds[:, 4] > thresh).bool()
+        preds = reformatted_preds[objectness_mask]
+        pred_string = "\n".join(
+            f"{argmax(pred[5:])},{pred[0]},{pred[1]},{pred[2]},{pred[3]}"
+            for pred in preds
+        )
+        with open(fname, "w") as f:
+            f.write(pred_string)
+
+
+def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, None]:
+    for i in range(0, len(s), n):
+        yield s[i : i + n]
 
 
 def predict(
@@ -50,7 +56,11 @@ def predict(
     output_dir: str,
     thresh: float = 0.5,
     visualize: bool = False,
+    batch_size: int = 16,
 ):
+    if visualize:
+        batch_size = 1
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     pth = torch.load(path_to_pth, map_location="cpu")
     img_h, img_w = pth["model_state_dict"]["img_size"]
@@ -64,9 +74,10 @@ def predict(
     else:
         imgs = [str(data)]
 
-    for fname in imgs:
-        img = R(read_grayscale(fname))
-        res = model(img[None, ...].to(device))
+    for fnames in iter_in_chunks(imgs, n=batch_size):
+        img_batch_block = torch.stack([read_grayscale(fname) for fname in fnames]).to(device)
+        img_batch = R(img_batch_block)
+        res = model(img_batch)
 
         if visualize:
             fig, ax = plt.subplots()
@@ -74,8 +85,9 @@ def predict(
             ax.imshow(drawn_img, cmap="gray")
             plt.show()
         else:
-            out_fname = Path(output_dir) / Path(fname).with_suffix(".csv").name
-            save_preds(out_fname, res, thresh=0.5)
+            out_fnames = [Path(output_dir) / Path(fname).with_suffix(".csv").name
+                          for fname in fnames]
+            save_preds(out_fnames, res, thresh=0.5)
 
 
 def do_infer(args):
