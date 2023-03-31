@@ -141,21 +141,17 @@ class Metrics:
                 )
 
                 # choose predictions from argmaxed IoU along label dim to get best prediction per label
-                prediction_indices = ops.box_iou(
+                prediction_matrix = ops.box_iou(
                     img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]
-                ).argmax(dim=1)
+                )
+                n, m = prediction_matrix.shape
+                if m > 0:
+                    prediction_indices = prediction_matrix.argmax(dim=1)
+                else:
+                    # no predictions!
+                    prediction_indices = []
                 final_preds = preds_with_objects[prediction_indices]
             else:
-                """
-                if use_IoU:
-                    # we know that objectness_mask.sum() < len(img_masked_labels) - i.e. there are
-                    # fewer predicted objects than labels.
-                    print(
-                        "warning (utils._format_preds_and_labels) fewer predicted objects "
-                        f"({objectness_mask.sum()}) than labels ({len(img_masked_labels)}), "
-                        "defaulting to label mask."
-                    )
-                """
                 # filter on label tensor idx
                 final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
                 final_preds[:, 0:4] = ops.box_convert(
@@ -225,7 +221,10 @@ class Metrics:
 
 
 def draw_rects(
-    img: torch.Tensor, rects: Union[torch.Tensor, List], thresh: Optional[float] = None
+    img: torch.Tensor,
+    rects: Union[torch.Tensor, List],
+    thresh: Optional[float] = None,
+    labels: Optional[List[str]] = None,
 ) -> Image:
     """
     img is the torch tensor representing an image
@@ -275,7 +274,10 @@ def draw_rects(
 
     for r in formatted_rects:
         draw.rectangle(r[:4], outline="red")
-        draw.text((r[0], r[1]), str(r[4]), (0, 0, 0))
+        if labels is not None:
+            draw.text((r[0], r[1]), labels[int(r[4])], (0, 0, 0))
+        else:
+            draw.text((r[0], r[1]), str(r[4]), (0, 0, 0))
 
     return rgb
 

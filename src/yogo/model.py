@@ -158,7 +158,7 @@ class YOGO(nn.Module):
             nn.LeakyReLU(),
         )
         conv_block_6 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
+            nn.Conv2d(128, 128, 3, padding=1, bias=True),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(),
         )
