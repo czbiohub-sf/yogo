@@ -16,7 +16,7 @@ def model_no_dropout(num_classes: int) -> nn.Module:
     conv_block_3 = nn.Sequential(
         nn.Conv2d(32, 64, 3, stride=2, padding=1),
         nn.LeakyReLU(),
-        nn.BatchNorm2d(16),
+        nn.BatchNorm2d(32),
     )
     conv_block_4 = nn.Sequential(
         nn.Conv2d(64, 128, 3, padding=1),
