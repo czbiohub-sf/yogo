@@ -5,9 +5,8 @@ command:
   - train
   - ../dataset_defs/full-aditi-data.yml
   - --note
-  - "Sweeping along models"
+  - "Sweeping! :broom:"
   - --no-classify
-  - --normalize-imgs
 method: random
 metric:
   goal: maximize
@@ -33,3 +32,5 @@ parameters:
     max: 0.1
   batch_size:
     values: [64, 128]
+  epochs:
+    values: [16, 32, 64]
