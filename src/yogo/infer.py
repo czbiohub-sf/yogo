@@ -3,14 +3,13 @@
 import torch
 import signal
 
-from pathlib import Path
-
+import torchvision.ops as ops
 import matplotlib.pyplot as plt
 
-from pathlib import Path
-
 from tqdm import tqdm
+from pathlib import Path
 from typing import Sequence, TypeVar, Generator
+
 from torchvision.transforms import Resize
 
 from yogo.model import YOGO
@@ -35,10 +34,25 @@ def save_preds(fnames, batch_preds, thresh=0.5):
 
     for fname, batch_pred in zip(fnames, batch_preds):
         reformatted_preds = batch_pred.view(pred_shape, Sx * Sy).T
+
+        # Filter for objectness first
         objectness_mask = (reformatted_preds[:, 4] > thresh).bool()
         preds = reformatted_preds[objectness_mask]
+
+        # Non-maximal supression to remove duplicate boxes
+        keep_idxs = ops.nms(
+            ops.box_convert(
+                preds[:, :4],
+                "cxcywh",
+                "xyxy"
+            ),
+            preds[:, 4],
+            iou_threshold=0.8  # TODO is this 0.8 threshold fine?
+        )
+        preds = preds[keep_idxs]
+
         pred_string = "\n".join(
-            f"{argmax(pred[5:])},{pred[0]},{pred[1]},{pred[2]},{pred[3]}"
+            f"{argmax(pred[5:])} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
             for pred in preds
         )
         with open(fname, "w") as f:
@@ -85,7 +99,7 @@ def predict(
             ax.imshow(drawn_img, cmap="gray")
             plt.show()
         else:
-            out_fnames = [Path(output_dir) / Path(fname).with_suffix(".csv").name
+            out_fnames = [Path(output_dir) / Path(fname).with_suffix(".txt").name
                           for fname in fnames]
             save_preds(out_fnames, res, thresh=0.5)
 
