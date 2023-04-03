@@ -47,7 +47,7 @@ def save_preds(fnames, batch_preds, thresh=0.5):
                 "xyxy"
             ),
             preds[:, 4],
-            iou_threshold=0.8  # TODO is this 0.8 threshold fine?
+            iou_threshold=0.95
         )
         preds = preds[keep_idxs]
 
