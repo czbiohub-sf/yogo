@@ -214,6 +214,8 @@ def train():
                 step=global_step,
             )
 
+            # TODO we should choose better conditions here - e.g. mAP for no-classify isn't great,
+            # and maybe we care about recall more than mAP
             if mAP["map"] > best_mAP:
                 best_mAP = mAP["map"]
                 wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
