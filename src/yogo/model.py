@@ -44,6 +44,9 @@ class YOGO(nn.Module):
             else model_func(num_classes=num_classes)
         )
 
+        # initialize the weights, PyTorch chooses bad defaults
+        self.model.apply(self.init_network_weights)
+
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_h))
@@ -61,6 +64,14 @@ class YOGO(nn.Module):
             .expand(Sy, Sx)
             .to(self.device)
         )
+
+    @staticmethod
+    def init_network_weights(module: nn.Module):
+        if isinstance(module, nn.Conv2d):
+            # init weights to default leaky relu neg slope, biases to 0
+            torch.nn.init.kaiming_normal_(module.weight, a = 0.01, nonlinearity='leaky_relu')
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
 
     @classmethod
     def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple[Self, int]:
