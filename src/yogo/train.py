@@ -402,7 +402,7 @@ def do_training(args) -> None:
             "device": str(device),
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
-            "model": "model_big_normalized",
+            "model": None, "model_big_heavy_normalized",
             "resize_shape": resize_target_size,
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
@@ -418,6 +418,8 @@ def do_training(args) -> None:
         tags=["v0.0.3"],
     )
 
+    # with torch.autograd.detect_anomaly():
+    #     train()
     train()
 
 
