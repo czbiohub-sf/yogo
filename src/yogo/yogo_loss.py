@@ -3,7 +3,7 @@ import torch
 import torchvision.ops as ops
 
 
-def validate_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
+def valid_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
     """
     xyxy_boxes: torch.Tensor of shape (N, 4)
     """
@@ -108,8 +108,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             "xyxy",
         )
 
-        assert validate_boxes(formatted_preds_xyxy), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
-        assert validate_boxes(formatted_labels_masked), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
+        assert valid_boxes(formatted_preds_xyxy), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
+        assert valid_boxes(formatted_labels_masked), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
 
         loss += (
             self.coord_weight
