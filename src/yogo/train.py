@@ -189,7 +189,7 @@ def train():
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_rects(
-                    imgs[0, 0, ...].detach(),
+                    imgs[0, 0, ...].detach().int(),
                     outputs[0, ...].detach(),
                     thresh=0.5,
                     labels=class_names,
@@ -289,6 +289,7 @@ def init_dataset(config: WandbConfig):
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
+        normalize_images=config["normalize_images"]
     )
 
     train_dataloader = dataloaders["train"]
@@ -412,7 +413,7 @@ def do_training(args) -> None:
             "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
             "run group": args.group,
-            "normalize_imgs": args.normalize_imgs,
+            "normalize_images": args.normalize_images,
             "dataset_descriptor_file": args.dataset_descriptor_file,
             "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },

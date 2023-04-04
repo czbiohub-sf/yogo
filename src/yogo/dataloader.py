@@ -249,9 +249,10 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         """
         img_path = str(self._paths[index], encoding="utf-8")
         target = self._imgs[index, ...]
-        sample = self.loader(img_path)
+        sample = self.loader(img_path).float()
         if self.normalize_images:
             sample /= 255
+        print(sample)
         return sample, target
 
     def __len__(self) -> int:

@@ -90,7 +90,7 @@ def train_parser(parser=None):
         help="turn off classification loss - good only for pretraining just a cell detector",
     )
     parser.add_argument(
-        "--normalize-imgs",
+        "--normalize-images",
         default=False,
         action=boolean_action,
         help="normalize images into [0,1]",
