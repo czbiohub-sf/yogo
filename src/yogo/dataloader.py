@@ -302,7 +302,9 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune=False):
     to_prune: List[int] = []
     for i in range(len(dataset_paths)):
         if not (
-            dataset_paths[i]["image_path"].is_dir() and dataset_paths[i]["label_path"].is_dir() and len(list(dataset_paths[i]["label_path"].iterdir())) > 0
+            dataset_paths[i]["image_path"].is_dir()
+            and dataset_paths[i]["label_path"].is_dir()
+            and len(list(dataset_paths[i]["label_path"].iterdir())) > 0
         ):
             if prune:
                 print(f"pruning {dataset_paths[i]}")

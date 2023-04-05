@@ -41,13 +41,9 @@ def save_preds(fnames, batch_preds, thresh=0.5):
 
         # Non-maximal supression to remove duplicate boxes
         keep_idxs = ops.nms(
-            ops.box_convert(
-                preds[:, :4],
-                "cxcywh",
-                "xyxy"
-            ),
+            ops.box_convert(preds[:, :4], "cxcywh", "xyxy"),
             preds[:, 4],
-            iou_threshold=0.95
+            iou_threshold=0.95,
         )
         preds = preds[keep_idxs]
 
@@ -89,7 +85,9 @@ def predict(
         imgs = [str(data)]
 
     for fnames in iter_in_chunks(imgs, n=batch_size):
-        img_batch_block = torch.stack([read_grayscale(fname) for fname in fnames]).to(device)
+        img_batch_block = torch.stack([read_grayscale(fname) for fname in fnames]).to(
+            device
+        )
         img_batch = R(img_batch_block)
         res = model(img_batch)
 
@@ -99,8 +97,10 @@ def predict(
             ax.imshow(drawn_img, cmap="gray")
             plt.show()
         else:
-            out_fnames = [Path(output_dir) / Path(fname).with_suffix(".txt").name
-                          for fname in fnames]
+            out_fnames = [
+                Path(output_dir) / Path(fname).with_suffix(".txt").name
+                for fname in fnames
+            ]
             save_preds(out_fnames, res, thresh=0.5)
 
 

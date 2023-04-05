@@ -33,7 +33,14 @@ class YOGO(nn.Module):
         anchor_h: float,
         num_classes: int,
         inference: bool = False,
-        model_func: Optional[Callable[[int,], nn.Module]] = None,
+        model_func: Optional[
+            Callable[
+                [
+                    int,
+                ],
+                nn.Module,
+            ]
+        ] = None,
     ):
         super().__init__()
         self.device = "cpu"
@@ -69,7 +76,9 @@ class YOGO(nn.Module):
     def init_network_weights(module: nn.Module):
         if isinstance(module, nn.Conv2d):
             # init weights to default leaky relu neg slope, biases to 0
-            torch.nn.init.kaiming_normal_(module.weight, a = 0.01, nonlinearity='leaky_relu')
+            torch.nn.init.kaiming_normal_(
+                module.weight, a=0.01, nonlinearity="leaky_relu"
+            )
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
 
@@ -92,7 +101,7 @@ class YOGO(nn.Module):
             anchor_h.item(),
             num_classes=num_classes.item(),
             inference=inference,
-            model_func=get_model_func(model_version)
+            model_func=get_model_func(model_version),
         )
 
         model.load_state_dict(params)

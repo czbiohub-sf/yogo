@@ -68,7 +68,7 @@ def train_parser(parser=None):
             "model_big_normalized",
             "model_big_heavy_normalized",
         ],
-        help="model version to use - do not use with --from-pretrained, as we use the pretrained model"
+        help="model version to use - do not use with --from-pretrained, as we use the pretrained model",
     )
     parser.add_argument(
         "--optimizer",

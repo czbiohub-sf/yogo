@@ -108,8 +108,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             "xyxy",
         )
 
-        assert valid_boxes(formatted_preds_xyxy), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
-        assert valid_boxes(formatted_labels_masked), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
+        assert valid_boxes(
+            formatted_preds_xyxy
+        ), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
+        assert valid_boxes(
+            formatted_labels_masked
+        ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
 
         loss += (
             self.coord_weight

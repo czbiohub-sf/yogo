@@ -48,6 +48,7 @@ def model_no_dropout(num_classes: int) -> nn.Module:
         conv_block_8,
     )
 
+
 def model_smaller_SxSy(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
@@ -276,7 +277,10 @@ def model_big_heavy_normalized(num_classes: int) -> nn.Module:
         nn.Conv2d(256, 5 + num_classes, 3),
     )
 
-def get_model_func(model_name: Optional[str]) -> Optional[Callable[[int,], nn.Module]]:
+
+def get_model_func(
+    model_name: Optional[str],
+) -> Optional[Callable[[int,], nn.Module]]:
     models = {
         "model_no_dropout": model_no_dropout,
         "model_smaller_SxSy": model_smaller_SxSy,
