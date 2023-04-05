@@ -44,7 +44,9 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def checkpoint_model(model, epoch, optimizer, name, step, model_version: Optional[str]=None):
+def checkpoint_model(
+    model, epoch, optimizer, name, step, model_version: Optional[str] = None
+):
     torch.save(
         {
             "epoch": epoch,
@@ -191,7 +193,11 @@ def train():
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_rects(
-                    imgs[0, 0, ...].detach().int(),
+                    (
+                        (255 * imgs[0, 0, ...].detach()).int()
+                        if config["normalize_images"]
+                        else imgs[0, 0, ...].detach()
+                    ),
                     outputs[0, ...].detach(),
                     thresh=0.5,
                     labels=class_names,
@@ -227,7 +233,7 @@ def train():
                     optimizer,
                     model_save_dir / "best.pth",
                     global_step,
-                    model_version=config["model"]
+                    model_version=config["model"],
                 )
             else:
                 checkpoint_model(
@@ -236,7 +242,7 @@ def train():
                     optimizer,
                     model_save_dir / "latest.pth",
                     global_step,
-                    model_version=config["model"]
+                    model_version=config["model"],
                 )
 
         net.train()
@@ -274,7 +280,7 @@ def train():
             optimizer,
             model_save_dir / "latest.pth",
             global_step,
-            model_version=config["model"]
+            model_version=config["model"],
         )
 
 
@@ -291,7 +297,7 @@ def init_dataset(config: WandbConfig):
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
-        normalize_images=config["normalize_images"]
+        normalize_images=config["normalize_images"],
     )
 
     train_dataloader = dataloaders["train"]
