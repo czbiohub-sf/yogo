@@ -294,19 +294,28 @@ def load_dataset_description(
                 f"got {split_fractions}"
             )
 
-        check_dataset_paths(dataset_paths)
+        check_dataset_paths(dataset_paths, prune=True)
         return classes, dataset_paths, split_fractions
 
 
-def check_dataset_paths(dataset_paths: List[Dict[str, Path]]):
-    for dataset_desc in dataset_paths:
+def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune=False):
+    to_prune: List[int] = []
+    for i in range(len(dataset_paths)):
         if not (
-            dataset_desc["image_path"].is_dir() and dataset_desc["label_path"].is_dir()
+            dataset_paths[i]["image_path"].is_dir() and dataset_paths[i]["label_path"].is_dir() and len(list(dataset_paths[i]["label_path"].iterdir())) > 0
         ):
-            raise FileNotFoundError(
-                f"image_path or label_path do not lead to a directory\n"
-                f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
-            )
+            if prune:
+                print(f"pruning {dataset_paths[i]}")
+                to_prune.append(i)
+            else:
+                raise FileNotFoundError(
+                    f"image_path or label_path do not lead to a directory\n"
+                    f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
+                )
+
+    # reverse order so we don't move around the to-delete items in the list
+    for i in to_prune[::-1]:
+        del dataset_paths[i]
 
 
 def get_datasets(
