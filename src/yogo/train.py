@@ -175,6 +175,8 @@ def train():
                 step=global_step,
             )
 
+            wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
+
         # do validation things
         val_loss = 0.0
         net.eval()
