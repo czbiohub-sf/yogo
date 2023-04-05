@@ -86,6 +86,7 @@ def train():
     classify = not config["no_classify"]
     model = get_model_func(config["model"])
 
+    net = None
     if config.pretrained_path:
         print(f"loading pretrained path from {config.pretrained_path}")
         net, global_step = YOGO.from_pth(config.pretrained_path)
@@ -161,7 +162,22 @@ def train():
             optimizer.zero_grad(set_to_none=True)
 
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+
+            # Temporary until we fix the nan issues
+            try:
+                loss = Y_loss(outputs, labels)
+            except AssertionError as e:
+                checkpoint_model(
+                    net,
+                    epoch,
+                    optimizer,
+                    model_save_dir / "assertion_error.pth",
+                    global_step,
+                    model_version=config["model"],
+                    imgs=imgs,
+                )
+                raise e
+
             loss.backward()
 
             optimizer.step()
