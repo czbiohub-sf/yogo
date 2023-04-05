@@ -45,7 +45,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def checkpoint_model(
-    model, epoch, optimizer, name, step, model_version: Optional[str] = None
+    model, epoch, optimizer, name, step, model_version: Optional[str] = None, **kwargs
 ):
     torch.save(
         {
@@ -54,6 +54,7 @@ def checkpoint_model(
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
             "model_version": model_version,
+            **kwargs,
         },
         str(name),
     )
