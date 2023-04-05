@@ -148,8 +148,11 @@ class YOGO(nn.Module):
         would be overcmoplicated for what we are doing - we can add modules
         here as we add different types of layers
         """
-        # we get "Module object is not iterable" here - not sure why
-        h, w = self.img_size  # type: ignore
+        if isinstance(self.img_size, torch.Tensor):
+            h, w = self.img_size
+        else:
+            raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
+
         for mod in self.modules():
             if isinstance(mod, nn.Conv2d,):
                 if isinstance(mod.padding, tuple):
@@ -162,7 +165,7 @@ class YOGO(nn.Module):
                 h = torch.floor((h + 2 * p0 - d0 * (k0 - 1) - 1) / s0 + 1)
                 w = torch.floor((w + 2 * p1 - d1 * (k1 - 1) - 1) / s1 + 1)
 
-        Sy, Sx = h, w
+        Sy, Sx = h.int().item(), w.int().item()
         return Sx, Sy
 
     def gen_model(self, num_classes) -> nn.Module:
