@@ -5,7 +5,7 @@ import wandb
 import torch
 
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, SequentialLR, LinearLR
 
 from lion_pytorch import Lion
 
@@ -78,6 +78,8 @@ def get_optimizer(
 def train():
     config = wandb.config
     device = config["device"]
+    epochs = config["epochs"]
+    learning_rate = config["learning_rate"]
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
@@ -85,6 +87,18 @@ def train():
     num_classes = len(class_names)
     classify = not config["no_classify"]
     model = get_model_func(config["model"])
+    val_metrics = Metrics(
+        num_classes=num_classes,
+        device=device,
+        class_names=class_names,
+        classify=classify,
+    )
+    test_metrics = Metrics(
+        num_classes=num_classes,
+        device=device,
+        class_names=class_names,
+        classify=classify,
+    )
 
     net = None
     if config.pretrained_path:
@@ -108,29 +122,6 @@ def train():
 
     print("created network")
 
-    Y_loss = YOGOLoss(classify=classify).to(device)
-    optimizer = get_optimizer(
-        config["optimizer_type"],
-        parameters=net.parameters(),
-        learning_rate=config["learning_rate"],
-        weight_decay=weight_decay,
-    )
-
-    print("created loss and optimizer")
-
-    val_metrics = Metrics(
-        num_classes=num_classes,
-        device=device,
-        class_names=class_names,
-        classify=classify,
-    )
-    test_metrics = Metrics(
-        num_classes=num_classes,
-        device=device,
-        class_names=class_names,
-        classify=classify,
-    )
-
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
     Sx, Sy = net.get_grid_size(config["resize_shape"])
@@ -142,17 +133,38 @@ def train():
         train_dataloader,
         validate_dataloader,
         test_dataloader,
-    ) = init_dataset(config)
+    ) = init_dataset(config, Sx, Sy)
     print("dataset initialized...")
 
-    scheduler = CosineAnnealingLR(
-        optimizer,
-        T_max=config["epochs"] * len(train_dataloader),
-        eta_min=config["learning_rate"] / 10,
+    Y_loss = YOGOLoss(classify=classify).to(device)
+    optimizer = get_optimizer(
+        config["optimizer_type"],
+        parameters=net.parameters(),
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
     )
 
+    print("created loss and optimizer")
+
+    # undecided about LR scheduler
+    min_period = min(8, epochs // 4) * len(train_dataloader)
+    anneal_period = epochs * len(train_dataloader) - min_period
+    lin = LinearLR(
+        optimizer, start_factor=0.01, end_factor=1.618, total_iters=min_period
+    )
+    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=learning_rate / 10)
+    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
+
+    # scheduler = CosineAnnealingLR(
+    #     optimizer,
+    #     T_max=epochs * len(train_dataloader),
+    #     eta_min=learning_rate / 10,
+    # )
+
+    print("starting training")
+
     best_mAP = 0
-    for epoch in range(config["epochs"]):
+    for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
             # TODO need pin_memory?
@@ -305,12 +317,12 @@ def train():
 WandbConfig: TypeAlias = dict
 
 
-def init_dataset(config: WandbConfig):
+def init_dataset(config: WandbConfig, Sx, Sy):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
-        Sx=config["Sx"],
-        Sy=config["Sy"],
+        Sx=Sx,
+        Sy=Sy,
         device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
