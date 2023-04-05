@@ -252,7 +252,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         sample = self.loader(img_path).float()
         if self.normalize_images:
             sample /= 255
-        print(sample)
         return sample, target
 
     def __len__(self) -> int:
