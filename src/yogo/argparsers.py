@@ -57,6 +57,20 @@ def train_parser(parser=None):
         "--epochs", type=uint, help="number of epochs to train", default=None
     )
     parser.add_argument(
+        "--model",
+        default=None,
+        const=None,
+        nargs="?",
+        choices=[
+            "model_no_dropout",
+            "model_smaller_SxSy",
+            "model_big_simple",
+            "model_big_normalized",
+            "model_big_heavy_normalized",
+        ],
+        help="model version to use - do not use with --from-pretrained, as we use the pretrained model"
+    )
+    parser.add_argument(
         "--optimizer",
         default="adam",
         const="adam",

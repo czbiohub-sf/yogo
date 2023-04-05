@@ -179,6 +179,7 @@ def train():
             )
 
             wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
+            wandb.log({"training param norm": net.param_norm()}, step=global_step)
 
         # do validation things
         val_loss = 0.0
@@ -414,7 +415,7 @@ def do_training(args) -> None:
             "device": str(device),
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
-            "model": "model_big_heavy_normalized",
+            "model": args.model,
             "resize_shape": resize_target_size,
             "vertical_crop_size": vertical_crop_size,
             "preprocess_type": preprocess_type,
