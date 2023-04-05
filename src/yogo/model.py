@@ -3,7 +3,7 @@ from torch import nn
 
 from pathlib import Path
 from typing_extensions import Self
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Callable
 
 from yogo.model_funcs import get_model_func
 
@@ -33,7 +33,7 @@ class YOGO(nn.Module):
         anchor_h: float,
         num_classes: int,
         inference: bool = False,
-        model_func: nn.Module = None,
+        model_func: Optional[Callable[[int,], nn.Module]] = None,
     ):
         super().__init__()
         self.device = "cpu"
@@ -41,7 +41,7 @@ class YOGO(nn.Module):
         self.model = (
             self.gen_model(num_classes=num_classes)
             if model_func is None
-            else model_func(num_classes=num_classes)
+            else model_func(num_classes)
         )
 
         # initialize the weights, PyTorch chooses bad defaults
@@ -76,13 +76,15 @@ class YOGO(nn.Module):
     @classmethod
     def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple[Self, int]:
         loaded_pth = torch.load(pth_path, map_location="cpu")
-        params = loaded_pth["model_state_dict"]
 
+        model_version = loaded_pth.get("model_version", None)
+        global_step = loaded_pth.get("step", 0)
+
+        params = loaded_pth["model_state_dict"]
         img_size = params["img_size"]
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
-        model_version = params.get("model_version", None)
 
         model = cls(
             (img_size[0], img_size[1]),
@@ -94,7 +96,6 @@ class YOGO(nn.Module):
         )
 
         model.load_state_dict(params)
-        global_step = params.get("step", 0)
         return model, global_step
 
     def to(self, device):
