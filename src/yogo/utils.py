@@ -233,6 +233,7 @@ def draw_rects(
         - a list of (class, xc, yc, w, h)
     thresh is a threshold for confidence when rects is a torch.Tensor
     """
+    img = img.squeeze()
     assert (
         len(img.shape) == 2
     ), f"takes single grayscale image - should be 2d, got {img.shape}"

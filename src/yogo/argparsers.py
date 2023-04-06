@@ -152,22 +152,34 @@ def export_parser(parser=None):
 
 def infer_parser(parser=None):
     if parser is None:
-        parser = argparse.ArgumentParser(description="infer results over some dataset")
+        parser = argparse.ArgumentParser(description="infer on image data")
 
     parser.add_argument(
-        "pth_path", type=str, help="path to .pth file defining the model"
+        "pth_path", type=Path, help="path to .pth file defining the model"
     )
-    parser.add_argument("images", type=str, help="path to image or images")
     parser.add_argument(
-        "--output_dir",
-        type=str,
-        help="path to directory for results - ignore to not save results",
+        "--output-dir",
+        type=Path,
         default=None,
+        help="path to directory for results - ignore to not save results",
     )
     parser.add_argument(
-        "--visualize",
+        "--draw-boxes",
         help="plot and display each image",
         action=boolean_action,
         default=False,
+    )
+    data_source = parser.add_mutually_exclusive_group(required=True)
+    data_source.add_argument(
+        "--path-to-images", type=Path, default=None, help="path to image or images"
+    )
+    data_source.add_argument(
+        "--path-to-zarr", type=Path, default=None, help="path to zarr file"
+    )
+    parser.add_argument(
+        "--normalize-images",
+        default=False,
+        action=boolean_action,
+        help="normalize images into [0,1]",
     )
     return parser
