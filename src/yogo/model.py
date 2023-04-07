@@ -61,7 +61,7 @@ class YOGO(nn.Module):
 
         self.inference = inference
 
-        Sx, Sy = self.get_grid_size(img_size)
+        Sx, Sy = self.get_grid_size()
 
         self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
         self._Cys = (
@@ -141,12 +141,31 @@ class YOGO(nn.Module):
         total_norm = total_norm**0.5
         return total_norm
 
-    def get_grid_size(self, input_shape: Tuple[int, int]) -> Tuple[int, int]:
+    def get_grid_size(self) -> Tuple[int, int]:
         """return Sx, Sy
-        FIXME - hacky cause we have to infer, should be able to calc from model defn
+
+        We could support arbitrary layers, but that would take a long time, and
+        would be overcmoplicated for what we are doing - we can add modules
+        here as we add different types of layers
         """
-        out = self.model(torch.rand(1, 1, *input_shape, device=self.device))
-        _, _, Sy, Sx = out.shape
+        if isinstance(self.img_size, torch.Tensor):
+            h, w = self.img_size
+        else:
+            raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
+
+        for mod in self.modules():
+            if isinstance(mod, nn.Conv2d,):
+                if isinstance(mod.padding, tuple):
+                    p0, p1 = mod.padding
+                elif mod.padding is None or mod.padding == 'none':
+                    p0, p1 = 0, 0
+                d0, d1 = mod.dilation if isinstance(mod.dilation, tuple) else (mod.dilation, mod.dilation)
+                k0, k1 = mod.kernel_size if isinstance(mod.kernel_size, tuple) else (mod.kernel_size, mod.kernel_size)
+                s0, s1 = mod.stride if isinstance(mod.stride, tuple) else (mod.stride, mod.stride)
+                h = torch.floor((h + 2 * p0 - d0 * (k0 - 1) - 1) / s0 + 1)
+                w = torch.floor((w + 2 * p1 - d1 * (k1 - 1) - 1) / s1 + 1)
+
+        Sy, Sx = h.int().item(), w.int().item()
         return Sx, Sy
 
     def gen_model(self, num_classes) -> nn.Module:
