@@ -240,22 +240,18 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return paths, tensors
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """From torchvision.datasets.folder.DatasetFolder
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (sample, target) where target is class_index of the target class.
+        """
+        if we are normalizing images, we have to make sure the sample
         """
         img_path = str(self._paths[index], encoding="utf-8")
         target = self._imgs[index, ...]
-        sample = self.loader(img_path).float()
+        sample = self.loader(img_path)
         if self.normalize_images:
-            sample /= 255
+            # turns our torch.uint8 tensor 'sample' into a torch.FloatTensor
+            sample /= 256
         return sample, target
 
     def __len__(self) -> int:
-        "From torchvision.datasets.folder.DatasetFolder"
         return len(self._paths)
 
 

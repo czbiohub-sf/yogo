@@ -29,7 +29,7 @@ class MultiArgSequential(torch.nn.Sequential):
 class ImageTransformLabelIdentity(DualInputModule):
     """
     A transform for images that leaves alone the labels,
-    good for e.g. resizes
+    good for e.g. resizes with bboxes with normalized coords
     """
 
     def __init__(self, transform):
@@ -41,7 +41,7 @@ class ImageTransformLabelIdentity(DualInputModule):
 
 
 class RandomVerticalCrop(DualInputModule):
-    """Random crop of a horizontal strip over the batch."""
+    """Random crop of a horizontal strip over the batch"""
 
     def __init__(self, height: float):
         if not (0 < height < 1):
