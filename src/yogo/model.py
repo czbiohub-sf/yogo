@@ -217,7 +217,8 @@ class YOGO(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.model(x)
+        # we get either raw uint8 tensors or float tensors
+        x = self.model(x.float())
 
         _, _, Sy, Sx = x.shape
 
