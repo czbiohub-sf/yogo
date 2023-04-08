@@ -79,6 +79,14 @@ def train_parser(parser=None):
         help="optimizer for training run",
     )
     parser.add_argument(
+        "--lr-scheduler",
+        default="lin-warmup-cosine",
+        const="lin-warmup-cosine",
+        nargs="?",
+        choices=["cosine", "lin-warmup-cosine", "lin-warmerup-cosine"],
+        help="lr scheduler",
+    )
+    parser.add_argument(
         "--note",
         type=str,
         help="note for the run (e.g. 'run on a TI-82')",
