@@ -84,9 +84,10 @@ def train():
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
     weight_decay = config["weight_decay"]
-    num_classes = len(class_names)
     classify = not config["no_classify"]
     model = get_model_func(config["model"])
+    num_classes = len(class_names)
+
     val_metrics = Metrics(
         num_classes=num_classes,
         device=device,
@@ -146,20 +147,11 @@ def train():
 
     print("created loss and optimizer")
 
-    # undecided about LR scheduler
-    min_period = min(8, epochs // 4) * len(train_dataloader)
-    anneal_period = epochs * len(train_dataloader) - min_period
-    lin = LinearLR(
-        optimizer, start_factor=0.01, end_factor=1, total_iters=min_period
+    scheduler = CosineAnnealingLR(
+        optimizer,
+        T_max=epochs * len(train_dataloader),
+        eta_min=learning_rate / 10,
     )
-    cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=learning_rate / 10)
-    scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
-
-    # scheduler = CosineAnnealingLR(
-    #     optimizer,
-    #     T_max=epochs * len(train_dataloader),
-    #     eta_min=learning_rate / 10,
-    # )
 
     print("starting training")
 
