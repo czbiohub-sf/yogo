@@ -455,6 +455,7 @@ def do_training(args) -> None:
             "dataset_descriptor_file": args.dataset_descriptor_file,
             "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },
+        name=args.name,
         notes=args.note,
         tags=["v0.0.3"],
     )

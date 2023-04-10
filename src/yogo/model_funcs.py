@@ -368,7 +368,7 @@ def model_big_heavy_normalized(num_classes: int) -> nn.Module:
             nn.Conv2d(256, 256, 3),
             nn.LeakyReLU(),
         ),
-        nn.Conv2d(256, 5 + num_classes, 3),
+        nn.Conv2d(256, 5 + num_classes, 1),
     )
 
 

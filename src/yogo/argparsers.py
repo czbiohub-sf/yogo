@@ -83,9 +83,14 @@ def train_parser(parser=None):
     parser.add_argument(
         "--note",
         type=str,
-        nargs="?",
         help="note for the run (e.g. 'run on a TI-82')",
-        default="",
+        default=None,
+    )
+    parser.add_argument(
+        "--name",
+        type=str,
+        help="name for the run (e.g. 'ti-82_run')",
+        default=None,
     )
     parser.add_argument(
         "--group",

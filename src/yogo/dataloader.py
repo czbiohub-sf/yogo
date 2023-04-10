@@ -248,7 +248,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         sample = self.loader(img_path)
         if self.normalize_images:
             # turns our torch.uint8 tensor 'sample' into a torch.FloatTensor
-            sample /= 256
+            sample = sample / 256
         return sample, target
 
     def __len__(self) -> int:
@@ -424,6 +424,7 @@ def get_dataloader(
             dataset,
             shuffle=True,
             drop_last=False,
+            pin_memory=True,
             batch_size=batch_size,
             persistent_workers=True,
             multiprocessing_context="spawn",
