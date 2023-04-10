@@ -5,6 +5,7 @@ import wandb
 import torch
 
 from torch.optim import AdamW
+from torch.cuda.amp import GradScaler
 from torch.optim.lr_scheduler import CosineAnnealingLR, SequentialLR, LinearLR
 
 from lion_pytorch import Lion
@@ -143,6 +144,9 @@ def train():
         learning_rate=learning_rate,
         weight_decay=weight_decay,
     )
+
+    # automatic mixed precision grad scaler
+    scaler = GradScaler()
 
     print("created loss and optimizer")
 
