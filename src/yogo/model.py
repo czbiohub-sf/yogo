@@ -3,7 +3,7 @@ from torch import nn
 
 from pathlib import Path
 from typing_extensions import Self
-from typing import Tuple, Optional, Callable
+from typing import Tuple, Optional, Callable, Union, Any
 
 from yogo.model_funcs import get_model_func
 
