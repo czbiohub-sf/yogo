@@ -175,20 +175,7 @@ def train():
 
             outputs = net(imgs)
 
-            # Temporary until we fix the nan issues
-            try:
-                loss = Y_loss(outputs, labels)
-            except AssertionError as e:
-                checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "assertion_error.pth",
-                    global_step,
-                    model_version=config["model"],
-                    imgs=imgs,
-                )
-                raise e
+            loss = Y_loss(outputs, labels)
 
             loss.backward()
 
