@@ -75,51 +75,6 @@ def get_optimizer(
     raise ValueError(f"got invalid optimizer_type {optimizer_type}")
 
 
-def get_scheduler(
-    schedule_type: Literal["cosine", "lin-warmup-cosine", "lin-warmerup-cosine"],
-    optimizer,
-    learning_rate,
-    epochs,
-    num_batches_per_epoch,
-):
-    if schedule_type == "cosine":
-        return CosineAnnealingLR(
-            optimizer,
-            T_max=epochs * num_batches_per_epoch,
-            eta_min=learning_rate / 10,
-        )
-    elif schedule_type == "lin-warmup-cosine":
-        # undecided about LR scheduler
-        if epochs < 8:
-            raise ValueError(
-                f"lin-warmup-cosine scheduler requires at least 8 epochs - got {epochs}"
-            )
-        min_period = min(8, epochs // 8) * num_batches_per_epoch
-        anneal_period = epochs * num_batches_per_epoch - min_period
-        lin = LinearLR(
-            optimizer, start_factor=0.01, end_factor=1, total_iters=min_period
-        )
-        cs = CosineAnnealingLR(
-            optimizer, T_max=anneal_period, eta_min=learning_rate / 10
-        )
-        return SequentialLR(optimizer, [lin, cs], [min_period])
-    elif schedule_type == "lin-warmerup-cosine":
-        # undecided about LR scheduler
-        if epochs < 8:
-            raise ValueError(
-                f"lin-warmerup-cosine scheduler requires at least 8 epochs - got {epochs}"
-            )
-        min_period = min(8, epochs // 8) * num_batches_per_epoch
-        anneal_period = epochs * num_batches_per_epoch - min_period
-        lin = LinearLR(
-            optimizer, start_factor=0.1, end_factor=1, total_iters=min_period
-        )
-        cs = CosineAnnealingLR(
-            optimizer, T_max=anneal_period, eta_min=learning_rate / 10
-        )
-        return SequentialLR(optimizer, [lin, cs], [min_period])
-
-
 def train():
     config = wandb.config
     device = config["device"]
@@ -192,12 +147,10 @@ def train():
 
     print("created loss and optimizer")
 
-    scheduler = get_scheduler(
-        config["lr_scheduler"],
+    scheduler = CosineAnnealingLR(
         optimizer,
-        learning_rate,
-        epochs,
-        len(train_dataloader),
+        T_max=epochs * len(train_dataloader),
+        eta_min=learning_rate / 10,
     )
 
     print("starting training")
@@ -442,7 +395,6 @@ def do_training(args) -> None:
     learning_rate = args.lr or 3e-4
     weight_decay = args.weight_decay or 1e-2
     optimizer_type = args.optimizer or "adam"
-    lr_scheduler = args.lr_scheduler or "lin-warmup-cosine"
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -476,7 +428,6 @@ def do_training(args) -> None:
         entity="bioengineering",
         config={
             "optimizer_type": optimizer_type,
-            "lr_scheduler": lr_scheduler,
             "learning_rate": learning_rate,
             "weight_decay": weight_decay,
             "epochs": epochs,
