@@ -424,6 +424,7 @@ def get_dataloader(
             dataset,
             shuffle=True,
             drop_last=False,
+            pin_memory=True,
             batch_size=batch_size,
             persistent_workers=True,
             multiprocessing_context="spawn",
