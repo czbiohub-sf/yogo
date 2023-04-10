@@ -153,15 +153,18 @@ class YOGO(nn.Module):
         else:
             raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
 
+        def as_tuple(inp: Union[Any, Tuple[Any,Any]]) -> Tuple[Any,Any]:
+            return inp if isinstance(inp, tuple) else (inp, inp)
+
         for mod in self.modules():
             if isinstance(mod, nn.Conv2d,):
                 if isinstance(mod.padding, tuple):
                     p0, p1 = mod.padding
                 elif mod.padding is None or mod.padding == 'none':
                     p0, p1 = 0, 0
-                d0, d1 = mod.dilation if isinstance(mod.dilation, tuple) else (mod.dilation, mod.dilation)
-                k0, k1 = mod.kernel_size if isinstance(mod.kernel_size, tuple) else (mod.kernel_size, mod.kernel_size)
-                s0, s1 = mod.stride if isinstance(mod.stride, tuple) else (mod.stride, mod.stride)
+                d0, d1 = as_tuple(mod.dilation)
+                k0, k1 = as_tuple(mod.kernel_size)
+                s0, s1 = as_tuple(mod.stride)
                 h = torch.floor((h + 2 * p0 - d0 * (k0 - 1) - 1) / s0 + 1)
                 w = torch.floor((w + 2 * p1 - d1 * (k1 - 1) - 1) / s1 + 1)
 
