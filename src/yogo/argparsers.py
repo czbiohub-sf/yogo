@@ -63,7 +63,6 @@ def train_parser(parser=None):
         nargs="?",
         choices=[
             "base_model",
-            "base_model_tweaked_kernel",
             "model_no_dropout",
             "model_smaller_SxSy",
             "model_big_simple",
