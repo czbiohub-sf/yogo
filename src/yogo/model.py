@@ -204,7 +204,7 @@ class YOGO(nn.Module):
             nn.Conv2d(128, 128, 3, padding=1),
             nn.LeakyReLU(),
         )
-        conv_block_8 = nn.Conv2d(128, 5 + num_classes, 3)
+        conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
         return nn.Sequential(
             conv_block_1,
             conv_block_2,

@@ -62,6 +62,7 @@ def train_parser(parser=None):
         const=None,
         nargs="?",
         choices=[
+            "base_model",
             "model_no_dropout",
             "model_smaller_SxSy",
             "model_big_simple",
