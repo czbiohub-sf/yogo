@@ -174,7 +174,7 @@ def train():
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
-            scaler.udate()
+            scaler.update()
 
             scheduler.step()
 
