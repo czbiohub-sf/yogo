@@ -70,8 +70,11 @@ class YOGO(nn.Module):
             .to(self.device)
         )
 
-        self.register_buffer("_Cxs", _Cxs)
-        self.register_buffer("_Cys", _Cys)
+        # TODO this feels wrong, but it works - there is some issue
+        # with just giving _Cxs / _Cys directly when initting via
+        # from_pth
+        self.register_buffer("_Cxs", _Cxs.clone())
+        self.register_buffer("_Cys", _Cys.clone())
 
         # initialize the weights, PyTorch chooses bad defaults
         self.model.apply(self.init_network_weights)
