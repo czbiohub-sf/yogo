@@ -159,7 +159,6 @@ def train():
     for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
-            # TODO need pin_memory?
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
