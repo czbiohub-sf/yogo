@@ -256,7 +256,13 @@ def train():
         net.train()
 
     # do test things
+    # When testing, we load the `best.pth` model.
+    # That model is what we are going to use, so it is what
+    # we care about!!
+    net, global_step = YOGO.from_pth(model_save_dir / "best.pth")
+    net.to(device)
     net.eval()
+
     test_loss = 0.0
     with torch.no_grad():
         for imgs, labels in test_dataloader:
