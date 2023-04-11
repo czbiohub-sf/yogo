@@ -373,7 +373,7 @@ def do_training(args) -> None:
         config={
             "optimizer_type": optimizer_type,
             "learning_rate": learning_rate,
-            "decay_factor": 10,
+            "decay_factor": args.lr_decay_factor,
             "weight_decay": weight_decay,
             "epochs": epochs,
             "batch_size": batch_size,
