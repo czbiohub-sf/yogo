@@ -3,7 +3,7 @@ from torch import nn
 
 from pathlib import Path
 from typing_extensions import Self
-from typing import Tuple, Optional, Callable
+from typing import Tuple, Optional, Callable, Union, Any
 
 from yogo.model_funcs import get_model_func
 
@@ -41,18 +41,16 @@ class YOGO(nn.Module):
                 nn.Module,
             ]
         ] = None,
+        device: Union[torch.device, str]="cpu"
     ):
         super().__init__()
-        self.device = "cpu"
+        self.device = device
 
         self.model = (
             self.gen_model(num_classes=num_classes)
             if model_func is None
             else model_func(num_classes)
         )
-
-        # initialize the weights, PyTorch chooses bad defaults
-        self.model.apply(self.init_network_weights)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
@@ -63,14 +61,21 @@ class YOGO(nn.Module):
 
         Sx, Sy = self.get_grid_size()
 
-        self._Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
-        self._Cys = (
+        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
+        _Cys = (
             torch.linspace(0, 1 - 1 / Sy, Sy)
             .expand(1, -1)
             .transpose(0, 1)
             .expand(Sy, Sx)
             .to(self.device)
         )
+
+        self.register_buffer("_Cxs", _Cxs)
+        self.register_buffer("_Cys", _Cys)
+
+        # initialize the weights, PyTorch chooses bad defaults
+        self.model.apply(self.init_network_weights)
+
 
     @staticmethod
     def init_network_weights(module: nn.Module):
@@ -107,11 +112,9 @@ class YOGO(nn.Module):
         model.load_state_dict(params)
         return model, global_step
 
-    def to(self, device):
+    def to(self, device, *args, **kwargs):
         self.device = device
-        super().to(device, dtype=torch.float32)
-        self._Cxs = self._Cxs.to(device)
-        self._Cys = self._Cys.to(device)
+        super().to(device, *args, **kwargs)
         return self
 
     def num_params(self) -> int:
@@ -153,15 +156,18 @@ class YOGO(nn.Module):
         else:
             raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
 
+        def as_tuple(inp: Union[Any, Tuple[Any,Any]]) -> Tuple[Any,Any]:
+            return inp if isinstance(inp, tuple) else (inp, inp)
+
         for mod in self.modules():
             if isinstance(mod, nn.Conv2d,):
                 if isinstance(mod.padding, tuple):
                     p0, p1 = mod.padding
                 elif mod.padding is None or mod.padding == 'none':
                     p0, p1 = 0, 0
-                d0, d1 = mod.dilation if isinstance(mod.dilation, tuple) else (mod.dilation, mod.dilation)
-                k0, k1 = mod.kernel_size if isinstance(mod.kernel_size, tuple) else (mod.kernel_size, mod.kernel_size)
-                s0, s1 = mod.stride if isinstance(mod.stride, tuple) else (mod.stride, mod.stride)
+                d0, d1 = as_tuple(mod.dilation)
+                k0, k1 = as_tuple(mod.kernel_size)
+                s0, s1 = as_tuple(mod.stride)
                 h = torch.floor((h + 2 * p0 - d0 * (k0 - 1) - 1) / s0 + 1)
                 w = torch.floor((w + 2 * p1 - d1 * (k1 - 1) - 1) / s1 + 1)
 

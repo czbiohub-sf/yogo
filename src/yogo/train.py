@@ -85,9 +85,10 @@ def train():
     anchor_h = config["anchor_h"]
     class_names = config["class_names"]
     weight_decay = config["weight_decay"]
-    num_classes = len(class_names)
     classify = not config["no_classify"]
     model = get_model_func(config["model"])
+    num_classes = len(class_names)
+
     val_metrics = Metrics(
         num_classes=num_classes,
         device=device,
