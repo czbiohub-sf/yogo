@@ -439,8 +439,6 @@ def do_training(args) -> None:
         tags=["v0.0.3"],
     )
 
-    # with torch.autograd.detect_anomaly():
-    #     train()
     train()
 
 
