@@ -282,16 +282,6 @@ def train():
             }
         )
 
-        checkpoint_model(
-            net,
-            epoch,
-            optimizer,
-            model_save_dir / "latest.pth",
-            global_step,
-            model_version=config["model"],
-        )
-
-
 WandbConfig: TypeAlias = dict
 
 
