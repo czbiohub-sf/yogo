@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import wandb
 import torch
 
 import torchvision.ops as ops
@@ -219,6 +220,43 @@ class Metrics:
 
         return preds, labels
 
+
+def get_wandb_confusion(
+    confusion_data: torch.Tensor,
+    class_names: List[str],
+    title: str = "confusion matrix",
+):
+    nc1, nc2 = confusion_data.shape
+    assert (
+        nc1 == nc2 == len(class_names)
+    ), f"nc1 != nc2 != len(class_names)! (nc1 = {nc1}, nc2 = {nc2}, class_names = {class_names})"
+
+    L = []
+    for i in range(nc1):
+        for j in range(nc2):
+            # annoyingly, wandb will sort the matrix by row/col names. sad!
+            # fix the order we want by prepending the index of the class.
+            L.append(
+                (
+                    f"{i} - {class_names[i]}",
+                    f"{j} - {class_names[j]}",
+                    confusion_data[i, j],
+                )
+            )
+
+    return wandb.plot_table(
+        "wandb/confusion_matrix/v1",
+        wandb.Table(
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=L,
+        ),
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
+        {"title": title},
+    )
 
 def draw_rects(
     img: torch.Tensor,
