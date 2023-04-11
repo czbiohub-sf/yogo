@@ -5,7 +5,7 @@ from torch import nn
 
 def base_model(num_classes) -> nn.Module:
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(1, 16, 7, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
         nn.LeakyReLU(),
     )
@@ -14,7 +14,8 @@ def base_model(num_classes) -> nn.Module:
         nn.LeakyReLU(),
     )
     conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 3, stride=2, padding=1),
+        nn.Conv2d(32, 64, 7, stride=2, padding=1),
+        nn.BatchNorm2d(64),
         nn.LeakyReLU(),
     )
     conv_block_4 = nn.Sequential(
@@ -22,7 +23,7 @@ def base_model(num_classes) -> nn.Module:
         nn.LeakyReLU(),
     )
     conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(128, 128, 7, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(128),
         nn.LeakyReLU(),
     )
