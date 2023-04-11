@@ -1,5 +1,6 @@
 import os
 import csv
+import json
 import torch
 import numpy as np
 
@@ -16,7 +17,7 @@ from torchvision.io import read_image, ImageReadMode
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
-from typing import List, Dict, Union, Tuple, Optional, Callable, Literal, cast
+from typing import List, Dict, Union, Tuple, Optional, Callable, Literal, Any, cast
 
 from yogo.data_transforms import (
     DualInputModule,
@@ -74,7 +75,7 @@ def split_labels_into_bins(
     return {k: torch.vstack(vs) for k, vs in d.items()}
 
 
-def format_labels(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
+def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
     with torch.no_grad():
         output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
@@ -88,8 +89,43 @@ def format_labels(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
         return output
 
 
+def correct_label_idx(
+    label: Union[str, int],
+    dataset_classes: List[str],
+    notes_data: Optional[Dict[str, Any]]
+) -> int:
+    """
+    dataset_classes is the ordering of classes that are given by
+    label-studio. So we get the class of the prediction from
+    `int(row[0])`, and get the index of that from YOGO_CLASS_ORDERING
+    """
+    if label.isnumeric():
+        label = int(label)
+        if notes_data is None:
+            return YOGO_CLASS_ORDERING.index(dataset_classes[label])
+        else:
+            label_name: Optional[str] = None
+            for row in notes_data["categories"]:
+                if label == int(row["id"]):
+                    label_name = row["name"]
+                    break
+
+            if label_name is None:
+                raise ValueError(f"label index {label} not found in notes.json file")
+
+            return YOGO_CLASS_ORDERING.index(label_name)
+    else:
+        return YOGO_CLASS_ORDERING.index(row[0])
+
+
+
+
 def label_file_to_tensor(
-    label_path: Path, dataset_classes: List[str], Sx: int, Sy: int
+    label_path: Path,
+    dataset_classes: List[str],
+    Sx: int,
+    Sy: int,
+    notes_data: Optional[Dict[str, Any]],
 ) -> torch.Tensor:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
@@ -114,15 +150,7 @@ def label_file_to_tensor(
                     len(row) == 5
                 ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
-                """
-                dataset_classes is the ordering of classes that are given by
-                label-studio. So we get the class of the prediction from
-                `int(row[0])`, and get the index of that from YOGO_CLASS_ORDERING
-                """
-                if row[0].isnumeric():
-                    label_idx = YOGO_CLASS_ORDERING.index(dataset_classes[int(row[0])])
-                else:
-                    label_idx = YOGO_CLASS_ORDERING.index(row[0])
+                label_idx = correct_label_idx(row[0], dataset_classes, notes_data)
 
                 # float for everything so we can make tensors of labels
                 labels.append([float(label_idx)] + [float(v) for v in row[1:]])
@@ -135,7 +163,7 @@ def label_file_to_tensor(
         return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
-    return format_labels(labels_tensor, Sx, Sy)
+    return format_labels_tensor(labels_tensor, Sx, Sy)
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -214,10 +242,18 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         is_valid_file = cast(Callable[[str], bool], is_valid_file)
 
+        notes_data = None
+        if (self.label_folder_path.parent / "notes.json").exists():
+            with open(str(self.label_folder_path.parent / "notes.json"), "r") as notes:
+                notes_data = json.load(notes)
+
         # maps file name to a list of tuples of bounding boxes + classes
         paths: List[str] = []
         tensors: List[torch.Tensor] = []
         for label_file_path in self.label_folder_path.glob("*"):
+            # ignore (*nix convention) hidden files
+            if label_file_path.name.startswith("."): continue
+
             image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
                 for sfx in [".png", ".jpg"]
@@ -233,7 +269,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 raise FileNotFoundError(
                     f"None of the following images exist: {image_paths}"
                 ) from e
-            labels = label_file_to_tensor(label_file_path, dataset_classes, Sx, Sy)
+
+            # if we have a `notes.json` file available, the labels are from a
+            # label studio project, so use it. Otherwise, assume YOGO_CLASS_ORDERING
+
+            labels = label_file_to_tensor(label_file_path, dataset_classes, Sx, Sy, notes_data)
             paths.append(str(image_file_path))
             tensors.append(labels)
 
