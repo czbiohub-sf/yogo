@@ -14,7 +14,6 @@ from torchvision.io import read_image, ImageReadMode
 from typing import List, Dict, Union, Tuple, Optional, Callable, Any, cast
 
 
-
 LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 YOGO_CLASS_ORDERING = [
     "healthy",
@@ -25,6 +24,7 @@ YOGO_CLASS_ORDERING = [
     "wbc",
     "misc",
 ]
+
 
 def read_grayscale(img_path):
     try:

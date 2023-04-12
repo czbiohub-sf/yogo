@@ -12,9 +12,7 @@ from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
 from typing import List, Dict, Union, Tuple, Optional, Literal
 
-from yogo.dataloading.dataset import (
-    ObjectDetectionDataset
-)
+from yogo.dataloading.dataset import ObjectDetectionDataset
 from yogo.dataloading.data_transforms import (
     DualInputModule,
     DualInputId,
