@@ -197,9 +197,7 @@ def train():
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
-                val_metrics.update(
-                    outputs.detach(), labels.detach()
-                )
+                val_metrics.update(outputs.detach(), labels.detach())
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
