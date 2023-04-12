@@ -110,7 +110,11 @@ class ImageLoader:
         device = choose_device()
         transform = Compose(transform_list)
 
-        data = [path_to_data] if path_to_data.is_file() else list(path_to_data.glob("*.png"))
+        data = (
+            [path_to_data]
+            if path_to_data.is_file()
+            else list(path_to_data.glob("*.png"))
+        )
 
         _num_els = len(data)
 
