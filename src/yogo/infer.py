@@ -118,7 +118,7 @@ class ImageLoader:
             for fnames in iter_in_chunks(sorted(data), n):
                 if fnames_only:
                     yield fnames
-                yield self.create_batch_from_fnames(
+                yield cls.create_batch_from_fnames(
                     fnames,
                     transform=transform,
                     normalize_images=normalize_images,
