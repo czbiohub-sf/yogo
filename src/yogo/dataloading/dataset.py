@@ -137,7 +137,6 @@ def label_file_to_tensor(
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
-    # TODO Make Zarr DataLoader too! :)
     def __init__(
         self,
         dataset_classes: List[str],
