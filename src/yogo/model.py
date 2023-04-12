@@ -41,7 +41,7 @@ class YOGO(nn.Module):
                 nn.Module,
             ]
         ] = None,
-        device: Union[torch.device, str]="cpu"
+        device: Union[torch.device, str] = "cpu",
     ):
         super().__init__()
         self.device = device
@@ -78,7 +78,6 @@ class YOGO(nn.Module):
 
         # initialize the weights, PyTorch chooses bad defaults
         self.model.apply(self.init_network_weights)
-
 
     @staticmethod
     def init_network_weights(module: nn.Module):
@@ -159,14 +158,17 @@ class YOGO(nn.Module):
         else:
             raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
 
-        def as_tuple(inp: Union[Any, Tuple[Any,Any]]) -> Tuple[Any,Any]:
+        def as_tuple(inp: Union[Any, Tuple[Any, Any]]) -> Tuple[Any, Any]:
             return inp if isinstance(inp, tuple) else (inp, inp)
 
         for mod in self.modules():
-            if isinstance(mod, nn.Conv2d,):
+            if isinstance(
+                mod,
+                nn.Conv2d,
+            ):
                 if isinstance(mod.padding, tuple):
                     p0, p1 = mod.padding
-                elif mod.padding is None or mod.padding == 'none':
+                elif mod.padding is None or mod.padding == "none":
                     p0, p1 = 0, 0
                 d0, d1 = as_tuple(mod.dilation)
                 k0, k1 = as_tuple(mod.kernel_size)

@@ -83,7 +83,11 @@ class ImageLoader:
         return self._num_els
 
     @staticmethod
-    def create_batch_from_fnames(fnames: List[Union[str, Path]], transform: nn.Module, normalize_images: bool = False):
+    def create_batch_from_fnames(
+        fnames: List[Union[str, Path]],
+        transform: nn.Module,
+        normalize_images: bool = False,
+    ):
         img_batch = torch.stack([read_grayscale(str(fname)) for fname in fnames])
         img_batch = img_batch.to(device)
         img_batch = transform(img_batch)
@@ -113,7 +117,9 @@ class ImageLoader:
             for fnames in iter_in_chunks(sorted(data), n):
                 if fnames_only:
                     yield fnames
-                yield self.create_batch_from_fnames(fnames, transform=transform, normalize_images=normalize_images)
+                yield self.create_batch_from_fnames(
+                    fnames, transform=transform, normalize_images=normalize_images
+                )
 
         return cls(_iter, _num_els)
 
@@ -152,7 +158,7 @@ def predict(
     draw_boxes: bool = False,
     batch_size: int = 16,
     normalize_images: bool = False,
-    use_tqdm: bool = False
+    use_tqdm: bool = False,
 ):
     if draw_boxes:
         batch_size = 1
@@ -174,11 +180,14 @@ def predict(
             transform_list=[R],
             n=batch_size,
             fnames_only=(output_dir is not None),
-            normalize_images=normalize_images
+            normalize_images=normalize_images,
         )
     elif path_to_zarr is not None:
         image_loader = ImageLoader.load_zarr_data(
-            path_to_zarr, transform_list=[R], n=batch_size, normalize_images=normalize_images
+            path_to_zarr,
+            transform_list=[R],
+            n=batch_size,
+            normalize_images=normalize_images,
         )
     else:
         raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
@@ -230,7 +239,7 @@ def do_infer(args):
         output_dir=args.output_dir,
         draw_boxes=args.draw_boxes,
         use_tqdm=(args.output_dir is not None or args.draw_boxes),
-        normalize_images=args.normalize_images
+        normalize_images=args.normalize_images,
     )
 
 

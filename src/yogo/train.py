@@ -325,8 +325,7 @@ def init_dataset(config: WandbConfig, Sx, Sy):
 
 
 def do_training(args) -> None:
-    """ responsible for parsing args and starting a training run
-    """
+    """responsible for parsing args and starting a training run"""
     device = torch.device(
         args.device
         if args.device is not None

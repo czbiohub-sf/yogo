@@ -51,7 +51,10 @@ def train_parser(parser=None):
         "--lr", type=float, help="learning rate for training", default=None
     )
     parser.add_argument(
-        "--lr-decay-factor", type=float, help="factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2", default=None
+        "--lr-decay-factor",
+        type=float,
+        help="factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2",
+        default=None,
     )
     parser.add_argument(
         "--weight-decay", type=float, help="weight decay for training", default=None

@@ -92,7 +92,7 @@ def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor
 def correct_label_idx(
     label: Union[str, int],
     dataset_classes: List[str],
-    notes_data: Optional[Dict[str, Any]]
+    notes_data: Optional[Dict[str, Any]],
 ) -> int:
     """
     dataset_classes is the ordering of classes that are given by
@@ -116,8 +116,6 @@ def correct_label_idx(
             return YOGO_CLASS_ORDERING.index(label_name)
     else:
         return YOGO_CLASS_ORDERING.index(row[0])
-
-
 
 
 def label_file_to_tensor(
@@ -252,7 +250,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         tensors: List[torch.Tensor] = []
         for label_file_path in self.label_folder_path.glob("*"):
             # ignore (*nix convention) hidden files
-            if label_file_path.name.startswith("."): continue
+            if label_file_path.name.startswith("."):
+                continue
 
             image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
@@ -273,7 +272,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
             # if we have a `notes.json` file available, the labels are from a
             # label studio project, so use it. Otherwise, assume YOGO_CLASS_ORDERING
 
-            labels = label_file_to_tensor(label_file_path, dataset_classes, Sx, Sy, notes_data)
+            labels = label_file_to_tensor(
+                label_file_path, dataset_classes, Sx, Sy, notes_data
+            )
             paths.append(str(image_file_path))
             tensors.append(labels)
 

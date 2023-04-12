@@ -258,6 +258,7 @@ def get_wandb_confusion(
         {"title": title},
     )
 
+
 def draw_rects(
     img: torch.Tensor,
     rects: Union[torch.Tensor, List],
