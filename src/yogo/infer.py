@@ -87,6 +87,7 @@ class ImageLoader:
         fnames: List[Union[str, Path]],
         transform: nn.Module,
         normalize_images: bool = False,
+        device: Union[str, torch.device] = "cpu",
     ):
         img_batch = torch.stack([read_grayscale(str(fname)) for fname in fnames])
         img_batch = img_batch.to(device)
@@ -109,7 +110,7 @@ class ImageLoader:
         device = choose_device()
         transform = Compose(transform_list)
 
-        data = [datapath] if datapath.is_file() else list(datapath.glob("*.png"))
+        data = [path_to_data] if path_to_data.is_file() else list(path_to_data.glob("*.png"))
 
         _num_els = len(data)
 
@@ -118,8 +119,11 @@ class ImageLoader:
                 if fnames_only:
                     yield fnames
                 yield self.create_batch_from_fnames(
-                    fnames, transform=transform, normalize_images=normalize_images
-                ).to(device)
+                    fnames,
+                    transform=transform,
+                    normalize_images=normalize_images,
+                    device=device,
+                )
 
         return cls(_iter, _num_els)
 
@@ -193,8 +197,10 @@ def predict(
         raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
 
     if not use_tqdm:
+
         def tqdm_(v):
             return v
+
     else:
         tqdm_ = tqdm
 
