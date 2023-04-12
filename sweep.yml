@@ -3,34 +3,31 @@ command:
   - run
   - yogo
   - train
-  - ../dataset_defs/full-aditi-data.yml
+  - ../dataset_defs/all-labelled-data.yml
   - --note
   - "Sweeping! :broom:"
-  - --no-classify
-method: random
+  - --from-pretrained
+  - trained_models/fresh-totem-448/best.pth
+method: bayes
 metric:
   goal: maximize
   name: val mAP
 parameters:
   learning_rate:
     distribution: log_uniform_values
-    min: 0.0000001
+    min: 0.000000001
     max: 0.01
-  optimizer_type:
-    values: ["adam", "lion"]
-  model:
-    values: [
-        "model_no_dropout",
-        "model_smaller_SxSy",
-        "model_big_simple",
-        "model_big_normalized",
-        "model_big_normalized_dropout",
-    ]
+  decay_factor:
+    distribution: uniform
+    min: 1.5
+    max: 128
   weight_decay:
     distribution: log_uniform_values
     min: 0.001
-    max: 0.1
+    max: 0.9
   batch_size:
-    values: [32, 64]
+    values: [16, 32, 64, 128]
   epochs:
-    values: [16, 32, 64]
+    distribution: int_uniform
+    min: 8
+    max: 92
