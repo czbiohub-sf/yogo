@@ -15,7 +15,7 @@ from typing import Optional, Tuple, cast
 from yogo.model import YOGO
 from yogo.argparsers import train_parser
 from yogo.yogo_loss import YOGOLoss
-from yogo.utils import Metrics
+from yogo.metrics import Metrics
 from yogo.dataloading.dataloader import (
     load_dataset_description,
     get_dataloader,

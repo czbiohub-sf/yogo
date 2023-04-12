@@ -18,7 +18,8 @@ from yogo.model import YOGO
 from yogo.model_funcs import get_model_func
 from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
-from yogo.utils import draw_rects, get_wandb_confusion, Metrics
+from yogo.utils import draw_rects, get_wandb_confusion
+from yogo.metrics import Metrics
 from yogo.dataloading.dataset import YOGO_CLASS_ORDERING
 from yogo.dataloading.dataloader import (
     load_dataset_description,
@@ -214,6 +215,7 @@ def train():
             )
 
             mAP, confusion_data, precision, recall = val_metrics.compute()
+            val_metrics.reset()
 
             wandb.log(
                 {
