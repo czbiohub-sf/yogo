@@ -13,7 +13,7 @@ jobs:
       - name: install checking requirements
         run: |
           pip install --upgrade pip
-          pip ruff==0.0.253
+          pip install ruff==0.0.253
       - name: ruff
         run: ruff ulc_mm_package --ignore E501 --ignore E722
       - if: failure()
