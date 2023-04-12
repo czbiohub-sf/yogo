@@ -327,7 +327,7 @@ if __name__ == "__main__":
 
     from matplotlib.pyplot import imshow, show
 
-    from yogo.dataloader import get_dataloader
+    from yogo.dataloading.dataloader import get_dataloader
 
     if len(sys.argv) != 2:
         print(f"usage: {sys.argv[0]} <path to image or dir of images>")
