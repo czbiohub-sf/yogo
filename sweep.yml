@@ -3,11 +3,15 @@ command:
   - run
   - yogo
   - train
-  - ../dataset_defs/all-labelled-data.yml
+  - ../dataset_defs/all-labelled-data-fast.yml
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
   - trained_models/fresh-totem-448/best.pth
+  - --epochs
+  - 64
+  - --batch-size
+  - 64
 method: bayes
 metric:
   goal: maximize
@@ -15,22 +19,16 @@ metric:
 parameters:
   learning_rate:
     distribution: log_uniform_values
-    min: 0.000000001
-    max: 0.01
+    min: 0.000001
+    max: 0.1
   decay_factor:
     distribution: uniform
     min: 1.5
     max: 128
   weight_decay:
-    distribution: log_uniform_values
-    min: 0.001
-    max: 0.9
-  batch_size:
-    values: [16, 32, 64, 128]
-  epochs:
-    distribution: int_uniform
-    min: 8
-    max: 92
+    distribution: uniform_values
+    min: 0.0001
+    max: 1
   label_smoothing:
     distribution: log_uniform_values
     min: 0.0001
