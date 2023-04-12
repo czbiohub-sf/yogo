@@ -197,6 +197,9 @@ def train():
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
                 val_loss += loss.item()
+                val_metrics.update(
+                    outputs.detach(), labels.detach()
+                )
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
@@ -212,9 +215,7 @@ def train():
                 )
             )
 
-            mAP, confusion_data, precision, recall = val_metrics.forward(
-                outputs.detach(), labels.detach()
-            )
+            mAP, confusion_data, precision, recall = val_metrics.compute()
 
             wandb.log(
                 {
