@@ -27,6 +27,10 @@ from yogo.dataloading.data_transforms import (
 DatasetSplitName = Literal["train", "val", "test"]
 
 
+class InvalidDatasetDescriptionFile(Exception):
+    ...
+
+
 def collate_batch(batch, device="cpu", transforms=None):
     # TODO https://pytorch.org/docs/stable/data.html#memory-pinning
     # perform image transforms here so we can transform in batches! :)
@@ -59,6 +63,12 @@ def load_dataset_description(
                     "image_path": Path(yaml_data["image_path"]),
                     "label_path": Path(yaml_data["label_path"]),
                 }
+            ]
+
+        if "test_paths" in yaml_data:
+            test_dataset_paths = [
+                {k: Path(v) for k, v in d.items()}
+                for d in yaml_data["test_paths"].values()
             ]
 
         split_fractions = {
