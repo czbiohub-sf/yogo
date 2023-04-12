@@ -214,6 +214,7 @@ def train():
             )
 
             mAP, confusion_data, precision, recall = val_metrics.compute()
+            val_metrics.reset()
 
             wandb.log(
                 {
