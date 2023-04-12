@@ -120,7 +120,7 @@ class Metrics:
             Sy,
             Sx,
         ) = batch_labels.shape  # label_shape is mask x y x y class
-        assert bs1 == bs2, f"sanity check, pred batch size should equal"
+        assert bs1 == bs2, "sanity check, pred batch size should equal"
 
         masked_predictions, masked_labels = [], []
         for b in range(bs1):

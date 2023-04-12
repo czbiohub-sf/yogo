@@ -13,7 +13,7 @@ from tqdm import tqdm
 from pathlib import Path
 from typing import Sequence, TypeVar, Generator, List, Union, Optional
 
-from torchvision.transforms import Resize, Compose, ToTensor
+from torchvision.transforms import Resize, Compose
 
 from yogo.model import YOGO
 from yogo.utils import draw_rects
@@ -119,7 +119,7 @@ class ImageLoader:
                     yield fnames
                 yield self.create_batch_from_fnames(
                     fnames, transform=transform, normalize_images=normalize_images
-                )
+                ).to(device)
 
         return cls(_iter, _num_els)
 
@@ -193,7 +193,8 @@ def predict(
         raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
 
     if not use_tqdm:
-        tqdm_ = lambda v: v
+        def tqdm_(v):
+            return v
     else:
         tqdm_ = tqdm
 

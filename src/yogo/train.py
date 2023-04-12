@@ -5,14 +5,14 @@ import wandb
 import torch
 
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR, SequentialLR, LinearLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from lion_pytorch import Lion
 
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast, Literal, Iterator, List
+from typing import Optional, Tuple, cast, Literal, Iterator
 
 from yogo.model import YOGO
 from yogo.model_funcs import get_model_func
