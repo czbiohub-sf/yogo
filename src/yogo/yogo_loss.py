@@ -23,6 +23,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self,
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
+        label_smoothing: float = 0.01,
         classify: bool = True,
     ) -> None:
         super().__init__()
@@ -31,9 +32,11 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.mse = torch.nn.MSELoss(reduction="none")
         self._classify = classify
 
-        # TODO sweep over label_smoothing values
         if self._classify:
-            self.cel = torch.nn.CrossEntropyLoss(reduction="none", label_smoothing=0.01)
+            self.cel = torch.nn.CrossEntropyLoss(
+                reduction="none",
+                label_smoothing=label_smoothing
+            )
 
         self.device = "cpu"
 

@@ -370,6 +370,7 @@ def do_training(args) -> None:
             "learning_rate": learning_rate,
             "decay_factor": decay_factor,
             "weight_decay": weight_decay,
+            "label_smoothing": 0.01,
             "epochs": epochs,
             "batch_size": batch_size,
             "device": str(device),

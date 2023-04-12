@@ -31,3 +31,7 @@ parameters:
     distribution: int_uniform
     min: 8
     max: 92
+  label_smoothing:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.09
