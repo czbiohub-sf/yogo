@@ -96,12 +96,12 @@ class Metrics:
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
         We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
 
-        batch_preds and batch_labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!.
+        batch_preds and batch_labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
         use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
         objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
             only be used with use_IoU == True
 
-        Returns (tensor of predictions shape=[N, x y x y t0 *classes], tensor of labels shape=[N, mask x y x y class])
+        Returns (tensor of predictions shape=[N, x y x y objectness *classes], tensor of labels shape=[N, mask x y x y class])
         """
         if not (0 <= objectness_thresh < 1):
             raise ValueError(
@@ -113,7 +113,7 @@ class Metrics:
             pred_shape,
             Sy,
             Sx,
-        ) = batch_preds.shape  # pred_shape is xc yc w h to *classes
+        ) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
         (
             bs2,
             label_shape,
