@@ -18,7 +18,7 @@ from torchvision.transforms import Resize, Compose
 from yogo.model import YOGO
 from yogo.utils import draw_rects
 from yogo.argparsers import infer_parser
-from yogo.dataloader import read_grayscale
+from yogo.dataloading.dataloader import read_grayscale
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff

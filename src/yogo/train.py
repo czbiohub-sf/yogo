@@ -19,7 +19,7 @@ from yogo.model_funcs import get_model_func
 from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, get_wandb_confusion, Metrics
-from yogo.dataloader import (
+from yogo.dataloading.dataloader import (
     YOGO_CLASS_ORDERING,
     load_dataset_description,
     get_dataloader,

@@ -16,7 +16,7 @@ from yogo.model import YOGO
 from yogo.argparsers import train_parser
 from yogo.yogo_loss import YOGOLoss
 from yogo.utils import Metrics
-from yogo.dataloader import (
+from yogo.dataloading.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
