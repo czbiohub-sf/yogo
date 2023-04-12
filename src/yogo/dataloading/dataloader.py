@@ -39,7 +39,14 @@ class DatasetDescription:
     test_dataset_paths: Optional[List[Dict[str, Path]]]
 
     def __iter__(self):
-        return iter((self.classes, self.split_fractions, self.dataset_paths, self.test_dataset_paths))
+        return iter(
+            (
+                self.classes,
+                self.split_fractions,
+                self.dataset_paths,
+                self.test_dataset_paths,
+            )
+        )
 
 
 def load_dataset_description(dataset_description: str) -> DatasetDescription:
@@ -67,15 +74,13 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
 
         if "test_paths" in yaml_data:
             if "dataset_split_fractions" in yaml_data:
-                raise ValueError(
-                    "when test_paths have been given explicitly, ")
+                raise ValueError("when test_paths have been given explicitly, ")
 
             test_dataset_paths = [
                 {k: Path(v) for k, v in d.items()}
                 for d in yaml_data["test_paths"].values()
             ]
         else:
-
             test_dataset_paths = None
 
         split_fractions = {
@@ -92,10 +97,11 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
         check_dataset_paths(test_dataset_paths, prune=False)
 
         return DatasetDescription(
-            classes, split_fractions, dataset_paths, test_dataset_paths)
+            classes, split_fractions, dataset_paths, test_dataset_paths
+        )
 
 
-def check_dataset_paths(dataset_paths:List[Dict[str, Path]],prune:bool=False):
+def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = False):
     to_prune: List[int] = []
     for i in range(len(dataset_paths)):
         if not (
