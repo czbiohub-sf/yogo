@@ -5,7 +5,7 @@ from tqdm import tqdm
 from ruamel import yaml
 from pathlib import Path
 from functools import partial
-
+from dataclasses import dataclass
 
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
@@ -31,18 +31,18 @@ class InvalidDatasetDescriptionFile(Exception):
     ...
 
 
-def collate_batch(batch, device="cpu", transforms=None):
-    # TODO https://pytorch.org/docs/stable/data.html#memory-pinning
-    # perform image transforms here so we can transform in batches! :)
-    inputs, labels = zip(*batch)
-    batched_inputs = torch.stack(inputs)
-    batched_labels = torch.stack(labels)
-    return transforms(batched_inputs, batched_labels)
+@dataclass
+class DatasetDescription:
+    classes: List[str]
+    split_fractions: Dict[str, float]
+    dataset_paths: List[Dict[str, Path]]
+    test_dataset_paths: Optional[List[Dict[str, Path]]]
+
+    def __iter__(self):
+        return iter((self.classes, self.split_fractions, self.dataset_paths, self.test_dataset_paths))
 
 
-def load_dataset_description(
-    dataset_description: str,
-) -> Tuple[List[str], List[Dict[str, Path]], Dict[str, float]]:
+def load_dataset_description(dataset_description: str) -> DatasetDescription:
     with open(dataset_description, "r") as desc:
         yaml_data = yaml.safe_load(desc)
 
@@ -66,10 +66,17 @@ def load_dataset_description(
             ]
 
         if "test_paths" in yaml_data:
+            if "dataset_split_fractions" in yaml_data:
+                raise ValueError(
+                    "when test_paths have been given explicitly, ")
+
             test_dataset_paths = [
                 {k: Path(v) for k, v in d.items()}
                 for d in yaml_data["test_paths"].values()
             ]
+        else:
+
+            test_dataset_paths = None
 
         split_fractions = {
             k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
@@ -82,10 +89,13 @@ def load_dataset_description(
             )
 
         check_dataset_paths(dataset_paths, prune=True)
-        return classes, dataset_paths, split_fractions
+        check_dataset_paths(test_dataset_paths, prune=False)
+
+        return DatasetDescription(
+            classes, split_fractions, dataset_paths, test_dataset_paths)
 
 
-def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune=False):
+def check_dataset_paths(dataset_paths:List[Dict[str, Path]],prune:bool=False):
     to_prune: List[int] = []
     for i in range(len(dataset_paths)):
         if not (
@@ -114,23 +124,25 @@ def get_datasets(
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
+    dataset_desc = load_dataset_description(dataset_description_file)
     (
         dataset_classes,
-        dataset_paths,
         split_fractions,
-    ) = load_dataset_description(dataset_description_file)
+        dataset_paths,
+        test_dataset_paths,
+    ) = dataset_desc
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dataset_classes,
-            dataset_desc["image_path"],
-            dataset_desc["label_path"],
+            dataset_paths["image_path"],
+            dataset_paths["label_path"],
             Sx,
             Sy,
             normalize_images=normalize_images,
         )
-        for dataset_desc in tqdm(dataset_paths)
+        for dataset_paths in tqdm(dataset_paths)
     )
 
     if split_fractions_override is not None:
@@ -161,6 +173,15 @@ def get_datasets(
             ),
         )
     )
+
+
+def collate_batch(batch, device="cpu", transforms=None):
+    # TODO https://pytorch.org/docs/stable/data.html#memory-pinning
+    # perform image transforms here so we can transform in batches! :)
+    inputs, labels = zip(*batch)
+    batched_inputs = torch.stack(inputs)
+    batched_labels = torch.stack(labels)
+    return transforms(batched_inputs, batched_labels)
 
 
 def get_dataloader(
