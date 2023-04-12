@@ -349,7 +349,7 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune=False):
             else:
                 raise FileNotFoundError(
                     f"image_path or label_path do not lead to a directory\n"
-                    f"image_path={dataset_desc['image_path']}\nlabel_path={dataset_desc['label_path']}"
+                    f"image_path={dataset_paths['image_path']}\nlabel_path={dataset_paths['label_path']}"
                 )
 
     # reverse order so we don't move around the to-delete items in the list
