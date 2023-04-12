@@ -32,4 +32,4 @@ parameters:
   label_smoothing:
     distribution: log_uniform_values
     min: 0.0001
-    max: 0.09
+    max: 0.1
