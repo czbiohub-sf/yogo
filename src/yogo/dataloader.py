@@ -406,7 +406,7 @@ def get_datasets(
             random_split(
                 full_dataset,
                 [split_sizes["train"], split_sizes["val"], split_sizes["test"]],
-                generator=torch.Generator().manual_seed(101010),
+                generator=torch.Generator().manual_seed(111111),
             ),
         )
     )
@@ -470,7 +470,7 @@ def get_dataloader(
             multiprocessing_context="spawn",
             # optimal # of workers?
             num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
-            generator=torch.Generator().manual_seed(101010),
+            generator=torch.Generator().manual_seed(111111),
             collate_fn=partial(collate_batch, device=device, transforms=transforms),
         )
     return d
