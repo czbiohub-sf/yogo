@@ -1,0 +1,17 @@
+name: format-check
+
+on: [push,pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+          architecture: x64
+      - uses: psf/black@stable
+        with:
+          options: "--check"
+          src: "./src"
