@@ -162,15 +162,10 @@ def train():
         for imgs, labels in train_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-
             optimizer.zero_grad(set_to_none=True)
-
             outputs = net(imgs)
-
             loss = Y_loss(outputs, labels)
-
             loss.backward()
-
             optimizer.step()
             scheduler.step()
 
