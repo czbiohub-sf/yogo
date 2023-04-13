@@ -76,7 +76,7 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
         "dataset_paths",
     ]
     with open(dataset_description, "r") as desc:
-        yaml_data = yaml.safe_load(desc)
+        yaml_data = yaml.load(desc, type="safe")
 
         # validate req'd keys exist
         for k in required_keys:
