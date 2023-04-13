@@ -15,6 +15,8 @@ nvcc --version
 
 nvidia-smi
 
+echo "running: $@"
+
 wandb enabled
 wandb online
 conda run "$@"
