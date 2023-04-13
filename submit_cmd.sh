@@ -7,7 +7,7 @@
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-node=a100:1
 #SBATCH --cpus-per-task=32
-#SBATCH --output=./slurm-outputs/slurm-%j.out
+#SBATCH --output=./slurm-outputs/%j.out
 
 env | grep "^SLURM" | sort
 
