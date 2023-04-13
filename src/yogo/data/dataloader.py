@@ -6,12 +6,11 @@ from ruamel import yaml
 from pathlib import Path
 from functools import partial
 from dataclasses import dataclass
-from collections.abc import Sized
 
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
-from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split, Subset
+from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import cast, Type, Sized, List, Dict, Union, Tuple, Optional, Literal
+from typing import List, Dict, Union, Tuple, Optional
 
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
@@ -195,7 +194,7 @@ def split_dataset(
     elif len(split_fractions) == 1:
         if not next(iter(split_fractions)) == 1:
             raise ValueError(
-                f"when split_fractions has length 1, it must have a value of 1"
+                "when split_fractions has length 1, it must have a value of 1"
             )
         keys = list(split_fractions)
         return {keys.pop(): dataset}
