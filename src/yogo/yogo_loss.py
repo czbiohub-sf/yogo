@@ -34,8 +34,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         if self._classify:
             self.cel = torch.nn.CrossEntropyLoss(
-                reduction="none",
-                label_smoothing=label_smoothing
+                reduction="none", label_smoothing=label_smoothing
             )
 
         self.device = "cpu"
