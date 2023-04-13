@@ -49,58 +49,6 @@ class DatasetDescription:
         )
 
 
-def load_dataset_description(dataset_description: str) -> DatasetDescription:
-    with open(dataset_description, "r") as desc:
-        yaml_data = yaml.safe_load(desc)
-
-        classes = yaml_data["class_names"]
-
-        # either we have image_path and label_path directly defined
-        # in our yaml file (describing 1 dataset exactly), or we have
-        # a nested dict structure describing each dataset description.
-        # see README.md for more detail
-        if "dataset_paths" in yaml_data:
-            dataset_paths = [
-                {k: Path(v) for k, v in d.items()}
-                for d in yaml_data["dataset_paths"].values()
-            ]
-        else:
-            dataset_paths = [
-                {
-                    "image_path": Path(yaml_data["image_path"]),
-                    "label_path": Path(yaml_data["label_path"]),
-                }
-            ]
-
-        if "test_paths" in yaml_data:
-            if "dataset_split_fractions" in yaml_data:
-                raise ValueError("when test_paths have been given explicitly, ")
-
-            test_dataset_paths = [
-                {k: Path(v) for k, v in d.items()}
-                for d in yaml_data["test_paths"].values()
-            ]
-        else:
-            test_dataset_paths = None
-
-        split_fractions = {
-            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
-        }
-
-        if not sum(split_fractions.values()) == 1:
-            raise ValueError(
-                "invalid split fractions for dataset: split fractions must add to 1, "
-                f"got {split_fractions}"
-            )
-
-        check_dataset_paths(dataset_paths, prune=True)
-        check_dataset_paths(test_dataset_paths, prune=False)
-
-        return DatasetDescription(
-            classes, split_fractions, dataset_paths, test_dataset_paths
-        )
-
-
 def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = False):
     to_prune: List[int] = []
     for i in range(len(dataset_paths)):
@@ -123,6 +71,65 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
         del dataset_paths[i]
 
 
+def load_dataset_description(dataset_description: str) -> DatasetDescription:
+    """ Loads and validates dataset description file
+    """
+    required_keys = [
+        "class_names",  # we don't actually use classes fm dataset desc files, but keep for now
+        "dataset_split_fractions",
+        "dataset_paths",
+    ]
+    with open(dataset_description, "r") as desc:
+        yaml_data = yaml.safe_load(desc)
+
+        # validate req'd keys exist
+        for k in required_keys:
+            if k not in yaml_data:
+                raise InvalidDatasetDescriptionFile(
+                    f"{k} is required in dataset description files, but was "
+                    f"found missing for {dataset_description}"
+                )
+
+        classes = yaml_data["class_names"]
+        split_fractions = {
+            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
+        }
+        dataset_paths = [
+            {k: Path(v) for k, v in d.items()}
+            for d in yaml_data["dataset_paths"].values()
+        ]
+
+        if "test_paths" in yaml_data:
+            test_dataset_paths = [
+                {k: Path(v) for k, v in d.items()}
+                for d in yaml_data["test_paths"].values()
+            ]
+            # when we have 'test_paths', all the data from dataset_paths
+            # will be used for training, so we should only have 'test' and
+            # 'val' in dataset_split_fractions.
+            if 'val' not in split_fractions or 'test' not in split_fractions:
+                raise InvalidDatasetDescriptionFile(
+                    "'val' and 'test' are required keys for dataset_split_fractions"
+                )
+            if 'train' in split_fractions
+        else:
+            test_dataset_paths = None
+
+
+        if not sum(split_fractions.values()) == 1:
+            raise ValueError(
+                "invalid split fractions for dataset: split fractions must add to 1, "
+                f"got {split_fractions}"
+            )
+
+        check_dataset_paths(dataset_paths, prune=True)
+        check_dataset_paths(test_dataset_paths, prune=False)
+
+        return DatasetDescription(
+            classes, split_fractions, dataset_paths, test_dataset_paths
+        )
+
+
 def get_datasets(
     dataset_description_file: str,
     Sx: int,
@@ -130,13 +137,12 @@ def get_datasets(
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
-    dataset_desc = load_dataset_description(dataset_description_file)
     (
         dataset_classes,
         split_fractions,
         dataset_paths,
         test_dataset_paths,
-    ) = dataset_desc
+    ) = load_dataset_description(dataset_description_file)
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
@@ -151,6 +157,24 @@ def get_datasets(
         for dataset_paths in tqdm(dataset_paths)
     )
 
+    if test_dataset_paths is not None:
+        test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
+            ObjectDetectionDataset(
+                dataset_classes,
+                dataset_paths["image_path"],
+                dataset_paths["label_path"],
+                Sx,
+                Sy,
+                normalize_images=normalize_images,
+            )
+            for dataset_paths in tqdm(test_dataset_paths)
+        )
+        return full_dataset, split_val_test()
+
+    return split_train_val_test()
+
+
+def split_train_val_test():
     if split_fractions_override is not None:
         split_fractions = split_fractions_override
 
