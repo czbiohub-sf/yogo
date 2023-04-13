@@ -6,11 +6,12 @@ from ruamel import yaml
 from pathlib import Path
 from functools import partial
 from dataclasses import dataclass
+from collections.abc import Sized
 
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
-from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
+from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split, Subset
 
-from typing import List, Dict, Union, Tuple, Optional, Literal
+from typing import cast, Type, Sized, List, Dict, Union, Tuple, Optional, Literal
 
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
@@ -22,9 +23,6 @@ from yogo.data.data_transforms import (
     ImageTransformLabelIdentity,
     MultiArgSequential,
 )
-
-
-DatasetSplitName = Literal["train", "val", "test"]
 
 
 class InvalidDatasetDescriptionFile(Exception):
@@ -72,8 +70,7 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
 
 
 def load_dataset_description(dataset_description: str) -> DatasetDescription:
-    """ Loads and validates dataset description file
-    """
+    """Loads and validates dataset description file"""
     required_keys = [
         "class_names",  # we don't actually use classes fm dataset desc files, but keep for now
         "dataset_split_fractions",
@@ -98,20 +95,23 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
             {k: Path(v) for k, v in d.items()}
             for d in yaml_data["dataset_paths"].values()
         ]
+        check_dataset_paths(dataset_paths, prune=True)
 
         if "test_paths" in yaml_data:
             test_dataset_paths = [
                 {k: Path(v) for k, v in d.items()}
                 for d in yaml_data["test_paths"].values()
             ]
+            check_dataset_paths(test_dataset_paths, prune=False)
+
             # when we have 'test_paths', all the data from dataset_paths
             # will be used for training, so we should only have 'test' and
             # 'val' in dataset_split_fractions.
-            if 'val' not in split_fractions or 'test' not in split_fractions:
+            if "val" not in split_fractions or "test" not in split_fractions:
                 raise InvalidDatasetDescriptionFile(
                     "'val' and 'test' are required keys for dataset_split_fractions"
                 )
-            if 'train' in split_fractions:
+            if "train" in split_fractions:
                 raise InvalidDatasetDescriptionFile(
                     "when `test_paths` is present in a dataset descriptor file, 'train' "
                     "is not a valid key for `dataset_split_fractions`, since we will use "
@@ -119,20 +119,16 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
                 )
         else:
             test_dataset_paths = None
-            if any(k not in split_fractions for k in ('test', 'train' 'val')):
+            if any(k not in split_fractions for k in ("test", "train" "val")):
                 raise InvalidDatasetDescriptionFile(
                     "'train', 'val', and 'test' are required keys for dataset_split_fractions - missing at least one"
                 )
 
-
         if not sum(split_fractions.values()) == 1:
-            raise ValueError(
+            raise InvalidDatasetDescriptionFile(
                 "invalid split fractions for dataset: split fractions must add to 1, "
                 f"got {split_fractions}"
             )
-
-        check_dataset_paths(dataset_paths, prune=True)
-        check_dataset_paths(test_dataset_paths, prune=False)
 
         return DatasetDescription(
             classes, split_fractions, dataset_paths, test_dataset_paths
@@ -145,7 +141,7 @@ def get_datasets(
     Sy: int,
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
-) -> Dict[DatasetSplitName, Subset[ConcatDataset[ObjectDetectionDataset]]]:
+) -> Dict[str, Dataset]:
     (
         dataset_classes,
         split_fractions,
@@ -178,36 +174,58 @@ def get_datasets(
             )
             for dataset_paths in tqdm(test_dataset_paths)
         )
-        return full_dataset, split_val_test()
+        return {
+            "train": full_dataset,
+            **split_dataset(test_dataset, split_fractions),
+        }
 
-    return split_train_val_test()
+    return split_dataset(full_dataset, split_fractions)
 
 
-def split_train_val_test():
-    if split_fractions_override is not None:
-        split_fractions = split_fractions_override
+def split_dataset(
+    dataset: Dataset, split_fractions: Dict[str, float]
+) -> Dict[str, Dataset]:
+    if not hasattr(dataset, "__len__"):
+        raise ValueError(
+            f"dataset {dataset} must have a length (specifically, `__len__` must be defined)"
+        )
 
+    if len(split_fractions) == 0:
+        raise ValueError("must have at least one value for the split!")
+    elif len(split_fractions) == 1:
+        if not next(iter(split_fractions)) == 1:
+            raise ValueError(
+                f"when split_fractions has length 1, it must have a value of 1"
+            )
+        keys = list(split_fractions)
+        return {keys.pop(): dataset}
+
+    keys = list(split_fractions)
+
+    # very annoying type hint here - `Dataset` doesn't necessarily have `__len__`,
+    # so we manually check it. But I am not sure that you can cast to Sizedj so mypy complains
     dataset_sizes = {
-        designation: round(split_fractions[designation] * len(full_dataset))
-        for designation in ["train", "val"]
+        k: round(split_fractions[k] * len(dataset)) for k in keys[:-1]  # type: ignore
     }
-    test_dataset_size = {"test": len(full_dataset) - sum(dataset_sizes.values())}
-    split_sizes = {**dataset_sizes, **test_dataset_size}
+    final_dataset_size = {keys[-1]: len(dataset) - sum(dataset_sizes.values())}  # type: ignore
+    split_sizes = {**dataset_sizes, **final_dataset_size}
 
-    assert all([sz > 0 for sz in split_sizes.values()]) and sum(
-        split_sizes.values()
-    ) == len(
-        full_dataset
-    ), f"could not create valid dataset split sizes: {split_sizes}, full dataset size is {len(full_dataset)}"
+    all_sizes_are_gt_0 = all([sz > 0 for sz in split_sizes.values()])
+    split_sizes_eq_dataset_size = sum(split_sizes.values()) == len(dataset)  # type: ignore
+    if not (all_sizes_are_gt_0 and split_sizes_eq_dataset_size):
+        raise ValueError(
+            f"could not create valid dataset split sizes: {split_sizes}, "
+            f"full dataset size is {len(dataset)}"  # type: ignore
+        )
 
     # YUCK! Want a map from the dataset designation to teh set itself, but "random_split" takes a list
     # of lengths of dataset. So we do this verbose rigamarol.
     return dict(
         zip(
-            ["train", "val", "test"],
+            keys,
             random_split(
-                full_dataset,
-                [split_sizes["train"], split_sizes["val"], split_sizes["test"]],
+                dataset,
+                [split_sizes[k] for k in keys],
                 generator=torch.Generator().manual_seed(111111),
             ),
         )
@@ -235,7 +253,7 @@ def get_dataloader(
     device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
-) -> Dict[DatasetSplitName, DataLoader]:
+) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
         Sx,
