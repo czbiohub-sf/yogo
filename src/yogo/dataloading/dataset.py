@@ -88,7 +88,9 @@ def correct_label_idx(
                 raise ValueError(f"label index {label} not found in notes.json file")
 
             return YOGO_CLASS_ORDERING.index(label_name)
-    raise ValueError(f"label must be an integer or a numeric string (i.e. '1', '2', ...); got {label}")
+    raise ValueError(
+        f"label must be an integer or a numeric string (i.e. '1', '2', ...); got {label}"
+    )
 
 
 def label_file_to_tensor(
