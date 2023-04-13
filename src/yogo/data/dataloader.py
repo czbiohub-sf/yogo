@@ -12,8 +12,8 @@ from torch.utils.data import ConcatDataset, DataLoader, random_split, Subset
 
 from typing import List, Dict, Union, Tuple, Optional, Literal
 
-from yogo.dataloading.dataset import ObjectDetectionDataset
-from yogo.dataloading.data_transforms import (
+from yogo.data.dataset import ObjectDetectionDataset
+from yogo.data.data_transforms import (
     DualInputModule,
     DualInputId,
     RandomHorizontalFlipWithBBs,
@@ -115,7 +115,7 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
             else:
                 raise FileNotFoundError(
                     f"image_path or label_path do not lead to a directory\n"
-                    f"image_path={dataset_paths['image_path']}\nlabel_path={dataset_paths['label_path']}"
+                    f"image_path={dataset_paths[i]['image_path']}\nlabel_path={dataset_paths[i]['label_path']}"
                 )
 
     # reverse order so we don't move around the to-delete items in the list
@@ -210,7 +210,7 @@ def get_dataloader(
         split_fractions_override=split_fractions_override,
         normalize_images=normalize_images,
     )
-    augmentations = (
+    augmentations: List[DualInputModule] = (
         [
             ImageTransformLabelIdentity(RandomAdjustSharpness(0, p=0.5)),
             ImageTransformLabelIdentity(ColorJitter(brightness=0.2, contrast=0.2)),

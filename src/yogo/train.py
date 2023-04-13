@@ -20,8 +20,8 @@ from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, get_wandb_confusion
 from yogo.metrics import Metrics
-from yogo.dataloading.dataset import YOGO_CLASS_ORDERING
-from yogo.dataloading.dataloader import (
+from yogo.data.dataset import YOGO_CLASS_ORDERING
+from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
@@ -162,15 +162,10 @@ def train():
         for imgs, labels in train_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-
             optimizer.zero_grad(set_to_none=True)
-
             outputs = net(imgs)
-
             loss = Y_loss(outputs, labels)
-
             loss.backward()
-
             optimizer.step()
             scheduler.step()
 
@@ -336,6 +331,7 @@ def do_training(args) -> None:
     epochs = args.epochs or 64
     batch_size = args.batch_size or 32
     learning_rate = args.lr or 3e-4
+    label_smoothing = args.label_smoothing or 0.01
     decay_factor = args.lr_decay_factor or 10
     weight_decay = args.weight_decay or 1e-2
     optimizer_type = args.optimizer or "adam"
@@ -373,6 +369,7 @@ def do_training(args) -> None:
             "learning_rate": learning_rate,
             "decay_factor": decay_factor,
             "weight_decay": weight_decay,
+            "label_smoothing": label_smoothing,
             "epochs": epochs,
             "batch_size": batch_size,
             "device": str(device),

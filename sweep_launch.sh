@@ -7,7 +7,7 @@
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --output=./slurm-outputs/slurm-%j.out
+#SBATCH --output=./slurm-outputs/%j.out
 
 echo
 echo "You Only Glance Once (YOGO) Sweep"

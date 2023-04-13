@@ -71,7 +71,9 @@ def correct_label_idx(
     label-studio. So we get the class of the prediction from
     `int(row[0])`, and get the index of that from YOGO_CLASS_ORDERING
     """
-    if label.isnumeric():
+    if isinstance(label, int):
+        return YOGO_CLASS_ORDERING.index(str(label))
+    elif isinstance(label, str) and label.isnumeric():
         label = int(label)
         if notes_data is None:
             return YOGO_CLASS_ORDERING.index(dataset_classes[label])
@@ -86,8 +88,9 @@ def correct_label_idx(
                 raise ValueError(f"label index {label} not found in notes.json file")
 
             return YOGO_CLASS_ORDERING.index(label_name)
-    else:
-        return YOGO_CLASS_ORDERING.index(row[0])
+    raise ValueError(
+        f"label must be an integer or a numeric string (i.e. '1', '2', ...); got {label}"
+    )
 
 
 def label_file_to_tensor(

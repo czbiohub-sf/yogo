@@ -2,7 +2,6 @@ import torch
 from torch import nn
 
 from pathlib import Path
-from typing_extensions import Self
 from typing import Tuple, Optional, Callable, Union, Any
 
 from yogo.model_funcs import get_model_func
@@ -90,7 +89,7 @@ class YOGO(nn.Module):
                 torch.nn.init.zeros_(module.bias)
 
     @classmethod
-    def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple[Self, int]:
+    def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple["YOGO", int]:
         loaded_pth = torch.load(pth_path, map_location="cpu")
 
         model_version = loaded_pth.get("model_version", None)
@@ -158,7 +157,7 @@ class YOGO(nn.Module):
         else:
             raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
 
-        def as_tuple(inp: Union[Any, Tuple[Any, Any]]) -> Tuple[Any, Any]:
+        def as_tuple(inp: Union[Any, Tuple[Any, Any]]) -> Tuple[Any, ...]:
             return inp if isinstance(inp, tuple) else (inp, inp)
 
         for mod in self.modules():

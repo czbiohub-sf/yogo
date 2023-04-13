@@ -16,11 +16,11 @@ from yogo.model import YOGO
 from yogo.argparsers import train_parser
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
-from yogo.dataloading.dataloader import (
+from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
-from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from yogo.cluster_anchors import best_anchor
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -208,11 +208,7 @@ def do_training(args) -> None:
         args.dataset_descriptor_file
     )
 
-    anchor_w, anchor_h = best_anchor(
-        get_dataset_bounding_boxes(
-            [d["label_path"] for d in dataset_paths], center_box=True
-        )
-    )
+    anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
     wandb.init(
         project="yogo",

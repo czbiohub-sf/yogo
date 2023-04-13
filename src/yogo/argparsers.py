@@ -57,6 +57,12 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
+        "--label-smoothing",
+        type=float,
+        help="label smoothing - default 0.01",
+        default=0.01,
+    )
+    parser.add_argument(
         "--weight-decay", type=float, help="weight decay for training", default=None
     )
     parser.add_argument(
