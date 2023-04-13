@@ -20,8 +20,8 @@ from yogo.yogo_loss import YOGOLoss
 from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, get_wandb_confusion
 from yogo.metrics import Metrics
-from yogo.dataloading.dataset import YOGO_CLASS_ORDERING
-from yogo.dataloading.dataloader import (
+from yogo.data.dataset import YOGO_CLASS_ORDERING
+from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
