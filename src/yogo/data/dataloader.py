@@ -76,8 +76,8 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
         "dataset_paths",
     ]
     with open(dataset_description, "r") as desc:
-        yaml = YAML(typ='safe')
-        yaml_data = yaml.load(desc) # validate req'd keys exist
+        yaml = YAML(typ="safe")
+        yaml_data = yaml.load(desc)  # validate req'd keys exist
 
         for k in required_keys:
             if k not in yaml_data:
