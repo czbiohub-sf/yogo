@@ -20,7 +20,7 @@ from yogo.dataloading.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
-from yogo.cluster_anchors import best_anchor, get_dataset_bounding_boxes
+from yogo.cluster_anchors import best_anchor
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from torch import nn
 from tqdm import tqdm
 from pathlib import Path
-from typing import Sequence, TypeVar, Generator, List, Union, Optional, Sequence
+from typing import Sequence, TypeVar, Generator, List, Union, Optional
 
 from torchvision.transforms import Resize, Compose
 
