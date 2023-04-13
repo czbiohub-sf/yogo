@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from torch import nn
 from tqdm import tqdm
 from pathlib import Path
-from typing import Sequence, TypeVar, Generator, List, Union, Optional
+from typing import Sequence, TypeVar, Generator, List, Union, Optional, Sequence
 
 from torchvision.transforms import Resize, Compose
 
@@ -84,7 +84,7 @@ class ImageLoader:
 
     @staticmethod
     def create_batch_from_fnames(
-        fnames: List[Union[str, Path]],
+        fnames: Sequence[Union[str, Path]],
         transform: nn.Module,
         normalize_images: bool = False,
         device: Union[str, torch.device] = "cpu",
