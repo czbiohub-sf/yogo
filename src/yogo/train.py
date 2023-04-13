@@ -331,6 +331,7 @@ def do_training(args) -> None:
     epochs = args.epochs or 64
     batch_size = args.batch_size or 32
     learning_rate = args.lr or 3e-4
+    label_smoothing = args.label_smoothing or 0.01
     decay_factor = args.lr_decay_factor or 10
     weight_decay = args.weight_decay or 1e-2
     optimizer_type = args.optimizer or "adam"
@@ -370,7 +371,7 @@ def do_training(args) -> None:
             "learning_rate": learning_rate,
             "decay_factor": decay_factor,
             "weight_decay": weight_decay,
-            "label_smoothing": 0.01,
+            "label_smoothing": label_smoothing,
             "epochs": epochs,
             "batch_size": batch_size,
             "device": str(device),
