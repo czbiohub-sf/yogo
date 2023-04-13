@@ -26,9 +26,9 @@ parameters:
     min: 1.5
     max: 128
   weight_decay:
-    distribution: uniform
-    min: 0.0001
-    max: 1
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.5
   label_smoothing:
     distribution: log_uniform_values
     min: 0.0001
