@@ -111,9 +111,18 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
                 raise InvalidDatasetDescriptionFile(
                     "'val' and 'test' are required keys for dataset_split_fractions"
                 )
-            if 'train' in split_fractions
+            if 'train' in split_fractions:
+                raise InvalidDatasetDescriptionFile(
+                    "when `test_paths` is present in a dataset descriptor file, 'train' "
+                    "is not a valid key for `dataset_split_fractions`, since we will use "
+                    "all the data from `dataset_paths` for training"
+                )
         else:
             test_dataset_paths = None
+            if any(k not in split_fractions for k in ('test', 'train' 'val')):
+                raise InvalidDatasetDescriptionFile(
+                    "'train', 'val', and 'test' are required keys for dataset_split_fractions - missing at least one"
+                )
 
 
         if not sum(split_fractions.values()) == 1:
