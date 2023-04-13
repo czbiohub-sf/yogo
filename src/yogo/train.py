@@ -355,9 +355,7 @@ def do_training(args) -> None:
         preprocess_type = None
 
     print("loading dataset description")
-    class_names, dataset_paths, _ = load_dataset_description(
-        args.dataset_descriptor_file
-    )
+    dataset_paths = load_dataset_description(args.dataset_descriptor_file).dataset_paths
 
     print("getting best anchor")
     anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
