@@ -4,9 +4,11 @@ import torchvision.ops as ops
 
 from typing import Optional, Tuple, List, Dict
 
-from torchmetrics import ConfusionMatrix
+from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from torchmetrics.classification import MulticlassPrecision, MulticlassRecall
+from torchmetrics.classification import (
+    MulticlassPrecision, MulticlassRecall, MulticlassConfusionMatrix, MulticlassAccuracy
+)
 
 
 class Metrics:
@@ -18,16 +20,18 @@ class Metrics:
         class_names: Optional[List[str]] = None,
         classify: bool = True,
     ):
+        # TODO can we put confusion in MetricCollection? mAP?
         self.mAP = MeanAveragePrecision(box_format="xyxy")
-        self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        # TODO review https://torchmetrics.readthedocs.io/en/stable/classification/precision.html
-        self.precision = MulticlassPrecision(num_classes=num_classes, thresholds=4)
-        self.recall = MulticlassRecall(num_classes=num_classes, thresholds=4)
+        self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
+        self.precision_recall_metrics = MetricCollection([
+            MulticlassPrecision(num_classes=num_classes, thresholds=4),
+            MulticlassRecall(num_classes=num_classes, thresholds=4)
+            MulticlassAccuracy(num_classes=num_classes, thresholds=4)
+        ])
 
         self.mAP.to(device)
         self.confusion.to(device)
-        self.precision.to(device)
-        self.recall.to(device)
+        self.precision_recall_metrics.to(device)
 
         self.num_classes = num_classes
         self.class_names = (
@@ -50,30 +54,26 @@ class Metrics:
             formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
         )
 
-        self.precision.update(
-            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
-        )
-
-        self.recall.update(
+        self.precision_recall_metrics.update(
             formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
         )
 
     def compute(self):
+        pr_metrics = self.precision_recall_metrics.compute()
         return (
             self.mAP.compute(),
             self.confusion.compute(),
-            self.precision.compute(),
-            self.recall.compute(),
+            pr_metrics["MulticlassPrecision"],
+            pr_metrics["MulticlassRecall"],
+            pr_metrics["MulticlassAccuracy"],
         )
 
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
-        self.precision.reset()
-        self.recall.reset()
+        self.precision_recall_metrics.reset()
 
     def forward(self, preds, labels):
-        # prob inefficient but its OK
         self.update(preds, labels)
         res = self.compute()
         self.reset()
