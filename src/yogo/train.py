@@ -14,7 +14,7 @@ from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast, Literal, Iterator
 
-import yogo.default_hyperparams as df
+from yogo import DefaultHyperparams as df
 
 from yogo.model import YOGO
 from yogo.model_funcs import get_model_func
