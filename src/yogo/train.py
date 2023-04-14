@@ -48,12 +48,20 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def checkpoint_model(
-    model, epoch, optimizer, name, step, model_version: Optional[str] = None, **kwargs
+    model: torch.nn.Module,
+    epoch: int,
+    optimizer: torch.nn.Module,
+    name: str,
+    step: int,
+    normalized: bool,
+    model_version: Optional[str] = None,
+    **kwargs,
 ):
     torch.save(
         {
             "epoch": epoch,
             "step": step,
+            "normalize_images": normalized,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
             "model_version": model_version,
@@ -107,8 +115,13 @@ def train():
     net = None
     if config.pretrained_path:
         print(f"loading pretrained path from {config.pretrained_path}")
-        net, global_step = YOGO.from_pth(config.pretrained_path)
+
+        net, net_cfg = YOGO.from_pth(config.pretrained_path)
         net.to(device)
+
+        global_step = net_cfg["step"]
+        config["normalize_images"] = net_cfg["normalize_images"]
+
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
             raise RuntimeError(
                 "mismatch in pretrained network image resize shape and current resize shape: "
@@ -239,6 +252,7 @@ def train():
                     optimizer,
                     model_save_dir / "best.pth",
                     global_step,
+                    config["normalize_images"],
                     model_version=config["model"],
                 )
             else:
@@ -248,6 +262,7 @@ def train():
                     optimizer,
                     model_save_dir / "latest.pth",
                     global_step,
+                    config["normalize_images"],
                     model_version=config["model"],
                 )
 
