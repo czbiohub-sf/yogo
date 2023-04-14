@@ -160,57 +160,30 @@ class Metrics:
         return torch.cat(masked_predictions), torch.cat(masked_labels)
 
     def format_for_mAP(
-        self, batch_preds, batch_labels
+        self, formatted_preds, formatted_labels
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
-        bs, label_shape, Sy, Sx = batch_labels.shape
-        bs, pred_shape, Sy, Sx = batch_preds.shape
-
-        device = batch_preds.device
-        preds, labels = [], []
-        for b, (img_preds, img_labels) in enumerate(zip(batch_preds, batch_labels)):
-            if torch.all(img_labels[0, ...] == 0).item():
-                # mask says there are no labels!
-                labels.append(
-                    {
-                        "boxes": torch.tensor([], device=device),
-                        "labels": torch.tensor([], device=device),
-                    }
-                )
-                preds.append(
-                    {
-                        "boxes": torch.tensor([], device=device),
-                        "labels": torch.tensor([], device=device),
-                        "scores": torch.tensor([], device=device),
-                    }
-                )
-            else:
-                # view -> T keeps tensor as a view, and no copies?
-                row_ordered_img_preds = img_preds.view(-1, Sy * Sx).T
-                row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
-
-                # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
-                mask = row_ordered_img_labels[..., 0] == 1
-
-                labels.append(
-                    {
-                        "boxes": ops.box_convert(
-                            row_ordered_img_labels[mask, 1:5], "xyxy", "cxcywh"
-                        ),
-                        "labels": row_ordered_img_labels[mask, 5],
-                    }
-                )
-                preds.append(
-                    {
-                        "boxes": row_ordered_img_preds[mask, :4],
-                        "scores": row_ordered_img_preds[mask, 4],
-                        # bastardization of mAP - if we are only doing object detection, lets only get
-                        # penalized for our detection failures. This is definitely hacky!
-                        "labels": (
-                            row_ordered_img_preds[mask, 5:].argmax(dim=1)
-                            if self.classify
-                            else row_ordered_img_labels[mask, 5]
-                        ),
-                    }
-                )
+        """
+        formatted_preds
+           tensor of predictions shape=[N, x y x y objectness *classes]
+        formatted_labels
+           tensor of labels shape=[N, mask x y x y class])
+        """
+        preds = [
+            {
+                "boxes": ops.box_convert(formatted_preds[:, :4], "xyxy", "cxcywh"),
+                "scores": formatted_preds[:, 4],
+                "labels": (
+                    formatted_preds[:, 5:].argmax(dim=1)
+                    if self.classify
+                    else formatted_labels[:, 5]
+                ),
+            }
+        ]
+        labels = [
+            {
+                "boxes": ops.box_convert(formatted_labels[:, 1:5], "xyxy", "cxcywh"),
+                "labels": formatted_labels[:, 5],
+            }
+        ]
 
         return preds, labels
