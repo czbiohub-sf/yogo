@@ -13,7 +13,7 @@ from torchmetrics.classification import (
     MulticlassAccuracy,
 )
 
-
+import time
 class Metrics:
     @torch.no_grad()
     def __init__(
@@ -49,9 +49,12 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
+        t0 = time.perf_counter()
         formatted_preds, formatted_labels = self._format_preds_and_labels(
             preds, labels, use_IoU=True, per_batch=True
         )
+        t1 = time.perf_counter()
+        print(f'tot {t1- t0}')
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
 
@@ -111,6 +114,7 @@ class Metrics:
                 tensor of labels shape=[N, mask x y x y class]
             )
         """
+        t0 = time.perf_counter()
         if not (0 <= objectness_thresh < 1):
             raise ValueError(
                 f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
@@ -129,19 +133,31 @@ class Metrics:
             Sx,
         ) = batch_labels.shape  # label_shape is mask x y x y class
         assert bs1 == bs2, "sanity check, pred batch size should equal"
+        t1 = time.perf_counter()
+        print(f'setup {t1 - t0}')
 
         masked_predictions, masked_labels = [], []
         for b in range(bs1):
+            t0 = time.perf_counter()
             reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).T
             reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).T
+            t1 = time.perf_counter()
 
             # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
             labels_mask = reformatted_labels[:, 0].bool()
             objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
 
-            img_masked_labels = reformatted_labels[labels_mask]
+            t2 = time.perf_counter()
+            # with this masking op, we are taking the view reformatted_labels and
+            # realizing it. This is very slow (~100+ ms at least!).
+            # Is there a way to do this without this cost? Maybe not. If so,
+            # we must put this into it's own multiprocess.
+            img_masked_labels = reformatted_labels[labels_mask, :]
+            t3 = time.perf_counter()
+            print(f'loop setup {(t1 - t0)=} {(t2 - t1)=} {(t3 - t2)=}')
 
-            if use_IoU and objectness_mask.sum() >= len(img_masked_labels):
+            t0 = time.perf_counter()
+            if use_IoU and objectness_mask.sum().item() >= len(img_masked_labels):
                 # filter on objectness
                 preds_with_objects = reformatted_preds[objectness_mask]
 
@@ -169,6 +185,8 @@ class Metrics:
 
             masked_predictions.append(final_preds)
             masked_labels.append(img_masked_labels)
+            t1 = time.perf_counter()
+            print(f'calc {t1 - t0}')
 
         if per_batch:
             return masked_predictions, masked_labels

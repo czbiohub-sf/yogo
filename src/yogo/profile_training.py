@@ -95,7 +95,7 @@ def train(config):
         scheduler.step()
         metrics.update(outputs.detach(), labels)
 
-        if i > 16:
+        if i > 32:
             break
         # profiler.step()
 
