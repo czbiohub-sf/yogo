@@ -7,7 +7,10 @@ from typing import Optional, Tuple, List, Dict
 from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchmetrics.classification import (
-    MulticlassPrecision, MulticlassRecall, MulticlassConfusionMatrix, MulticlassAccuracy
+    MulticlassPrecision,
+    MulticlassRecall,
+    MulticlassConfusionMatrix,
+    MulticlassAccuracy,
 )
 
 
@@ -23,11 +26,13 @@ class Metrics:
         # TODO can we put confusion in MetricCollection? mAP?
         self.mAP = MeanAveragePrecision(box_format="xyxy")
         self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
-        self.precision_recall_metrics = MetricCollection([
-            MulticlassPrecision(num_classes=num_classes, thresholds=4),
-            MulticlassRecall(num_classes=num_classes, thresholds=4)
-            MulticlassAccuracy(num_classes=num_classes, thresholds=4)
-        ])
+        self.precision_recall_metrics = MetricCollection(
+            [
+                MulticlassPrecision(num_classes=num_classes, thresholds=4),
+                MulticlassRecall(num_classes=num_classes, thresholds=4),
+                # MulticlassAccuracy(num_classes=num_classes, thresholds=4)
+            ]
+        )
 
         self.mAP.to(device)
         self.confusion.to(device)
@@ -44,11 +49,14 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        self.mAP.update(*self.format_for_mAP(preds, labels))
-
         formatted_preds, formatted_labels = self._format_preds_and_labels(
-            preds, labels, use_IoU=True
+            preds, labels, use_IoU=True, per_batch=True
         )
+
+        self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
+
+        formatted_preds = torch.cat(formatted_preds)
+        formatted_labels = torch.cat(formatted_labels)
 
         self.confusion.update(
             formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
@@ -65,7 +73,7 @@ class Metrics:
             self.confusion.compute(),
             pr_metrics["MulticlassPrecision"],
             pr_metrics["MulticlassRecall"],
-            pr_metrics["MulticlassAccuracy"],
+            # pr_metrics["MulticlassAccuracy"],
         )
 
     def reset(self):
@@ -85,6 +93,7 @@ class Metrics:
         batch_labels: torch.Tensor,
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
+        per_batch: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """A very important utility function for filtering predictions on labels
 
@@ -161,6 +170,8 @@ class Metrics:
             masked_predictions.append(final_preds)
             masked_labels.append(img_masked_labels)
 
+        if per_batch:
+            return masked_predictions, masked_labels
         return torch.cat(masked_predictions), torch.cat(masked_labels)
 
     def format_for_mAP(
@@ -172,22 +183,20 @@ class Metrics:
         formatted_labels
            tensor of labels shape=[N, mask x y x y class])
         """
-        preds = [
-            {
-                "boxes": formatted_preds[:, :4],
-                "scores": formatted_preds[:, 4],
-                "labels": (
-                    formatted_preds[:, 5:].argmax(dim=1)
-                    if self.classify
-                    else formatted_labels[:, 5]
-                ),
-            }
-        ]
-        labels = [
-            {
-                "boxes": formatted_labels[:, 1:5],
-                "labels": formatted_labels[:, 5],
-            }
-        ]
+        preds, labels = [], []
+        for fp, fl in zip(formatted_preds, formatted_labels):
+            preds.append(
+                {
+                    "boxes": fp[:, :4],
+                    "scores": fp[:, 4],
+                    "labels": fp[:, 5:].argmax(dim=1) if self.classify else fl[:, 5],
+                }
+            )
+            labels.append(
+                {
+                    "boxes": fl[:, 1:5],
+                    "labels": fl[:, 5],
+                }
+            )
 
         return preds, labels
