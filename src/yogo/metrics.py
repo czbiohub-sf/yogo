@@ -18,7 +18,7 @@ class Metrics:
         class_names: Optional[List[str]] = None,
         classify: bool = True,
     ):
-        self.mAP = MeanAveragePrecision(box_format="cxcywh")
+        self.mAP = MeanAveragePrecision(box_format="xyxy")
         self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
         # TODO review https://torchmetrics.readthedocs.io/en/stable/classification/precision.html
         self.precision = MulticlassPrecision(num_classes=num_classes, thresholds=4)
@@ -96,7 +96,11 @@ class Metrics:
         objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
             only be used with use_IoU == True
 
-        Returns (tensor of predictions shape=[N, x y x y objectness *classes], tensor of labels shape=[N, mask x y x y class])
+        returns
+            (
+                tensor of predictions shape=[N, x y x y objectness *classes],
+                tensor of labels shape=[N, mask x y x y class]
+            )
         """
         if not (0 <= objectness_thresh < 1):
             raise ValueError(
@@ -170,7 +174,7 @@ class Metrics:
         """
         preds = [
             {
-                "boxes": ops.box_convert(formatted_preds[:, :4], "xyxy", "cxcywh"),
+                "boxes": formatted_preds[:, :4],
                 "scores": formatted_preds[:, 4],
                 "labels": (
                     formatted_preds[:, 5:].argmax(dim=1)
@@ -181,7 +185,7 @@ class Metrics:
         ]
         labels = [
             {
-                "boxes": ops.box_convert(formatted_labels[:, 1:5], "xyxy", "cxcywh"),
+                "boxes": formatted_labels[:, 1:5],
                 "labels": formatted_labels[:, 5],
             }
         ]
