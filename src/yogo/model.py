@@ -89,7 +89,9 @@ class YOGO(nn.Module):
                 torch.nn.init.zeros_(module.bias)
 
     @classmethod
-    def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple["YOGO", Dict[str, Any]]:
+    def from_pth(
+        cls, pth_path: Path, inference: bool = False
+    ) -> Tuple["YOGO", Dict[str, Any]]:
         loaded_pth = torch.load(pth_path, map_location="cpu")
 
         model_version = loaded_pth.get("model_version", None)
@@ -111,7 +113,10 @@ class YOGO(nn.Module):
         )
 
         model.load_state_dict(params)
-        return model, {'step': global_step, "normalize_images": loaded_pth.get("normalize_images", False)}
+        return model, {
+            "step": global_step,
+            "normalize_images": loaded_pth.get("normalize_images", False),
+        }
 
     def to(self, device, *args, **kwargs):
         self.device = device

@@ -48,7 +48,14 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def checkpoint_model(
-    model: torch.nn.Module, epoch: int, optimizer: torch.nn.Module, name: str, step: int, normalized: bool, model_version: Optional[str] = None, **kwargs
+    model: torch.nn.Module,
+    epoch: int,
+    optimizer: torch.nn.Module,
+    name: str,
+    step: int,
+    normalized: bool,
+    model_version: Optional[str] = None,
+    **kwargs,
 ):
     torch.save(
         {
