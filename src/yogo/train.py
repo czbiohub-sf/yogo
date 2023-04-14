@@ -305,13 +305,13 @@ def init_dataset(config: WandbConfig, Sx, Sy):
 
     wandb.config.update(
         {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader.dataset)} images",
-            "validation set size": f"{len(validate_dataloader.dataset)} images",
-            "testing set size": f"{len(test_dataloader.dataset)} images",
+            "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
+            "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
+            "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
         }
     )
 
-    if wandb.run.name is not None:
+    if wandb.run is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
     else:
         model_save_dir = Path(
