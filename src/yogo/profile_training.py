@@ -4,7 +4,6 @@ import torch
 
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
-from torch.profiler import ProfilerActivity
 
 from pathlib import Path
 from typing_extensions import TypeAlias
@@ -80,6 +79,7 @@ def train(config):
         prof.export_chrome_trace("training_profile.json")
 
     import functiontrace
+
     functiontrace.trace()
     for i, (imgs, labels) in enumerate(train_dataloader):
         imgs = imgs.to(device)
@@ -127,7 +127,6 @@ def init_dataset(config, Sx, Sy):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-
 def do_training(args) -> None:
     device = torch.device(
         args.device
@@ -137,7 +136,6 @@ def do_training(args) -> None:
 
     epochs = args.epochs or 64
     batch_size = args.batch_size or 32
-    adam_lr = 3e-4
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -157,14 +155,12 @@ def do_training(args) -> None:
         resize_target_size = (772, 1032)
         preprocess_type = None
 
-    desc = load_dataset_description(
-        args.dataset_descriptor_file
-    )
+    desc = load_dataset_description(args.dataset_descriptor_file)
     class_names, dataset_paths = desc.classes, desc.dataset_paths
 
     anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
-    config={
+    config = {
         "learning_rate": 1e-6,
         "epochs": epochs,
         "batch_size": batch_size,
