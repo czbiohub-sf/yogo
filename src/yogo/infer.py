@@ -174,9 +174,12 @@ def predict(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     pth = torch.load(path_to_pth, map_location="cpu")
     img_h, img_w = pth["model_state_dict"]["img_size"]
-    model, _ = YOGO.from_pth(Path(path_to_pth), inference=True)
-    R = Resize([img_h, img_w])
+
+    model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
+
+    normalize_images = cfg["normalize_images"]
+    R = Resize([img_h, img_w])
 
     if path_to_images is not None and path_to_zarr is not None:
         raise ValueError(

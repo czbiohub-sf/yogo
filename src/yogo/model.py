@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 from pathlib import Path
-from typing import Tuple, Optional, Callable, Union, Any
+from typing import Tuple, Optional, Callable, Union, Any, Dict
 
 from yogo.model_funcs import get_model_func
 
@@ -89,7 +89,7 @@ class YOGO(nn.Module):
                 torch.nn.init.zeros_(module.bias)
 
     @classmethod
-    def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple["YOGO", int]:
+    def from_pth(cls, pth_path: Path, inference: bool = False) -> Tuple["YOGO", Dict[str, Any]]:
         loaded_pth = torch.load(pth_path, map_location="cpu")
 
         model_version = loaded_pth.get("model_version", None)
@@ -111,7 +111,7 @@ class YOGO(nn.Module):
         )
 
         model.load_state_dict(params)
-        return model, global_step
+        return model, {'step': global_step, "normalize_images": loaded_pth.get("normalize_images", False)}
 
     def to(self, device, *args, **kwargs):
         self.device = device
