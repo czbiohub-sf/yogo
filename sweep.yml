@@ -20,7 +20,7 @@ parameters:
   learning_rate:
     distribution: log_uniform_values
     min: 0.000001
-    max: 0.1
+    max: 0.01
   decay_factor:
     distribution: uniform
     min: 1.5
