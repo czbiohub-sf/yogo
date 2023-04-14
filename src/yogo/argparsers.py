@@ -2,7 +2,7 @@ import argparse
 
 from pathlib import Path
 
-import yogo.default_hyperparams as df
+from yogo import DefaultHyperparams as df
 
 
 try:
