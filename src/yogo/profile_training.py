@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
 
-
-import wandb
 import torch
 
 from torch.optim import AdamW
@@ -40,8 +38,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
-def train():
-    config = wandb.config
+def train(config):
     device = config["device"]
     anchor_w = config["anchor_w"]
     anchor_h = config["anchor_h"]
@@ -55,6 +52,7 @@ def train():
         anchor_h=anchor_h,
     ).to(device)
     Y_loss = YOGOLoss().to(device)
+
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
@@ -62,14 +60,13 @@ def train():
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
     Sx, Sy = net.get_grid_size()
-    wandb.config.update({"Sx": Sx, "Sy": Sy})
 
     (
         model_save_dir,
         train_dataloader,
         validate_dataloader,
         test_dataloader,
-    ) = init_dataset(config)
+    ) = init_dataset(config, Sx, Sy)
 
     min_period = 8 * len(train_dataloader)
     anneal_period = config["epochs"] * len(train_dataloader) - min_period
@@ -82,54 +79,36 @@ def train():
         print(prof.key_averages().table(sort_by="cpu_memory_usage", row_limit=10))
         prof.export_chrome_trace("training_profile.json")
 
-    global_step = 0
-    with torch.profiler.profile(
-        activities=[ProfilerActivity.CPU],
-        record_shapes=True,
-        profile_memory=True,
-        schedule=torch.profiler.schedule(wait=16, warmup=2, active=4, repeat=1),
-        on_trace_ready=cb,
-        with_stack=True,
-    ) as profiler:
-        for epoch in range(config["epochs"]):
-            # train
-            for i, (imgs, labels) in enumerate(train_dataloader, 1):
-                imgs.to(device)
-                labels.to(device)
-                global_step += 1
+    import functiontrace
+    functiontrace.trace()
+    for i, (imgs, labels) in enumerate(train_dataloader):
+        imgs = imgs.to(device)
+        labels = labels.to(device)
 
-                optimizer.zero_grad(set_to_none=True)
+        optimizer.zero_grad(set_to_none=True)
 
-                outputs = net(imgs)
-                loss = Y_loss(outputs, labels)
-                loss.backward()
-                optimizer.step()
-                scheduler.step()
-                profiler.step()
+        outputs = net(imgs)
+        loss = Y_loss(outputs, labels)
+        loss.backward()
 
-                wandb.log(
-                    {
-                        "train loss": loss.item(),
-                        "epoch": epoch,
-                        "LR": scheduler.get_last_lr()[0],
-                    },
-                    commit=False,
-                    step=global_step,
-                )
-            metrics.update(imgs, labels)
+        optimizer.step()
+        scheduler.step()
+        metrics.update(outputs.detach(), labels)
 
-        wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
+        if i > 16:
+            break
+        # profiler.step()
 
 
 WandbConfig: TypeAlias = dict
 
 
-def init_dataset(config: WandbConfig):
+def init_dataset(config, Sx, Sy):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
-        config["Sx"],
-        config["Sy"],
+        Sx,
+        Sy,
         device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
@@ -140,39 +119,13 @@ def init_dataset(config: WandbConfig):
     validate_dataloader = dataloaders["val"]
     test_dataloader = dataloaders["test"]
 
-    wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader) * config['batch_size']} images",
-            "validation set size": f"{len(validate_dataloader) * config['batch_size']} images",
-            "testing set size": f"{len(test_dataloader) * config['batch_size']} images",
-        }
+    model_save_dir = Path(
+        f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
     )
-
-    if wandb.run.name is not None:
-        model_save_dir = Path(f"trained_models/{wandb.run.name}")
-    else:
-        model_save_dir = Path(
-            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
-        )
     model_save_dir.mkdir(exist_ok=True, parents=True)
 
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
-
-def get_wandb_confusion(confusion_data, title):
-    return wandb.plot_table(
-        "wandb/confusion_matrix/v1",
-        wandb.Table(
-            columns=["Actual", "Predicted", "nPredictions"],
-            data=confusion_data,
-        ),
-        {
-            "Actual": "Actual",
-            "Predicted": "Predicted",
-            "nPredictions": "nPredictions",
-        },
-        {"title": title},
-    )
 
 
 def do_training(args) -> None:
@@ -204,34 +157,29 @@ def do_training(args) -> None:
         resize_target_size = (772, 1032)
         preprocess_type = None
 
-    class_names, dataset_paths, _ = load_dataset_description(
+    desc = load_dataset_description(
         args.dataset_descriptor_file
     )
+    class_names, dataset_paths = desc.classes, desc.dataset_paths
 
     anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
-    wandb.init(
-        project="yogo",
-        entity="bioengineering",
-        config={
-            "learning_rate": adam_lr,
-            "epochs": epochs,
-            "batch_size": batch_size,
-            "device": str(device),
-            "anchor_w": anchor_w,
-            "anchor_h": anchor_h,
-            "resize_shape": resize_target_size,
-            "vertical_crop_size": vertical_crop_size,
-            "preprocess_type": preprocess_type,
-            "class_names": class_names,
-            "run group": args.group,
-            "dataset_descriptor_file": args.dataset_descriptor_file,
-        },
-        notes=args.note,
-        tags=["v0.0.3"],
-    )
+    config={
+        "learning_rate": 1e-6,
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "device": str(device),
+        "anchor_w": anchor_w,
+        "anchor_h": anchor_h,
+        "resize_shape": resize_target_size,
+        "vertical_crop_size": vertical_crop_size,
+        "preprocess_type": preprocess_type,
+        "class_names": class_names,
+        "run group": args.group,
+        "dataset_descriptor_file": args.dataset_descriptor_file,
+    }
 
-    train()
+    train(config)
 
 
 if __name__ == "__main__":
