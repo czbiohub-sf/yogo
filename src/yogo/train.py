@@ -14,6 +14,8 @@ from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast, Literal, Iterator
 
+import yogo.default_hyperparams as df
+
 from yogo.model import YOGO
 from yogo.model_funcs import get_model_func
 from yogo.yogo_loss import YOGOLoss
@@ -21,11 +23,11 @@ from yogo.argparsers import train_parser
 from yogo.utils import draw_rects, get_wandb_confusion
 from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
+from yogo.cluster_anchors import best_anchor
 from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
-from yogo.cluster_anchors import best_anchor
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
@@ -328,13 +330,13 @@ def do_training(args) -> None:
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = args.epochs or 64
-    batch_size = args.batch_size or 32
-    learning_rate = args.lr or 3e-4
-    label_smoothing = args.label_smoothing or 0.01
-    decay_factor = args.lr_decay_factor or 10
-    weight_decay = args.weight_decay or 1e-2
-    optimizer_type = args.optimizer or "adam"
+    epochs = args.epochs or df.EPOCHS
+    batch_size = args.batch_size or df.BATCH_SIZE
+    learning_rate = args.lr or df.LEARNING_RATE
+    label_smoothing = args.label_smoothing or df.LABEL_SMOOTHING
+    decay_factor = args.lr_decay_factor or df.DECAY_FACTOR
+    weight_decay = args.weight_decay or df.WEIGHT_DECAY
+    optimizer_type = args.optimizer or df.OPTIMIZER_TYPE
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None

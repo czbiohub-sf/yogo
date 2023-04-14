@@ -2,6 +2,8 @@ import argparse
 
 from pathlib import Path
 
+import yogo.default_hyperparams as df
+
 
 try:
     boolean_action = argparse.BooleanOptionalAction  # type: ignore
@@ -45,28 +47,40 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
-        "--batch-size", type=uint, help="batch size for training", default=None
+        "--batch-size",
+        type=uint,
+        help=f"batch size for training (default {df.BATCH_SIZE})",
+        default=None,
     )
     parser.add_argument(
-        "--lr", type=float, help="learning rate for training", default=None
+        "--lr",
+        type=float,
+        help=f"learning rate for training (default {df.LEARNING_RATE})",
+        default=None,
     )
     parser.add_argument(
         "--lr-decay-factor",
         type=float,
-        help="factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2",
+        help=f"factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default {df.DECAY_FACTOR})",
         default=None,
     )
     parser.add_argument(
         "--label-smoothing",
         type=float,
-        help="label smoothing - default 0.01",
+        help=f"label smoothing - default 0.01 (default {df.LABEL_SMOOTHING})",
         default=0.01,
     )
     parser.add_argument(
-        "--weight-decay", type=float, help="weight decay for training", default=None
+        "--weight-decay",
+        type=float,
+        help=f"weight decay for training (default {df.WEIGHT_DECAY})",
+        default=None,
     )
     parser.add_argument(
-        "--epochs", type=uint, help="number of epochs to train", default=None
+        "--epochs",
+        type=uint,
+        help=f"number of epochs to train (default {df.EPOCHS})",
+        default=None,
     )
     parser.add_argument(
         "--model",
@@ -89,7 +103,7 @@ def train_parser(parser=None):
         const="adam",
         nargs="?",
         choices=["adam", "lion"],
-        help="optimizer for training run",
+        help=f"optimizer for training run (default {df.OPTIMIZER_TYPE})",
     )
     parser.add_argument(
         "--note",
@@ -119,13 +133,13 @@ def train_parser(parser=None):
         "--no-classify",
         default=False,
         action=boolean_action,
-        help="turn off classification loss - good only for pretraining just a cell detector",
+        help="turn off classification loss - good only for pretraining just a cell detector (default False)",
     )
     parser.add_argument(
         "--normalize-images",
         default=False,
         action=boolean_action,
-        help="normalize images into [0,1]",
+        help="normalize images into [0,1] (default False)",
     )
 
     image_resize_options = parser.add_mutually_exclusive_group(required=False)
