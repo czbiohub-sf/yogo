@@ -92,9 +92,13 @@ class ImageLoader:
         img_batch = torch.stack([read_grayscale(str(fname)) for fname in fnames])
         img_batch = img_batch.to(device)
         img_batch = transform(img_batch)
-        img_batch.unsqueeze_(dim=0)
+
+        if len(img_batch.shape) == 3:
+            img_batch.unsqueeze_(dim=0)
+
         if normalize_images:
             img_batch /= 255
+
         return img_batch
 
     @classmethod
@@ -171,7 +175,7 @@ def predict(
     if draw_boxes:
         batch_size = 1
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = choose_device()
     pth = torch.load(path_to_pth, map_location="cpu")
     img_h, img_w = pth["model_state_dict"]["img_size"]
 
@@ -220,7 +224,7 @@ def predict(
         else:
             # data is a list of filenames, so we have to create the batch here
             fnames = data
-            img_batch = ImageLoader.create_batch_from_fnames(fnames, transform=R)
+            img_batch = ImageLoader.create_batch_from_fnames(fnames, transform=R, device=device)
             res = model(img_batch)
 
         if output_dir is not None and not draw_boxes:
