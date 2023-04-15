@@ -26,6 +26,8 @@ def print_tensor_properties(tensor):
 
 import time
 
+def tpc(): return time.perf_counter()
+
 
 class Metrics:
     @torch.no_grad()
@@ -62,11 +64,11 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        t0 = time.perf_counter()
+        t0 = tpc()
         formatted_preds, formatted_labels = self._format_preds_and_labels(
             preds, labels, use_IoU=True, per_batch=True
         )
-        t1 = time.perf_counter()
+        t1 = tpc()
         print(f"tot {t1- t0}")
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
@@ -133,10 +135,7 @@ class Metrics:
             )
         """
 
-        def print(*args, **kwargs):
-            pass
-
-        t0 = time.perf_counter()
+        t0 = tpc()
         if not (0 <= objectness_thresh < 1):
             raise ValueError(
                 f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
@@ -155,30 +154,36 @@ class Metrics:
             Sx,
         ) = batch_labels.shape  # label_shape is mask x y x y class
         assert bs1 == bs2, "sanity check, pred batch size should equal"
-        t1 = time.perf_counter()
+        t1 = tpc()
         print(f"setup {t1 - t0}")
 
-        print_tensor_properties(batch_preds)
-        print_tensor_properties(batch_labels)
+        t0 = tpc()
+        vs = batch_labels.to_sparse().values
+        t1 = tpc()
+        print(f"TO SPARSE {t1 - t0}")
 
         masked_predictions, masked_labels = [], []
+
+        # from IPython import embed
+        # embed()
+
         for b in range(bs1):
-            t0 = time.perf_counter()
+            t0 = tpc()
             reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).t()
 
-            t0p5 = time.perf_counter()
+            t0p5 = tpc()
 
             reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).t()
 
-            t1 = time.perf_counter()
+            t1 = tpc()
 
             objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
-            t2 = time.perf_counter()
+            t2 = tpc()
 
             mask = reformatted_labels[:, 0].bool()
             img_masked_labels = reformatted_labels[mask]
 
-            t0 = time.perf_counter()
+            t0 = tpc()
             if use_IoU and objectness_mask.sum().item() >= len(img_masked_labels):
                 # filter on objectness
                 preds_with_objects = reformatted_preds[objectness_mask]
@@ -207,7 +212,7 @@ class Metrics:
 
             masked_predictions.append(final_preds)
             masked_labels.append(img_masked_labels)
-            t1 = time.perf_counter()
+            t1 = tpc()
             print(f"calc {t1 - t0}")
 
         if per_batch:
