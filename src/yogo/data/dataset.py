@@ -77,7 +77,7 @@ def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor
         output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
         output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
 
-    return output.to_sparse()
+    return output
 
 
 def correct_label_idx(

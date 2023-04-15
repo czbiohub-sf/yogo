@@ -157,11 +157,6 @@ class Metrics:
         t1 = tpc()
         print(f"setup {t1 - t0}")
 
-        t0 = tpc()
-        vs = batch_labels.to_sparse().values
-        t1 = tpc()
-        print(f"TO SPARSE {t1 - t0}")
-
         masked_predictions, masked_labels = [], []
 
         # from IPython import embed
