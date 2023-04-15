@@ -33,34 +33,6 @@ def read_grayscale(img_path):
         raise RuntimeError(f"file {img_path} threw: {e}")
 
 
-def split_labels_into_bins(
-    labels: torch.Tensor, Sx, Sy
-) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
-    """
-    labels shape is [N,5]; N is batch size, 5 is [label, x, y, x, y]
-    """
-    d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
-    for label in labels:
-        i = torch.div((label[1] + label[3]) / 2, (1 / Sx), rounding_mode="trunc").long()
-        j = torch.div((label[2] + label[4]) / 2, (1 / Sy), rounding_mode="trunc").long()
-        d[(i, j)].append(label)
-    return {k: torch.vstack(vs) for k, vs in d.items()}
-
-
-def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
-    with torch.no_grad():
-        output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
-        label_cells = split_labels_into_bins(labels, Sx, Sy)
-
-        for (k, j), cell_label in label_cells.items():
-            pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
-            output[0, j, k] = 1  # mask that there is a prediction here
-            output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
-            output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
-
-        return output
-
-
 def correct_label_idx(
     label: Union[str, int],
     dataset_classes: List[str],
@@ -91,6 +63,37 @@ def correct_label_idx(
     raise ValueError(
         f"label must be an integer or a numeric string (i.e. '1', '2', ...); got {label}"
     )
+
+
+def split_labels_into_bins(
+    labels: torch.Tensor, Sx, Sy
+) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+    """
+    labels shape is [N,5]; N is batch size, 5 is [label, x, y, x, y]
+    """
+    d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
+    for label in labels:
+        i = torch.div((label[1] + label[3]) / 2, (1 / Sx), rounding_mode="trunc").long()
+        j = torch.div((label[2] + label[4]) / 2, (1 / Sy), rounding_mode="trunc").long()
+        d[(i, j)].append(label)
+    return {k: torch.vstack(vs) for k, vs in d.items()}
+
+
+def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+    label_cells = split_labels_into_bins(labels, Sx, Sy)
+    label_idxs = []
+
+    for (j, k), cell_label in label_cells.items():
+        pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
+        output[0, k, j] = 1  # mask that there is a prediction here
+        output[1:5, k, j] = cell_label[pred_square_idx][1:]  # xyxy
+        output[5, k, j] = cell_label[pred_square_idx][0]  # prediction idx
+        label_idxs.append((k, j))
+
+    return output, torch.tensor(label_idxs)
+
+
 
 
 def label_file_to_tensor(
@@ -136,7 +139,29 @@ def label_file_to_tensor(
         return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
-    return format_labels_tensor(labels_tensor, Sx, Sy)
+    tensor, indices = format_labels_tensor(labels_tensor, Sx, Sy)
+    return Labels(tensor, indices)
+
+
+@dataclass
+class Labels:
+    """ WARNING WARNIGNI WARNING
+    This is a python object, so this will NOT play well w/ dataloader workers
+    bc COW and ref counting.
+
+    The proper way to do this would be to take a dimension of the label tensor
+    for the indices, maybe? but that is a lot of work. Geez!
+
+    Maybe sparse tensors are they way? All this for faster metrics! geez.
+    """
+    tensor: torch.Tensor
+    indices: torch.Tensor
+
+    # TODO impl pin mem, cat?
+    def pin_memory(self):
+        self.tensor = self.inp.pin_memory()
+        self.tgt = self.tgt.pin_memory()
+        return self
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
