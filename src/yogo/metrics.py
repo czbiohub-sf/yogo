@@ -13,6 +13,17 @@ from torchmetrics.classification import (
     MulticlassAccuracy,
 )
 
+
+def print_tensor_properties(tensor):
+    print(f"Tensor properties for")
+    print(f"Data type: {tensor.dtype}")
+    print(f"Class: {tensor.__class__.__name__}")
+    print(f"Shape: {tuple(tensor.shape)}")
+    print(f"Layout: {tensor.layout}")
+    print(f"Device: {tensor.device}")
+    print(f"strides: {tensor.stride()}")
+
+
 import time
 class Metrics:
     @torch.no_grad()
@@ -104,6 +115,11 @@ class Metrics:
         We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
 
         batch_preds and batch_labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
+
+        batch_preds is of shape [batch_size, pred_dim, Sy, Sx]
+        batch_labels is of shape [batch_size, label_dim, Sy, Sx]
+        label dim has elements (mask x y x y class)
+
         use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
         objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
             only be used with use_IoU == True
@@ -114,6 +130,8 @@ class Metrics:
                 tensor of labels shape=[N, mask x y x y class]
             )
         """
+        def print(*args, **kwargs): pass
+
         t0 = time.perf_counter()
         if not (0 <= objectness_thresh < 1):
             raise ValueError(
@@ -136,25 +154,25 @@ class Metrics:
         t1 = time.perf_counter()
         print(f'setup {t1 - t0}')
 
+        print_tensor_properties(batch_preds)
+        print_tensor_properties(batch_labels)
+
         masked_predictions, masked_labels = [], []
         for b in range(bs1):
             t0 = time.perf_counter()
-            reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).T
-            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).T
+            reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).t()
+
+            t0p5 = time.perf_counter()
+
+            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).t()
+
             t1 = time.perf_counter()
 
-            # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
-            labels_mask = reformatted_labels[:, 0].bool()
             objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
-
             t2 = time.perf_counter()
-            # with this masking op, we are taking the view reformatted_labels and
-            # realizing it. This is very slow (~100+ ms at least!).
-            # Is there a way to do this without this cost? Maybe not. If so,
-            # we must put this into it's own multiprocess.
-            img_masked_labels = reformatted_labels[labels_mask, :]
-            t3 = time.perf_counter()
-            print(f'loop setup {(t1 - t0)=} {(t2 - t1)=} {(t3 - t2)=}')
+
+            mask = reformatted_labels[:, 0].bool()
+            img_masked_labels = reformatted_labels[mask]
 
             t0 = time.perf_counter()
             if use_IoU and objectness_mask.sum().item() >= len(img_masked_labels):
@@ -178,7 +196,7 @@ class Metrics:
                 final_preds = preds_with_objects[prediction_indices]
             else:
                 # filter on label tensor idx
-                final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
+                final_preds = reformatted_preds[img_masked_labels]
                 final_preds[:, 0:4] = ops.box_convert(
                     final_preds[:, 0:4], "cxcywh", "xyxy"
                 )
