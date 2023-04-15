@@ -59,18 +59,25 @@ def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor
 
     The tensor is indexed frequently, and the mask dimension is used for masking in
     the loss function and in metric calculation.
+
+    ALSO:
+        - would channels (i.e. pred dim) last work??
+        - Sparse doesn't work w/ multiproc dataloader[0], so we can instead return
+          tensor of indices and values, collate them together to the biggest tensor,
+          and create sparse tensors when needed
+
+    [0] https://github.com/pytorch/pytorch/issues/20248
     """
-    with torch.no_grad():
-        output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
-        label_cells = split_labels_into_bins(labels, Sx, Sy)
+    output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+    label_cells = split_labels_into_bins(labels, Sx, Sy)
 
-        for (k, j), cell_label in label_cells.items():
-            pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
-            output[0, j, k] = 1  # mask that there is a prediction here
-            output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
-            output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
+    for (k, j), cell_label in label_cells.items():
+        pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
+        output[0, j, k] = 1  # mask that there is a prediction here
+        output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
+        output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
 
-        return output
+    return output.to_sparse()
 
 
 def correct_label_idx(
@@ -148,7 +155,7 @@ def label_file_to_tensor(
         return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
 
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
-    return format_labels_tensor(labels_tensor, Sx, Sy).
+    return format_labels_tensor(labels_tensor, Sx, Sy)
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):

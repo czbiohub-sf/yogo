@@ -25,6 +25,8 @@ def print_tensor_properties(tensor):
 
 
 import time
+
+
 class Metrics:
     @torch.no_grad()
     def __init__(
@@ -65,7 +67,7 @@ class Metrics:
             preds, labels, use_IoU=True, per_batch=True
         )
         t1 = time.perf_counter()
-        print(f'tot {t1- t0}')
+        print(f"tot {t1- t0}")
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
 
@@ -130,7 +132,9 @@ class Metrics:
                 tensor of labels shape=[N, mask x y x y class]
             )
         """
-        def print(*args, **kwargs): pass
+
+        def print(*args, **kwargs):
+            pass
 
         t0 = time.perf_counter()
         if not (0 <= objectness_thresh < 1):
@@ -152,7 +156,7 @@ class Metrics:
         ) = batch_labels.shape  # label_shape is mask x y x y class
         assert bs1 == bs2, "sanity check, pred batch size should equal"
         t1 = time.perf_counter()
-        print(f'setup {t1 - t0}')
+        print(f"setup {t1 - t0}")
 
         print_tensor_properties(batch_preds)
         print_tensor_properties(batch_labels)
@@ -204,7 +208,7 @@ class Metrics:
             masked_predictions.append(final_preds)
             masked_labels.append(img_masked_labels)
             t1 = time.perf_counter()
-            print(f'calc {t1 - t0}')
+            print(f"calc {t1 - t0}")
 
         if per_batch:
             return masked_predictions, masked_labels
