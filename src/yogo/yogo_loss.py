@@ -84,6 +84,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
+        import time
+        t0 = time.perf_counter()
         formatted_preds = (
             pred_batch[:, :4, :, :]
             .permute((1, 0, 2, 3))
@@ -102,7 +104,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         # TODO try .T
         formatted_preds_masked = formatted_preds[:, mask].permute((1, 0))
+
         formatted_labels_masked = formatted_labels[:, mask].permute((1, 0))
+        t1 = time.perf_counter()
+        print(f"all LOSS FOMRAT {t1 - t0}")
 
         formatted_preds_xyxy = ops.box_convert(
             formatted_preds_masked,

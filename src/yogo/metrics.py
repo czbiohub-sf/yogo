@@ -134,6 +134,7 @@ class Metrics:
                 tensor of labels shape=[N, mask x y x y class]
             )
         """
+        # def print(*a,**k): pass
 
         t0 = tpc()
         if not (0 <= objectness_thresh < 1):
@@ -157,7 +158,30 @@ class Metrics:
         t1 = tpc()
         print(f"setup {t1 - t0}")
 
+        t0 = tpc()
         masked_predictions, masked_labels = [], []
+        formatted_preds = (
+            batch_preds
+            .permute((1, 0, 2, 3))
+            .reshape(pred_shape, bs1 * Sx * Sy)
+        )
+        formatted_labels = (
+            batch_labels
+            .permute((1, 0, 2, 3))
+            .reshape(label_shape, bs2 * Sx * Sy)
+        )
+        mask = (
+            batch_labels[:, 0:1, :, :]
+            .permute((1, 0, 2, 3))
+            .reshape(bs2 * Sx * Sy)
+        ).bool()
+
+        formatted_preds_masked = formatted_preds[:, mask].permute((1, 0))
+        t1 = tpc()
+        print(f"setting {t1 - t0}")
+        formatted_labels_masked = formatted_labels[:, mask].permute((1, 0))
+        t2 = tpc()
+        print(f"setting {t2 - t1}")
 
         # from IPython import embed
         # embed()
@@ -168,15 +192,14 @@ class Metrics:
 
             t0p5 = tpc()
 
-            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).t()
+            img_masked_labels = formatted_labels_masked[b:b+(label_shape*Sy*Sx)]
 
             t1 = tpc()
 
             objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
             t2 = tpc()
 
-            mask = reformatted_labels[:, 0].bool()
-            img_masked_labels = reformatted_labels[mask]
+            print(f"reformatting preds {t0p5 - t0} img_masked_labels {t1 - t0p5} objectness {t2 - t1}")
 
             t0 = tpc()
             if use_IoU and objectness_mask.sum().item() >= len(img_masked_labels):

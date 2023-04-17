@@ -78,9 +78,9 @@ def train(config):
         print(prof.key_averages().table(sort_by="cpu_memory_usage", row_limit=10))
         prof.export_chrome_trace("training_profile.json")
 
-    import functiontrace
+    #import functiontrace
+    #functiontrace.trace()
 
-    functiontrace.trace()
     for i, (imgs, labels) in enumerate(train_dataloader):
         imgs = imgs.to(device)
         labels = labels.to(device)
