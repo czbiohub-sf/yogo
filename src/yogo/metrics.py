@@ -10,7 +10,7 @@ from torchmetrics.classification import (
     MulticlassPrecision,
     MulticlassRecall,
     MulticlassConfusionMatrix,
-    MulticlassAccuracy,
+    # MulticlassAccuracy,
 )
 
 
