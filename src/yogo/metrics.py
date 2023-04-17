@@ -4,9 +4,14 @@ import torchvision.ops as ops
 
 from typing import Optional, Tuple, List, Dict
 
-from torchmetrics import ConfusionMatrix
+from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from torchmetrics.classification import MulticlassPrecision, MulticlassRecall
+from torchmetrics.classification import (
+    MulticlassPrecision,
+    MulticlassRecall,
+    MulticlassConfusionMatrix,
+    MulticlassAccuracy,
+)
 
 
 class Metrics:
@@ -18,16 +23,20 @@ class Metrics:
         class_names: Optional[List[str]] = None,
         classify: bool = True,
     ):
-        self.mAP = MeanAveragePrecision(box_format="cxcywh")
-        self.confusion = ConfusionMatrix(task="multiclass", num_classes=num_classes)
-        # TODO review https://torchmetrics.readthedocs.io/en/stable/classification/precision.html
-        self.precision = MulticlassPrecision(num_classes=num_classes, thresholds=4)
-        self.recall = MulticlassRecall(num_classes=num_classes, thresholds=4)
+        # TODO can we put confusion in MetricCollection? mAP?
+        self.mAP = MeanAveragePrecision(box_format="xyxy")
+        self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
+        self.precision_recall_metrics = MetricCollection(
+            [
+                MulticlassPrecision(num_classes=num_classes, thresholds=4),
+                MulticlassRecall(num_classes=num_classes, thresholds=4),
+                # MulticlassAccuracy(num_classes=num_classes, thresholds=4)
+            ]
+        )
 
         self.mAP.to(device)
         self.confusion.to(device)
-        self.precision.to(device)
-        self.recall.to(device)
+        self.precision_recall_metrics.to(device)
 
         self.num_classes = num_classes
         self.class_names = (
@@ -40,40 +49,39 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        self.mAP.update(*self.format_for_mAP(preds, labels))
-
         formatted_preds, formatted_labels = self._format_preds_and_labels(
-            preds, labels, use_IoU=True
+            preds, labels, use_IoU=True, per_batch=True
         )
+
+        self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
+
+        formatted_preds = torch.cat(formatted_preds)
+        formatted_labels = torch.cat(formatted_labels)
 
         self.confusion.update(
             formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
         )
 
-        self.precision.update(
-            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
-        )
-
-        self.recall.update(
+        self.precision_recall_metrics.update(
             formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
         )
 
     def compute(self):
+        pr_metrics = self.precision_recall_metrics.compute()
         return (
             self.mAP.compute(),
             self.confusion.compute(),
-            self.precision.compute(),
-            self.recall.compute(),
+            pr_metrics["MulticlassPrecision"],
+            pr_metrics["MulticlassRecall"],
+            # pr_metrics["MulticlassAccuracy"],
         )
 
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
-        self.precision.reset()
-        self.recall.reset()
+        self.precision_recall_metrics.reset()
 
     def forward(self, preds, labels):
-        # prob inefficient but its OK
         self.update(preds, labels)
         res = self.compute()
         self.reset()
@@ -85,6 +93,7 @@ class Metrics:
         batch_labels: torch.Tensor,
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
+        per_batch: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """A very important utility function for filtering predictions on labels
 
@@ -96,7 +105,11 @@ class Metrics:
         objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
             only be used with use_IoU == True
 
-        Returns (tensor of predictions shape=[N, x y x y objectness *classes], tensor of labels shape=[N, mask x y x y class])
+        returns
+            (
+                tensor of predictions shape=[N, x y x y objectness *classes],
+                tensor of labels shape=[N, mask x y x y class]
+            )
         """
         if not (0 <= objectness_thresh < 1):
             raise ValueError(
@@ -157,60 +170,33 @@ class Metrics:
             masked_predictions.append(final_preds)
             masked_labels.append(img_masked_labels)
 
+        if per_batch:
+            return masked_predictions, masked_labels
         return torch.cat(masked_predictions), torch.cat(masked_labels)
 
     def format_for_mAP(
-        self, batch_preds, batch_labels
+        self, formatted_preds, formatted_labels
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
-        bs, label_shape, Sy, Sx = batch_labels.shape
-        bs, pred_shape, Sy, Sx = batch_preds.shape
-
-        device = batch_preds.device
+        """
+        formatted_preds
+           tensor of predictions shape=[N, x y x y objectness *classes]
+        formatted_labels
+           tensor of labels shape=[N, mask x y x y class])
+        """
         preds, labels = [], []
-        for b, (img_preds, img_labels) in enumerate(zip(batch_preds, batch_labels)):
-            if torch.all(img_labels[0, ...] == 0).item():
-                # mask says there are no labels!
-                labels.append(
-                    {
-                        "boxes": torch.tensor([], device=device),
-                        "labels": torch.tensor([], device=device),
-                    }
-                )
-                preds.append(
-                    {
-                        "boxes": torch.tensor([], device=device),
-                        "labels": torch.tensor([], device=device),
-                        "scores": torch.tensor([], device=device),
-                    }
-                )
-            else:
-                # view -> T keeps tensor as a view, and no copies?
-                row_ordered_img_preds = img_preds.view(-1, Sy * Sx).T
-                row_ordered_img_labels = img_labels.view(-1, Sy * Sx).T
-
-                # if label[0] == 0, there is no box in cell Sx/Sy - mask those out
-                mask = row_ordered_img_labels[..., 0] == 1
-
-                labels.append(
-                    {
-                        "boxes": ops.box_convert(
-                            row_ordered_img_labels[mask, 1:5], "xyxy", "cxcywh"
-                        ),
-                        "labels": row_ordered_img_labels[mask, 5],
-                    }
-                )
-                preds.append(
-                    {
-                        "boxes": row_ordered_img_preds[mask, :4],
-                        "scores": row_ordered_img_preds[mask, 4],
-                        # bastardization of mAP - if we are only doing object detection, lets only get
-                        # penalized for our detection failures. This is definitely hacky!
-                        "labels": (
-                            row_ordered_img_preds[mask, 5:].argmax(dim=1)
-                            if self.classify
-                            else row_ordered_img_labels[mask, 5]
-                        ),
-                    }
-                )
+        for fp, fl in zip(formatted_preds, formatted_labels):
+            preds.append(
+                {
+                    "boxes": fp[:, :4],
+                    "scores": fp[:, 4],
+                    "labels": fp[:, 5:].argmax(dim=1) if self.classify else fl[:, 5],
+                }
+            )
+            labels.append(
+                {
+                    "boxes": fl[:, 1:5],
+                    "labels": fl[:, 5],
+                }
+            )
 
         return preds, labels
