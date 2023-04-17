@@ -224,7 +224,9 @@ def predict(
         else:
             # data is a list of filenames, so we have to create the batch here
             fnames = data
-            img_batch = ImageLoader.create_batch_from_fnames(fnames, transform=R, device=device)
+            img_batch = ImageLoader.create_batch_from_fnames(
+                fnames, transform=R, device=device
+            )
             res = model(img_batch)
 
         if output_dir is not None and not draw_boxes:
