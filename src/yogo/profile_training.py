@@ -97,7 +97,6 @@ def train(config):
 
         if i > 16:
             break
-        # profiler.step()
 
 
 WandbConfig: TypeAlias = dict
