@@ -109,9 +109,9 @@ class ImageLoader:
         n: int = 1,
         fnames_only: bool = False,
         normalize_images: bool = False,
+        device: Union[str, torch.device] = "cpu",
     ):
         "takes a path to either a single png image or a folder of pngs"
-        device = choose_device()
         transform = Compose(transform_list)
 
         data = (
@@ -143,8 +143,8 @@ class ImageLoader:
         transform_list: List[nn.Module] = [],
         n: int = 1,
         normalize_images: bool = False,
+        device: Union[str, torch.device] = "cpu",
     ):
-        device = choose_device()
         zarr_store = zarr.open(str(path_to_zarr), mode="r")
         transform = Compose([torch.Tensor, *transform_list])
 
@@ -197,6 +197,7 @@ def predict(
             n=batch_size,
             fnames_only=(output_dir is not None),
             normalize_images=normalize_images,
+            device=device,
         )
     elif path_to_zarr is not None:
         image_loader = ImageLoader.load_zarr_data(
@@ -204,6 +205,7 @@ def predict(
             transform_list=[R],
             n=batch_size,
             normalize_images=normalize_images,
+            device=device,
         )
     else:
         raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
