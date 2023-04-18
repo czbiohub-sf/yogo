@@ -183,7 +183,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         )
 
         self._paths = np.array(paths).astype(np.string_)
-        self._imgs = torch.stack(tensors)
+        self._labels = torch.stack(tensors)
 
     def make_dataset(
         self,
@@ -261,12 +261,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return paths, tensors
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        if we are normalizing images, we have to make sure the sample
-        """
         img_path = str(self._paths[index], encoding="utf-8")
-        target = self._imgs[index, ...]
         sample = self.loader(img_path)
+        target = self._labels[index, ...]
         if self.normalize_images:
             # turns our torch.uint8 tensor 'sample' into a torch.FloatTensor
             sample = sample / 256
