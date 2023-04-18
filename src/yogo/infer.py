@@ -63,7 +63,6 @@ def save_preds(fnames, batch_preds, thresh=0.5):
             f.write(pred_string)
 
 
-
 def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, None]:
     for i in range(0, len(s), n):
         yield s[i : i + n]
