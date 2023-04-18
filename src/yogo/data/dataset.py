@@ -93,13 +93,7 @@ def correct_label_idx(
     )
 
 
-def label_file_to_tensor(
-    label_path: Path,
-    dataset_classes: List[str],
-    Sx: int,
-    Sy: int,
-    notes_data: Optional[Dict[str, Any]],
-) -> torch.Tensor:
+def load_labels(label_path: Path, dataset_classes: List[str]) -> List[List[int, ...]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -113,7 +107,7 @@ def label_file_to_tensor(
                 reader = csv.reader(f, dialect)
             except csv.Error:
                 # emtpy file, no labels, just keep moving
-                return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+                return []
 
             if has_header:
                 next(reader, None)
@@ -130,6 +124,18 @@ def label_file_to_tensor(
     except FileNotFoundError:
         pass
 
+    return labels
+
+
+def label_file_to_tensor(
+    label_path: Path,
+    dataset_classes: List[str],
+    Sx: int,
+    Sy: int,
+    notes_data: Optional[Dict[str, Any]],
+) -> torch.Tensor:
+    "loads labels from label file into a tensor suitible for back prop, given by image path"
+    labels = load_labels(label_path, dataset_classes)
     labels_tensor = torch.Tensor(labels)
 
     if labels_tensor.nelement() == 0:
