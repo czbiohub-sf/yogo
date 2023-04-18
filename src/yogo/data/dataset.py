@@ -64,7 +64,7 @@ def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor
 def correct_label_idx(
     label: Union[str, int],
     dataset_classes: List[str],
-    notes_data: Optional[Dict[str, Any]],
+    notes_data: Optional[Dict[str, Any]] = None,
 ) -> int:
     """
     dataset_classes is the ordering of classes that are given by
@@ -93,7 +93,7 @@ def correct_label_idx(
     )
 
 
-def load_labels(label_path: Path, dataset_classes: List[str]) -> List[List[int, ...]]:
+def load_labels(label_path: Path, dataset_classes: List[str], notes_data: Optional[Dict[str, Any]] = None) -> List[List[int]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:
@@ -132,7 +132,7 @@ def label_file_to_tensor(
     dataset_classes: List[str],
     Sx: int,
     Sy: int,
-    notes_data: Optional[Dict[str, Any]],
+    notes_data: Optional[Dict[str, Any]] = None,
 ) -> torch.Tensor:
     "loads labels from label file into a tensor suitible for back prop, given by image path"
     labels = load_labels(label_path, dataset_classes)
