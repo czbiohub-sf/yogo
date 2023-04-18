@@ -50,8 +50,9 @@ def save_preds(fnames, batch_preds, thresh=0.5):
         keep_idxs = ops.nms(
             ops.box_convert(preds[:, :4], "cxcywh", "xyxy"),
             preds[:, 4],
-            iou_threshold=0.95,
+            iou_threshold=0.5,
         )
+
         preds = preds[keep_idxs]
 
         pred_string = "\n".join(
@@ -60,6 +61,7 @@ def save_preds(fnames, batch_preds, thresh=0.5):
         )
         with open(fname, "w") as f:
             f.write(pred_string)
+
 
 
 def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, None]:
