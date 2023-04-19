@@ -5,7 +5,7 @@ from torch import nn
 
 class Residual(nn.Module):
     def __init__(self, n_channels: int):
-        super().__init__(self)
+        super().__init__()
         self.conv_block_1 = nn.Sequential(
             nn.Conv2d(n_channels, n_channels, 3, padding=1, bias=False),
             nn.BatchNorm2d(n_channels),
