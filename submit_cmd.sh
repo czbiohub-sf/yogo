@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=ULCMalariaYOGOTraining
+#SBATCH --job-name=YOGOTraining
 #SBATCH --time=16:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1

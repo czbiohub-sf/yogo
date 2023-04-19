@@ -231,9 +231,7 @@ def split_dataset(
     )
 
 
-def collate_batch(batch, device="cpu", transforms=None):
-    # TODO https://pytorch.org/docs/stable/data.html#memory-pinning
-    # perform image transforms here so we can transform in batches! :)
+def collate_batch(batch, transforms):
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
     batched_labels = torch.stack(labels)
@@ -299,6 +297,6 @@ def get_dataloader(
             # optimal # of workers?
             num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
             generator=torch.Generator().manual_seed(111111),
-            collate_fn=partial(collate_batch, device=device, transforms=transforms),
+            collate_fn=partial(collate_batch, transforms=transforms),
         )
     return d
