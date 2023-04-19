@@ -17,9 +17,9 @@ notes/trace2html
 
 dataset_defs
 
-src/yogo.egg-info
 *tasks.json
 training_profile.json
 .vscode
 
 *.json.gz
+yogo.egg-info

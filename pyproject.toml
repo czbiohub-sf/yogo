@@ -1,3 +1,29 @@
+[tool.poetry]
+name = "yogo"
+version = "0.1.0"
+description = "you only glance once?"
+authors = ["Axel Jacobsen"]
+readme = "README.md"
+keywords = ["object detection", "YOLO", "deep learning", "PyTorch"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+torch = ">=1.13.1"
+torchmetrics = ""
+torchvision = ">=0.14.1"
+"ruamel.yaml" = "0.17.21"
+tqdm = "^4.61.2"
+wandb = "^0.11.2"
+matplotlib = "^3.4.2"
+lion_pytorch = "==0.0.7"
+
+[tool.poetry.extras]
+onnx = ["onnx", "onnxruntime", "onnx-simplifier"]
+
+[tool.poetry.scripts]
+yogo = "yogo.__main__:main"
+
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
