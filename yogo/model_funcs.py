@@ -91,7 +91,6 @@ def res_net_zero(num_classes) -> nn.Module:
         nn.BatchNorm2d(128),
         nn.LeakyReLU(),
     )
-    res_block_3 = Residual(128)
     conv_block_4 = nn.Conv2d(128, 5 + num_classes, 1)
     return nn.Sequential(
         conv_block_1,
@@ -99,7 +98,6 @@ def res_net_zero(num_classes) -> nn.Module:
         conv_block_2,
         res_block_2,
         conv_block_3,
-        res_block_3,
         conv_block_4,
     )
 
