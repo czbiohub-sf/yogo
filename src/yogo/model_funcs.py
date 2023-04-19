@@ -389,6 +389,7 @@ MODELS = {
     "model_big_heavy_normalized": model_big_heavy_normalized,
 }
 
+
 def get_model_func(
     model_name: Optional[str],
 ) -> Optional[Callable[[int,], nn.Module]]:
