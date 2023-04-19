@@ -17,8 +17,8 @@ class Residual(nn.Module):
         )
 
     def forward(self, x):
-        x_ = conv_block_1(x)
-        x_ = conv_block_2(x_)
+        x_ = self.conv_block_1(x)
+        x_ = self.conv_block_2(x_)
         return x_ + x
 
 
