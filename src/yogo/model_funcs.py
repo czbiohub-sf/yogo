@@ -3,40 +3,63 @@ from typing import Optional, Callable
 from torch import nn
 
 
+class Residual(nn.Module):
+    def __init__(self, n_channels: int):
+        super().__init__(self)
+        self.conv_block_1 = nn.Sequential(
+            nn.Conv2d(n_channels, n_channels, 3, padding=1, bias=False),
+            nn.BatchNorm2d(n_channels),
+            nn.LeakyReLU(),
+        )
+        self.conv_block_2 = nn.Sequential(
+            nn.Conv2d(n_channels, n_channels, 3, padding=1),
+            nn.LeakyReLU(),
+        )
+
+    def forward(self, x):
+        x_ = conv_block_1(x)
+        x_ = conv_block_2(x_)
+        return x_ + x
+
+
 def base_model(num_classes) -> nn.Module:
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 5, stride=2, padding=1, bias=False),
-        nn.BatchNorm2d(16),
+        nn.Conv2d(1, 32, 5, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(32),
         nn.LeakyReLU(),
     )
     conv_block_2 = nn.Sequential(
-        nn.Conv2d(16, 32, 3, padding=1),
+        nn.Conv2d(32, 64, 3, padding=1),
         nn.LeakyReLU(),
     )
     conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 5, stride=2, padding=1),
-        nn.BatchNorm2d(64),
+        nn.Conv2d(64, 64, 3, padding=1),
         nn.LeakyReLU(),
     )
     conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 128, 3, padding=1),
+        nn.Conv2d(64, 64, 5, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(64),
         nn.LeakyReLU(),
     )
     conv_block_5 = nn.Sequential(
+        nn.Conv2d(64, 128, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_6 = nn.Sequential(
         nn.Conv2d(128, 128, 5, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(128),
         nn.LeakyReLU(),
     )
-    conv_block_6 = nn.Sequential(
-        nn.Conv2d(128, 128, 3, padding=1, bias=True),
+    conv_block_7 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1, bias=False),
         nn.BatchNorm2d(128),
         nn.LeakyReLU(),
     )
-    conv_block_7 = nn.Sequential(
+    conv_block_8 = nn.Sequential(
         nn.Conv2d(128, 128, 3, padding=1),
         nn.LeakyReLU(),
     )
-    conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
+    conv_block_9 = nn.Conv2d(128, 5 + num_classes, 1)
     return nn.Sequential(
         conv_block_1,
         conv_block_2,
@@ -46,6 +69,38 @@ def base_model(num_classes) -> nn.Module:
         conv_block_6,
         conv_block_7,
         conv_block_8,
+        conv_block_9,
+    )
+
+
+def res_net_zero(num_classes) -> nn.Module:
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(1, 32, 5, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(32),
+        nn.LeakyReLU(),
+    )
+    res_block_1 = Residual(32)
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(32, 64, 5, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(64),
+        nn.LeakyReLU(),
+    )
+    res_block_2 = Residual(64)
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(64, 128, 5, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    res_block_3 = Residual(128)
+    conv_block_4 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        res_block_1,
+        conv_block_2,
+        res_block_2,
+        conv_block_3,
+        res_block_3,
+        conv_block_4,
     )
 
 
@@ -329,6 +384,7 @@ def get_model_func(
 ) -> Optional[Callable[[int,], nn.Module]]:
     models = {
         "base_model": base_model,
+        "res_net_zero": res_net_zero,
         "model_no_dropout": model_no_dropout,
         "model_smaller_SxSy": model_smaller_SxSy,
         "model_big_simple": model_big_simple,
