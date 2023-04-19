@@ -24,7 +24,7 @@ class Residual(nn.Module):
 
 def base_model(num_classes) -> nn.Module:
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 32, 5, stride=2, padding=1, bias=False),
+        nn.Conv2d(1, 32, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(32),
         nn.LeakyReLU(),
     )
@@ -37,7 +37,7 @@ def base_model(num_classes) -> nn.Module:
         nn.LeakyReLU(),
     )
     conv_block_4 = nn.Sequential(
-        nn.Conv2d(64, 64, 5, stride=2, padding=1, bias=False),
+        nn.Conv2d(64, 64, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(64),
         nn.LeakyReLU(),
     )
@@ -46,7 +46,7 @@ def base_model(num_classes) -> nn.Module:
         nn.LeakyReLU(),
     )
     conv_block_6 = nn.Sequential(
-        nn.Conv2d(128, 128, 5, stride=2, padding=1, bias=False),
+        nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(128),
         nn.LeakyReLU(),
     )
