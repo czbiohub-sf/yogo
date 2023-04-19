@@ -5,10 +5,7 @@ description = "you only glance once?"
 authors = ["Axel Jacobsen"]
 readme = "README.md"
 keywords = ["object detection", "YOLO", "deep learning", "PyTorch"]
-
-[tool.poetry.license]
-name = "BSD-3-Clause"
-url = "https://opensource.org/licenses/BSD-3-Clause"
+license = "BSD-3-Clause"
 
 [tool.poetry.dependencies]
 python = ">=3.7,<4"
