@@ -379,20 +379,21 @@ def model_big_heavy_normalized(num_classes: int) -> nn.Module:
     )
 
 
+MODELS = {
+    "base_model": base_model,
+    "res_net_zero": res_net_zero,
+    "model_no_dropout": model_no_dropout,
+    "model_smaller_SxSy": model_smaller_SxSy,
+    "model_big_simple": model_big_simple,
+    "model_big_normalized": model_big_normalized,
+    "model_big_heavy_normalized": model_big_heavy_normalized,
+}
+
 def get_model_func(
     model_name: Optional[str],
 ) -> Optional[Callable[[int,], nn.Module]]:
-    models = {
-        "base_model": base_model,
-        "res_net_zero": res_net_zero,
-        "model_no_dropout": model_no_dropout,
-        "model_smaller_SxSy": model_smaller_SxSy,
-        "model_big_simple": model_big_simple,
-        "model_big_normalized": model_big_normalized,
-        "model_big_heavy_normalized": model_big_heavy_normalized,
-    }
     try:
-        return models[model_name]
+        return MODELS[model_name]
     except KeyError:
         print(f"provided model {model_name} doesn't exist; defaulting to None")
         return None
