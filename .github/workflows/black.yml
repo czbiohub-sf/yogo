@@ -14,4 +14,4 @@ jobs:
       - uses: psf/black@stable
         with:
           options: "--check"
-          src: "./yogo
+          src: "./yogo"

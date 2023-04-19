@@ -15,8 +15,4 @@ jobs:
           pip install --upgrade pip
           pip install ruff==0.0.253
       - name: ruff
-        run: ruff src --ignore E501 --ignore E722
-      - if: failure()
-        run: |
-          echo "Run the following locally:"
-          echo "    ruff yogo --ignore E501 --ignore E722"
+        run: ruff yogo --ignore E501 --ignore E722
