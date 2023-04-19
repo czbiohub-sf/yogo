@@ -19,4 +19,4 @@ jobs:
       - if: failure()
         run: |
           echo "Run the following locally:"
-          echo "    ruff src --ignore E501 --ignore E722"
+          echo "    ruff yogo --ignore E501 --ignore E722"
