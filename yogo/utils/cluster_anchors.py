@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import cast, Union, Tuple, Sequence, List
 
 
-
 # [dims, xmin, xmax, ymin, ymax]
 CornerBox = Union["npt.NDArray[np.float64]", torch.Tensor]
 # [dims, xc, yc, w, h]
