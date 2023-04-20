@@ -246,7 +246,6 @@ def do_infer(args):
         output_dir=args.output_dir,
         draw_boxes=args.draw_boxes,
         use_tqdm=(args.output_dir is not None or args.draw_boxes),
-        normalize_images=args.normalize_images,
     )
 
 
