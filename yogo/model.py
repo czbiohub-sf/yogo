@@ -153,7 +153,7 @@ class YOGO(nn.Module):
     def get_img_size(self) -> Tuple[torch.Tensor, torch.Tensor]:
         if isinstance(self.img_size, torch.Tensor):
             h, w = self.img_size
-            return h,w
+            return h, w
         raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
 
     def get_grid_size(self) -> Tuple[int, int]:
@@ -163,7 +163,7 @@ class YOGO(nn.Module):
         would be overcmoplicated for what we are doing - we can add modules
         here as we add different types of layers
         """
-        h,w = self.get_img_size()
+        h, w = self.get_img_size()
 
         def as_tuple(inp: Union[Any, Tuple[Any, Any]]) -> Tuple[Any, ...]:
             return inp if isinstance(inp, tuple) else (inp, inp)
