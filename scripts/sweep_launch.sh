@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 
 #SBATCH --job-name=ULCMalariaYOGOTraining
 #SBATCH --time=16:00:00
