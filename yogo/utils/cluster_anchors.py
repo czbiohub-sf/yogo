@@ -13,8 +13,6 @@ import numpy.typing as npt
 from pathlib import Path
 from typing import cast, Union, Tuple, Sequence, List
 
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 
 
 # [dims, xmin, xmax, ymin, ymax]
