@@ -70,6 +70,7 @@ def gen_model(num_classes) -> nn.Module:
         conv_block_8,
     )
 
+
 def base_model(num_classes) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 32, 3, stride=2, padding=1, bias=False),
