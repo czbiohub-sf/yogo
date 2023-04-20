@@ -71,29 +71,6 @@ def gen_random_box(n=1, center_box=False) -> CornerBox:
     return cb
 
 
-def plot_boxes(boxes, color_period=0) -> None:
-    colors = ["r", "g", "b", "c", "m", "y", "k"]
-    assert (
-        0 <= color_period < len(colors)
-    ), f"color_period must be in [0, {len(colors)})"
-
-    _, ax = plt.subplots()
-    current_axis = plt.gca()
-    for i, box in enumerate(boxes):
-        color = colors[i % color_period if color_period > 0 else 0]
-        _, _, w, h = corners_to_centers(box)
-        current_axis.add_patch(
-            Rectangle(
-                (box[0], box[2]),
-                w,
-                h,
-                facecolor=color if i > len(boxes) - 1 - color_period else "none",
-                edgecolor=color,
-            )
-        )
-    plt.show()
-
-
 def get_dataset_bounding_boxes(
     bb_dirs: Sequence[Union[Path, str]], center_box=False
 ) -> Union[CenterBox, CornerBox]:
@@ -120,7 +97,7 @@ def get_bounding_boxes(bb_dir: str, center_box=False) -> Union[CenterBox, Corner
     return np.array(bbs)
 
 
-def k_means(data: CornerBox, k=3, plot=False) -> CornerBox:
+def k_means(data: CornerBox, k=3) -> CornerBox:
     """
     https://blog.paperspace.com/speed-up-kmeans-numpy-vectorization-broadcasting-profiling/
     assumptions:
@@ -145,9 +122,6 @@ def k_means(data: CornerBox, k=3, plot=False) -> CornerBox:
             means[m] = data[mean_groups == m].mean(axis=0)  # type: ignore
 
         boxes.append(means.copy())
-
-    if plot:
-        plot_boxes(np.array(boxes).reshape(-1, 4), color_period=k)
 
     return means
 
