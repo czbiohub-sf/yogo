@@ -158,11 +158,11 @@ def predict(
         batch_size = 1
 
     device = choose_device()
-    pth = torch.load(path_to_pth, map_location="cpu")
-    img_h, img_w = pth["model_state_dict"]["img_size"]
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
+
+    img_h, img_w = model.get_img_size()
 
     normalize_images = cfg["normalize_images"]
     R = Resize([img_h, img_w])

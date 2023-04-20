@@ -150,6 +150,12 @@ class YOGO(nn.Module):
         total_norm = total_norm**0.5
         return total_norm
 
+    def get_img_size(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        if isinstance(self.img_size, torch.Tensor):
+            h, w = self.img_size
+            return h,w
+        raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
+
     def get_grid_size(self) -> Tuple[int, int]:
         """return Sx, Sy
 
@@ -157,10 +163,7 @@ class YOGO(nn.Module):
         would be overcmoplicated for what we are doing - we can add modules
         here as we add different types of layers
         """
-        if isinstance(self.img_size, torch.Tensor):
-            h, w = self.img_size
-        else:
-            raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
+        h,w = self.get_img_size()
 
         def as_tuple(inp: Union[Any, Tuple[Any, Any]]) -> Tuple[Any, ...]:
             return inp if isinstance(inp, tuple) else (inp, inp)
@@ -180,8 +183,11 @@ class YOGO(nn.Module):
                 h = torch.floor((h + 2 * p0 - d0 * (k0 - 1) - 1) / s0 + 1)
                 w = torch.floor((w + 2 * p1 - d1 * (k1 - 1) - 1) / s1 + 1)
 
-        Sy, Sx = h.int().item(), w.int().item()
-        return Sx, Sy
+        Sy = h.int().item()
+        Sx = w.int().item()
+        # for some reason, mypy thinks that Sx and Sy are floats,
+        # even though I `int()` them
+        return Sx, Sy  # type: ignore
 
     def gen_model(self, num_classes) -> nn.Module:
         conv_block_1 = nn.Sequential(
