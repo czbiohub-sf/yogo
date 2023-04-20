@@ -12,8 +12,8 @@ import numpy as np
 
 from pathlib import Path
 
-from .model import YOGO
-from .argparsers import export_parser
+from yogo.model import YOGO
+from yogo.utils.argparsers import export_parser
 
 
 """

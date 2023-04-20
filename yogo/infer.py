@@ -15,7 +15,7 @@ from typing import Sequence, TypeVar, List, Union, Optional
 from torchvision.transforms import Resize, Compose
 
 from yogo.model import YOGO
-from yogo.argparsers import infer_parser
+from yogo.utils.argparsers import infer_parser
 from yogo.utils import draw_rects, format_preds, iter_in_chunks
 from yogo.data.dataset import read_grayscale, YOGO_CLASS_ORDERING
 

@@ -10,14 +10,14 @@ from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast
 
 from yogo.model import YOGO
-from yogo.argparsers import train_parser
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
 from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
 )
-from yogo.cluster_anchors import best_anchor
+from yogo.utils.cluster_anchors import best_anchor
+from yogo.utils.argparsers import train_parser
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
