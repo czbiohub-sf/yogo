@@ -208,10 +208,4 @@ def infer_parser(parser=None):
     data_source.add_argument(
         "--path-to-zarr", type=Path, default=None, help="path to zarr file"
     )
-    parser.add_argument(
-        "--normalize-images",
-        default=False,
-        action=boolean_action,
-        help="normalize images into [0,1]",
-    )
     return parser

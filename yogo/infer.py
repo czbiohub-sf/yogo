@@ -5,20 +5,19 @@ import math
 import torch
 import signal
 
-import torchvision.ops as ops
 import matplotlib.pyplot as plt
 
 from torch import nn
 from tqdm import tqdm
 from pathlib import Path
-from typing import Sequence, TypeVar, Generator, List, Union, Optional
+from typing import Sequence, TypeVar, List, Union, Optional
 
 from torchvision.transforms import Resize, Compose
 
 from yogo.model import YOGO
-from yogo.utils import draw_rects
 from yogo.argparsers import infer_parser
-from yogo.data.dataset import read_grayscale
+from yogo.utils import draw_rects, format_preds, iter_in_chunks
+from yogo.data.dataset import read_grayscale, YOGO_CLASS_ORDERING
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff
@@ -40,20 +39,7 @@ def save_preds(fnames, batch_preds, thresh=0.5):
     bs, pred_shape, Sy, Sx = batch_preds.shape
 
     for fname, batch_pred in zip(fnames, batch_preds):
-        reformatted_preds = batch_pred.view(pred_shape, Sx * Sy).T
-
-        # Filter for objectness first
-        objectness_mask = (reformatted_preds[:, 4] > thresh).bool()
-        preds = reformatted_preds[objectness_mask]
-
-        # Non-maximal supression to remove duplicate boxes
-        keep_idxs = ops.nms(
-            ops.box_convert(preds[:, :4], "cxcywh", "xyxy"),
-            preds[:, 4],
-            iou_threshold=0.5,
-        )
-
-        preds = preds[keep_idxs]
+        preds = format_preds(batch_pred)
 
         pred_string = "\n".join(
             f"{argmax(pred[5:])} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
@@ -61,11 +47,6 @@ def save_preds(fnames, batch_preds, thresh=0.5):
         )
         with open(fname, "w") as f:
             f.write(pred_string)
-
-
-def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, None]:
-    for i in range(0, len(s), n):
-        yield s[i : i + n]
 
 
 class ImageLoader:
@@ -171,7 +152,6 @@ def predict(
     thresh: float = 0.5,
     draw_boxes: bool = False,
     batch_size: int = 16,
-    normalize_images: bool = False,
     use_tqdm: bool = False,
 ):
     if draw_boxes:
@@ -240,16 +220,19 @@ def predict(
             ]
             save_preds(out_fnames, res, thresh=0.5)
         elif draw_boxes:
-            fig, ax = plt.subplots()
-            drawn_img = draw_rects(img_batch[0, ...], res[0, ...], thresh=0.5)
-            ax.imshow(drawn_img, cmap="gray")
+            # batch size is 1 (see above)
+            drawn_img = draw_rects(
+                img_batch[0, ...], res[0, ...], thresh=0.5, labels=YOGO_CLASS_ORDERING
+            )
             if output_dir is not None:
                 out_fname = (
                     Path(output_dir) / Path(fnames.pop()).with_suffix(".png").name
                 )
-                plt.savefig(out_fname, dpi=fig.dpi)
-                plt.close()
+                drawn_img.save(out_fname)
             else:
+                fig, ax = plt.subplots()
+                ax.set_axis_off()
+                ax.imshow(drawn_img, cmap="gray")
                 plt.show()
         else:
             print(res)
