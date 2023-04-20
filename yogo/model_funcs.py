@@ -151,6 +151,27 @@ def res_net_zero(num_classes) -> nn.Module:
     )
 
 
+def res_net_one(num_classes) -> nn.Module:
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(1, 32, 5, stride=2, padding=1),
+        nn.LeakyReLU(),
+    )
+    res_block_1 = Residual(32)
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(32, 64, 5, stride=2, padding=1),
+        nn.LeakyReLU(),
+    )
+    res_block_2 = Residual(64)
+    conv_block_3 = nn.Conv2d(64, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        res_block_1,
+        conv_block_2,
+        res_block_2,
+        conv_block_3,
+    )
+
+
 def model_no_dropout(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 3, stride=2, padding=1),
@@ -429,6 +450,7 @@ def model_big_heavy_normalized(num_classes: int) -> nn.Module:
 MODELS = {
     "base_model": base_model,
     "gen_model": gen_model,
+    "res_net_one": res_net_one,
     "res_net_zero": res_net_zero,
     "model_no_dropout": model_no_dropout,
     "model_smaller_SxSy": model_smaller_SxSy,
