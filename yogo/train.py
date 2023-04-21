@@ -117,7 +117,7 @@ def train():
         print(f"loading pretrained path from {config.pretrained_path}")
 
         net, net_cfg = YOGO.from_pth(config.pretrained_path)
-        net.to(device)
+        net.to(device, memory_format=torch.channels_last)
 
         global_step = net_cfg["step"]
         config["normalize_images"] = net_cfg["normalize_images"]
@@ -134,7 +134,7 @@ def train():
             anchor_w=anchor_w,
             anchor_h=anchor_h,
             model_func=model,
-        ).to(device)
+        ).to(device, memory_format=torch.channels_last)
         global_step = 0
 
     print("created network")
@@ -173,7 +173,7 @@ def train():
     for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
-            imgs = imgs.to(device, non_blocking=True)
+            imgs = imgs.to(device, non_blocking=True, memory_format=torch.channels_last)
             labels = labels.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             outputs = net(imgs)
@@ -201,7 +201,7 @@ def train():
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
-                imgs = imgs.to(device, non_blocking=True)
+                imgs = imgs.to(device, non_blocking=True, memory_format=torch.channels_last)
                 labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
                 loss = Y_loss(outputs, labels)
@@ -268,12 +268,12 @@ def train():
 
     net, global_step = YOGO.from_pth(model_save_dir / "best.pth")
     print(f"loaded best.pth from step {global_step} for test inference")
-    net.to(device)
+    net.to(device, memory_format=torch.channels_last)
 
     test_loss = 0.0
     with torch.no_grad():
         for imgs, labels in test_dataloader:
-            imgs = imgs.to(device, non_blocking=True)
+            imgs = imgs.to(device, non_blocking=True, memory_format=torch.channels_last)
             labels = labels.to(device, non_blocking=True)
             outputs = net(imgs)
             loss = Y_loss(outputs, labels)
