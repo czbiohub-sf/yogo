@@ -74,10 +74,6 @@ def train(config):
     cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
-    def cb(prof):
-        print(prof.key_averages().table(sort_by="cpu_memory_usage", row_limit=10))
-        prof.export_chrome_trace("training_profile.json")
-
     import functiontrace
 
     functiontrace.trace()
