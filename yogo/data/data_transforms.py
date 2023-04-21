@@ -147,11 +147,11 @@ class RandomHorizontalFlipWithBBs(DualInputModule):
         """
         assert img_batch.ndim == 4 and label_batch.ndim == 4
         if torch.rand(1) < self.p:
-            label_batch[:, 1, :, :], label_batch[:, 3, :, :] = (
-                1 - label_batch[:, 3, :, :],
-                1 - label_batch[:, 1, :, :],
+            label_batch[:, :, :, 1], label_batch[:, :, :, 3] = (
+                1 - label_batch[:, :, :, 3],
+                1 - label_batch[:, :, :, 1],
             )
-            return F.hflip(img_batch), torch.flip(label_batch, dims=(3,))
+            return F.hflip(img_batch), torch.flip(label_batch, dims=(2,))
         return img_batch, label_batch
 
 
@@ -172,9 +172,9 @@ class RandomVerticalFlipWithBBs(DualInputModule):
         """
         assert img_batch.ndim == 4 and label_batch.ndim == 4
         if torch.rand(1) < self.p:
-            label_batch[:, 2, :, :], label_batch[:, 4, :, :] = (
-                1 - label_batch[:, 4, :, :],
-                1 - label_batch[:, 2, :, :],
+            label_batch[:, :, :, 2], label_batch[:, :, :, 4] = (
+                1 - label_batch[:, :, :, 4],
+                1 - label_batch[:, :, :, 2],
             )
-            return F.vflip(img_batch), torch.flip(label_batch, dims=(2,))
+            return F.vflip(img_batch), torch.flip(label_batch, dims=(1,))
         return img_batch, label_batch
