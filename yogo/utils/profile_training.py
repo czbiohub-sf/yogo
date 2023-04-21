@@ -77,6 +77,7 @@ def train(config):
     import functiontrace
 
     functiontrace.trace()
+
     for i, (imgs, labels) in enumerate(train_dataloader):
         imgs = imgs.to(device)
         labels = labels.to(device)
@@ -91,7 +92,7 @@ def train(config):
         scheduler.step()
         metrics.update(outputs.detach(), labels)
 
-        if i > 16:
+        if i > 64:
             break
 
 
