@@ -46,8 +46,8 @@ class Metrics:
         assert self.num_classes == len(self.class_names)
 
     def update(self, preds, labels):
-        bs, pred_shape, Sy, Sx = preds.shape
-        bs, label_shape, Sy, Sx = labels.shape
+        bs,Sy, Sx , pred_shape  = preds.shape
+        bs, Sy, Sx, label_shape = labels.shape
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(
             preds, labels, use_IoU=True, per_batch=True
@@ -118,22 +118,22 @@ class Metrics:
 
         (
             bs1,
-            pred_shape,
             Sy,
             Sx,
+            pred_shape,
         ) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
         (
             bs2,
-            label_shape,
             Sy,
             Sx,
+            label_shape,
         ) = batch_labels.shape  # label_shape is mask x y x y class
         assert bs1 == bs2, "sanity check, pred batch size should equal"
 
         masked_predictions, masked_labels = [], []
         for b in range(bs1):
-            reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).T
-            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).T
+            reformatted_preds = batch_preds[b, ...].view(Sx * Sy, pred_shape)
+            reformatted_labels = batch_labels[b, ...].view(Sx * Sy, label_shape)
 
             # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
             labels_mask = reformatted_labels[:, 0].bool()
