@@ -266,8 +266,8 @@ def train():
 
         net.train()
 
-    net, global_step = YOGO.from_pth(model_save_dir / "best.pth")
-    print(f"loaded best.pth from step {global_step} for test inference")
+    net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
+    print(f"loaded best.pth from step {cfg['step']} for test inference")
     net.to(device)
 
     test_loss = 0.0
