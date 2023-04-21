@@ -49,14 +49,14 @@ def split_labels_into_bins(
 
 def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
     with torch.no_grad():
-        output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+        output = torch.zeros(Sy, Sx, LABEL_TENSOR_PRED_DIM_SIZE)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
 
-        for (k, j), cell_label in label_cells.items():
+        for (j, k), cell_label in label_cells.items():
             pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
-            output[0, j, k] = 1  # mask that there is a prediction here
-            output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
-            output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
+            output[k, j, 0] = 1  # mask that there is a prediction here
+            output[k, j, 1:5] = cell_label[pred_square_idx][1:]  # xyxy
+            output[k, j, 5] = cell_label[pred_square_idx][0]  # prediction idx
 
         return output
 
@@ -143,7 +143,7 @@ def label_file_to_tensor(
     labels_tensor = torch.Tensor(labels)
 
     if labels_tensor.nelement() == 0:
-        return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+        return torch.zeros(Sy, Sx, LABEL_TENSOR_PRED_DIM_SIZE)
 
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
     return format_labels_tensor(labels_tensor, Sx, Sy)
