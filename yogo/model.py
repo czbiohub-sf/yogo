@@ -240,13 +240,15 @@ class YOGO(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # we get either raw uint8 tensors or float tensors
         x = self.model(x.float())
+        # Transpose dimensions to change shape from (batch size, 12, h, w) to (batch size, h, w, 12)
+        x = x.transpose(1, 3).transpose(2, 3)
 
-        _, _, Sy, Sx = x.shape
+        _, Sy, Sx, _ = x.shape
 
         if self.inference:
-            classification = torch.softmax(x[:, 5:, :, :], dim=1)
+            classification = torch.softmax(x[:, :, :, 5], dim=1)
         else:
-            classification = x[:, 5:, :, :]
+            classification = x[:, :, :, 5]
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         #  center of bounding box in x
@@ -256,11 +258,11 @@ class YOGO(nn.Module):
         #  'objectness' score
         return torch.cat(
             (
-                (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
-                (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
-                self.anchor_w * torch.exp(x[:, 2:3, :, :]),
-                self.anchor_h * torch.exp(x[:, 3:4, :, :]),
-                torch.sigmoid(x[:, 4:5, :, :]),
+                (1 / Sx) * torch.sigmoid(x[:, :, :, 0:1]) + self._Cxs,
+                (1 / Sy) * torch.sigmoid(x[:,  :, :, 1:2]) + self._Cys,
+                self.anchor_w * torch.exp(x[:, :, :,  2:3]),
+                self.anchor_h * torch.exp(x[:, :, :, 3:4]),
+                torch.sigmoid(x[:, :, :, 4:5]),
                 *torch.split(classification, 1, dim=1),
             ),
             dim=1,
