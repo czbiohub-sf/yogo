@@ -139,8 +139,6 @@ def train():
 
     print("created network")
 
-    # TODO: generalize so we can tune Sx / Sy!
-    # TODO: best way to make model architecture tunable?
     Sx, Sy = net.get_grid_size()
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
