@@ -36,7 +36,7 @@ def choose_device():
 
 
 def save_preds(fnames, batch_preds, thresh=0.5):
-    bs, pred_shape, Sy, Sx = batch_preds.shape
+    bs, Sy, Sx, pred_shape = batch_preds.shape
 
     for fname, batch_pred in zip(fnames, batch_preds):
         preds = format_preds(batch_pred)
