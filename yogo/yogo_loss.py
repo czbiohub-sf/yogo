@@ -64,20 +64,20 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         loss += (
             self.no_obj_weight
             * (
-                (1 - label_batch[:, 0, :, :])
+                (1 - label_batch[:, :, :, 0])
                 * self.mse(
-                    pred_batch[:, 4, :, :],
-                    torch.zeros_like(pred_batch[:, 4, :, :]),
+                    pred_batch[:, :, :, 4],
+                    torch.zeros_like(pred_batch[:, :, :, 4]),
                 )
             ).sum()
         )
 
         # objectness loss when there is an obj
         loss += (
-            label_batch[:, 0, :, :]
+            label_batch[:, :, :, 0]
             * self.mse(
-                pred_batch[:, 4, :, :],
-                torch.ones_like(pred_batch[:, 4, :, :]),
+                pred_batch[:, :, :, 4],
+                torch.ones_like(pred_batch[:, :, :, 4]),
             )
         ).sum()
 
@@ -85,24 +85,20 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
         formatted_preds = (
-            pred_batch[:, :4, :, :]
-            .permute((1, 0, 2, 3))
-            .reshape(4, batch_size * Sx * Sy)
+            pred_batch[:, :, :, :4]
+            .view(batch_size * Sx * Sy, 4)
         )
         formatted_labels = (
-            label_batch[:, 1:5, :, :]
-            .permute((1, 0, 2, 3))
-            .reshape(4, batch_size * Sx * Sy)
+            label_batch[:, :, :, 1:5]
+            .view(batch_size * Sx * Sy, 4)
         )
         mask = (
-            label_batch[:, 0:1, :, :]
-            .permute((1, 0, 2, 3))
-            .reshape(batch_size * Sx * Sy)
+            label_batch[:, :, :, 0:1]
+            .view(batch_size * Sx * Sy)
         ).bool()
 
-        # TODO try .T
-        formatted_preds_masked = formatted_preds[:, mask].permute((1, 0))
-        formatted_labels_masked = formatted_labels[:, mask].permute((1, 0))
+        formatted_preds_masked = formatted_preds[mask, :]
+        formatted_labels_masked = formatted_labels[mask, :]
 
         formatted_preds_xyxy = ops.box_convert(
             formatted_preds_masked,
@@ -134,8 +130,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # classification loss
         if self._classify:
             loss += (
-                label_batch[:, 0, :, :]
-                * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
+                label_batch[:, :, :, 0]
+                * self.cel(pred_batch[:, :, :, 5:], label_batch[:, :, :, 5].long())
             ).sum()
 
         return loss / batch_size
