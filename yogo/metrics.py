@@ -46,7 +46,7 @@ class Metrics:
         assert self.num_classes == len(self.class_names)
 
     def update(self, preds, labels):
-        bs,Sy, Sx , pred_shape  = preds.shape
+        bs, Sy, Sx, pred_shape = preds.shape
         bs, Sy, Sx, label_shape = labels.shape
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(

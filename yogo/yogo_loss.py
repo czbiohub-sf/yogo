@@ -84,18 +84,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
-        formatted_preds = (
-            pred_batch[:, :, :, :4]
-            .view(batch_size * Sx * Sy, 4)
-        )
-        formatted_labels = (
-            label_batch[:, :, :, 1:5]
-            .view(batch_size * Sx * Sy, 4)
-        )
-        mask = (
-            label_batch[:, :, :, 0:1]
-            .view(batch_size * Sx * Sy)
-        ).bool()
+        formatted_preds = pred_batch[:, :, :, :4].view(batch_size * Sx * Sy, 4)
+        formatted_labels = label_batch[:, :, :, 1:5].view(batch_size * Sx * Sy, 4)
+        mask = (label_batch[:, :, :, 0:1].view(batch_size * Sx * Sy)).bool()
 
         formatted_preds_masked = formatted_preds[mask, :]
         formatted_labels_masked = formatted_labels[mask, :]
