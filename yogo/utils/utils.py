@@ -85,9 +85,9 @@ def format_preds(
             f"invalid box format {box_format}; valid box formats are {get_args(BoxFormat)}"
         )
 
-    pred_shape, Sy, Sx = batch_pred.shape
+    Sy, Sx, pred_shape = batch_pred.shape
 
-    reformatted_preds = batch_pred.view(pred_shape, Sx * Sy).T
+    reformatted_preds = batch_pred.view(Sx * Sy, pred_shape)
 
     # Filter for objectness first
     objectness_mask = (reformatted_preds[:, 4] > thresh).bool()
@@ -152,6 +152,7 @@ def draw_rects(
     elif isinstance(rects, list):
         if thresh is not None:
             raise ValueError("threshold only valid for tensor (i.e. prediction) input")
+        # TODO fix this type error
         formatted_rects = [
             [
                 int(w * (r[1] - r[3] / 2)),
