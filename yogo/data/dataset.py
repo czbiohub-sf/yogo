@@ -97,7 +97,7 @@ def load_labels(
     label_path: Path,
     dataset_classes: List[str],
     notes_data: Optional[Dict[str, Any]] = None,
-) -> List[List[int]]:
+) -> List[List[float]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
     try:

@@ -11,6 +11,15 @@ except AttributeError:
     boolean_action = "store_true"  # type: ignore
 
 
+def uint(val: int):
+    try:
+        v = int(val)
+        if v >= 0:
+            return v
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
+
+
 def global_parser():
     parser = argparse.ArgumentParser(description="looking for a glance?")
     subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
@@ -20,15 +29,6 @@ def global_parser():
         parser=subparsers.add_parser("infer", help="infer images using a model")
     )
     return parser
-
-
-def uint(val: int):
-    try:
-        v = int(val)
-        if v >= 0:
-            return v
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
 
 
 def train_parser(parser=None):
