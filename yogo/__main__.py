@@ -3,12 +3,12 @@ import torch
 
 from yogo.infer import do_infer
 from yogo.train import do_training
-from yogo.argparsers import global_parser
+from yogo.utils.argparsers import global_parser
 
 no_onnx = False
 onnx_err = ""
 try:
-    from yogo.export_model import do_export
+    from yogo.utils.export_model import do_export
 except ImportError as e:
     no_onnx = True
     onnx_err = str(e)

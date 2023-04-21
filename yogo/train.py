@@ -19,11 +19,11 @@ from yogo import DefaultHyperparams as df
 from yogo.model import YOGO
 from yogo.model_funcs import get_model_func
 from yogo.yogo_loss import YOGOLoss
-from yogo.argparsers import train_parser
-from yogo.utils import draw_rects, get_wandb_confusion
 from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
-from yogo.cluster_anchors import best_anchor
+from yogo.utils.argparsers import train_parser
+from yogo.utils.cluster_anchors import best_anchor
+from yogo.utils import draw_rects, get_wandb_confusion
 from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
