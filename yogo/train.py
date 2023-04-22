@@ -17,7 +17,7 @@ from typing import Optional, Tuple, cast, Literal, Iterator
 from yogo import DefaultHyperparams as df
 
 from yogo.model import YOGO
-from yogo.model_funcs import get_model_func
+from yogo.model_defns import get_model_func
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING

@@ -4,7 +4,7 @@ from torch import nn
 from pathlib import Path
 from typing import Tuple, Optional, Callable, Union, Any, Dict
 
-from yogo.model_funcs import get_model_func
+from yogo.model_defns import get_model_func
 
 
 class YOGO(nn.Module):
