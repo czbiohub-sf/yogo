@@ -1,5 +1,4 @@
 import torch
-import time
 
 import torchvision.ops as ops
 
