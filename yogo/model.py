@@ -245,9 +245,9 @@ class YOGO(nn.Module):
         x = x.transpose(1, 3).transpose(1, 2)
 
         if self.inference:
-            classification = torch.softmax(x[:, :, :, 5:6], dim=3)
+            classification = torch.softmax(x[:, :, :, 5:], dim=3)
         else:
-            classification = x[:, :, :, 5:6]
+            classification = x[:, :, :, 5:]
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         #  center of bounding box in x
@@ -256,7 +256,7 @@ class YOGO(nn.Module):
         #  height of bounding box
         #  'objectness' score
         _, Sy, Sx, _ = x.shape
-        res =  torch.cat(
+        res = torch.cat(
             (
                 (1 / Sx) * torch.sigmoid(x[:, :, :, 0:1]) + self._Cxs[..., None],
                 (1 / Sy) * torch.sigmoid(x[:, :, :, 1:2]) + self._Cys[..., None],
