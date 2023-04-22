@@ -48,15 +48,19 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self, pred_batch: torch.Tensor, label_batch: torch.Tensor
     ) -> torch.Tensor:
         """
-        pred and label are both 4d. pred_batch has shape
+        pred and label are both 4d. both have shape
         (
              batch size,
-             pred_dim,      (tx, ty, tw, th, to, c1, c2, c3, c4)
+             Sy,
              Sx,
-             Sy
+             (pred_dim or label_dim),
         )
+
+        label_dim is (mask x y x y class_idx)
+        pred_dim is (tx, ty, tw, th, to, *class_probabilities)
         """
-        batch_size, Sy, Sx, _ = pred_batch.shape
+        batch_size, Sy, Sx, pred_dim = pred_batch.shape
+        batch_size, Sy, Sx, label_dim = label_batch.shape
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -84,25 +88,27 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
-        formatted_preds = pred_batch[:, :, :, :4].view(batch_size * Sx * Sy, 4)
-        formatted_labels = label_batch[:, :, :, 1:5].view(batch_size * Sx * Sy, 4)
+        formatted_preds = pred_batch.view(batch_size * Sx * Sy, pred_dim)
+        formatted_labels = label_batch[:, :, :, ].view(batch_size * Sx * Sy, label_dim)
         mask = (label_batch[:, :, :, 0:1].view(batch_size * Sx * Sy)).bool()
 
         formatted_preds_masked = formatted_preds[mask, :]
         formatted_labels_masked = formatted_labels[mask, :]
 
         formatted_preds_xyxy = ops.box_convert(
-            formatted_preds_masked,
+            formatted_preds_masked[:, :4],
             "cxcywh",
             "xyxy",
         )
+        formatted_labels_xyxy = formatted_labels_masked[:, 1:5]
 
         assert valid_boxes(
             formatted_preds_xyxy
         ), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
         assert valid_boxes(
-            formatted_labels_masked
+            formatted_labels_xyxy
         ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
+
 
         loss += (
             self.coord_weight
@@ -113,18 +119,15 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                         min=0,
                         max=1,
                     ),
-                    formatted_labels_masked,
+                    formatted_labels_xyxy,
                 )
             ).sum()
         )
 
-        print(pred_batch.shape, label_batch.shape, id(pred_batch), id(label_batch), pred_batch == label_batch)
         # classification loss
-        # TODO need to transpose these :O
         if self._classify:
             loss += (
-                label_batch[:, :, :, 0]
-                * self.cel(pred_batch[:, :, :, 5:], label_batch[:, :, :, 5].long())
+                self.cel(formatted_preds_masked[:, 5:], formatted_labels_masked[:, 5].long())
             ).sum()
 
         return loss / batch_size
