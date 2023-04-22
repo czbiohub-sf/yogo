@@ -56,7 +56,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
              Sy
         )
         """
-        batch_size, _, Sy, Sx = pred_batch.shape
+        batch_size, Sy, Sx, _ = pred_batch.shape
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
@@ -118,7 +118,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             ).sum()
         )
 
+        print(pred_batch.shape, label_batch.shape, id(pred_batch), id(label_batch), pred_batch == label_batch)
         # classification loss
+        # TODO need to transpose these :O
         if self._classify:
             loss += (
                 label_batch[:, :, :, 0]
