@@ -1,4 +1,5 @@
 import torch
+import time
 
 import torchvision.ops as ops
 
@@ -89,7 +90,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # there is a lot of work to get it into the right format for loss
         # hopefully it is not too slow
         formatted_preds = pred_batch.view(batch_size * Sx * Sy, pred_dim)
-        formatted_labels = label_batch[:, :, :, ].view(batch_size * Sx * Sy, label_dim)
+        formatted_labels = label_batch.view(batch_size * Sx * Sy, label_dim)
         mask = (label_batch[:, :, :, 0:1].view(batch_size * Sx * Sy)).bool()
 
         formatted_preds_masked = formatted_preds[mask, :]
@@ -102,6 +103,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         )
         formatted_labels_xyxy = formatted_labels_masked[:, 1:5]
 
+        formatted_preds_xyxy = torch.clamp(
+            formatted_preds_xyxy,
+            min=0,
+            max=1,
+        )
+
         assert valid_boxes(
             formatted_preds_xyxy
         ), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
@@ -109,16 +116,11 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             formatted_labels_xyxy
         ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
 
-
         loss += (
             self.coord_weight
             * (
                 ops.complete_box_iou_loss(
-                    torch.clamp(
-                        formatted_preds_xyxy,
-                        min=0,
-                        max=1,
-                    ),
+                    formatted_preds_xyxy,
                     formatted_labels_xyxy,
                 )
             ).sum()
@@ -127,7 +129,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # classification loss
         if self._classify:
             loss += (
-                self.cel(formatted_preds_masked[:, 5:], formatted_labels_masked[:, 5].long())
+                self.cel(
+                    formatted_preds_masked[:, 5:], formatted_labels_masked[:, 5].long()
+                )
             ).sum()
 
         return loss / batch_size
