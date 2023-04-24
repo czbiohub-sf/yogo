@@ -39,7 +39,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # we jit YOGO_loss, which indexes a large-ish tensor randomly at each iteration,
 # which leads to a minor regression in performance instead of an improvement.
 # This issue (https://github.com/pytorch/pytorch/issues/52286) suggests this line.
-torch._C._jit_set_bailout_depth(1)
+torch.jit.set_fusion_strategy([('STATIC', 1)])
 
 def train(config):
     device = config["device"]
