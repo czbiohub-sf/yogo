@@ -116,8 +116,18 @@ class Metrics:
                 f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
             )
 
-        ( bs1, Sy, Sx, pred_shape,) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
-        ( bs2, Sy, Sx, label_shape,) = batch_labels.shape  # label_shape is mask x y x y class
+        (
+            bs1,
+            Sy,
+            Sx,
+            pred_shape,
+        ) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
+        (
+            bs2,
+            Sy,
+            Sx,
+            label_shape,
+        ) = batch_labels.shape  # label_shape is mask x y x y class
         assert bs1 == bs2, "sanity check, pred batch size should be equal"
 
         reformatted_preds = batch_preds.view(bs1 * Sx * Sy, pred_shape)
@@ -140,8 +150,12 @@ class Metrics:
 
             labels = reformatted_labels[mini:maxi][labels_mask[mini:maxi], :]
 
-            preds_with_objects_by_labels = reformatted_preds[mini:maxi][labels_mask[mini:maxi], :]
-            preds_with_objects = reformatted_preds[mini:maxi][objectness_mask[mini:maxi], :]
+            preds_with_objects_by_labels = reformatted_preds[mini:maxi][
+                labels_mask[mini:maxi], :
+            ]
+            preds_with_objects = reformatted_preds[mini:maxi][
+                objectness_mask[mini:maxi], :
+            ]
 
             if use_IoU and objectness_mask_sum[b] >= labels_mask_sum[b]:
                 # choose predictions from argmaxed IoU along label dim to get best prediction per label
