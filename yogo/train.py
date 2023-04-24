@@ -17,7 +17,7 @@ from typing import Optional, Tuple, cast, Literal, Iterator
 from yogo import DefaultHyperparams as df
 
 from yogo.model import YOGO
-from yogo.model_funcs import get_model_func
+from yogo.model_defns import get_model_func
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
@@ -266,8 +266,8 @@ def train():
 
         net.train()
 
-    net, global_step = YOGO.from_pth(model_save_dir / "best.pth")
-    print(f"loaded best.pth from step {global_step} for test inference")
+    net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
+    print(f"loaded best.pth from step {cfg['step']} for test inference")
     net.to(device)
 
     test_loss = 0.0
