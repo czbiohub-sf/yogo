@@ -116,59 +116,54 @@ class Metrics:
                 f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
             )
 
-        (
-            bs1,
-            Sy,
-            Sx,
-            pred_shape,
-        ) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
-        (
-            bs2,
-            Sy,
-            Sx,
-            label_shape,
-        ) = batch_labels.shape  # label_shape is mask x y x y class
-        assert bs1 == bs2, "sanity check, pred batch size should equal"
+        ( bs1, Sy, Sx, pred_shape,) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
+        ( bs2, Sy, Sx, label_shape,) = batch_labels.shape  # label_shape is mask x y x y class
+        assert bs1 == bs2, "sanity check, pred batch size should be equal"
+
+        reformatted_preds = batch_preds.view(bs1 * Sx * Sy, pred_shape)
+        reformatted_labels = batch_labels.view(bs2 * Sx * Sy, label_shape)
+
+        reformatted_preds[:, 0:4] = ops.box_convert(
+            reformatted_preds[:, 0:4], "cxcywh", "xyxy"
+        )
+
+        labels_mask = reformatted_labels[:, 0].bool()
+        labels_mask_sum = labels_mask.view(bs2, -1).sum(dim=1)
+
+        objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
+        objectness_mask_sum = objectness_mask.view(bs1, -1).sum(dim=1)
 
         masked_predictions, masked_labels = [], []
+
         for b in range(bs1):
-            reformatted_preds = batch_preds[b, ...].view(Sx * Sy, pred_shape)
-            reformatted_labels = batch_labels[b, ...].view(Sx * Sy, label_shape)
+            mini, maxi = b * Sx * Sy, (b + 1) * Sx * Sy
 
-            # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
-            labels_mask = reformatted_labels[:, 0].bool()
-            objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
+            labels = reformatted_labels[mini:maxi][labels_mask[mini:maxi], :]
 
-            img_masked_labels = reformatted_labels[labels_mask]
+            preds_with_objects_by_labels = reformatted_preds[mini:maxi][labels_mask[mini:maxi], :]
+            preds_with_objects = reformatted_preds[mini:maxi][objectness_mask[mini:maxi], :]
 
-            if use_IoU and objectness_mask.sum() >= len(img_masked_labels):
-                # filter on objectness
-                preds_with_objects = reformatted_preds[objectness_mask]
-
-                preds_with_objects[:, 0:4] = ops.box_convert(
-                    preds_with_objects[:, 0:4], "cxcywh", "xyxy"
-                )
-
+            if use_IoU and objectness_mask_sum[b] >= labels_mask_sum[b]:
                 # choose predictions from argmaxed IoU along label dim to get best prediction per label
                 prediction_matrix = ops.box_iou(
-                    img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]
+                    labels[:, 1:5],
+                    preds_with_objects[:, 0:4],
                 )
                 n, m = prediction_matrix.shape
                 if m > 0:
+                    # add mini here so we take correct slice
                     prediction_indices = prediction_matrix.argmax(dim=1)
                 else:
                     # no predictions!
                     prediction_indices = []
+
                 final_preds = preds_with_objects[prediction_indices]
             else:
                 # filter on label tensor idx
-                final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
-                final_preds[:, 0:4] = ops.box_convert(
-                    final_preds[:, 0:4], "cxcywh", "xyxy"
-                )
+                final_preds = preds_with_objects_by_labels
 
             masked_predictions.append(final_preds)
-            masked_labels.append(img_masked_labels)
+            masked_labels.append(labels)
 
         if per_batch:
             return masked_predictions, masked_labels
