@@ -3,15 +3,6 @@ import torch
 import torchvision.ops as ops
 
 
-def valid_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
-    """
-    xyxy_boxes: torch.Tensor of shape (N, 4)
-    """
-    return (
-        (xyxy_boxes[:, 0] <= xyxy_boxes[:, 2]) & (xyxy_boxes[:, 1] <= xyxy_boxes[:, 3])
-    ).all()
-
-
 class YOGOLoss(torch.nn.modules.loss._Loss):
     __constants__ = ["coord_weight", "no_obj_weight", "num_classes"]
     coord_weight: float
@@ -98,7 +89,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             label_batch[:, 0:1, :, :]
             .permute((1, 0, 2, 3))
             .reshape(batch_size * Sx * Sy)
-        ).bool()
+        ).to(torch.bool)
 
         # TODO try .T
         formatted_preds_masked = formatted_preds[:, mask].permute((1, 0))
@@ -109,13 +100,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             "cxcywh",
             "xyxy",
         )
-
-        assert valid_boxes(
-            formatted_preds_xyxy
-        ), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
-        assert valid_boxes(
-            formatted_labels_masked
-        ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
 
         loss += (
             self.coord_weight

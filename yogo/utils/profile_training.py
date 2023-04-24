@@ -36,6 +36,10 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # measure forward / backward pass timing w/
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
+# we jit YOGO_loss, which indexes a large-ish tensor randomly at each iteration,
+# which leads to a minor regression in performance instead of an improvement.
+# This issue (https://github.com/pytorch/pytorch/issues/52286) suggests this line.
+torch._C._jit_set_bailout_depth(1)
 
 def train(config):
     device = config["device"]
@@ -50,11 +54,14 @@ def train(config):
         anchor_w=anchor_w,
         anchor_h=anchor_h,
     ).to(device)
+
     Y_loss = YOGOLoss().to(device)
+    Y_loss = torch.jit.script(Y_loss)
 
     optimizer = AdamW(net.parameters(), lr=config["learning_rate"])
 
     metrics = Metrics(num_classes=num_classes, device=device, class_names=class_names)
+    # metrics = torch.jit.script(metrics)
 
     # TODO: generalize so we can tune Sx / Sy!
     # TODO: best way to make model architecture tunable?
