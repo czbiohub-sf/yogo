@@ -100,33 +100,31 @@ def load_labels(
 ) -> List[List[float]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
-    try:
-        with open(label_path, "r") as f:
-            file_chunk = f.read(1024)
-            f.seek(0)
 
-            try:
-                dialect = csv.Sniffer().sniff(file_chunk)
-                has_header = csv.Sniffer().has_header(file_chunk)
-                reader = csv.reader(f, dialect)
-            except csv.Error:
-                # emtpy file, no labels, just keep moving
-                return []
+    with open(label_path, "r") as f:
+        file_chunk = f.read(1024)
+        f.seek(0)
 
-            if has_header:
-                next(reader, None)
+        try:
+            dialect = csv.Sniffer().sniff(file_chunk)
+            has_header = csv.Sniffer().has_header(file_chunk)
+            reader = csv.reader(f, dialect)
+        except csv.Error:
+            # emtpy file, no labels, just keep moving
+            return []
 
-            for row in reader:
-                assert (
-                    len(row) == 5
-                ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
+        if has_header:
+            next(reader, None)
 
-                label_idx = correct_label_idx(row[0], dataset_classes, notes_data)
+        for row in reader:
+            assert (
+                len(row) == 5
+            ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
-                # float for everything so we can make tensors of labels
-                labels.append([float(label_idx)] + [float(v) for v in row[1:]])
-    except FileNotFoundError:
-        pass
+            label_idx = correct_label_idx(row[0], dataset_classes, notes_data)
+
+            # float for everything so we can make tensors of labels
+            labels.append([float(label_idx)] + [float(v) for v in row[1:]])
 
     return labels
 
