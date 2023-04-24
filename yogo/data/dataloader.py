@@ -1,5 +1,6 @@
 import os
 import torch
+import multiprocessing as mp
 
 from tqdm import tqdm
 from ruamel import yaml
@@ -134,6 +135,15 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
         )
 
 
+def multiproc_dataset_creation(dataset_paths: Sequence[Any]) -> List[Any]:
+    cpu_count = mp.cpu_count()
+    vs = []
+    with mp.Pool(cpu_count) as P:
+        for v in tqdm(P.imap_unordered(f, arr, chunksize=1), total=len(arr)):
+            vs.append(v)
+    return vs
+
+
 def get_datasets(
     dataset_description_file: str,
     Sx: int,
@@ -150,14 +160,15 @@ def get_datasets(
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-        ObjectDetectionDataset(
-            dataset_classes,
-            dataset_paths["image_path"],
-            dataset_paths["label_path"],
-            Sx,
-            Sy,
-            normalize_images=normalize_images,
-        )
+        multiproc_map(
+            partial(ObjectDetectionDataset,
+                dataset_classes,
+                dataset_paths["image_path"],
+                dataset_paths["label_path"],
+                Sx,
+                Sy,
+                normalize_images=normalize_images,
+            )
         for dataset_paths in tqdm(dataset_paths)
     )
 
