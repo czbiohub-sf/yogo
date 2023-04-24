@@ -13,10 +13,9 @@ def valid_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
 
 
 class YOGOLoss(torch.nn.modules.loss._Loss):
-    __constants__ = ["coord_weight", "no_obj_weight", "num_classes"]
+    __constants__ = ["coord_weight", "no_obj_weight"]
     coord_weight: float
     no_obj_weight: float
-    num_classes: int
 
     # TODO sweep over coord + no_obj_weight, look at confusion matrix for results
     def __init__(
