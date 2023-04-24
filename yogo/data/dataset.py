@@ -145,6 +145,7 @@ def label_file_to_tensor(
     if labels_tensor.nelement() == 0:
         return torch.zeros(Sy, Sx, LABEL_TENSOR_PRED_DIM_SIZE)
 
+    # most bbox calcs expect xyxy, so put boxes in xyxy
     labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
     return format_labels_tensor(labels_tensor, Sx, Sy)
 
