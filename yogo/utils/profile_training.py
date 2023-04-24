@@ -37,6 +37,10 @@ torch.backends.cuda.matmul.allow_tf32 = True
 # https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
+def trace_handler(prof):
+    prof.export_chrome_trace("chrome_profile.json")
+
+
 def train(config):
     device = config["device"]
     anchor_w = config["anchor_w"]
@@ -74,26 +78,37 @@ def train(config):
     cs = CosineAnnealingLR(optimizer, T_max=anneal_period, eta_min=5e-5)
     scheduler = SequentialLR(optimizer, [lin, cs], [min_period])
 
-    import functiontrace
+    with torch.profiler.profile(
+        activities=[
+            torch.profiler.ProfilerActivity.CPU,
+            torch.profiler.ProfilerActivity.CUDA,
+        ],
+        schedule=torch.profiler.schedule(
+            wait=2,
+            warmup=8,
+            active=54,
+        ),
+        with_stack=True,
+        on_trace_ready=trace_handler,
+    ) as p:
+        for i, (imgs, labels) in enumerate(train_dataloader):
+            imgs = imgs.to(device)
+            labels = labels.to(device)
 
-    functiontrace.trace()
+            optimizer.zero_grad(set_to_none=True)
 
-    for i, (imgs, labels) in enumerate(train_dataloader):
-        imgs = imgs.to(device)
-        labels = labels.to(device)
+            outputs = net(imgs)
+            loss = Y_loss(outputs, labels)
+            loss.backward()
 
-        optimizer.zero_grad(set_to_none=True)
+            optimizer.step()
+            scheduler.step()
+            metrics.update(outputs.detach(), labels)
 
-        outputs = net(imgs)
-        loss = Y_loss(outputs, labels)
-        loss.backward()
+            p.step()
 
-        optimizer.step()
-        scheduler.step()
-        metrics.update(outputs.detach(), labels)
-
-        if i > 64:
-            break
+            if i > 64:
+                break
 
 
 WandbConfig: TypeAlias = dict
@@ -175,7 +190,7 @@ def do_training(args) -> None:
 
 
 if __name__ == "__main__":
-    torch.multiprocessing.set_start_method("spawn")
+    # torch.multiprocessing.set_start_method("spawn")
 
     parser = train_parser()
     args = parser.parse_args()
