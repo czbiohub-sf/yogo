@@ -134,6 +134,24 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
         )
 
 
+def _create_ObjectDetectionDataset(
+    dataset_path,
+    dataset_classes,
+    Sx,
+    Sy,
+    normalize_images,
+) -> ObjectDetectionDataset:
+    "helper for multiproc_map_with_tqdm"
+    return ObjectDetectionDataset(
+        dataset_classes,
+        dataset_path["image_path"],
+        dataset_path["label_path"],
+        Sx,
+        Sy,
+        normalize_images=normalize_images,
+    )
+
+
 def get_datasets(
     dataset_description_file: str,
     Sx: int,
@@ -141,16 +159,6 @@ def get_datasets(
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> Dict[str, Dataset]:
-    def create_ObjectDetectionDataset(dataset_path) -> ObjectDetectionDataset:
-        return ObjectDetectionDataset(
-            dataset_classes,
-            dataset_path["image_path"],
-            dataset_path["label_path"],
-            Sx,
-            Sy,
-            normalize_images=normalize_images,
-        )
-
     (
         dataset_classes,
         split_fractions,
@@ -160,12 +168,30 @@ def get_datasets(
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-        multiproc_map_with_tqdm(create_ObjectDetectionDataset, dataset_paths)
+        multiproc_map_with_tqdm(
+            partial(
+                _create_ObjectDetectionDataset,
+                dataset_classes=dataset_classes,
+                Sx=Sx,
+                Sy=Sy,
+                normalize_images=normalize_images,
+            ),
+            dataset_paths,
+        )
     )
 
     if test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-            multiproc_map_with_tqdm(create_ObjectDetectionDataset, test_dataset_paths)
+            multiproc_map_with_tqdm(
+                partial(
+                    _create_ObjectDetectionDataset,
+                    dataset_classes=dataset_classes,
+                    Sx=Sx,
+                    Sy=Sy,
+                    normalize_images=normalize_images,
+                ),
+                test_dataset_paths,
+            )
         )
         return {
             "train": full_dataset,
