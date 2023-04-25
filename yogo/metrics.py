@@ -45,12 +45,12 @@ class Metrics:
         self.classify = classify
         assert self.num_classes == len(self.class_names)
 
-    def update(self, preds, labels):
+    def update(self, preds, labels, label_idxs):
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(
-            preds, labels, use_IoU=True, per_batch=True
+            preds, labels, label_idxs, use_IoU=True, per_batch=True
         )
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
@@ -91,6 +91,7 @@ class Metrics:
         self,
         batch_preds: torch.Tensor,
         batch_labels: torch.Tensor,
+        batch_label_idxs: torch.Tensor,
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
         per_batch: bool = False,
@@ -132,14 +133,18 @@ class Metrics:
 
         masked_predictions, masked_labels = [], []
         for b in range(bs1):
+            num_labels = batch_label_idxs[b, 0, 0].int().item()
+            label_indicies = batch_label_idxs[b, 1:num_labels+1, :].int()
+
             reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).T
-            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).T
+            reformatted_labels = batch_labels[b, :, label_indicies[:, 0], label_indicies[:, 1]].view(label_shape, num_labels).T
+            img_masked_labels = reformatted_labels
 
             # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
-            labels_mask = reformatted_labels[:, 0].bool()
+            # print(label_indicies.shape)
             objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
 
-            img_masked_labels = reformatted_labels[labels_mask]
+            # print(f"{label_indicies.shape=} {label_indicies.dtype=} {reformatted_labels.shape} {num_labels=} ")
 
             if use_IoU and objectness_mask.sum() >= len(img_masked_labels):
                 # filter on objectness

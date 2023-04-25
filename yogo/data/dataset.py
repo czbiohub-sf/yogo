@@ -60,7 +60,7 @@ def format_labels_tensor(
             output[1:5, j, i] = cell_label[pred_square_idx][1:]  # xyxy
             output[5, j, i] = cell_label[pred_square_idx][0]  # prediction idx
 
-        return output, torch.tensor(list(label_cells))
+        return output, torch.tensor(list(label_cells))[:, [1,0]].int()
 
 
 def correct_label_idx(
@@ -155,7 +155,7 @@ def create_collected_label_index_tensor(
     max_num_labels = max(li.shape[0] for li in label_idxs_seq)
 
     N, label_idx_dim, num_idxs = len(label_idxs_seq), max_num_labels + 1, 2
-    label_idxs_batch = torch.zeros((N, label_idx_dim, num_idxs))
+    label_idxs_batch = torch.zeros((N, label_idx_dim, num_idxs), dtype=torch.int)
 
     for b, label_idxs in enumerate(label_idxs_seq):
         num_labels = label_idxs.shape[0]

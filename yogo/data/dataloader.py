@@ -235,7 +235,7 @@ def stack_label_idx_batch(label_idxs_samples: List[torch.Tensor]):
     max_num_labels = max(li.shape[0] for li in label_idxs_samples)
 
     N, label_idx_dim, num_idxs = len(label_idxs_samples), max_num_labels + 1, 2
-    label_idxs_batch = torch.zeros((N, label_idx_dim, num_idxs))
+    label_idxs_batch = torch.zeros((N, label_idx_dim, num_idxs), dtype=torch.int)
 
     for b, label_idxs in enumerate(label_idxs_samples):
         num_labels = label_idxs.shape[0]

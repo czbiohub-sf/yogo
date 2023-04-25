@@ -103,7 +103,7 @@ def train(config):
 
             optimizer.step()
             scheduler.step()
-            metrics.update(outputs.detach(), labels)
+            metrics.update(outputs.detach(), labels, label_idxs)
 
             p.step()
 
