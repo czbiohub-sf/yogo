@@ -47,7 +47,9 @@ def split_labels_into_bins(
     return {k: torch.vstack(vs) for k, vs in d.items()}
 
 
-def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> Tuple[torch.Tensor, torch.Tensor]:
+def format_labels_tensor(
+    labels: torch.Tensor, Sx: int, Sy: int
+) -> Tuple[torch.Tensor, torch.Tensor]:
     with torch.no_grad():
         output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
         label_cells = split_labels_into_bins(labels, Sx, Sy)
@@ -147,7 +149,9 @@ def label_file_to_tensor(
     return format_labels_tensor(labels_tensor, Sx, Sy)
 
 
-def create_collected_label_index_tensor(label_idxs_seq: Tuple[torch.Tensor]) -> torch.Tensor:
+def create_collected_label_index_tensor(
+    label_idxs_seq: Tuple[torch.Tensor],
+) -> torch.Tensor:
     max_num_labels = max(li.shape[0] for li in label_idxs_seq)
 
     N, label_idx_dim, num_idxs = len(label_idxs_seq), max_num_labels + 1, 2
@@ -156,9 +160,10 @@ def create_collected_label_index_tensor(label_idxs_seq: Tuple[torch.Tensor]) -> 
     for b, label_idxs in enumerate(label_idxs_seq):
         num_labels = label_idxs.shape[0]
         label_idxs_batch[b, 0, :] = num_labels
-        label_idxs_batch[b, 1:num_labels+1, :] = label_idxs
+        label_idxs_batch[b, 1 : num_labels + 1, :] = label_idxs
 
     return label_idxs_batch
+
 
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
@@ -189,7 +194,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
         # essentially, to avoid dataloader workers from copying tonnes of mem,
         # we can't store samples in lists. Hence, the tensor and numpy array.
-        paths, tensors, tensor_idxs  = self.make_dataset(
+        paths, tensors, tensor_idxs = self.make_dataset(
             Sx,
             Sy,
             is_valid_file=is_valid_file,
@@ -200,7 +205,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self._paths = np.array(paths).astype(np.string_)
         self._labels = torch.stack(tensors)
         self._label_idxs = create_collected_label_index_tensor(tensor_idxs)
-        print(self._label_idxs.shape)
 
     def make_dataset(
         self,

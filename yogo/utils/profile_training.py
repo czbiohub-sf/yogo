@@ -94,7 +94,6 @@ def train(config):
         for i, (imgs, labels, label_idxs) in enumerate(train_dataloader):
             imgs = imgs.to(device)
             labels = labels.to(device)
-            print(label_idxs.shape, label_idxs)
 
             optimizer.zero_grad(set_to_none=True)
 
