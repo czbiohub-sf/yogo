@@ -231,10 +231,19 @@ def split_dataset(
     )
 
 
+def stack_label_idx_batch(label_idxs: List[torch.Tensor]):
+    max_num_labels = max(li.shape[1] for li in label_idxs)
+
+    N,
+
+
 def collate_batch(batch, transforms):
-    inputs, labels = zip(*batch)
+    inputs, labels, label_idxs = zip(*batch)
     batched_inputs = torch.stack(inputs)
     batched_labels = torch.stack(labels)
+
+
+
     return transforms(batched_inputs, batched_labels)
 
 
