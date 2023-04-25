@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Union, Tuple, Optional
+from typing import List, Dict, Union, Tuple, Optional, Sequence, Any, Callable
 
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
@@ -135,12 +135,16 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
         )
 
 
-def multiproc_dataset_creation(dataset_paths: Sequence[Any]) -> List[Any]:
+def multiproc_dataset_creation(
+    func: Callable[[Any], Any], arr: Sequence[Any]
+) -> List[Any]:
     cpu_count = mp.cpu_count()
     vs = []
+
     with mp.Pool(cpu_count) as P:
-        for v in tqdm(P.imap_unordered(f, arr, chunksize=1), total=len(arr)):
+        for v in tqdm(P.imap_unordered(func, arr, chunksize=1), total=len(arr)):
             vs.append(v)
+
     return vs
 
 
@@ -151,6 +155,16 @@ def get_datasets(
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> Dict[str, Dataset]:
+    def create_ObjectDetectionDataset(dataset_path) -> ObjectDetectionDataset:
+        return ObjectDetectionDataset(
+            dataset_classes,
+            dataset_path["image_path"],
+            dataset_path["label_path"],
+            Sx,
+            Sy,
+            normalize_images=normalize_images,
+        )
+
     (
         dataset_classes,
         split_fractions,
@@ -160,16 +174,7 @@ def get_datasets(
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-        multiproc_map(
-            partial(ObjectDetectionDataset,
-                dataset_classes,
-                dataset_paths["image_path"],
-                dataset_paths["label_path"],
-                Sx,
-                Sy,
-                normalize_images=normalize_images,
-            )
-        for dataset_paths in tqdm(dataset_paths)
+        multiproc_dataset_creation(create_ObjectDetectionDataset, dataset_paths)
     )
 
     if test_dataset_paths is not None:
