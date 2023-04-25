@@ -179,15 +179,9 @@ def get_datasets(
 
     if test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-            ObjectDetectionDataset(
-                dataset_classes,
-                dataset_paths["image_path"],
-                dataset_paths["label_path"],
-                Sx,
-                Sy,
-                normalize_images=normalize_images,
+            multiproc_dataset_creation(
+                create_ObjectDetectionDataset, test_dataset_paths
             )
-            for dataset_paths in tqdm(test_dataset_paths)
         )
         return {
             "train": full_dataset,
