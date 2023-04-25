@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-import tqdm
 import wandb
 import torch
 import multiprocessing as mp
@@ -8,6 +7,7 @@ import multiprocessing as mp
 import torchvision.ops as ops
 import torchvision.transforms as transforms
 
+from tqdm import tqdm
 from PIL import Image, ImageDraw
 from typing import (
     Optional,
@@ -18,9 +18,10 @@ from typing import (
     List,
     Literal,
     get_args,
+    Any,
+    Callable,
 )
 
-from typing import List, Dict, Union, Tuple, Optional, Sequence, Any, Callable
 
 T = TypeVar("T")
 BoxFormat = Literal["xyxy", "cxcywh"]
@@ -126,7 +127,6 @@ def multiproc_map_with_tqdm(
             vs.append(v)
 
     return vs
-
 
 
 def draw_rects(
