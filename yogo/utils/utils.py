@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 
+import tqdm
 import wandb
 import torch
+import multiprocessing as mp
 
 import torchvision.ops as ops
 import torchvision.transforms as transforms
@@ -18,6 +20,7 @@ from typing import (
     get_args,
 )
 
+from typing import List, Dict, Union, Tuple, Optional, Sequence, Any, Callable
 
 T = TypeVar("T")
 BoxFormat = Literal["xyxy", "cxcywh"]
@@ -110,6 +113,20 @@ def format_preds(
     )
 
     return preds[keep_idxs]
+
+
+def multiproc_map_with_tqdm(
+    func: Callable[[Any], Any], arr: Sequence[Any]
+) -> List[Any]:
+    cpu_count = mp.cpu_count()
+    vs = []
+
+    with mp.Pool(cpu_count) as P:
+        for v in tqdm(P.imap_unordered(func, arr, chunksize=1), total=len(arr)):
+            vs.append(v)
+
+    return vs
+
 
 
 def draw_rects(

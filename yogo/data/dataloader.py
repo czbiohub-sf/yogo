@@ -1,8 +1,6 @@
 import os
 import torch
-import multiprocessing as mp
 
-from tqdm import tqdm
 from ruamel import yaml
 from pathlib import Path
 from functools import partial
@@ -11,8 +9,9 @@ from dataclasses import dataclass
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Union, Tuple, Optional, Sequence, Any, Callable
+from typing import List, Dict, Union, Tuple, Optional
 
+from yogo.utils import multiproc_map_with_tqdm
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
     DualInputModule,
@@ -135,19 +134,6 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
         )
 
 
-def multiproc_dataset_creation(
-    func: Callable[[Any], Any], arr: Sequence[Any]
-) -> List[Any]:
-    cpu_count = mp.cpu_count()
-    vs = []
-
-    with mp.Pool(cpu_count) as P:
-        for v in tqdm(P.imap_unordered(func, arr, chunksize=1), total=len(arr)):
-            vs.append(v)
-
-    return vs
-
-
 def get_datasets(
     dataset_description_file: str,
     Sx: int,
@@ -174,14 +160,12 @@ def get_datasets(
 
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-        multiproc_dataset_creation(create_ObjectDetectionDataset, dataset_paths)
+        multiproc_map_with_tqdm(create_ObjectDetectionDataset, dataset_paths)
     )
 
     if test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-            multiproc_dataset_creation(
-                create_ObjectDetectionDataset, test_dataset_paths
-            )
+            multiproc_map_with_tqdm(create_ObjectDetectionDataset, test_dataset_paths)
         )
         return {
             "train": full_dataset,
