@@ -2,7 +2,7 @@ import torch
 
 import torchvision.ops as ops
 
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Union, Tuple, List, Dict
 
 from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -94,7 +94,10 @@ class Metrics:
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
         per_batch: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Union[
+            Tuple[torch.Tensor, torch.Tensor],
+            Tuple[List[torch.Tensor], List[torch.Tensor]],
+        ]:
         """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
