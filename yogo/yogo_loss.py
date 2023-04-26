@@ -89,7 +89,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # hopefully it is not too slow
         formatted_preds = pred_batch.view(batch_size * Sx * Sy, pred_dim)
         formatted_labels = label_batch.view(batch_size * Sx * Sy, label_dim)
-        mask = (label_batch[:, :, :, 0:1].view(batch_size * Sx * Sy)).bool()
+        mask = (label_batch[:, :, :, 0].view(batch_size * Sx * Sy)).bool()
 
         formatted_preds_masked = formatted_preds[mask, :]
         formatted_labels_masked = formatted_labels[mask, :]
@@ -127,9 +127,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # classification loss
         if self._classify:
             loss += (
-                label_batch[:, :, :, 0]
-                * self.cel(
-                    formatted_preds_masked[:, 5:], formatted_labels_masked[:, 5].long()
+                self.cel(
+                    formatted_preds_masked[:, :5], formatted_labels_masked[:, 5].long()
                 )
             ).sum()
 
