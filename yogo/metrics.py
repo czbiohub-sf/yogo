@@ -89,8 +89,8 @@ class Metrics:
 
     def _format_preds_and_labels(
         self,
-        batch_preds: torch.Tensor,
-        batch_labels: torch.Tensor,
+        pred_batch: torch.Tensor,
+        label_batch: torch.Tensor,
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
         per_batch: bool = False,
@@ -98,11 +98,14 @@ class Metrics:
         """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
-        We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
+        We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c.
 
-        batch_preds and batch_labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
-        use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
-        objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
+        This is also a very slow function right now (due to `mask`s, which require cudaMemcpyAsync or cudaStreamSynchronize,
+        depending on implementation).
+
+        - pred_batch and label_batch are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
+        - use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
+        - objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
             only be used with use_IoU == True
 
         returns
@@ -121,26 +124,26 @@ class Metrics:
             Sy,
             Sx,
             pred_shape,
-        ) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
+        ) = pred_batch.shape  # pred_shape is xc yc w h objectness *classes
         (
             bs2,
             Sy,
             Sx,
             label_shape,
-        ) = batch_labels.shape  # label_shape is mask x y x y class
+        ) = label_batch.shape  # label_shape is mask x y x y class
         assert bs1 == bs2, "sanity check, pred batch size should be equal"
 
-        reformatted_preds = batch_preds.view(bs1 * Sx * Sy, pred_shape)
-        reformatted_labels = batch_labels.view(bs2 * Sx * Sy, label_shape)
+        formatted_preds = pred_batch.view(bs1 * Sx * Sy, pred_shape)
+        formatted_labels = label_batch.view(bs2 * Sx * Sy, label_shape)
 
-        reformatted_preds[:, 0:4] = ops.box_convert(
-            reformatted_preds[:, 0:4], "cxcywh", "xyxy"
+        formatted_preds[:, 0:4] = ops.box_convert(
+            formatted_preds[:, 0:4], "cxcywh", "xyxy"
         )
 
-        labels_mask = reformatted_labels[:, 0].bool()
+        labels_mask = formatted_labels[:, 0].bool()
         labels_mask_sum = labels_mask.view(bs2, -1).sum(dim=1)
 
-        objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
+        objectness_mask = (formatted_preds[:, 4] > objectness_thresh).bool()
         objectness_mask_sum = objectness_mask.view(bs1, -1).sum(dim=1)
 
         masked_predictions, masked_labels = [], []
@@ -148,12 +151,12 @@ class Metrics:
         for b in range(bs1):
             mini, maxi = b * Sx * Sy, (b + 1) * Sx * Sy
 
-            labels = reformatted_labels[mini:maxi][labels_mask[mini:maxi], :]
+            labels = formatted_labels[mini:maxi][labels_mask[mini:maxi], :]
 
-            preds_with_objects_by_labels = reformatted_preds[mini:maxi][
+            preds_with_objects_by_labels = formatted_preds[mini:maxi][
                 labels_mask[mini:maxi], :
             ]
-            preds_with_objects = reformatted_preds[mini:maxi][
+            preds_with_objects = formatted_preds[mini:maxi][
                 objectness_mask[mini:maxi], :
             ]
 
