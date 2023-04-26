@@ -127,8 +127,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # classification loss
         if self._classify:
             loss += (
-                self.cel(
-                    formatted_preds_masked[:, 5:], formatted_labels_masked[:, 5].long()
+                label_batch[:, :, :, 0]
+                * self.cel(
+                    pred_batch[:, :, :, :5], label_batch[:, :, :, 5].long()
                 )
             ).sum()
 
