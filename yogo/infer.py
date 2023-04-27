@@ -139,12 +139,13 @@ class ImageLoader:
                     zarr_store[:, :, rg.start : rg.stop].transpose((2, 0, 1))
                     if isinstance(zarr_store, zarr.Array)
                     else np.stack(
-                        zarr_store[i][:][None, ...]
-                        for i in rg
+                        [zarr_store[i][:][None, ...]
+                        for i in rg]
                     )
                 )
                 img_batch = transform(img_batch)
-                img_batch.unsqueeze_(dim=1)
+                if len(img_batch.shape) == 3:
+                    img_batch.unsqueeze_(dim=1)
                 if normalize_images:
                     img_batch /= 255
                 yield img_batch.to(device)
