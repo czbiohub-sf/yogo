@@ -154,6 +154,7 @@ class ImageLoader:
         return cls(_iter, _num_els)
 
 
+@torch.no_grad()
 def predict(
     path_to_pth: str,
     path_to_images: Optional[Path] = None,
