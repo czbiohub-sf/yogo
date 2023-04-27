@@ -5,6 +5,7 @@ import math
 import torch
 import signal
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from torch import nn
@@ -130,11 +131,18 @@ class ImageLoader:
         zarr_store = zarr.open(str(path_to_zarr), mode="r")
         transform = Compose([torch.Tensor, *transform_list])
 
-        _num_els = zarr_store.initialized
+        _num_els = zarr_store.initialized if isinstance(zarr_store, zarr.Array) else len(zarr_store)
 
         def _iter():
             for rg in iter_in_chunks(range(_num_els), n):
-                img_batch = zarr_store[:, :, rg.start : rg.stop].transpose((2, 0, 1))
+                img_batch = (
+                    zarr_store[:, :, rg.start : rg.stop].transpose((2, 0, 1))
+                    if isinstance(zarr_store, zarr.Array)
+                    else np.stack(
+                        zarr_store[i][:][None, ...]
+                        for i in rg
+                    )
+                )
                 img_batch = transform(img_batch)
                 img_batch.unsqueeze_(dim=1)
                 if normalize_images:
@@ -161,6 +169,7 @@ def predict(
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
+    model.eval()
 
     img_h, img_w = model.get_img_size()
 
@@ -200,14 +209,14 @@ def predict(
         if isinstance(data, torch.Tensor):
             fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
             img_batch = data
-            res = model(img_batch)
+            res = model(img_batch).cpu()
         else:
             # data is a list of filenames, so we have to create the batch here
             fnames = data
             img_batch = ImageLoader.create_batch_from_fnames(
                 fnames, transform=R, device=device
             )
-            res = model(img_batch)
+            res = model(img_batch).cpu()
 
         if output_dir is not None and not draw_boxes:
             out_fnames = [
