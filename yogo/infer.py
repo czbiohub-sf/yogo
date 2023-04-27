@@ -131,17 +131,18 @@ class ImageLoader:
         zarr_store = zarr.open(str(path_to_zarr), mode="r")
         transform = Compose([torch.Tensor, *transform_list])
 
-        _num_els = zarr_store.initialized if isinstance(zarr_store, zarr.Array) else len(zarr_store)
+        _num_els = (
+            zarr_store.initialized
+            if isinstance(zarr_store, zarr.Array)
+            else len(zarr_store)
+        )
 
         def _iter():
             for rg in iter_in_chunks(range(_num_els), n):
                 img_batch = (
                     zarr_store[:, :, rg.start : rg.stop].transpose((2, 0, 1))
                     if isinstance(zarr_store, zarr.Array)
-                    else np.stack(
-                        [zarr_store[i][:][None, ...]
-                        for i in rg]
-                    )
+                    else np.stack([zarr_store[i][:][None, ...] for i in rg])
                 )
                 img_batch = transform(img_batch)
                 if len(img_batch.shape) == 3:
