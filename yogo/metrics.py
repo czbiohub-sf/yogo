@@ -95,9 +95,9 @@ class Metrics:
         objectness_thresh: float = 0.3,
         per_batch: bool = False,
     ) -> Union[
-            Tuple[torch.Tensor, torch.Tensor],
-            Tuple[List[torch.Tensor], List[torch.Tensor]],
-        ]:
+        Tuple[torch.Tensor, torch.Tensor],
+        Tuple[List[torch.Tensor], List[torch.Tensor]],
+    ]:
         """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
