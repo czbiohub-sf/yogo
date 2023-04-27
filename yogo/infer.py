@@ -165,7 +165,7 @@ def predict(
     img_h, img_w = model.get_img_size()
 
     normalize_images = cfg["normalize_images"]
-    R = Resize([img_h, img_w])
+    R = Resize([img_h, img_w], antialias=True)
 
     if path_to_images is not None and path_to_zarr is not None:
         raise ValueError(

@@ -274,7 +274,7 @@ def get_dataloader(
         assert vertical_crop_size is not None, "must be None if cropping"
         image_preprocess = RandomVerticalCrop(vertical_crop_size)
     elif preprocess_type == "resize":
-        image_preprocess = Resize(resize_shape)
+        image_preprocess = Resize(resize_shape, antialias=True)
     elif preprocess_type is None:
         image_preprocess = DualInputId()
     else:
