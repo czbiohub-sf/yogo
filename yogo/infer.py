@@ -191,6 +191,9 @@ def predict(
     else:
         raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
 
+    if output_dir is not None:
+        Path(output_dir).mkdir(exist_ok=True, parents=False)
+
     if not use_tqdm:
 
         def tqdm_(v):
