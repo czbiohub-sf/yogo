@@ -154,7 +154,8 @@ def predict(
     batch_size: int = 16,
     use_tqdm: bool = False,
     device: Union[str, torch.device] = "cpu",
-):
+    print_results: bool = False,
+) -> List[torch.Tensor]:
     if draw_boxes:
         batch_size = 1
 
@@ -193,16 +194,9 @@ def predict(
     if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
-    if not use_tqdm:
-
-        def tqdm_(v):
-            return v
-
-    else:
-        tqdm_ = tqdm
-
+    results = []
     N = int(math.log(len(image_loader), 10) + 1)
-    for i, data in enumerate(tqdm_(image_loader)):
+    for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
             fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
             img_batch = data
@@ -236,8 +230,12 @@ def predict(
                 ax.set_axis_off()
                 ax.imshow(drawn_img, cmap="gray")
                 plt.show()
-        else:
+        elif print_results:
             print(res)
+        else:
+            results.extend(r for r in res)
+
+    return results
 
 
 def do_infer(args):
