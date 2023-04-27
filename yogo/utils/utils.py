@@ -132,6 +132,7 @@ def draw_rects(
     ), f"takes single grayscale image - should be 2d, got {img.shape}"
     h, w = img.shape
 
+    formatted_rects: Union[torch.Tensor, List]
     if isinstance(rects, torch.Tensor) and len(rects.shape) == 3:
         pred_dim, Sy, Sx = rects.shape
 
@@ -172,10 +173,17 @@ def draw_rects(
     rgb.paste(image)
     draw = ImageDraw.Draw(rgb)
 
+    def bbox_colour(label: str) -> str:
+        if label in ("healthy", "0"):
+            return "green"
+        elif label in ("misc", "6"):
+            return "black"
+        return "red"
+
     for r in formatted_rects:
         r = list(r)
-        draw.rectangle(r[:4], outline="red")
         label = labels[int(r[4])] if labels is not None else str(r[4])
+        draw.rectangle(r[:4], outline=bbox_colour(label))
         draw.text((r[0], r[1]), label, (0, 0, 0))
 
     return rgb
