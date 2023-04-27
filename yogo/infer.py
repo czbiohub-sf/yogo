@@ -153,11 +153,10 @@ def predict(
     draw_boxes: bool = False,
     batch_size: int = 16,
     use_tqdm: bool = False,
+    device: Union[str, torch.device] = "cpu",
 ):
     if draw_boxes:
         batch_size = 1
-
-    device = choose_device()
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
