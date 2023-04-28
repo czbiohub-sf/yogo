@@ -11,7 +11,7 @@ from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
 from typing import List, Dict, Union, Tuple, Optional
 
-from yogo.utils import multiproc_map_with_tqdm
+from yogo.utils import multithread_map
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
     DualInputModule,
@@ -141,7 +141,7 @@ def _create_ObjectDetectionDataset(
     Sy,
     normalize_images,
 ) -> ObjectDetectionDataset:
-    "helper for multiproc_map_with_tqdm"
+    "helper for multithreaded dataset creation"
     return ObjectDetectionDataset(
         dataset_classes,
         dataset_path["image_path"],
@@ -166,9 +166,8 @@ def get_datasets(
         test_dataset_paths,
     ) = load_dataset_description(dataset_description_file)
 
-    # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-        multiproc_map_with_tqdm(
+        multithread_map(
             partial(
                 _create_ObjectDetectionDataset,
                 dataset_classes=dataset_classes,
@@ -182,7 +181,7 @@ def get_datasets(
 
     if test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
-            multiproc_map_with_tqdm(
+            multithread_map(
                 partial(
                     _create_ObjectDetectionDataset,
                     dataset_classes=dataset_classes,

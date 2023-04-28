@@ -4,6 +4,9 @@ import wandb
 import torch
 import multiprocessing as mp
 
+from functools import partial
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed, ALL_COMPLETED
+
 import torchvision.ops as ops
 import torchvision.transforms as transforms
 
@@ -116,17 +119,53 @@ def format_preds(
     return preds[keep_idxs]
 
 
-def multiproc_map_with_tqdm(
-    func: Callable[[Any], Any], arr: Sequence[Any]
+print_lock = mp.Lock()
+
+
+def protected_fcn(f, *args):
+    try:
+        f(*args)
+    except:
+        with print_lock:
+            print(f"exception occurred processing {args}")
+            print(traceback.format_exc())
+
+
+def multiprocess_map(
+    fn: Callable[[Any,], Any],
+    argument_list: Sequence[Any],
+    ordered: bool = True,
+    verbose: bool = True,
 ) -> List[Any]:
-    cpu_count = mp.cpu_count()
-    vs = []
+    protected_fcn_partial = partial(protected_fcn, fn)
+    argument_list = list(argument_list)
 
-    with mp.Pool(cpu_count) as P:
-        for v in tqdm(P.imap_unordered(func, arr, chunksize=1), total=len(arr)):
-            vs.append(v)
+    with mp.Pool() as pool:
+        if ordered:
+            mp_func = pool.imap
+        else:
+            mp_func = pool.imap_unordered
+        return list(
+            tqdm(
+                mp_func(protected_fcn_partial, argument_list),
+                total=len(argument_list),
+                disable=not verbose,
+            )
+        )
 
-    return vs
+def multithread_map(
+    fn: Callable[[Any,], Any],
+    argument_list: Sequence[Any],
+    verbose: bool = True,
+) -> List[Any]:
+    """ UNORDERED MAP!
+    """
+    protected_fcn_partial = partial(protected_fcn, fn)
+    argument_list = list(argument_list)
+
+    with ThreadPoolExecutor(4) as executor:
+        futs = [executor.submit(protected_fcn_partial, arg) for arg in argument_list]
+        return list(tqdm(as_completed(futs), total=len(argument_list), disable=not verbose))
 
 
 def draw_rects(
