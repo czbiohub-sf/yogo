@@ -246,7 +246,7 @@ def predict(
         elif print_results:
             print(res)
         else:
-            results[i:i+batch_size, ...] = res.cpu()
+            results[i : i + batch_size, ...] = res.cpu()
 
     return results
 
