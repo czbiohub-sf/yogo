@@ -166,7 +166,7 @@ def predict(
     use_tqdm: bool = False,
     device: Union[str, torch.device] = "cpu",
     print_results: bool = False,
-) -> List[torch.Tensor]:
+) -> torch.Tensor:
     if draw_boxes:
         batch_size = 1
 
@@ -175,6 +175,7 @@ def predict(
     model.eval()
 
     img_h, img_w = model.get_img_size()
+    Sx, Sy = model.get_grid_size()
 
     normalize_images = cfg["normalize_images"]
     R = Resize([img_h, img_w], antialias=True)
@@ -206,7 +207,7 @@ def predict(
     if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
-    results = []
+    results = torch.zeros((len(image_loader), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
     N = int(math.log(len(image_loader), 10) + 1)
     for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
@@ -245,7 +246,7 @@ def predict(
         elif print_results:
             print(res)
         else:
-            results.extend(r for r in res)
+            results[i:i+batch_size, ...] = res.cpu()
 
     return results
 
