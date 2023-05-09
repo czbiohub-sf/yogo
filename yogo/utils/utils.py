@@ -112,6 +112,24 @@ def format_preds(
     return preds[keep_idxs]
 
 
+def _format_tensor_for_rects(rects: torch.Tensor, img_h: int, img_w: int, thresh=0.5) -> torch.Tensor:
+    pred_dim, Sy, Sx = rects.shape
+
+    if thresh is None:
+        thresh = 0.5
+
+    formatted_preds = format_preds(
+        rects,
+        thresh=thresh,
+        box_format="xyxy",
+    )
+    N = formatted_preds.shape[0]
+    formatted_rects = torch.zeros((N, 5), device=formatted_preds.device)
+    formatted_rects[:, (0, 2)] = img_w * formatted_preds[:, (0, 2)]
+    formatted_rects[:, (1, 3)] = img_h * formatted_preds[:, (1, 3)]
+    formatted_rects[:, 4] = torch.argmax(formatted_preds[:, 5:], dim=1)
+    return formatted_rects
+
 def draw_rects(
     img: torch.Tensor,
     rects: Union[torch.Tensor, List],
@@ -127,29 +145,18 @@ def draw_rects(
     thresh is a threshold for confidence when rects is a torch.Tensor
     """
     img = img.squeeze()
+    if isinstance(rects, torch.Tensor):
+        rects = rects.squeeze()
+
     assert (
         len(img.shape) == 2
     ), f"takes single grayscale image - should be 2d, got {img.shape}"
+
     h, w = img.shape
 
     formatted_rects: Union[torch.Tensor, List]
     if isinstance(rects, torch.Tensor) and len(rects.shape) == 3:
-        pred_dim, Sy, Sx = rects.shape
-
-        if thresh is None:
-            thresh = 0.5
-
-        formatted_preds = format_preds(
-            rects,
-            thresh=thresh,
-            box_format="xyxy",
-        )
-        N = formatted_preds.shape[0]
-        formatted_rects = torch.zeros((N, 5), device=formatted_preds.device)
-        formatted_rects[:, (0, 2)] = w * formatted_preds[:, (0, 2)]
-        formatted_rects[:, (1, 3)] = h * formatted_preds[:, (1, 3)]
-        formatted_rects[:, 4] = torch.argmax(formatted_preds[:, 5:], dim=1)
-
+        formatted_rects = _format_tensor_for_rects(rects, h, w, thresh=thresh)
     elif isinstance(rects, list):
         if thresh is not None:
             raise ValueError("threshold only valid for tensor (i.e. prediction) input")
@@ -168,7 +175,7 @@ def draw_rects(
             f"got invalid argument for rects: type={type(rects)} shape={rects.shape if hasattr(rects, 'shape') else 'no shape attribute'}"
         )
 
-    image = transforms.ToPILImage()(img[None, ...])
+    image = transforms.ToPILImage()(img[..., None])
     rgb = Image.new("RGB", image.size)
     rgb.paste(image)
     draw = ImageDraw.Draw(rgb)
