@@ -3,10 +3,11 @@
 import wandb
 import torch
 
+import PIL
+import numpy as np
 import torchvision.ops as ops
 import torchvision.transforms as transforms
 
-from PIL import Image, ImageDraw
 from typing import (
     Optional,
     Sequence,
@@ -138,7 +139,7 @@ def draw_rects(
     rects: Union[torch.Tensor, List],
     thresh: Optional[float] = None,
     labels: Optional[List[str]] = None,
-) -> Image:
+) -> PIL.Image.Image:
     """
     img is the torch tensor representing an image
     rects is either
@@ -178,10 +179,13 @@ def draw_rects(
             f"got invalid argument for rects: type={type(rects)} shape={rects.shape if hasattr(rects, 'shape') else 'no shape attribute'}"
         )
 
-    image = transforms.ToPILImage()(img[..., None])
-    rgb = Image.new("RGB", image.size)
+    if isinstance(img, np.ndarray):
+        image = transforms.ToPILImage()(img[..., None])
+    elif isinstance(img, torch.Tensor):
+        image = transforms.ToPILImage()(img[None, ...])
+    rgb = PIL.Image.new("RGB", image.size)
     rgb.paste(image)
-    draw = ImageDraw.Draw(rgb)
+    draw = PIL.ImageDraw.Draw(rgb)
 
     def bbox_colour(label: str) -> str:
         if label in ("healthy", "0"):
