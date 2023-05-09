@@ -90,7 +90,7 @@ class ImageLoader:
         cls,
         path_to_data: Path,
         transform_list: List[nn.Module] = [],
-        n: int = 1,
+        batch_size: int = 1,
         fnames_only: bool = False,
         normalize_images: bool = False,
         device: Union[str, torch.device] = "cpu",
@@ -107,7 +107,7 @@ class ImageLoader:
         _num_els = len(data)
 
         def _iter():
-            for fnames in iter_in_chunks(sorted(data), n):
+            for fnames in iter_in_chunks(sorted(data), batch_size):
                 if fnames_only:
                     yield fnames
                 else:
@@ -125,7 +125,7 @@ class ImageLoader:
         cls,
         path_to_zarr: Path,
         transform_list: List[nn.Module] = [],
-        n: int = 1,
+        batch_size: int = 1,
         normalize_images: bool = False,
         device: Union[str, torch.device] = "cpu",
     ):
@@ -139,7 +139,7 @@ class ImageLoader:
         )
 
         def _iter():
-            for rg in iter_in_chunks(range(_num_els), n):
+            for rg in iter_in_chunks(range(_num_els), batch_size):
                 img_batch = (
                     zarr_store[:, :, rg.start : rg.stop].transpose((2, 0, 1))
                     if isinstance(zarr_store, zarr.Array)
@@ -189,7 +189,7 @@ def predict(
         image_loader = ImageLoader.load_image_data(
             path_to_images,
             transform_list=[R],
-            n=batch_size,
+            batch_size=batch_size,
             fnames_only=(output_dir is not None),
             normalize_images=normalize_images,
             device=device,
@@ -198,7 +198,7 @@ def predict(
         image_loader = ImageLoader.load_zarr_data(
             path_to_zarr,
             transform_list=[R],
-            n=batch_size,
+            batch_size=batch_size,
             normalize_images=normalize_images,
             device=device,
         )
