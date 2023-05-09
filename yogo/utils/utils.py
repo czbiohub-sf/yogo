@@ -112,7 +112,9 @@ def format_preds(
     return preds[keep_idxs]
 
 
-def _format_tensor_for_rects(rects: torch.Tensor, img_h: int, img_w: int, thresh=0.5) -> torch.Tensor:
+def _format_tensor_for_rects(
+    rects: torch.Tensor, img_h: int, img_w: int, thresh=0.5
+) -> torch.Tensor:
     pred_dim, Sy, Sx = rects.shape
 
     if thresh is None:
@@ -129,6 +131,7 @@ def _format_tensor_for_rects(rects: torch.Tensor, img_h: int, img_w: int, thresh
     formatted_rects[:, (1, 3)] = img_h * formatted_preds[:, (1, 3)]
     formatted_rects[:, 4] = torch.argmax(formatted_preds[:, 5:], dim=1)
     return formatted_rects
+
 
 def draw_rects(
     img: torch.Tensor,
