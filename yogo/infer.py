@@ -206,12 +206,12 @@ def predict(
         raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
 
     if len(image_loader) == 0:
-        return torch.zeros(0)
-
-    if output_dir is not None:
         warnings.warn(
             f"dataset {path_to_images if path_to_images is not None else path_to_zarr} is empty"
         )
+        return torch.zeros(0)
+
+    if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
     results = torch.zeros((len(image_loader), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
