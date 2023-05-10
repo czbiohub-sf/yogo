@@ -169,9 +169,6 @@ def predict(
     device: Union[str, torch.device] = "cpu",
     print_results: bool = False,
 ) -> torch.Tensor:
-    if draw_boxes:
-        batch_size = 1
-
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
     model.eval()
@@ -237,20 +234,24 @@ def predict(
             ]
             save_preds(out_fnames, res, thresh=0.5)
         elif draw_boxes:
-            # batch size is 1 (see above)
-            drawn_img = draw_rects(
-                img_batch[0, ...], res[0, ...], thresh=0.5, labels=YOGO_CLASS_ORDERING
-            )
-            if output_dir is not None:
-                out_fname = (
-                    Path(output_dir) / Path(fnames.pop()).with_suffix(".png").name
+            for img_idx in range(img_batch.shape[0]):
+                drawn_img = draw_rects(
+                    img_batch[img_idx, ...],
+                    res[img_idx, ...],
+                    thresh=0.5,
+                    labels=YOGO_CLASS_ORDERING,
                 )
-                drawn_img.save(out_fname)
-            else:
-                fig, ax = plt.subplots()
-                ax.set_axis_off()
-                ax.imshow(drawn_img, cmap="gray")
-                plt.show()
+                if output_dir is not None:
+                    out_fname = (
+                        Path(output_dir)
+                        / Path(fnames[img_idx]).with_suffix(".png").name
+                    )
+                    drawn_img.save(out_fname)
+                else:
+                    fig, ax = plt.subplots()
+                    ax.set_axis_off()
+                    ax.imshow(drawn_img, cmap="gray")
+                    plt.show()
         elif print_results:
             print(res)
         else:
