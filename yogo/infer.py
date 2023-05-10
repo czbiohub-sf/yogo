@@ -269,6 +269,7 @@ def do_infer(args):
         path_to_zarr=args.path_to_zarr,
         output_dir=args.output_dir,
         draw_boxes=args.draw_boxes,
+        batch_size=args.batch_size,
         use_tqdm=(args.output_dir is not None or args.draw_boxes),
     )
 

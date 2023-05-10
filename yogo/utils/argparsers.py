@@ -201,6 +201,12 @@ def infer_parser(parser=None):
         action=boolean_action,
         default=False,
     )
+    parser.add_argument(
+        "--batch-size",
+        type=uint,
+        help=f"batch size for inference (default 16)",
+        default=16,
+    )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
         "--path-to-images", type=Path, default=None, help="path to image or images"
