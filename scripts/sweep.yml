@@ -3,7 +3,7 @@ command:
   - run
   - yogo
   - train
-  - ../dataset_defs/all-labelled-data-fast.yml
+  - ../dataset_defs/all-labelled-data-test.yml
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
