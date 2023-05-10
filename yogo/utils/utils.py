@@ -95,7 +95,7 @@ def format_preds(
     preds = reformatted_preds[objectness_mask]
 
     # if we have to convert box format to xyxy, do it to the tensor
-    # and give nms a view of the original. Otherwise, just five nms
+    # and give nms a view of the original. Otherwise, just give nms
     # the a converted clone of the boxes.
     if box_format == "xyxy":
         preds[:, :4] = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
