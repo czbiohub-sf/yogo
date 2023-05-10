@@ -104,7 +104,7 @@ class ImageLoader:
             else list(path_to_data.glob("*.png"))
         )
 
-        _num_els = len(data)
+        _num_els = len(data) // batch_size + (len(data) % batch_size > 0)
 
         def _iter():
             for fnames in iter_in_chunks(sorted(data), batch_size):
@@ -137,6 +137,7 @@ class ImageLoader:
             if isinstance(zarr_store, zarr.Array)
             else len(zarr_store)
         )
+        _num_els = _num_els // batch_size + (_num_els % batch_size > 0)
 
         def _iter():
             for rg in iter_in_chunks(range(_num_els), batch_size):
