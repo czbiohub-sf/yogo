@@ -114,18 +114,16 @@ def format_preds(
 
 
 def _format_tensor_for_rects(
-    rects: torch.Tensor, img_h: int, img_w: int, thresh=0.5
+    rects: torch.Tensor, img_h: int, img_w: int, thresh: float = 0.5
 ) -> torch.Tensor:
     pred_dim, Sy, Sx = rects.shape
-
-    if thresh is None:
-        thresh = 0.5
 
     formatted_preds = format_preds(
         rects,
         thresh=thresh,
         box_format="xyxy",
     )
+
     N = formatted_preds.shape[0]
     formatted_rects = torch.zeros((N, 5), device=formatted_preds.device)
     formatted_rects[:, (0, 2)] = img_w * formatted_preds[:, (0, 2)]
@@ -160,7 +158,9 @@ def draw_rects(
 
     formatted_rects: Union[torch.Tensor, List]
     if isinstance(rects, torch.Tensor) and len(rects.shape) == 3:
-        formatted_rects = _format_tensor_for_rects(rects, h, w, thresh=thresh)
+        formatted_rects = _format_tensor_for_rects(
+            rects, h, w, thresh=thresh if thresh is not None else 0.5
+        )
     elif isinstance(rects, list):
         if thresh is not None:
             raise ValueError("threshold only valid for tensor (i.e. prediction) input")
