@@ -68,7 +68,10 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
 
 
 def format_preds(
-    batch_pred: torch.Tensor, thresh=0.5, box_format: BoxFormat = "cxcywh"
+    batch_pred: torch.Tensor,
+    thresh: float = 0.5,
+    iou_thresh: float = 0.5,
+    box_format: BoxFormat = "cxcywh",
 ) -> torch.Tensor:
     """
     formats batch_pred, from YOGO, into [N,pred_shape], after applying NMS and
@@ -104,23 +107,31 @@ def format_preds(
         nms_boxes = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
 
     # Non-maximal supression to remove duplicate boxes
-    keep_idxs = ops.nms(
-        nms_boxes,
-        preds[:, 4],
-        iou_threshold=0.5,
-    )
+    if iou_thresh > 0:
+        keep_idxs = ops.nms(
+            nms_boxes,
+            preds[:, 4],
+            iou_threshold=iou_thresh,
+        )
+    else:
+        keep_idxs = torch.arange(len(preds))
 
     return preds[keep_idxs]
 
 
 def _format_tensor_for_rects(
-    rects: torch.Tensor, img_h: int, img_w: int, thresh: float = 0.5
+    rects: torch.Tensor,
+    img_h: int,
+    img_w: int,
+    thresh: float = 0.5,
+    iou_thresh: float = 0.5,
 ) -> torch.Tensor:
     pred_dim, Sy, Sx = rects.shape
 
     formatted_preds = format_preds(
         rects,
         thresh=thresh,
+        iou_thresh=iou_thresh,
         box_format="xyxy",
     )
 
@@ -136,6 +147,7 @@ def draw_rects(
     img: torch.Tensor,
     rects: Union[torch.Tensor, List],
     thresh: Optional[float] = None,
+    iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
 ) -> PIL.Image.Image:
     """
@@ -159,7 +171,11 @@ def draw_rects(
     formatted_rects: Union[torch.Tensor, List]
     if isinstance(rects, torch.Tensor) and len(rects.shape) == 3:
         formatted_rects = _format_tensor_for_rects(
-            rects, h, w, thresh=thresh if thresh is not None else 0.5
+            rects,
+            h,
+            w,
+            thresh=thresh if thresh is not None else 0.5,
+            iou_thresh=iou_thresh,
         )
     elif isinstance(rects, list):
         if thresh is not None:
