@@ -16,6 +16,7 @@ from typing import (
     Union,
     List,
     Literal,
+    Tuple,
     get_args,
 )
 
@@ -136,10 +137,11 @@ def _format_tensor_for_rects(
     )
 
     N = formatted_preds.shape[0]
-    formatted_rects = torch.zeros((N, 5), device=formatted_preds.device)
+    formatted_rects = torch.zeros((N, 6), device=formatted_preds.device)
     formatted_rects[:, (0, 2)] = img_w * formatted_preds[:, (0, 2)]
     formatted_rects[:, (1, 3)] = img_h * formatted_preds[:, (1, 3)]
     formatted_rects[:, 4] = torch.argmax(formatted_preds[:, 5:], dim=1)
+    formatted_rects[:, 5] = formatted_preds[:, 4]
     return formatted_rects
 
 
@@ -149,6 +151,7 @@ def draw_rects(
     thresh: Optional[float] = None,
     iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
+    objectness_opacity: bool = False,
 ) -> PIL.Image.Image:
     """
     img is the torch tensor representing an image
@@ -187,6 +190,7 @@ def draw_rects(
                 int(w * (r[1] + r[3] / 2)),
                 int(h * (r[2] + r[4] / 2)),
                 r[0],
+                1,
             ]
             for r in rects
         ]
@@ -199,21 +203,27 @@ def draw_rects(
         image = transforms.ToPILImage()(img[..., None])
     elif isinstance(img, torch.Tensor):
         image = transforms.ToPILImage()(img[None, ...])
-    rgb = PIL.Image.new("RGB", image.size)
+
+    rgb = PIL.Image.new("RGBA", image.size)
     rgb.paste(image)
     draw = PIL.ImageDraw.Draw(rgb)
 
-    def bbox_colour(label: str) -> str:
+    def bbox_colour(label: str, opacity: float = 1.0) -> Tuple[int, int, int, int]:
+        if not (0 <= opacity <= 1):
+            raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
         if label in ("healthy", "0"):
-            return "green"
+            return (0, 255, 0, int(opacity * 255))
         elif label in ("misc", "6"):
-            return "black"
-        return "red"
+            return (0, 0, 0, int(opacity * 255))
+        return (255, 0, 0, int(opacity * 255))
 
     for r in formatted_rects:
         r = list(r)
         label = labels[int(r[4])] if labels is not None else str(r[4])
-        draw.rectangle(r[:4], outline=bbox_colour(label))
-        draw.text((r[0], r[1]), label, (0, 0, 0))
+        if objectness_opacity:
+            draw.rectangle(r[:4], outline=bbox_colour(label, opacity=r[5].item()))
+        else:
+            draw.rectangle(r[:4], outline=bbox_colour(label))
+            draw.text((r[0], r[1]), label, (0, 0, 0, 255))
 
     return rgb
