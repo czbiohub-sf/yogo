@@ -204,7 +204,7 @@ def infer_parser(parser=None):
     parser.add_argument(
         "--batch-size",
         type=uint,
-        help=f"batch size for inference (default 16)",
+        help="batch size for inference (default 16)",
         default=16,
     )
     data_source = parser.add_mutually_exclusive_group(required=True)
