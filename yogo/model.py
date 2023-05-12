@@ -32,6 +32,7 @@ class YOGO(nn.Module):
         anchor_h: float,
         num_classes: int,
         inference: bool = False,
+        tuning: bool = False,
         model_func: Optional[
             Callable[
                 [
@@ -78,6 +79,10 @@ class YOGO(nn.Module):
         # initialize the weights, PyTorch chooses bad defaults
         self.model.apply(self.init_network_weights)
 
+        # fine tuning
+        if tuning:
+            self.model.apply(self.set_bn_eval)
+
     @staticmethod
     def init_network_weights(module: nn.Module):
         if isinstance(module, nn.Conv2d):
@@ -87,6 +92,11 @@ class YOGO(nn.Module):
             )
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
+
+    @staticmethod
+    def set_bn_eval(module: nn.Module):
+        if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+            module.eval()
 
     @classmethod
     def from_pth(
