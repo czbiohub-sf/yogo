@@ -79,7 +79,8 @@ class YOGO(nn.Module):
         # initialize the weights, PyTorch chooses bad defaults
         self.model.apply(self.init_network_weights)
 
-        # fine tuning
+        # fine tuning. If you `.eval()` the model anyways, this
+        # is not necessary
         if tuning:
             self.model.apply(self.set_bn_eval)
 
