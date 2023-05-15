@@ -218,14 +218,15 @@ def predict(
         if isinstance(data, torch.Tensor):
             fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
             img_batch = data
-            res = model(img_batch).cpu()
+            # HACK HACK HACK
+            res = model(img_batch[:, :, 386-193//2:386+193//2+1, :]).cpu()
         else:
             # data is a list of filenames, so we have to create the batch here
             fnames = data
             img_batch = ImageLoader.create_batch_from_fnames(
                 fnames, transform=R, device=device
             )
-            res = model(img_batch).cpu()
+            res = model(img_batch[:, :, 386-193//2:386+193//2+1, :]).cpu()
 
         if output_dir is not None and not draw_boxes:
             out_fnames = [
@@ -236,7 +237,7 @@ def predict(
         elif draw_boxes:
             for img_idx in range(img_batch.shape[0]):
                 drawn_img = draw_rects(
-                    img_batch[img_idx, ...],
+                    img_batch[img_idx, :, 386-193//2:386+193//2+1, :],
                     res[img_idx, ...],
                     thresh=0.5,
                     labels=YOGO_CLASS_ORDERING,
