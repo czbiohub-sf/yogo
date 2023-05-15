@@ -169,7 +169,9 @@ class YOGO(nn.Module):
             return h, w
         raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
 
-    def get_grid_size(self, img_size: Optional[Tuple[int,int]]) -> Tuple[int, int]:
+    def get_grid_size(
+        self, img_size: Optional[Tuple[int, int]] = None
+    ) -> Tuple[int, int]:
         """return Sx, Sy
 
         We could support arbitrary layers, but that would take a long time, and
