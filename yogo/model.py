@@ -169,14 +169,18 @@ class YOGO(nn.Module):
             return h, w
         raise ValueError(f"self.img_size is not a tensor: {type(self.img_size)}")
 
-    def get_grid_size(self) -> Tuple[int, int]:
+    def get_grid_size(self, img_size: Optional[Tuple[int,int]]) -> Tuple[int, int]:
         """return Sx, Sy
 
         We could support arbitrary layers, but that would take a long time, and
         would be overcmoplicated for what we are doing - we can add modules
         here as we add different types of layers
         """
-        h, w = self.get_img_size()
+        if img_size is not None:
+            # appease type checker
+            h, w = torch.tensor(img_size)
+        else:
+            h, w = self.get_img_size()
 
         def as_tuple(inp: Union[Any, Tuple[Any, Any]]) -> Tuple[Any, ...]:
             return inp if isinstance(inp, tuple) else (inp, inp)
@@ -196,11 +200,11 @@ class YOGO(nn.Module):
                 h = torch.floor((h + 2 * p0 - d0 * (k0 - 1) - 1) / s0 + 1)
                 w = torch.floor((w + 2 * p1 - d1 * (k1 - 1) - 1) / s1 + 1)
 
-        Sy = h.int().item()
-        Sx = w.int().item()
-        # for some reason, mypy thinks that Sx and Sy are floats,
-        # even though I `int()` them
-        return Sx, Sy  # type: ignore
+        Sy = h.item()
+        Sx = w.item()
+        # type checker is unhappy if I `h.int().item()` instead of
+        # int(h.item())
+        return int(Sx), int(Sy)
 
     def gen_model(self, num_classes) -> nn.Module:
         conv_block_1 = nn.Sequential(
