@@ -107,6 +107,7 @@ class YOGO(nn.Module):
 
         model_version = loaded_pth.get("model_version", None)
         global_step = loaded_pth.get("step", 0)
+        normalize_images = loaded_pth.get("normalize_images", False)
 
         params = loaded_pth["model_state_dict"]
         img_size = params["img_size"]
@@ -126,7 +127,7 @@ class YOGO(nn.Module):
         model.load_state_dict(params)
         return model, {
             "step": global_step,
-            "normalize_images": loaded_pth.get("normalize_images", False),
+            "normalize_images": normalize_images,
         }
 
     def to(self, device, *args, **kwargs):
