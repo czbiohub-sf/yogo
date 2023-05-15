@@ -143,6 +143,8 @@ class YOGO(nn.Module):
             p for p in self.parameters() if p.grad is not None and p.requires_grad
         ]
         for p in parameters:
+            if p.grad is None:
+                continue
             gradient_norm = p.grad.detach().data.norm(2)
             total_norm += gradient_norm.item() ** 2
         total_norm = total_norm**0.5
