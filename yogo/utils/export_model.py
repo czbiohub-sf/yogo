@@ -56,7 +56,9 @@ def do_export(args):
         net.register_buffer("_Cxs", _Cxs.clone())
         net.register_buffer("_Cys", _Cys.clone())
 
-    dummy_input = torch.randn(1, 1, int(img_h.item()), int(img_w.item()), requires_grad=False)
+    dummy_input = torch.randn(
+        1, 1, int(img_h.item()), int(img_w.item()), requires_grad=False
+    )
     torch_out = net(dummy_input)
 
     torch.onnx.export(

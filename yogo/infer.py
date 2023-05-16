@@ -222,7 +222,6 @@ def predict(
         if isinstance(data, torch.Tensor):
             fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
             img_batch = data
-            # HACK HACK HACK
             res = model(img_batch).cpu()
         else:
             # data is a list of filenames, so we have to create the batch here
@@ -241,7 +240,7 @@ def predict(
         elif draw_boxes:
             for img_idx in range(img_batch.shape[0]):
                 drawn_img = draw_rects(
-                    img_batch,
+                    img_batch[img_idx, ...],
                     res[img_idx, ...],
                     thresh=0.5,
                     labels=YOGO_CLASS_ORDERING,
