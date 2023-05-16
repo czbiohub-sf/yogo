@@ -29,33 +29,47 @@ def to_numpy(tensor):
 
 def do_export(args):
     pth_filename = args.input
-    onnx_filename = (
+    onnx_filename = Path(
         args.output_filename
         if args.output_filename is not None
         else pth_filename.replace("pth", "onnx")
-    )
-
-    if not onnx_filename.endswith(".onnx"):
-        onnx_filename += ".onnx"
+    ).with_suffix(".onnx")
 
     net, _ = YOGO.from_pth(pth_filename, inference=True)
     net.eval()
 
     img_h, img_w = net.img_size
-    dummy_input = torch.randn(1, 1, img_h, img_w, requires_grad=False)
+
+    if args.crop_height is not None:
+        img_h = (args.crop_height * img_h).round()
+
+        crop_size = (img_h, img_w)
+        Sx, Sy = net.get_grid_size(crop_size)
+        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1)
+        _Cys = (
+            torch.linspace(0, 1 - 1 / Sy, Sy)
+            .expand(1, -1)
+            .transpose(0, 1)
+            .expand(Sy, Sx)
+        )
+
+        net.register_buffer("_Cxs", _Cxs.clone())
+        net.register_buffer("_Cys", _Cys.clone())
+
+    dummy_input = torch.randn(1, 1, int(img_h.item()), int(img_w.item()), requires_grad=False)
     torch_out = net(dummy_input)
 
     torch.onnx.export(
         net,
         dummy_input,
-        onnx_filename,
+        str(onnx_filename),
         verbose=False,
         do_constant_folding=True,
         opset_version=14,
     )
 
     # Load the ONNX model
-    model_candidate = onnx.load(onnx_filename)
+    model_candidate = onnx.load(str(onnx_filename))
 
     if args.simplify:
         model_simplified_candidate, model_simplified_OK = onnxsim.simplify(
@@ -69,7 +83,7 @@ def do_export(args):
     onnx.checker.check_model(model)
 
     # Compare model output from pure torch and onnx
-    ort_session = onnxruntime.InferenceSession(onnx_filename)
+    ort_session = onnxruntime.InferenceSession(str(onnx_filename))
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(dummy_input)}
     ort_outs = ort_session.run(None, ort_inputs)
 
@@ -81,21 +95,21 @@ def do_export(args):
         err_msg="onnx and pytorch outputs are far apart",
     )
 
-    success_msg = f"exported to {onnx_filename}"
+    success_msg = f"exported to {str(onnx_filename)}"
 
     # export to IR
     subprocess.run(
         [
             "mo",
             "--input_model",
-            onnx_filename,
+            str(onnx_filename),
             "--output_dir",
-            Path(onnx_filename).resolve().parents[0],
+            onnx_filename.resolve().parents[0],
             "--data_type",
             "FP16",
         ]
     )
-    success_msg += f", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
+    success_msg += f", {str(onnx_filename.with_suffix('.xml'))}, {str(onnx_filename.with_suffix('.bin'))}"
 
     print("\n")
     print(success_msg)
