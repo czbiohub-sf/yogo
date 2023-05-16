@@ -101,7 +101,11 @@ class ImageLoader:
         data = (
             [path_to_data]
             if path_to_data.is_file()
-            else list(path_to_data.glob("*.png"))
+            else [
+                f
+                for f in path_to_data.glob("*.png")
+                if not path_to_data.name.startswith(".")
+            ]
         )
 
         _num_els = len(data) // batch_size + (len(data) % batch_size > 0)
