@@ -126,21 +126,6 @@ class YOGO(nn.Module):
 
         model.load_state_dict(params)
 
-        # HACK HACKH HACK
-        crop_size = (193, 1032)
-        Sx, Sy = model.get_grid_size(crop_size)
-        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(model.device)
-        _Cys = (
-            torch.linspace(0, 1 - 1 / Sy, Sy)
-            .expand(1, -1)
-            .transpose(0, 1)
-            .expand(Sy, Sx)
-            .to(model.device)
-        )
-
-        model.register_buffer("_Cxs", _Cxs.clone())
-        model.register_buffer("_Cys", _Cys.clone())
-
         return model, {
             "step": global_step,
             "normalize_images": normalize_images,

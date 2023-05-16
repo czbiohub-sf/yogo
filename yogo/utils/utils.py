@@ -170,7 +170,6 @@ def draw_rects(
     ), f"takes single grayscale image - should be 2d, got {img.shape}"
 
     h, w = img.shape
-    rects[3, :, :] *= 4
 
     formatted_rects: Union[torch.Tensor, List]
     if isinstance(rects, torch.Tensor) and len(rects.shape) == 3:
