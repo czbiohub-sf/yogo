@@ -14,10 +14,25 @@ except AttributeError:
 def uint(val: int):
     try:
         v = int(val)
-        if v >= 0:
-            return v
     except ValueError:
         raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
+
+    if v < 0:
+        raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
+
+    return v
+
+
+def unitary_float(val: float):
+    try:
+        v = float(val)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v} is not a float value")
+
+    if not (0 <= v <= 1):
+        raise argparse.ArgumentTypeError(f"{v} must be in [0,1]")
+
+    return v
 
 
 def global_parser():
@@ -66,7 +81,7 @@ def train_parser(parser=None):
     )
     parser.add_argument(
         "--label-smoothing",
-        type=float,
+        type=unitary_float,
         help=f"label smoothing - default 0.01 (default {df.LABEL_SMOOTHING})",
         default=0.01,
     )
@@ -151,8 +166,8 @@ def train_parser(parser=None):
     )
     image_resize_options.add_argument(
         "--crop",
-        type=float,
-        help="crop image verically - i.e. '-c 0.25' will crop images to (round(0.25 * height), width)",
+        type=unitary_float,
+        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
     return parser
 
@@ -167,6 +182,11 @@ def export_parser(parser=None):
         "input",
         type=str,
         help="path to input pth file",
+    )
+    parser.add_argument(
+        "--crop-height",
+        type=unitary_float,
+        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
     parser.add_argument(
         "--output-filename",

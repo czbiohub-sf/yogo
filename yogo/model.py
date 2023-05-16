@@ -125,6 +125,7 @@ class YOGO(nn.Module):
         )
 
         model.load_state_dict(params)
+
         return model, {
             "step": global_step,
             "normalize_images": normalize_images,
