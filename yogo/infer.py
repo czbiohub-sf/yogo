@@ -108,7 +108,7 @@ class ImageLoader:
             ]
         )
 
-        _num_els = len(data) // batch_size + (len(data) % batch_size > 0)
+        _num_batches = len(data) // batch_size + (len(data) % batch_size > 0)
 
         def _iter():
             for fnames in iter_in_chunks(sorted(data), batch_size):
@@ -122,7 +122,7 @@ class ImageLoader:
                         device=device,
                     )
 
-        return cls(_iter, _num_els)
+        return cls(_iter, _num_batches)
 
     @classmethod
     def load_zarr_data(
@@ -141,7 +141,7 @@ class ImageLoader:
             if isinstance(zarr_store, zarr.Array)
             else len(zarr_store)
         )
-        _num_els = _num_els // batch_size + (_num_els % batch_size > 0)
+        _num_batches = _num_els // batch_size + (_num_els % batch_size > 0)
 
         def _iter():
             for rg in iter_in_chunks(range(_num_els), batch_size):
@@ -157,7 +157,7 @@ class ImageLoader:
                     img_batch /= 255
                 yield img_batch.to(device)
 
-        return cls(_iter, _num_els)
+        return cls(_iter, _num_batches)
 
 
 @torch.no_grad()
@@ -217,9 +217,9 @@ def predict(
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
     results = torch.zeros((len(image_loader), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
-    N = int(math.log(len(image_loader), 10) + 1)
     for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
+            N = int(math.log(len(image_loader), 10) + 1)
             fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
             img_batch = data
             res = model(img_batch).cpu()
