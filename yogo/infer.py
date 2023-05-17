@@ -104,7 +104,7 @@ class ImageLoader:
             else [
                 f
                 for f in path_to_data.glob("*.png")
-                if not path_to_data.name.startswith(".")
+                if not f.name.startswith(".")
             ]
         )
 
@@ -254,7 +254,7 @@ def predict(
                 else:
                     fig, ax = plt.subplots()
                     ax.set_axis_off()
-                    ax.imshow(drawn_img, cmap="gray")
+                    ax.imshow(drawn_img)
                     plt.show()
         elif print_results:
             print(res)
