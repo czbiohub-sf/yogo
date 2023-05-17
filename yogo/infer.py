@@ -219,7 +219,7 @@ def predict(
     results = torch.zeros((len(image_loader), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
     for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
-            N = int(math.log(len(image_loader), 10) + 1)
+            N = int(math.log(len(image_loader) * batch_size, 10) + 1)
             fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
             img_batch = data
             res = model(img_batch).cpu()
