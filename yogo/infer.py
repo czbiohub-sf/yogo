@@ -101,11 +101,7 @@ class ImageLoader:
         data = (
             [path_to_data]
             if path_to_data.is_file()
-            else [
-                f
-                for f in path_to_data.glob("*.png")
-                if not f.name.startswith(".")
-            ]
+            else [f for f in path_to_data.glob("*.png") if not f.name.startswith(".")]
         )
 
         _num_batches = len(data) // batch_size + (len(data) % batch_size > 0)
