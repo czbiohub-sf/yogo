@@ -137,7 +137,12 @@ def label_file_to_tensor(
     notes_data: Optional[Dict[str, Any]] = None,
 ) -> torch.Tensor:
     "loads labels from label file into a tensor suitible for back prop, given by image path"
-    labels = load_labels(label_path, dataset_classes, notes_data=notes_data)
+
+    try:
+        labels = load_labels(label_path, dataset_classes, notes_data=notes_data)
+    except Exception as e:
+        raise RuntimeError(f"exception from {label_path}") from e
+
     labels_tensor = torch.Tensor(labels)
 
     if labels_tensor.nelement() == 0:
