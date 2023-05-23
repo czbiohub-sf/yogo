@@ -9,7 +9,7 @@ command:
   - --from-pretrained
   - trained_models/fresh-totem-448/best.pth
   - --epochs
-  - 64
+  - 92
   - --batch-size
   - 64
 method: bayes
@@ -19,7 +19,7 @@ metric:
 parameters:
   learning_rate:
     distribution: log_uniform_values
-    min: 0.0002
+    min: 0.0004
     max: 0.01
   weight_decay:
     distribution: log_uniform_values
