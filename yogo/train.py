@@ -37,7 +37,6 @@ torch.backends.cuda.matmul.allow_tf32 = True
 def checkpoint_model(
     model: torch.nn.Module,
     epoch: int,
-    optimizer: torch.nn.Module,
     name: str,
     step: int,
     normalized: bool,
@@ -81,6 +80,7 @@ def validate(
     model_save_dir,
     epoch,
 ):
+    classify = not config["no_classify"]
     class_names = config["class_names"]
     num_classes = len(class_names)
     # do validation things
@@ -135,7 +135,7 @@ def validate(
 
         # TODO we should choose better conditions here - e.g. mAP for no-classify isn't great,
         # and maybe we care about recall more than mAP
-        if mAP["map"] > best_mAP:
+        if mAP["map"] > wandb.run.summary["best_mAP"]:
             wandb.run.summary["best_mAP"] = mAP["map"]
             wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
             checkpoint_model(
