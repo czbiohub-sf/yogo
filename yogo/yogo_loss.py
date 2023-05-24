@@ -1,4 +1,7 @@
 import torch
+import wandb
+
+from typing import Dict, Tuple
 
 import torchvision.ops as ops
 
@@ -45,7 +48,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
     def forward(
         self, pred_batch: torch.Tensor, label_batch: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, Dict[str, float]]:
         """
         pred and label are both 4d. pred_batch has shape
         (
@@ -60,7 +63,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
         # objectness loss when there is no obj
-        loss += (
+        objectnes_loss_no_obj = (
             self.no_obj_weight
             * (
                 (1 - label_batch[:, 0, :, :])
@@ -69,16 +72,16 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     torch.zeros_like(pred_batch[:, 4, :, :]),
                 )
             ).sum()
-        )
+        ) / batch_size
 
         # objectness loss when there is an obj
-        loss += (
+        objectnes_loss_obj = (
             label_batch[:, 0, :, :]
             * self.mse(
                 pred_batch[:, 4, :, :],
                 torch.ones_like(pred_batch[:, 4, :, :]),
             )
-        ).sum()
+        ).sum() / batch_size
 
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
@@ -116,7 +119,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             formatted_labels_masked
         ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
 
-        loss += (
+        iou_loss = (
             self.coord_weight
             * (
                 ops.complete_box_iou_loss(
@@ -128,13 +131,28 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     formatted_labels_masked,
                 )
             ).sum()
-        )
+        ) / batch_size
 
         # classification loss
         if self._classify:
-            loss += (
+            classification_loss = (
                 label_batch[:, 0, :, :]
                 * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
-            ).sum()
+            ).sum() / batch_size
+        else:
+            classification_loss = torch.tensor(
+                0, dtype=torch.float32, device=self.device
+            )
 
-        return loss / batch_size
+        loss = (
+            objectnes_loss_no_obj + objectnes_loss_obj + iou_loss + classification_loss
+        )
+
+        loss_components = {
+                "iou_loss": iou_loss.item(),
+                "objectnes_loss_no_obj": objectnes_loss_no_obj.item(),
+                "objectnes_loss_obj": objectnes_loss_obj.item(),
+                "classification_loss": classification_loss.item(),
+            }
+
+        return loss, loss_components

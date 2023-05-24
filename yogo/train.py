@@ -177,7 +177,7 @@ def train():
             labels = labels.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            loss, loss_components = Y_loss(outputs, labels)
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -188,6 +188,7 @@ def train():
                     "train loss": loss.item(),
                     "epoch": epoch,
                     "LR": scheduler.get_last_lr()[0],
+                    **loss_components,
                 },
                 commit=False,
                 step=global_step,
@@ -204,7 +205,7 @@ def train():
                 imgs = imgs.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
-                loss = Y_loss(outputs, labels)
+                loss, _ = Y_loss(outputs, labels)
                 val_loss += loss.item()
                 val_metrics.update(outputs.detach(), labels.detach())
 
@@ -276,7 +277,7 @@ def train():
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            loss, _ = Y_loss(outputs, labels)
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
