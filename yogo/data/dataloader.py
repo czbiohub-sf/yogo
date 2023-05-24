@@ -247,7 +247,6 @@ def get_dataloader(
     preprocess_type: Optional[str] = None,
     vertical_crop_size: Optional[float] = None,
     resize_shape: Optional[Tuple[int, int]] = None,
-    device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> Dict[str, DataLoader]:
