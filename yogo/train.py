@@ -3,6 +3,10 @@
 import os
 import wandb
 import torch
+import queue
+import warnings
+
+import torch.multiprocessing as mp
 
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -11,6 +15,7 @@ from lion_pytorch import Lion
 
 from pathlib import Path
 from copy import deepcopy
+from itertools import cycle
 from typing_extensions import TypeAlias
 from typing import Optional, Tuple, cast, Literal, Iterator
 
@@ -69,6 +74,35 @@ def get_optimizer(
     elif optimizer_type == "adam":
         return AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
     raise ValueError(f"got invalid optimizer_type {optimizer_type}")
+
+
+def validate_process(
+    halt_flag: mp.Event,
+    param_q: mp.Queue,
+    net,
+    validate_dataloader,
+    device,
+    config,
+    model_save_dir,
+):
+    while not halt_flag.is_set():
+        try:
+            params = param_q.get(timeout=1)
+            param_q.task_done()
+            param_q.put(params)
+            global_step, epoch = 0,0
+        except queue.Empty:
+            continue
+        net.load_state_dict(params)
+        validate(
+            net,
+            validate_dataloader,
+            device,
+            config,
+            global_step,
+            model_save_dir,
+            epoch,
+        )
 
 
 def validate(
@@ -159,7 +193,6 @@ def validate(
 
 def train():
     config = wandb.config
-    device = config["device"]
     epochs = config["epochs"]
     learning_rate = config["learning_rate"]
     anchor_w = config["anchor_w"]
@@ -169,6 +202,20 @@ def train():
     classify = not config["no_classify"]
     model = get_model_func(config["model"])
     num_classes = len(class_names)
+
+    num_gpus = torch.cuda.device_count()
+    if num_gpus == 0:
+        warnings.warn("no cuda devices found, using cpu - this will be slow!")
+        device_list = ["cpu"]
+    else:
+        device_list = [f"cuda:{i}" for i in range(num_gpus)]
+
+    wandb.config.update({"device_list": device_list})
+    devices = cycle(device_list)
+    print(device_list)
+
+    device = next(devices)
+    val_device = next(devices)
 
     test_metrics = Metrics(
         num_classes=num_classes,
@@ -232,6 +279,26 @@ def train():
         eta_min=learning_rate / config["decay_factor"],
     )
 
+    if num_gpus > 1:
+        print("starting validation process")
+        halt_flag = mp.Event()
+        ctx = mp.get_context("spawn")
+        param_q = ctx.Queue()
+        val_proc = ctx.Process(
+            target=validate_process,
+            args=(
+                halt_flag,
+                param_q,
+                net,
+                validate_dataloader,
+                val_device,
+                config,
+                model_save_dir,
+            ),
+            daemon=True,
+        )
+        val_proc.start()
+
     print("starting training")
 
     for epoch in range(epochs):
@@ -260,16 +327,22 @@ def train():
             wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
             wandb.log({"training param norm": net.param_norm()}, step=global_step)
 
-        validate(
-            net,
-            validate_dataloader,
-            device,
-            config,
-            global_step,
-            model_save_dir,
-            epoch,
-        )
+        if num_gpus in (0, 1):
+            validate(
+                net,
+                validate_dataloader,
+                device,
+                config,
+                global_step,
+                model_save_dir,
+                epoch,
+            )
+        else:
+            param_q.put(net.state_dict())
+            param_q.get()
         net.train()
+
+    halt_flag.set()
 
     net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
     print(f"loaded best.pth from step {cfg['step']} for test inference")
@@ -300,6 +373,8 @@ def train():
             }
         )
 
+    val_proc.join()
+
 
 WandbConfig: TypeAlias = dict
 
@@ -310,7 +385,6 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         config["batch_size"],
         Sx=Sx,
         Sy=Sy,
-        device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
@@ -342,12 +416,6 @@ def init_dataset(config: WandbConfig, Sx, Sy):
 
 def do_training(args) -> None:
     """responsible for parsing args and starting a training run"""
-    device = torch.device(
-        args.device
-        if args.device is not None
-        else ("cuda" if torch.cuda.is_available() else "cpu")
-    )
-
     epochs = args.epochs or df.EPOCHS
     batch_size = args.batch_size or df.BATCH_SIZE
     learning_rate = args.lr or df.LEARNING_RATE
@@ -392,7 +460,6 @@ def do_training(args) -> None:
             "label_smoothing": label_smoothing,
             "epochs": epochs,
             "batch_size": batch_size,
-            "device": str(device),
             "anchor_w": anchor_w,
             "anchor_h": anchor_h,
             "model": args.model,
@@ -411,17 +478,13 @@ def do_training(args) -> None:
         notes=args.note,
         tags=["v0.0.3"],
     )
-    try:
-        wandb.run.summary["best_mAP"] = 0
-    except:
-        pass
+    assert wandb.run is not None
+    wandb.run.summary["best_mAP"] = 0
 
     train()
 
 
 if __name__ == "__main__":
-    torch.multiprocessing.set_start_method("spawn")
-
     parser = train_parser()
     args = parser.parse_args()
 

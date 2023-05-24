@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Union, Tuple, Optional
+from typing import List, Dict, Tuple, Optional
 
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
@@ -247,7 +247,6 @@ def get_dataloader(
     preprocess_type: Optional[str] = None,
     vertical_crop_size: Optional[float] = None,
     resize_shape: Optional[Tuple[int, int]] = None,
-    device: Union[str, torch.device] = "cpu",
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> Dict[str, DataLoader]:
@@ -288,7 +287,7 @@ def get_dataloader(
         )
         d[designation] = DataLoader(
             dataset,
-            shuffle=True,
+            shuffle=False,
             drop_last=False,
             pin_memory=True,
             batch_size=batch_size,
