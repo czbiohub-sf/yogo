@@ -30,21 +30,8 @@ from yogo.data.dataloader import (
 )
 
 
-# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
 torch.backends.cudnn.benchmark = True
-# https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
 torch.backends.cuda.matmul.allow_tf32 = True
-
-# TODO find sync points
-# https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
-# this will error out if a synchronizing operation occurs
-
-# TUNING GUIDE - goes over this
-# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
-
-# TODO
-# measure forward / backward pass timing w/
-# https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
 def checkpoint_model(
@@ -63,7 +50,6 @@ def checkpoint_model(
             "step": step,
             "normalize_images": normalized,
             "model_state_dict": deepcopy(model.state_dict()),
-            "optimizer_state_dict": deepcopy(optimizer.state_dict()),
             "model_version": model_version,
             **kwargs,
         },
@@ -86,6 +72,91 @@ def get_optimizer(
     raise ValueError(f"got invalid optimizer_type {optimizer_type}")
 
 
+def validate(
+    net,
+    validate_dataloader,
+    device,
+    config,
+    global_step,
+    model_save_dir,
+    epoch,
+):
+    class_names = config["class_names"]
+    num_classes = len(class_names)
+    # do validation things
+    val_metrics = Metrics(
+        num_classes=num_classes,
+        device=device,
+        class_names=class_names,
+        classify=classify,
+    )
+    Y_loss = YOGOLoss(classify=classify).to(device)
+    val_loss = 0.0
+    net.eval()
+    with torch.no_grad():
+        for imgs, labels in validate_dataloader:
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            outputs = net(imgs)
+            loss = Y_loss(outputs, labels)
+            val_loss += loss.item()
+            val_metrics.update(outputs.detach(), labels.detach())
+
+        # just use the final imgs and labels for val!
+        annotated_img = wandb.Image(
+            draw_rects(
+                (
+                    (255 * imgs[0, 0, ...].detach()).int()
+                    if config["normalize_images"]
+                    else imgs[0, 0, ...].detach()
+                ),
+                outputs[0, ...].detach(),
+                thresh=0.5,
+                labels=class_names,
+            )
+        )
+
+        mAP, confusion_data, precision, recall = val_metrics.compute()
+        val_metrics.reset()
+
+        wandb.log(
+            {
+                "validation bbs": annotated_img,
+                "val loss": val_loss / len(validate_dataloader),
+                "val mAP": mAP["map"],
+                "val confusion": get_wandb_confusion(
+                    confusion_data, class_names, "validation confusion matrix"
+                ),
+                "val precision": precision,
+                "val recall": recall,
+            },
+            step=global_step,
+        )
+
+        # TODO we should choose better conditions here - e.g. mAP for no-classify isn't great,
+        # and maybe we care about recall more than mAP
+        if mAP["map"] > best_mAP:
+            wandb.run.summary["best_mAP"] = mAP["map"]
+            wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
+            checkpoint_model(
+                net,
+                epoch,
+                model_save_dir / "best.pth",
+                global_step,
+                config["normalize_images"],
+                model_version=config["model"],
+            )
+        else:
+            checkpoint_model(
+                net,
+                epoch,
+                model_save_dir / "latest.pth",
+                global_step,
+                config["normalize_images"],
+                model_version=config["model"],
+            )
+
+
 def train():
     config = wandb.config
     device = config["device"]
@@ -99,12 +170,6 @@ def train():
     model = get_model_func(config["model"])
     num_classes = len(class_names)
 
-    val_metrics = Metrics(
-        num_classes=num_classes,
-        device=device,
-        class_names=class_names,
-        classify=classify,
-    )
     test_metrics = Metrics(
         num_classes=num_classes,
         device=device,
@@ -169,7 +234,6 @@ def train():
 
     print("starting training")
 
-    best_mAP = 0
     for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
@@ -196,74 +260,15 @@ def train():
             wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
             wandb.log({"training param norm": net.param_norm()}, step=global_step)
 
-        # do validation things
-        val_loss = 0.0
-        net.eval()
-        with torch.no_grad():
-            for imgs, labels in validate_dataloader:
-                imgs = imgs.to(device, non_blocking=True)
-                labels = labels.to(device, non_blocking=True)
-                outputs = net(imgs)
-                loss = Y_loss(outputs, labels)
-                val_loss += loss.item()
-                val_metrics.update(outputs.detach(), labels.detach())
-
-            # just use the final imgs and labels for val!
-            annotated_img = wandb.Image(
-                draw_rects(
-                    (
-                        (255 * imgs[0, 0, ...].detach()).int()
-                        if config["normalize_images"]
-                        else imgs[0, 0, ...].detach()
-                    ),
-                    outputs[0, ...].detach(),
-                    thresh=0.5,
-                    labels=class_names,
-                )
-            )
-
-            mAP, confusion_data, precision, recall = val_metrics.compute()
-            val_metrics.reset()
-
-            wandb.log(
-                {
-                    "validation bbs": annotated_img,
-                    "val loss": val_loss / len(validate_dataloader),
-                    "val mAP": mAP["map"],
-                    "val confusion": get_wandb_confusion(
-                        confusion_data, class_names, "validation confusion matrix"
-                    ),
-                    "val precision": precision,
-                    "val recall": recall,
-                },
-                step=global_step,
-            )
-
-            # TODO we should choose better conditions here - e.g. mAP for no-classify isn't great,
-            # and maybe we care about recall more than mAP
-            if mAP["map"] > best_mAP:
-                best_mAP = mAP["map"]
-                wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
-                checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "best.pth",
-                    global_step,
-                    config["normalize_images"],
-                    model_version=config["model"],
-                )
-            else:
-                checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "latest.pth",
-                    global_step,
-                    config["normalize_images"],
-                    model_version=config["model"],
-                )
-
+        validate(
+            net,
+            validate_dataloader,
+            device,
+            config,
+            global_step,
+            model_save_dir,
+            epoch,
+        )
         net.train()
 
     net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
@@ -406,6 +411,10 @@ def do_training(args) -> None:
         notes=args.note,
         tags=["v0.0.3"],
     )
+    try:
+        wandb.run.summary["best_mAP"] = 0
+    except:
+        pass
 
     train()
 
