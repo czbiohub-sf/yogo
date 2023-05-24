@@ -305,7 +305,6 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         config["batch_size"],
         Sx=Sx,
         Sy=Sy,
-        device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
