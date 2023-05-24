@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Union, Tuple, Optional
+from typing import List, Dict, Tuple, Optional
 
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
