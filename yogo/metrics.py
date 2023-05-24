@@ -45,12 +45,12 @@ class Metrics:
         self.classify = classify
         assert self.num_classes == len(self.class_names)
 
-    def update(self, preds, labels):
+    def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(
-            preds, labels, use_IoU=True, per_batch=True
+            preds, labels, use_IoU=use_IoU, per_batch=True
         )
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
