@@ -149,10 +149,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         )
 
         loss_components = {
-                "iou_loss": iou_loss.item(),
-                "objectnes_loss_no_obj": objectnes_loss_no_obj.item(),
-                "objectnes_loss_obj": objectnes_loss_obj.item(),
-                "classification_loss": classification_loss.item(),
-            }
+            "iou_loss": iou_loss.item(),
+            "objectnes_loss_no_obj": objectnes_loss_no_obj.item(),
+            "objectnes_loss_obj": objectnes_loss_obj.item(),
+            "classification_loss": classification_loss.item(),
+        }
 
         return loss, loss_components
