@@ -212,7 +212,7 @@ def predict(
     if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
-    results = torch.zeros((len(image_loader), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
+    results = torch.zeros((len(image_loader) * batch_size, len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
     for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
             N = int(math.log(len(image_loader) * batch_size, 10) + 1)
