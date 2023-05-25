@@ -52,8 +52,9 @@ def save_preds(fnames, batch_preds, thresh=0.5):
 
 
 class ImageLoader:
-    def __init__(self, _iter, _num_els):
+    def __init__(self, _iter, _num_iters, _num_els):
         self._iter = _iter
+        self._num_iters = _num_iters
         self._num_els = _num_els
 
     def __iter__(self):
@@ -64,6 +65,10 @@ class ImageLoader:
             raise RuntimeError(
                 "instantiate ImageLoader with `load_image_data` or `load_zarr_data`"
             )
+        return self._num_els
+
+    @property
+    def num_els(self) -> int:
         return self._num_els
 
     @staticmethod
@@ -118,7 +123,7 @@ class ImageLoader:
                         device=device,
                     )
 
-        return cls(_iter, _num_batches)
+        return cls(_iter, _num_batches, _num_els=len(data))
 
     @classmethod
     def load_zarr_data(
@@ -153,7 +158,7 @@ class ImageLoader:
                     img_batch /= 255
                 yield img_batch.to(device)
 
-        return cls(_iter, _num_batches)
+        return cls(_iter, _num_batches, _num_els=_num_els)
 
 
 @torch.no_grad()
@@ -212,10 +217,10 @@ def predict(
     if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
-    results = torch.zeros((len(image_loader) * batch_size, len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
+    results = torch.zeros((image_loader.num_els, len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
     for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
-            N = int(math.log(len(image_loader) * batch_size, 10) + 1)
+            N = int(math.log(image_loader.num_els, 10) + 1)
             fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
             img_batch = data
             res = model(img_batch).cpu()
@@ -261,6 +266,7 @@ def predict(
 
     if not print_results and output_dir is None:
         return results
+    return None
 
 
 def do_infer(args):
