@@ -65,7 +65,7 @@ class ImageLoader:
             raise RuntimeError(
                 "instantiate ImageLoader with `load_image_data` or `load_zarr_data`"
             )
-        return self._num_els
+        return self._num_iters
 
     @property
     def num_els(self) -> int:
@@ -218,6 +218,7 @@ def predict(
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
     results = torch.zeros((image_loader.num_els, len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
+    print(F"{len(image_loader)=}, {image_loader.num_els}")
     for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
             N = int(math.log(image_loader.num_els, 10) + 1)
@@ -262,7 +263,7 @@ def predict(
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_loader) % batch_size != 0
-            results[i : i + res.shape[0], ...] = res.cpu()
+            results[i*batch_size : i*batch_size + res.shape[0], ...] = res.cpu()
 
     if not print_results and output_dir is None:
         return results
