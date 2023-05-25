@@ -168,7 +168,7 @@ def predict(
     use_tqdm: bool = False,
     device: Union[str, torch.device] = "cpu",
     print_results: bool = False,
-) -> torch.Tensor:
+) -> Optional[torch.Tensor]:
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
     model.eval()
@@ -259,7 +259,8 @@ def predict(
             # namely when len(image_loader) % batch_size != 0
             results[i : i + res.shape[0], ...] = res.cpu()
 
-    return results
+    if not print_results and output_dir is not None:
+        return results
 
 
 def do_infer(args):
