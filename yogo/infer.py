@@ -259,7 +259,7 @@ def predict(
             # namely when len(image_loader) % batch_size != 0
             results[i : i + res.shape[0], ...] = res.cpu()
 
-    if not print_results and output_dir is not None:
+    if not print_results and output_dir is None:
         return results
 
 
