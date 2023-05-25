@@ -218,7 +218,6 @@ def predict(
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
     results = torch.zeros((image_loader.num_els, len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
-    print(F"{len(image_loader)=}, {image_loader.num_els}")
     for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
         if isinstance(data, torch.Tensor):
             N = int(math.log(image_loader.num_els, 10) + 1)
