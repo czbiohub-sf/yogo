@@ -262,7 +262,7 @@ def predict(
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_loader) % batch_size != 0
-            results[i*batch_size : i*batch_size + res.shape[0], ...] = res.cpu()
+            results[i * batch_size : i * batch_size + res.shape[0], ...] = res.cpu()
 
     if not print_results and output_dir is None:
         return results

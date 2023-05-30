@@ -140,7 +140,10 @@ def train():
     ) = init_dataset(config, Sx, Sy)
     print("dataset initialized...")
 
-    Y_loss = YOGOLoss(classify=classify).to(device)
+    Y_loss = YOGOLoss(
+        label_smoothing=config["label_smoothing"],
+        classify=classify,
+    ).to(device)
     optimizer = get_optimizer(
         config["optimizer_type"],
         parameters=net.parameters(),
