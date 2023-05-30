@@ -31,20 +31,9 @@ from yogo.data.dataloader import (
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
-torch.backends.cudnn.benchmark = True
 # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
+torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
-
-# TODO find sync points
-# https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
-# this will error out if a synchronizing operation occurs
-
-# TUNING GUIDE - goes over this
-# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
-
-# TODO
-# measure forward / backward pass timing w/
-# https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
 def checkpoint_model(
