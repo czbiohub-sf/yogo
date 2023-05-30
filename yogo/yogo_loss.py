@@ -15,21 +15,26 @@ def valid_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
 
 
 class YOGOLoss(torch.nn.modules.loss._Loss):
-    __constants__ = ["coord_weight", "no_obj_weight"]
+    __constants__ = ["coord_weight", "no_obj_weight",  "iou_weight", "classify_weight"]
     coord_weight: float
     no_obj_weight: float
 
-    # TODO sweep over coord + no_obj_weight, look at confusion matrix for results
     def __init__(
         self,
         coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
+        iou_weight: float = 1,
+        classify_weight: float = 1,
         label_smoothing: float = 0.01,
         classify: bool = True,
     ) -> None:
         super().__init__()
+
         self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
+        self.iou_weight = iou_weight
+        self.classify_weight = classify_weight
+
         self.mse = torch.nn.MSELoss(reduction="none")
         self._classify = classify
 
@@ -118,7 +123,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             formatted_labels_masked
         ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
 
-        iou_loss = (
+        iou_loss = self.iou_weight * (
             self.coord_weight
             * (
                 ops.complete_box_iou_loss(
@@ -134,7 +139,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         # classification loss
         if self._classify:
-            classification_loss = (
+            classification_loss = self.classify_weight * (
                 label_batch[:, 0, :, :]
                 * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
             ).sum() / batch_size
