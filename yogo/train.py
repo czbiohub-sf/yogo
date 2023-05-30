@@ -36,6 +36,9 @@ torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 
 
+WandbConfig: TypeAlias = dict
+
+
 def checkpoint_model(
     model: torch.nn.Module,
     epoch: int,
@@ -73,6 +76,41 @@ def get_optimizer(
     elif optimizer_type == "adam":
         return AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
     raise ValueError(f"got invalid optimizer_type {optimizer_type}")
+
+
+def init_dataset(config: WandbConfig, Sx, Sy):
+    dataloaders = get_dataloader(
+        config["dataset_descriptor_file"],
+        config["batch_size"],
+        Sx=Sx,
+        Sy=Sy,
+        preprocess_type=config["preprocess_type"],
+        vertical_crop_size=config["vertical_crop_size"],
+        resize_shape=config["resize_shape"],
+        normalize_images=config["normalize_images"],
+    )
+
+    train_dataloader = dataloaders["train"]
+    validate_dataloader = dataloaders["val"]
+    test_dataloader = dataloaders["test"]
+
+    wandb.config.update(
+        {  # we do this here b.c. batch_size can change wrt sweeps
+            "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
+            "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
+            "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
+        }
+    )
+
+    if wandb.run is not None:
+        model_save_dir = Path(f"trained_models/{wandb.run.name}")
+    else:
+        model_save_dir = Path(
+            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
+        )
+    model_save_dir.mkdir(exist_ok=True, parents=True)
+
+    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
 def train():
@@ -140,7 +178,14 @@ def train():
     ) = init_dataset(config, Sx, Sy)
     print("dataset initialized...")
 
-    Y_loss = YOGOLoss(classify=classify).to(device)
+    Y_loss = YOGOLoss(
+        no_obj_weight=config["no_obj_weight"],
+        iou_weight=config["iou_weight"],
+        classify_weight=config["classify_weight"],
+        label_smoothing=config["label_smoothing"],
+        classify=classify,
+    ).to(device)
+
     optimizer = get_optimizer(
         config["optimizer_type"],
         parameters=net.parameters(),
@@ -286,44 +331,6 @@ def train():
         )
 
 
-WandbConfig: TypeAlias = dict
-
-
-def init_dataset(config: WandbConfig, Sx, Sy):
-    dataloaders = get_dataloader(
-        config["dataset_descriptor_file"],
-        config["batch_size"],
-        Sx=Sx,
-        Sy=Sy,
-        preprocess_type=config["preprocess_type"],
-        vertical_crop_size=config["vertical_crop_size"],
-        resize_shape=config["resize_shape"],
-        normalize_images=config["normalize_images"],
-    )
-
-    train_dataloader = dataloaders["train"]
-    validate_dataloader = dataloaders["val"]
-    test_dataloader = dataloaders["test"]
-
-    wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
-            "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
-            "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
-        }
-    )
-
-    if wandb.run is not None:
-        model_save_dir = Path(f"trained_models/{wandb.run.name}")
-    else:
-        model_save_dir = Path(
-            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
-        )
-    model_save_dir.mkdir(exist_ok=True, parents=True)
-
-    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
-
-
 def do_training(args) -> None:
     """responsible for parsing args and starting a training run"""
     device = torch.device(
@@ -374,6 +381,9 @@ def do_training(args) -> None:
             "decay_factor": decay_factor,
             "weight_decay": weight_decay,
             "label_smoothing": label_smoothing,
+            "iou_weight": 5.0,
+            "no_obj_weight": 0.5,
+            "classify_weight": 1.0,
             "epochs": epochs,
             "batch_size": batch_size,
             "device": str(device),

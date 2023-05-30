@@ -15,22 +15,20 @@ def valid_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
 
 
 class YOGOLoss(torch.nn.modules.loss._Loss):
-    __constants__ = ["coord_weight", "no_obj_weight",  "iou_weight", "classify_weight"]
+    __constants__ = ["no_obj_weight", "iou_weight", "classify_weight"]
     coord_weight: float
     no_obj_weight: float
 
     def __init__(
         self,
-        coord_weight: float = 5.0,
         no_obj_weight: float = 0.5,
-        iou_weight: float = 1,
-        classify_weight: float = 1,
+        iou_weight: float = 5.0,
+        classify_weight: float = 1.0,
         label_smoothing: float = 0.01,
         classify: bool = True,
     ) -> None:
         super().__init__()
 
-        self.coord_weight = coord_weight
         self.no_obj_weight = no_obj_weight
         self.iou_weight = iou_weight
         self.classify_weight = classify_weight
@@ -123,8 +121,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             formatted_labels_masked
         ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
 
-        iou_loss = self.iou_weight * (
-            self.coord_weight
+        iou_loss = (
+            self.iou_weight
             * (
                 ops.complete_box_iou_loss(
                     torch.clamp(
@@ -135,14 +133,19 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     formatted_labels_masked,
                 )
             ).sum()
-        ) / batch_size
+            / batch_size
+        )
 
         # classification loss
         if self._classify:
-            classification_loss = self.classify_weight * (
-                label_batch[:, 0, :, :]
-                * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
-            ).sum() / batch_size
+            classification_loss = (
+                self.classify_weight
+                * (
+                    label_batch[:, 0, :, :]
+                    * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
+                ).sum()
+                / batch_size
+            )
         else:
             classification_loss = torch.tensor(
                 0, dtype=torch.float32, device=self.device
