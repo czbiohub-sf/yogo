@@ -19,8 +19,8 @@ metric:
 parameters:
   learning_rate:
     distribution: log_uniform_values
-    min: 0.0005
-    max: 0.008
+    min: 0.0015
+    max: 0.0070
   weight_decay:
     distribution: log_uniform_values
     min: 0.0001
