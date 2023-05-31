@@ -65,7 +65,6 @@ class BlobDataset(Dataset):
         background_img_shape: tuple[int, int] = (772, 1032),
         loader: Callable[[str], torch.Tensor] = read_grayscale,
         blend_thumbnails: bool = False,
-        gaussian_blur: bool = False,
         thumbnail_sigma: float = 1.0,
         normalize_images: bool = False,
         label: int = 6,
@@ -82,7 +81,6 @@ class BlobDataset(Dataset):
         self.label = label
         self.loader = loader
         self.length = length
-        self.gaussian_blur = gaussian_blur
         self.blend_thumbnails = blend_thumbnails
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
