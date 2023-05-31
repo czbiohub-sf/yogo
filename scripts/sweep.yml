@@ -29,3 +29,11 @@ parameters:
     distribution: log_uniform_values
     min: 0.0001
     max: 0.2
+  iou_weight:
+    distribution: uniform
+    min: 0.01
+    max: 20
+  classify_weight:
+    distribution: uniform
+    min: 1
+    max: 20
