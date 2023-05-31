@@ -12,6 +12,7 @@ from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
 from typing import List, Dict, Tuple, Optional
 
+from yogo.data.blobgen import BlobDataset
 from yogo.data.dataset import ObjectDetectionDataset
 from yogo.data.data_transforms import (
     DualInputModule,
@@ -249,6 +250,7 @@ def get_dataloader(
     resize_shape: Optional[Tuple[int, int]] = None,
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
+    blob_augmentation: Optional[Path] = None,
 ) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
@@ -257,6 +259,22 @@ def get_dataloader(
         split_fractions_override=split_fractions_override,
         normalize_images=normalize_images,
     )
+
+    # hardcode the blob agumentation for now
+    # this should be moved into the dataset description file
+    if blob_augmentation is not None:
+        bd = BlobDataset(
+            blob_augmentation,
+            Sx=Sx,
+            Sy=Sy,
+            n=10,
+            length=len(split_datasets["train"]) // 10,  # type: ignore
+            blend_thumbnails=True,
+            thumbnail_sigma=2,
+            normalize_images=normalize_images,
+        )
+        split_datasets["train"] = ConcatDataset([split_datasets["train"], bd])
+
     augmentations: List[DualInputModule] = (
         [
             ImageTransformLabelIdentity(RandomAdjustSharpness(0, p=0.5)),
