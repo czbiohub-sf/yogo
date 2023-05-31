@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 
+import math
 import torch
 import numpy as np
 
@@ -12,7 +13,6 @@ from torch.utils.data import Dataset
 from torchvision import transforms as T
 from torchvision.ops import box_iou
 from torchvision.transforms import functional as F
-from torchvision.io import read_image, ImageReadMode
 
 from yogo.data.dataset import read_grayscale, format_labels_tensor
 
@@ -40,9 +40,14 @@ class RandomRescale(torch.nn.Module):
             PIL Image or Tensor: Rescaled image.
         """
         img_size = torch.tensor(img.shape[-2:])
-        scale  = (torch.rand(1) * (self.scale[1] - self.scale[0]) + self.scale[0]).item()
+        scale = (torch.rand(1) * (self.scale[1] - self.scale[0]) + self.scale[0]).item()
         new_img_shape = [int(v) for v in img_size * scale]
-        return F.resize(img, size=new_img_shape, interpolation=self.interpolation, antialias=self.antialias)
+        return F.resize(
+            img,
+            size=new_img_shape,
+            interpolation=self.interpolation,
+            antialias=self.antialias,
+        )
 
     def __repr__(self) -> str:
         detail = f"(scale={self.scale}, interpolation={self.interpolation.value}, max_size={self.max_size}, antialias={self.antialias})"
@@ -59,6 +64,9 @@ class BlobDataset(Dataset):
         length: int = 1000,
         background_img_shape: tuple[int, int] = (772, 1032),
         loader: Callable[[str], torch.Tensor] = read_grayscale,
+        blend_thumbnails: bool = False,
+        gaussian_blur: bool = False,
+        thumbnail_sigma: float = 1.0,
         normalize_images: bool = False,
         label: int = 6,
     ):
@@ -74,6 +82,9 @@ class BlobDataset(Dataset):
         self.label = label
         self.loader = loader
         self.length = length
+        self.gaussian_blur = gaussian_blur
+        self.blend_thumbnails = blend_thumbnails
+        self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
         self.thumbnail_paths = self.get_thumbnail_paths(self.misc_thumbnail_path)
 
@@ -102,26 +113,66 @@ class BlobDataset(Dataset):
         return int(val)
 
     def propose_non_intersecting_coords(
-            self,
-            previous_coordinates: torch.Tensor,
-            h: int,
-            w: int,
-            num_tries: int = 100,
-        ) -> Optional[Tuple[int, int, torch.Tensor]]:
+        self,
+        previous_coordinates: torch.Tensor,
+        h: int,
+        w: int,
+        num_tries: int = 100,
+    ) -> Optional[Tuple[int, int, torch.Tensor]]:
         while num_tries > 0:
             y = np.random.randint(0, self.background_img_shape[0] - h)
             x = np.random.randint(0, self.background_img_shape[1] - w)
-            normalized_coords = torch.tensor([[
-                x / self.background_img_shape[1],
-                y / self.background_img_shape[0],
-                (x + w) / self.background_img_shape[1],
-                (y + h) / self.background_img_shape[0],
-            ]])
-            if previous_coordinates.sum().eq(0) or box_iou(normalized_coords, previous_coordinates).sum().eq(0):
+            normalized_coords = torch.tensor(
+                [
+                    [
+                        x / self.background_img_shape[1],
+                        y / self.background_img_shape[0],
+                        (x + w) / self.background_img_shape[1],
+                        (y + h) / self.background_img_shape[0],
+                    ]
+                ]
+            )
+            if previous_coordinates.sum().eq(0) or box_iou(
+                normalized_coords, previous_coordinates
+            ).sum().eq(0):
                 return x, y, normalized_coords
             num_tries -= 1
         return None
 
+    def gaussian_kernel(self, thumbnail, thumbnail_sigma):
+        def gaussian(x, mu=0.0, sigma=1.0):
+            return torch.exp(-((x - mu) ** 2) / (2 * sigma**2)) / (
+                sigma * math.sqrt(2 * math.pi)
+            )
+
+        w = torch.linspace(-1, 1, thumbnail.shape[1])
+        h = torch.linspace(-1, 1, thumbnail.shape[0])
+
+        w_gaussian = gaussian(w, sigma=thumbnail_sigma)
+        h_gaussian = gaussian(h, sigma=thumbnail_sigma)
+
+        kernel = torch.sqrt(h_gaussian[:, None] * w_gaussian[None, :])
+        kernel = (kernel - kernel.min()) * (1 / (kernel.max() - kernel.min()))
+
+        return kernel
+
+    def square_kernel(self, thumbnail):
+        "not as good as gaussian kernel"
+        hs = torch.linspace(-1, 1, thumbnail.shape[0])
+        ws = torch.linspace(-1, 1, thumbnail.shape[1])
+        kernel = torch.sqrt(hs[:, None] ** 2 * ws[None, :] ** 2)
+        kernel = torch.where(kernel < 0.5, 0, kernel)
+        kernel = (kernel - kernel.min()) * (1 / (kernel.max() - kernel.min()))
+        kernel = 1 - kernel
+
+        return kernel
+
+    def blend_thumbnail(
+        self, bg_shade: int, thumbnail: torch.Tensor, thumbnail_sigma: float = 1.0
+    ) -> torch.Tensor:
+        """Michelle's Idea"""
+        kernel = self.gaussian_kernel(thumbnail, thumbnail_sigma)
+        return bg_shade * (1 - kernel) + thumbnail * kernel
 
     def __getitem__(self, idx):
         if idx >= self.length:
@@ -140,6 +191,16 @@ class BlobDataset(Dataset):
         )
         max_scale = max_size / min(min(t.shape[-2:]) for t in thumbnails)
 
+        if self.blend_thumbnails:
+            thumbnails = [
+                self.blend_thumbnail(
+                    mean_background,
+                    thumbnail.squeeze(),
+                    thumbnail_sigma=self.thumbnail_sigma,
+                ).unsqueeze(0)
+                for thumbnail in thumbnails
+            ]
+
         xforms = torch.nn.Sequential(
             T.RandomRotation(180, expand=True, fill=mean_background),
             RandomRescale((0.8, min(max_scale, 2))),
@@ -148,17 +209,18 @@ class BlobDataset(Dataset):
 
         coords = torch.empty((len(thumbnails), 5))
         for i, thumbnail in enumerate(thumbnails):
-            thumbnail = xforms(thumbnail)
-            _, h, w = thumbnail.shape
+            thumbnail = xforms(thumbnail).squeeze()
+
+            h, w = thumbnail.shape
 
             proposed_coords = self.propose_non_intersecting_coords(coords[:, 1:], h, w)
             if proposed_coords is None:
-                print('continuing')
+                print("continuing")
                 continue
 
             x, y, normalized_coords = proposed_coords
 
-            img[y : y + h, x : x + w] = thumbnail[0]
+            img[y : y + h, x : x + w] = thumbnail
 
             coords[i, 0] = self.label
             coords[i, 1:] = normalized_coords
