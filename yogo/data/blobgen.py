@@ -20,15 +20,12 @@ class RandomRescale(torch.nn.Module):
     def __init__(
         self,
         scale: Tuple[int, int],
-        p=0.5,
         interpolation=F.InterpolationMode.BILINEAR,
-        max_size=None,
-        antialias="warn",
+        antialias=True,
     ):
         super().__init__()
 
         self.scale = scale
-        self.max_size = max_size
 
         self.interpolation = interpolation
         self.antialias = antialias
@@ -41,13 +38,10 @@ class RandomRescale(torch.nn.Module):
         Returns:
             PIL Image or Tensor: Rescaled image.
         """
-        if torch.rand(1) > self.p:
-            return img
-
         img_size = torch.tensor(img.shape[-2:])
-        scale = torch.rand(1) * (self.scale[1] - self.scale[0]) + self.scale[0]
-        size = (img_size * scale).int().tolist()
-        return F.resize(img, size, self.interpolation, self.max_size, self.antialias)
+        scale  = (torch.rand(1) * (self.scale[1] - self.scale[0]) + self.scale[0]).item()
+        new_img_shape = [int(v) for v in img_size * scale]
+        return F.resize(img, size=new_img_shape, interpolation=self.interpolation, antialias=self.antialias)
 
     def __repr__(self) -> str:
         detail = f"(scale={self.scale}, interpolation={self.interpolation.value}, max_size={self.max_size}, antialias={self.antialias})"
@@ -58,6 +52,8 @@ class BlobDataset(Dataset):
     def __init__(
         self,
         misc_thumbnail_path: Union[str, Path],
+        Sx,
+        Sy,
         length: int = 1000,
         background_img_shape: tuple[int, int] = (772, 1032),
         loader: Callable[[str], torch.Tensor] = read_grayscale,
@@ -70,10 +66,16 @@ class BlobDataset(Dataset):
         if not self.misc_thumbnail_path.exists():
             raise FileNotFoundError(f"{misc_thumbnail_path} does not exist")
 
+        self.Sx = Sx
+        self.Sy = Sy
         self.label = label
         self.loader = loader
         self.length = length
+        self.background_img_shape = background_img_shape
         self.thumbnail_paths = self.get_thumbnail_paths(self.misc_thumbnail_path)
+
+        if len(self.thumbnail_paths) == 0:
+            raise FileNotFoundError(f"no thumbnails found in {misc_thumbnail_path}")
 
     def __len__(self) -> int:
         return self.length
@@ -93,7 +95,7 @@ class BlobDataset(Dataset):
         self, thumbnail: torch.Tensor, darkness_threshold: int = 200
     ) -> int:
         "rough heuristic for getting background color of thumbnail"
-        val = thumbnail[thumbnail > darkness_threshold].mean().item()
+        val = thumbnail[thumbnail > darkness_threshold].float().mean().item()
         return int(val)
 
     def __getitem__(self, idx):
@@ -107,26 +109,34 @@ class BlobDataset(Dataset):
 
         img = torch.fill_(torch.empty(self.background_img_shape), mean_background)
 
-        max_size = (
-            self.background_img_shape[0] // 4,
-            self.background_img_shape[1] // 4,
+        max_size = min(
+            self.background_img_shape[0] // 3,
+            self.background_img_shape[1] // 3,
         )
+        max_scale = max_size / min(min(t.shape[-2:]) for t in thumbnails)
 
         xforms = torch.nn.Sequential(
             T.RandomRotation(180, expand=True, fill=mean_background),
-            RandomRescale((0.8, 2.0), p=0.5, max_size=max_size),
+            RandomRescale((0.8, max_scale)),
         )
         xforms = torch.jit.script(xforms)
 
         coords = []
         for thumbnail in thumbnails:
             thumbnail = xforms(thumbnail)
-            h, w = thumbnail.shape
-            x = np.random.randint(0, self.background_img_shape[0] - w)
-            y = np.random.randint(0, self.background_img_shape[1] - h)
-            img[x : x + w, y : y + h] = thumbnail
-            coords.append([self.label, x, y, x + w, y + h])
+            _, h, w = thumbnail.shape
+            y = np.random.randint(0, self.background_img_shape[0] - h)
+            x = np.random.randint(0, self.background_img_shape[1] - w)
+            img[y : y + h, x : x + w] = thumbnail[0]
+            normalized_coords = [
+                x / self.background_img_shape[1],
+                y / self.background_img_shape[0],
+                (x + w) / self.background_img_shape[1],
+                (y + h) / self.background_img_shape[0],
+            ]
+            coords.append([self.label, *normalized_coords])
 
-        label_tensor = format_labels_tensor(torch.tensor(coords))
+        print(coords)
+        label_tensor = format_labels_tensor(torch.tensor(coords), self.Sx, self.Sy)
 
         return img, label_tensor
