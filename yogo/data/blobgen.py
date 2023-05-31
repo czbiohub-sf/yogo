@@ -5,13 +5,14 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from typing import Union, Callable, Tuple
+from typing import Union, Callable, Tuple, Optional
 
 from torch.utils.data import Dataset
 
 from torchvision import transforms as T
-from torchvision.io import read_image, ImageReadMode
+from torchvision.ops import box_iou
 from torchvision.transforms import functional as F
+from torchvision.io import read_image, ImageReadMode
 
 from yogo.data.dataset import read_grayscale, format_labels_tensor
 
@@ -52,8 +53,9 @@ class BlobDataset(Dataset):
     def __init__(
         self,
         misc_thumbnail_path: Union[str, Path],
-        Sx,
-        Sy,
+        Sx: int,
+        Sy: int,
+        n: int = 4,
         length: int = 1000,
         background_img_shape: tuple[int, int] = (772, 1032),
         loader: Callable[[str], torch.Tensor] = read_grayscale,
@@ -68,6 +70,7 @@ class BlobDataset(Dataset):
 
         self.Sx = Sx
         self.Sy = Sy
+        self.n = n
         self.label = label
         self.loader = loader
         self.length = length
@@ -92,17 +95,39 @@ class BlobDataset(Dataset):
         return [self.loader(fp) for fp in paths]
 
     def get_background_shade(
-        self, thumbnail: torch.Tensor, darkness_threshold: int = 200
+        self, thumbnail: torch.Tensor, darkness_threshold: int = 210
     ) -> int:
         "rough heuristic for getting background color of thumbnail"
         val = thumbnail[thumbnail > darkness_threshold].float().mean().item()
         return int(val)
 
+    def propose_non_intersecting_coords(
+            self,
+            previous_coordinates: torch.Tensor,
+            h: int,
+            w: int,
+            num_tries: int = 100,
+        ) -> Optional[Tuple[int, int, torch.Tensor]]:
+        while num_tries > 0:
+            y = np.random.randint(0, self.background_img_shape[0] - h)
+            x = np.random.randint(0, self.background_img_shape[1] - w)
+            normalized_coords = torch.tensor([[
+                x / self.background_img_shape[1],
+                y / self.background_img_shape[0],
+                (x + w) / self.background_img_shape[1],
+                (y + h) / self.background_img_shape[0],
+            ]])
+            if previous_coordinates.sum().eq(0) or box_iou(normalized_coords, previous_coordinates).sum().eq(0):
+                return x, y, normalized_coords
+            num_tries -= 1
+        return None
+
+
     def __getitem__(self, idx):
         if idx >= self.length:
             raise IndexError(f"index {idx} is out of bounds for length {self.length}")
 
-        thumbnails = self.get_random_thumbnails()
+        thumbnails = self.get_random_thumbnails(self.n)
         mean_background = np.mean(
             [self.get_background_shade(thumbnail) for thumbnail in thumbnails]
         )
@@ -110,33 +135,34 @@ class BlobDataset(Dataset):
         img = torch.fill_(torch.empty(self.background_img_shape), mean_background)
 
         max_size = min(
-            self.background_img_shape[0] // 3,
-            self.background_img_shape[1] // 3,
+            self.background_img_shape[0] // 4,
+            self.background_img_shape[1] // 4,
         )
         max_scale = max_size / min(min(t.shape[-2:]) for t in thumbnails)
 
         xforms = torch.nn.Sequential(
             T.RandomRotation(180, expand=True, fill=mean_background),
-            RandomRescale((0.8, max_scale)),
+            RandomRescale((0.8, min(max_scale, 2))),
         )
         xforms = torch.jit.script(xforms)
 
-        coords = []
-        for thumbnail in thumbnails:
+        coords = torch.empty((len(thumbnails), 5))
+        for i, thumbnail in enumerate(thumbnails):
             thumbnail = xforms(thumbnail)
             _, h, w = thumbnail.shape
-            y = np.random.randint(0, self.background_img_shape[0] - h)
-            x = np.random.randint(0, self.background_img_shape[1] - w)
-            img[y : y + h, x : x + w] = thumbnail[0]
-            normalized_coords = [
-                x / self.background_img_shape[1],
-                y / self.background_img_shape[0],
-                (x + w) / self.background_img_shape[1],
-                (y + h) / self.background_img_shape[0],
-            ]
-            coords.append([self.label, *normalized_coords])
 
-        print(coords)
-        label_tensor = format_labels_tensor(torch.tensor(coords), self.Sx, self.Sy)
+            proposed_coords = self.propose_non_intersecting_coords(coords[:, 1:], h, w)
+            if proposed_coords is None:
+                print('continuing')
+                continue
+
+            x, y, normalized_coords = proposed_coords
+
+            img[y : y + h, x : x + w] = thumbnail[0]
+
+            coords[i, 0] = self.label
+            coords[i, 1:] = normalized_coords
+
+        label_tensor = format_labels_tensor(coords, self.Sx, self.Sy)
 
         return img, label_tensor
