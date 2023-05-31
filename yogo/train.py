@@ -302,6 +302,7 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
         normalize_images=config["normalize_images"],
+        blob_augmentation=Path("/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/misc"),
     )
 
     train_dataloader = dataloaders["train"]
