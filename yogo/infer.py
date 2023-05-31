@@ -37,14 +37,20 @@ def choose_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def save_preds(fnames, batch_preds, thresh=0.5):
+def save_preds(fnames, batch_preds, thresh=0.5, label_override: Optional[str] = None):
     bs, pred_shape, Sy, Sx = batch_preds.shape
+
+    if label_override is not None:
+        label_idx = YOGO_CLASS_ORDERING.index(label_override)
+    else:
+        # var is not used
+        label_idx = None
 
     for fname, batch_pred in zip(fnames, batch_preds):
         preds = format_preds(batch_pred)
 
         pred_string = "\n".join(
-            f"{argmax(pred[5:])} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
+            f"{argmax(pred[5:]) if label_override is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
             for pred in preds
         )
         with open(fname, "w") as f:
@@ -173,6 +179,7 @@ def predict(
     use_tqdm: bool = False,
     device: Union[str, torch.device] = "cpu",
     print_results: bool = False,
+    label_override: Optional[str] = None,
 ) -> Optional[torch.Tensor]:
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
@@ -237,7 +244,7 @@ def predict(
                 Path(output_dir) / Path(fname).with_suffix(".txt").name
                 for fname in fnames
             ]
-            save_preds(out_fnames, res, thresh=0.5)
+            save_preds(out_fnames, res, thresh=0.5, label_override=label_override)
         elif draw_boxes:
             for img_idx in range(img_batch.shape[0]):
                 drawn_img = draw_rects(
