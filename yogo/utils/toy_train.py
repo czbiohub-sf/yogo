@@ -2,6 +2,7 @@ import torch
 import wandb
 
 from torch.utils.data import DataLoader
+from torch.utils.data import ConcatDataset
 
 from torch.optim import AdamW
 
@@ -21,14 +22,29 @@ def collate_batch(batch):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-dl = DataLoader(
-    BlobDataset(
-        "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/misc",
-        129,
-        97,
-        n=8,
-        length=100,
-        blend_thumbnails=True,
+data_paths = {
+    "healthy": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/healthy",
+    "ring": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/ring",
+    "schizont": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/schizont",
+    "trophozoite": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/trophozoite",
+    "gametocyte": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/gametocyte",
+    "wbc": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/wbc",
+    "misc": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/misc",
+}
+
+dl: DataLoader[ConcatDataset[BlobDataset]] = DataLoader(
+    ConcatDataset(
+        [
+            BlobDataset(
+                {k: v},
+                129,
+                97,
+                n=8,
+                length=800,
+                blend_thumbnails=True,
+            )
+            for k, v in data_paths.items()
+        ]
     ),
     batch_size=64,
     num_workers=0,
