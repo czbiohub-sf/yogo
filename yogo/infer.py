@@ -85,7 +85,7 @@ class ImageLoader:
         device: Union[str, torch.device] = "cpu",
     ):
         img_batch = torch.stack([read_grayscale(str(fname)) for fname in fnames])
-        img_batch = img_batch.to(device)
+        img_batch = img_batch.to(device, dtype=torch.float16)
         img_batch = transform(img_batch)
 
         if len(img_batch.shape) == 3:
