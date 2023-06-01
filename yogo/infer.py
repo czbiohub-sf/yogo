@@ -37,11 +37,11 @@ def choose_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def save_preds(fnames, batch_preds, thresh=0.5, label_override: Optional[str] = None):
+def save_preds(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
     bs, pred_shape, Sy, Sx = batch_preds.shape
 
-    if label_override is not None:
-        label_idx = YOGO_CLASS_ORDERING.index(label_override)
+    if label is not None:
+        label_idx = YOGO_CLASS_ORDERING.index(label)
     else:
         # var is not used
         label_idx = None
@@ -50,7 +50,7 @@ def save_preds(fnames, batch_preds, thresh=0.5, label_override: Optional[str] = 
         preds = format_preds(batch_pred)
 
         pred_string = "\n".join(
-            f"{argmax(pred[5:]) if label_override is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
+            f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
             for pred in preds
         )
         with open(fname, "w") as f:
@@ -179,7 +179,7 @@ def predict(
     use_tqdm: bool = False,
     device: Union[str, torch.device] = "cpu",
     print_results: bool = False,
-    label_override: Optional[str] = None,
+    label: Optional[str] = None,
 ) -> Optional[torch.Tensor]:
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
@@ -244,7 +244,7 @@ def predict(
                 Path(output_dir) / Path(fname).with_suffix(".txt").name
                 for fname in fnames
             ]
-            save_preds(out_fnames, res, thresh=0.5, label_override=label_override)
+            save_preds(out_fnames, res, thresh=0.5, label=label)
         elif draw_boxes:
             for img_idx in range(img_batch.shape[0]):
                 drawn_img = draw_rects(
