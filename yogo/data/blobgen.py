@@ -120,7 +120,7 @@ class BlobDataset(Dataset):
         self,
         h: int,
         w: int,
-        previous_coordinates: List[List[float]],
+        previous_coordinates: List[torch.Tensor],
         num_tries: int = 100,
     ) -> Optional[Tuple[int, int, torch.Tensor]]:
         while num_tries > 0:
@@ -187,7 +187,7 @@ class BlobDataset(Dataset):
             [self.get_background_shade(thumbnail) for thumbnail in thumbnails]
         )
 
-        img = torch.fill_(torch.empty(self.background_img_shape), mean_background)
+        img = torch.empty(self.background_img_shape).fill_(mean_background)
 
         max_size = min(
             self.background_img_shape[0] // 4,
