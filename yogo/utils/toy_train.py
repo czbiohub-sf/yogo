@@ -47,13 +47,13 @@ dl: DataLoader[ConcatDataset[BlobDataset]] = DataLoader(
         ]
     ),
     batch_size=64,
-    num_workers=0,
+    num_workers=8,
     collate_fn=collate_batch,
 )
 
 
 net = YOGO(
-    num_classes=1,
+    num_classes=7,
     img_size=(772, 1032),
     anchor_w=0.4,
     anchor_h=0.5,
@@ -70,7 +70,7 @@ wandb.init(
 
 Y_loss = YOGOLoss(
     label_smoothing=0.01,
-    classify=False,
+    classify=True,
 ).to(device)
 
 global_step = 0
@@ -100,7 +100,6 @@ for epoch in range(1000):
             step=global_step,
         )
 
-    print(imgs[0, 0, ...].cpu().numpy())
     annotated_img = wandb.Image(
         draw_rects(
             imgs[0, 0, ...].cpu().int(),
