@@ -14,7 +14,7 @@ from torchvision import transforms as T
 from torchvision.ops import box_iou
 from torchvision.transforms import functional as F
 
-from yogo.data.dataset import read_grayscale, format_labels_tensor
+from yogo.data.dataset import read_grayscale, format_labels_tensor, YOGO_CLASS_ORDERING
 
 
 class RandomRescale(torch.nn.Module):
@@ -53,7 +53,7 @@ PathLike = Union[str, Path]
 class BlobDataset(Dataset):
     def __init__(
         self,
-        thumbnail_dir_paths: Dict[int, PathLike],
+        thumbnail_dir_paths: Dict[Union[str, int], PathLike],
         Sx: int,
         Sy: int,
         n: int = 4,
@@ -67,7 +67,7 @@ class BlobDataset(Dataset):
         super().__init__()
 
         self.thumbnail_dir_paths: Dict[int, Path] = {
-            k: Path(v) for k, v in thumbnail_dir_paths.items()
+            self._convert_label(k): Path(v) for k, v in thumbnail_dir_paths.items()
         }
 
         for thp in self.thumbnail_dir_paths.values():
@@ -91,6 +91,17 @@ class BlobDataset(Dataset):
                 f"no thumbnails found in any of {(str(tdp) for tdp in self.thumbnail_dir_paths)}"
             )
 
+    def _convert_label(self, label: Union[str, int]) -> int:
+        if isinstance(label, int):
+            if 0 <= label < len(YOGO_CLASS_ORDERING):
+                raise ValueError(f"label {label} is out of range")
+            return label
+
+        try:
+            return YOGO_CLASS_ORDERING.index(label)
+        except IndexError as e:
+            raise ValueError(f"label {label} is not a valid YOGO class") from e
+
     def __len__(self) -> int:
         return self.length
 
@@ -98,7 +109,7 @@ class BlobDataset(Dataset):
         self, dir_paths: Dict[int, Path]
     ) -> Tuple[np.ndarray, np.ndarray]:
         cls_path_pairs = [
-            (cls, fp) for cls, dp in dir_paths.items() for fp in dp.glob("*.png")
+            (cls, fp) for cls, dp in dir_paths.items() for fp in dp.rglob("*.png")
         ]
         classes, paths = zip(*cls_path_pairs)
         return np.array(classes), np.array(paths).astype(np.string_)
