@@ -302,7 +302,6 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
         normalize_images=config["normalize_images"],
-        blob_augmentation=Path(config["blob_aug_path"]),
     )
 
     train_dataloader = dataloaders["train"]
@@ -392,7 +391,6 @@ def do_training(args) -> None:
             "no_classify": args.no_classify,
             "run group": args.group,
             "normalize_images": args.normalize_images,
-            "blob_aug_path": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/misc",
             "dataset_descriptor_file": args.dataset_descriptor_file,
             "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },
