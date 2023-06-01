@@ -302,7 +302,7 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
         normalize_images=config["normalize_images"],
-        blob_augmentation=Path(config['blob_aug_path']),
+        blob_augmentation=Path(config["blob_aug_path"]),
     )
 
     train_dataloader = dataloaders["train"]
