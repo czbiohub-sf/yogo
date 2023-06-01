@@ -104,10 +104,16 @@ class BlobDataset(Dataset):
         return [self.loader(fp) for fp in paths]
 
     def get_background_shade(
-        self, thumbnail: torch.Tensor, darkness_threshold: int = 210
+        self, thumbnail: torch.Tensor, brightness_threshold: int = 210
     ) -> int:
         "rough heuristic for getting background color of thumbnail"
-        val = thumbnail[thumbnail > darkness_threshold].float().mean().item()
+        val = (
+            thumbnail[thumbnail > brightness_threshold]
+            .float()
+            .mean()
+            .nan_to_num(brightness_threshold)
+            .item()
+        )
         return int(val)
 
     def propose_non_intersecting_coords(
