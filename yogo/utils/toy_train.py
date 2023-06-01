@@ -39,7 +39,7 @@ dl: DataLoader[ConcatDataset[BlobDataset]] = DataLoader(
                 {k: v},
                 129,
                 97,
-                n=8,
+                n=12,
                 length=800,
                 blend_thumbnails=True,
             )
@@ -48,6 +48,8 @@ dl: DataLoader[ConcatDataset[BlobDataset]] = DataLoader(
     ),
     batch_size=64,
     num_workers=8,
+    shuffle=True,
+    pin_memory=True,
     collate_fn=collate_batch,
 )
 
