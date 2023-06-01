@@ -111,12 +111,13 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             "xyxy",
         )
 
-        assert valid_boxes(
-            formatted_preds_xyxy
-        ), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
-        assert valid_boxes(
-            formatted_labels_masked
-        ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
+        valid_box_mask = torch.logical_and(
+            formatted_preds_xyxy[:, 0] != formatted_preds_xyxy[:, 2],
+            formatted_preds_xyxy[:, 1] != formatted_preds_xyxy[:, 3],
+        )
+
+        formatted_preds_xyxy = formatted_preds_xyxy[valid_box_mask]
+        formatted_labels_masked = formatted_labels_masked[valid_box_mask]
 
         iou_loss = (
             self.coord_weight
