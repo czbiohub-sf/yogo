@@ -210,7 +210,7 @@ class BlobDataset(Dataset):
             T.RandomVerticalFlip(),
             # TODO this mucks w/ bounding boxes for rectangular shapes, probably ok for rbcs
             # T.RandomRotation(180, expand=True, fill=mean_background),
-            RandomRescale((0.8, min(max_scale, 2))),
+            RandomRescale((1, min(max_scale, 1.5))),
         )
 
         # xforms = torch.jit.script(xforms)
