@@ -56,7 +56,8 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
 def load_dataset_description(dataset_description: str) -> DatasetDescription:
     """Loads and validates dataset description file"""
     required_keys = [
-        "class_names" "dataset_split_fractions",
+        "class_names",
+        "dataset_split_fractions",
         "dataset_paths",
     ]
     with open(dataset_description, "r") as desc:
