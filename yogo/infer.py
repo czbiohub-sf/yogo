@@ -18,7 +18,7 @@ from torchvision.transforms import Resize, Compose
 
 from yogo.model import YOGO
 from yogo.utils.argparsers import infer_parser
-from yogo.utils import draw_rects, format_preds, iter_in_chunks
+from yogo.utils import draw_yogo_prediction, format_preds, iter_in_chunks
 from yogo.data.dataset import read_grayscale, YOGO_CLASS_ORDERING
 
 
@@ -247,7 +247,7 @@ def predict(
             save_preds(out_fnames, res, thresh=0.5, label=label)
         elif draw_boxes:
             for img_idx in range(img_batch.shape[0]):
-                drawn_img = draw_rects(
+                bbox_img = draw_yogo_prediction(
                     img_batch[img_idx, ...],
                     res[img_idx, ...],
                     thresh=0.5,
@@ -258,11 +258,11 @@ def predict(
                         Path(output_dir)
                         / Path(fnames[img_idx]).with_suffix(".png").name
                     )
-                    drawn_img.save(out_fname)
+                    bbox_img.save(out_fname)
                 else:
                     fig, ax = plt.subplots()
                     ax.set_axis_off()
-                    ax.imshow(drawn_img)
+                    ax.imshow(bbox_img)
                     plt.show()
         elif print_results:
             print(res)

@@ -7,7 +7,7 @@ from torch.utils.data import ConcatDataset
 from torch.optim import AdamW
 
 from yogo.model import YOGO
-from yogo.utils import draw_rects
+from yogo.utils import draw_yogo_prediction
 from yogo.yogo_loss import YOGOLoss
 from yogo.data.blobgen import BlobDataset
 from yogo.data.dataset import YOGO_CLASS_ORDERING
@@ -103,7 +103,7 @@ for epoch in range(1000):
         )
 
     annotated_img = wandb.Image(
-        draw_rects(
+        draw_yogo_prediction(
             imgs[0, 0, ...].cpu().int(),
             out[0, ...].cpu().detach(),
             thresh=0.5,
