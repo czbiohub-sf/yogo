@@ -109,7 +109,10 @@ def train():
         net.to(device)
 
         global_step = net_cfg["step"]
-        config["normalize_images"] = net_cfg["normalize_images"]
+        wandb.config.update(
+            {"normalize_images": net_cfg["normalize_images"]},
+            allow_val_change=True
+        )
 
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
             raise RuntimeError(
