@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from typing import Union, Callable, Tuple, Optional
+from typing import Union, Callable, Tuple, List, Optional
 
 from torch.utils.data import Dataset
 
@@ -62,7 +62,7 @@ class BlobDataset(Dataset):
         Sy: int,
         n: int = 4,
         length: int = 1000,
-        background_img_shape: tuple[int, int] = (772, 1032),
+        background_img_shape: Tuple[int, int] = (772, 1032),
         loader: Callable[[str], torch.Tensor] = read_grayscale,
         blend_thumbnails: bool = False,
         thumbnail_sigma: float = 1.0,
@@ -96,7 +96,7 @@ class BlobDataset(Dataset):
         paths = [fp for fp in folder_path.glob("*.png")]
         return np.array(paths).astype(np.string_)
 
-    def get_random_thumbnails(self, n: int = 1) -> list[torch.Tensor]:
+    def get_random_thumbnails(self, n: int = 1) -> List[torch.Tensor]:
         paths = [
             str(fp_encoded, encoding="utf-8")
             for fp_encoded in np.random.choice(self.thumbnail_paths, size=n)
@@ -112,9 +112,9 @@ class BlobDataset(Dataset):
 
     def propose_non_intersecting_coords(
         self,
-        previous_coordinates: torch.Tensor,
         h: int,
         w: int,
+        previous_coordinates: List[List[float]],
         num_tries: int = 100,
     ) -> Optional[Tuple[int, int, torch.Tensor]]:
         while num_tries > 0:
@@ -130,8 +130,8 @@ class BlobDataset(Dataset):
                     ]
                 ]
             )
-            if previous_coordinates.sum().eq(0) or box_iou(
-                normalized_coords, previous_coordinates
+            if len(previous_coordinates) == 0 or box_iou(
+                normalized_coords, torch.cat(previous_coordinates)
             ).sum().eq(0):
                 return x, y, normalized_coords
             num_tries -= 1
@@ -200,29 +200,35 @@ class BlobDataset(Dataset):
             ]
 
         xforms = torch.nn.Sequential(
-            T.RandomRotation(180, expand=True, fill=mean_background),
+            T.RandomHorizontalFlip(),
+            T.RandomVerticalFlip(),
+            # TODO this mucks w/ bounding boxes for rectangular shapes, probably ok for rbcs
+            # T.RandomRotation(180, expand=True, fill=mean_background),
             RandomRescale((0.8, min(max_scale, 2))),
         )
-        xforms = torch.jit.script(xforms)
 
-        coords = torch.empty((len(thumbnails), 5))
-        for i, thumbnail in enumerate(thumbnails):
+        # xforms = torch.jit.script(xforms)
+        # TODO: Why does the above cause the following?
+        # UserWarning: operator() profile_node %342 : int = prim::profile_ivalue(%out_dtype.1) does not have profile information
+
+        coords = []
+        for thumbnail in thumbnails:
             thumbnail = xforms(thumbnail).squeeze()
 
             h, w = thumbnail.shape
 
-            proposed_coords = self.propose_non_intersecting_coords(coords[:, 1:], h, w)
+            proposed_coords = self.propose_non_intersecting_coords(h, w, coords)
             if proposed_coords is None:
-                print("continuing")
                 continue
 
             x, y, normalized_coords = proposed_coords
 
             img[y : y + h, x : x + w] = thumbnail
 
-            coords[i, 0] = self.label
-            coords[i, 1:] = normalized_coords
+            coords.append(normalized_coords)
 
+        coords = torch.cat(coords)
+        coords = torch.cat([torch.ones(coords.shape[0], 1), coords], dim=1)
         label_tensor = format_labels_tensor(coords, self.Sx, self.Sy)
 
-        return img, label_tensor
+        return img.unsqueeze(0), label_tensor

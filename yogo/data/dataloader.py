@@ -267,7 +267,7 @@ def get_dataloader(
             blob_augmentation,
             Sx=Sx,
             Sy=Sy,
-            n=10,
+            n=8,
             length=len(split_datasets["train"]) // 10,  # type: ignore
             blend_thumbnails=True,
             thumbnail_sigma=2,
