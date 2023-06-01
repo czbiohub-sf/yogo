@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from typing import Union, Callable, Tuple, List, Optional
+from typing import Union, Callable, Tuple, List, Optional, Sequence
 
 from torch.utils.data import Dataset
 
@@ -31,14 +31,7 @@ class RandomRescale(torch.nn.Module):
         self.interpolation = interpolation
         self.antialias = antialias
 
-    def forward(self, img):
-        """
-        Args:
-            img (PIL Image or Tensor): Image to be scaled.
-
-        Returns:
-            PIL Image or Tensor: Rescaled image.
-        """
+    def forward(self, img: torch.Tensor):
         img_size = torch.tensor(img.shape[-2:])
         scale = (torch.rand(1) * (self.scale[1] - self.scale[0]) + self.scale[0]).item()
         new_img_shape = [int(v) for v in img_size * scale]
@@ -54,10 +47,13 @@ class RandomRescale(torch.nn.Module):
         return f"{self.__class__.__name__}{detail}"
 
 
+PathLike = Union[str, Path]
+
+
 class BlobDataset(Dataset):
     def __init__(
         self,
-        misc_thumbnail_path: Union[str, Path],
+        thumbnail_dir_paths: Union[PathLike, Sequence[PathLike]],
         Sx: int,
         Sy: int,
         n: int = 4,
@@ -70,10 +66,16 @@ class BlobDataset(Dataset):
         label: int = 6,
     ):
         super().__init__()
-        self.misc_thumbnail_path = Path(misc_thumbnail_path)
 
-        if not self.misc_thumbnail_path.exists():
-            raise FileNotFoundError(f"{misc_thumbnail_path} does not exist")
+        self.thumbnail_dir_paths: List[Path] = (
+            [Path(tdp) for tdp in thumbnail_dir_paths]
+            if isinstance(thumbnail_dir_paths, Sequence)
+            else [Path(thumbnail_dir_paths)]
+        )
+
+        for thp in self.thumbnail_dir_paths:
+            if not thp.exists():
+                raise FileNotFoundError(f"{str(thp)} does not exist")
 
         self.Sx = Sx
         self.Sy = Sy
@@ -84,16 +86,18 @@ class BlobDataset(Dataset):
         self.blend_thumbnails = blend_thumbnails
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
-        self.thumbnail_paths = self.get_thumbnail_paths(self.misc_thumbnail_path)
+        self.thumbnail_paths = self.get_thumbnail_paths(self.thumbnail_dir_paths)
 
-        if len(self.thumbnail_paths) == 0:
-            raise FileNotFoundError(f"no thumbnails found in {misc_thumbnail_path}")
+        if len(self.thumbnail_dir_paths) == 0:
+            raise FileNotFoundError(
+                f"no thumbnails found in any of {(str(tdp) for tdp in self.thumbnail_dir_paths)}"
+            )
 
     def __len__(self) -> int:
         return self.length
 
-    def get_thumbnail_paths(self, folder_path: Path):
-        paths = [fp for fp in folder_path.glob("*.png")]
+    def get_thumbnail_paths(self, dir_paths: List[Path]) -> np.ndarray:
+        paths = [fp for dp in dir_paths for fp in dp.glob("*.png")]
         return np.array(paths).astype(np.string_)
 
     def get_random_thumbnails(self, n: int = 1) -> List[torch.Tensor]:
