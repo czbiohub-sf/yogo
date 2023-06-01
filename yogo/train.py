@@ -207,7 +207,7 @@ def train():
                     (
                         (255 * imgs[0, 0, ...].detach()).int()
                         if config["normalize_images"]
-                        else imgs[0, 0, ...].detach()
+                        else imgs[0, 0, ...].detach().int()
                     ),
                     outputs[0, ...].detach(),
                     thresh=0.5,
