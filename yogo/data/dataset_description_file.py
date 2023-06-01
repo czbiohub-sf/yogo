@@ -12,7 +12,7 @@ class InvalidDatasetDescriptionFile(Exception):
 
 @dataclass
 class DatasetDescription:
-    classes: List[str]
+    classes: Optional[List[str]]
     split_fractions: Dict[str, float]
     dataset_paths: List[Dict[str, Path]]
     test_dataset_paths: Optional[List[Dict[str, Path]]]
@@ -66,7 +66,7 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
                     f"found missing for {dataset_description}"
                 )
 
-        classes = yaml_data["class_names"]
+        classes = yaml_data.get("class_names", None)
         split_fractions = {
             k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
         }
