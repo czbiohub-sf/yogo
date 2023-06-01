@@ -110,8 +110,7 @@ def train():
 
         global_step = net_cfg["step"]
         wandb.config.update(
-            {"normalize_images": net_cfg["normalize_images"]},
-            allow_val_change=True
+            {"normalize_images": net_cfg["normalize_images"]}, allow_val_change=True
         )
 
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
