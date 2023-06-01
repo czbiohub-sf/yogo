@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from typing import Union, Callable, Tuple, List, Optional, Sequence
+from typing import Union, Callable, Tuple, List, Optional, Dict
 
 from torch.utils.data import Dataset
 
@@ -53,7 +53,7 @@ PathLike = Union[str, Path]
 class BlobDataset(Dataset):
     def __init__(
         self,
-        thumbnail_dir_paths: Union[PathLike, Sequence[PathLike]],
+        thumbnail_dir_paths: Dict[int, PathLike],
         Sx: int,
         Sy: int,
         n: int = 4,
@@ -63,30 +63,28 @@ class BlobDataset(Dataset):
         blend_thumbnails: bool = False,
         thumbnail_sigma: float = 1.0,
         normalize_images: bool = False,
-        label: int = 6,
     ):
         super().__init__()
 
-        self.thumbnail_dir_paths: List[Path] = (
-            [Path(tdp) for tdp in thumbnail_dir_paths]
-            if isinstance(thumbnail_dir_paths, Sequence)
-            else [Path(thumbnail_dir_paths)]
-        )
+        self.thumbnail_dir_paths: Dict[int, Path] = {
+            k: Path(v) for k, v in thumbnail_dir_paths.items()
+        }
 
-        for thp in self.thumbnail_dir_paths:
+        for thp in self.thumbnail_dir_paths.values():
             if not thp.exists():
                 raise FileNotFoundError(f"{str(thp)} does not exist")
 
         self.Sx = Sx
         self.Sy = Sy
         self.n = n
-        self.label = label
         self.loader = loader
         self.length = length
         self.blend_thumbnails = blend_thumbnails
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
-        self.thumbnail_paths = self.get_thumbnail_paths(self.thumbnail_dir_paths)
+        self.classes, self.thumbnail_paths = self.get_thumbnail_paths(
+            self.thumbnail_dir_paths
+        )
 
         if len(self.thumbnail_dir_paths) == 0:
             raise FileNotFoundError(
@@ -96,16 +94,24 @@ class BlobDataset(Dataset):
     def __len__(self) -> int:
         return self.length
 
-    def get_thumbnail_paths(self, dir_paths: List[Path]) -> np.ndarray:
-        paths = [fp for dp in dir_paths for fp in dp.glob("*.png")]
-        return np.array(paths).astype(np.string_)
-
-    def get_random_thumbnails(self, n: int = 1) -> List[torch.Tensor]:
-        paths = [
-            str(fp_encoded, encoding="utf-8")
-            for fp_encoded in np.random.choice(self.thumbnail_paths, size=n)
+    def get_thumbnail_paths(
+        self, dir_paths: Dict[int, Path]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        cls_path_pairs = [
+            (cls, fp) for cls, dp in dir_paths.items() for fp in dp.glob("*.png")
         ]
-        return [self.loader(fp) for fp in paths]
+        classes, paths = zip(*cls_path_pairs)
+        return np.array(classes), np.array(paths).astype(np.string_)
+
+    def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
+        choices = np.random.randint(0, len(self.thumbnail_paths), size=n)
+        class_thumbnail_pairs = [
+            (class_, self.loader(str(fp_encoded, encoding="utf-8")))
+            for class_, fp_encoded in zip(
+                self.classes[choices], self.thumbnail_paths[choices]
+            )
+        ]
+        return class_thumbnail_pairs
 
     def get_background_shade(
         self, thumbnail: torch.Tensor, brightness_threshold: int = 210
@@ -186,7 +192,9 @@ class BlobDataset(Dataset):
         if idx >= self.length:
             raise IndexError(f"index {idx} is out of bounds for length {self.length}")
 
-        thumbnails = self.get_random_thumbnails(self.n)
+        class_thumbnail_pairs = self.get_random_thumbnails(self.n)
+        thumbnails = [thumbnail for _, thumbnail in class_thumbnail_pairs]
+
         mean_background = np.mean(
             [self.get_background_shade(thumbnail) for thumbnail in thumbnails]
         )
@@ -200,7 +208,7 @@ class BlobDataset(Dataset):
         max_scale = max_size / min(min(t.shape[-2:]) for t in thumbnails)
 
         if self.blend_thumbnails:
-            thumbnails = [
+            [
                 self.blend_thumbnail(
                     mean_background,
                     thumbnail.squeeze(),
@@ -222,7 +230,8 @@ class BlobDataset(Dataset):
         # UserWarning: operator() profile_node %342 : int = prim::profile_ivalue(%out_dtype.1) does not have profile information
 
         coords = []
-        for thumbnail in thumbnails:
+        classes = []
+        for class_, thumbnail in class_thumbnail_pairs:
             thumbnail = xforms(thumbnail).squeeze()
 
             h, w = thumbnail.shape
@@ -236,9 +245,11 @@ class BlobDataset(Dataset):
             img[y : y + h, x : x + w] = thumbnail
 
             coords.append(normalized_coords)
+            classes.append(class_)
 
         coords = torch.cat(coords)
-        coords = torch.cat([torch.ones(coords.shape[0], 1), coords], dim=1)
+        classes = torch.tensor(classes).view(-1, 1)
+        coords = torch.cat([classes, coords], dim=1)
         label_tensor = format_labels_tensor(coords, self.Sx, self.Sy)
 
         return img.unsqueeze(0), label_tensor

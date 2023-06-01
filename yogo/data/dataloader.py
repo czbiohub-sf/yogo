@@ -2,7 +2,6 @@ import os
 import torch
 
 from tqdm import tqdm
-from pathlib import Path
 from functools import partial
 
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
@@ -36,6 +35,7 @@ def get_datasets(
         split_fractions,
         dataset_paths,
         test_dataset_paths,
+        thumbnail_augmentations,
     ) = load_dataset_description(dataset_description_file)
 
     # can we speed this up? multiproc dataset creation?
@@ -68,7 +68,24 @@ def get_datasets(
             **split_dataset(test_dataset, split_fractions),
         }
 
-    return split_dataset(full_dataset, split_fractions)
+    split_datasets = split_dataset(full_dataset, split_fractions)
+
+    # hardcode the blob agumentation for now
+    # this should be moved into the dataset description file
+    if thumbnail_augmentations is not None:
+        bd = BlobDataset(
+            thumbnail_augmentations,
+            Sx=Sx,
+            Sy=Sy,
+            n=8,
+            length=len(split_datasets["train"]) // 10,  # type: ignore
+            blend_thumbnails=True,
+            thumbnail_sigma=2,
+            normalize_images=normalize_images,
+        )
+        split_datasets["train"] = ConcatDataset([split_datasets["train"], bd])
+
+    return split_datasets
 
 
 def split_dataset(
@@ -139,7 +156,6 @@ def get_dataloader(
     resize_shape: Optional[Tuple[int, int]] = None,
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
-    blob_augmentation: Optional[Path] = None,
 ) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
@@ -148,21 +164,6 @@ def get_dataloader(
         split_fractions_override=split_fractions_override,
         normalize_images=normalize_images,
     )
-
-    # hardcode the blob agumentation for now
-    # this should be moved into the dataset description file
-    if blob_augmentation is not None:
-        bd = BlobDataset(
-            blob_augmentation,
-            Sx=Sx,
-            Sy=Sy,
-            n=8,
-            length=len(split_datasets["train"]) // 10,  # type: ignore
-            blend_thumbnails=True,
-            thumbnail_sigma=2,
-            normalize_images=normalize_images,
-        )
-        split_datasets["train"] = ConcatDataset([split_datasets["train"], bd])
 
     augmentations: List[DualInputModule] = (
         [
