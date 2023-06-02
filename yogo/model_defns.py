@@ -335,7 +335,4 @@ def get_model_func(
         "model_big_normalized": model_big_normalized,
         "model_big_heavy_normalized": model_big_heavy_normalized,
     }
-    try:
-        return models[model_name]
-    except KeyError:
-        return None
+    return models[model_name].get(model_name, None)

@@ -5,15 +5,6 @@ from typing import Dict, Tuple
 import torchvision.ops as ops
 
 
-def valid_boxes(xyxy_boxes: torch.Tensor) -> bool:
-    """
-    xyxy_boxes: torch.Tensor of shape (N, 4)
-    """
-    return (
-        (xyxy_boxes[:, 0] <= xyxy_boxes[:, 2]) & (xyxy_boxes[:, 1] <= xyxy_boxes[:, 3])
-    ).all()
-
-
 class YOGOLoss(torch.nn.modules.loss._Loss):
     __constants__ = ["coord_weight", "no_obj_weight"]
     coord_weight: float

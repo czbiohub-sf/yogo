@@ -161,7 +161,7 @@ def draw_yogo_prediction(
     iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
     images_are_normalized: bool = False,
-) -> PIL.Image:
+) -> PIL.Image.Image:
     """Given an image and a prediction, return a PIL Image with bounding boxes
 
     args:
@@ -203,7 +203,7 @@ def draw_yogo_prediction(
 
     rgb = PIL.Image.new("RGBA", pil_img.size)
     rgb.paste(pil_img)
-    draw = PIL.ImageDraw.Draw(rgb)
+    draw = PIL.ImageDraw.Draw(rgb)  # type: ignore
 
     for r in formatted_rects:
         r = list(r)

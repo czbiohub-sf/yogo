@@ -43,7 +43,7 @@ class Metrics:
             list(range(num_classes)) if class_names is None else class_names
         )
         self.classify = classify
-        assert self.num_classes == len(self.class_names)
+        assert self.class_names is not None and self.num_classes == len(self.class_names)
 
     def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape
