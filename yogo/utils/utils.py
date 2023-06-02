@@ -161,23 +161,30 @@ def draw_yogo_prediction(
     thresh: Optional[float] = None,
     iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
+    images_are_normalized: bool = False,
 ) -> PIL.Image:
     """Given an image and a prediction, return a PIL Image with bounding boxes
 
     args:
-        img: 2d torch.Tensor of shape (h, w) or (1, h, w)
+        img: 2d torch.Tensor of shape (h, w) or (1, h, w). We will `torch.uint8` your tensor!
         prediction: torch.tensor of shape (pred_dim, Sy, Sx) or (1, pred_dim, Sy, Sx)
         thresh: objectness threshold
         iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
         labels: list of label names for displaying
     """
     img, prediction = img.squeeze(), prediction.squeeze()
+
+    if images_are_normalized:
+        img *= 255
+
+    img = img.to(torch.uint8)
+
     if img.ndim != 2:
         raise ValueError(
             "img must be 2-dimensional (i.e. grayscale), "
             f"but has {img.ndim} dimensions"
         )
-    if prediction.ndim != 3:
+    elif prediction.ndim != 3:
         raise ValueError(
             "prediction must be 'unbatched' (i.e. shape (pred_dim, Sy, Sx) or "
             f"(1, pred_dim, Sy, Sx)) - got shape {prediction.shape} "
