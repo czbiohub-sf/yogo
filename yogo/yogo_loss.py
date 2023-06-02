@@ -5,7 +5,7 @@ from typing import Dict, Tuple
 import torchvision.ops as ops
 
 
-def valid_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
+def valid_boxes(xyxy_boxes: torch.Tensor) -> bool:
     """
     xyxy_boxes: torch.Tensor of shape (N, 4)
     """
