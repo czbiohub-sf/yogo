@@ -335,4 +335,4 @@ def get_model_func(
         "model_big_normalized": model_big_normalized,
         "model_big_heavy_normalized": model_big_heavy_normalized,
     }
-    return models[model_name].get(model_name, None)
+    return models.get(model_name, None)
