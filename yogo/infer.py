@@ -15,7 +15,7 @@ from collections.abc import Sized
 from typing import List, Union, Optional, Callable, Tuple, cast
 
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import Compose
+from torchvision.transforms import Compose, CenterCrop
 
 from yogo.model import YOGO
 from yogo.utils.argparsers import infer_parser
@@ -199,6 +199,7 @@ def predict(
     device: Union[str, torch.device] = "cpu",
     print_results: bool = False,
     label: Optional[str] = None,
+    vertical_crop_height_px: Optional[int] = None,
 ) -> Optional[torch.Tensor]:
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
@@ -207,9 +208,17 @@ def predict(
     img_h, img_w = model.get_img_size()
     Sx, Sy = model.get_grid_size()
 
+    transforms: List[torch.nn.Module] = []
+
+    if vertical_crop_height_px:
+        crop = CenterCrop((vertical_crop_height_px, 1032))
+        transforms.append(crop)
+        model.resize_model(vertical_crop_height_px)
+
     image_dataset = get_dataset(
         path_to_images=path_to_images,
         path_to_zarr=path_to_zarr,
+        image_transforms=transforms,
         normalize_images=cfg["normalize_images"],
     )
 
@@ -280,6 +289,7 @@ def predict(
 
 
 def do_infer(args):
+    print(args)
     predict(
         args.pth_path,
         path_to_images=args.path_to_images,
@@ -288,6 +298,11 @@ def do_infer(args):
         draw_boxes=args.draw_boxes,
         batch_size=args.batch_size,
         use_tqdm=(args.output_dir is not None or args.draw_boxes),
+        vertical_crop_height_px=(
+            round(772 * args.crop_height)
+            if args.crop_height is not None
+            else None
+        ),
     )
 
 

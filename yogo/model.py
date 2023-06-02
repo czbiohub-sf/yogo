@@ -70,11 +70,14 @@ class YOGO(nn.Module):
             .to(self.device)
         )
 
-        # TODO this feels wrong, but it works - there is some issue
+        # this feels wrong, but it works - there is some issue
         # with just giving _Cxs / _Cys directly when initting via
         # from_pth
         self.register_buffer("_Cxs", _Cxs.clone())
         self.register_buffer("_Cys", _Cys.clone())
+
+        # multiplier for height - req'd when resizing model post-training
+        self.register_buffer("height_multiplier", torch.tensor(1.0))
 
         # initialize the weights, PyTorch chooses bad defaults
         self.model.apply(self.init_network_weights)
@@ -114,6 +117,9 @@ class YOGO(nn.Module):
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
+
+        if "height_multiplier" not in params:
+            params["height_multiplier"] = torch.tensor(1.0)
 
         model = cls(
             (img_size[0], img_size[1]),
@@ -218,8 +224,8 @@ class YOGO(nn.Module):
         model to a certain image height - 193 px is about a quarter
         of the full 772 pixel height, and is standard for our uses.
         """
-        img_width = int(self.get_img_size()[1].item())
-        crop_size = (img_height, img_width)
+        org_img_height, org_img_width = (int(d) for d in self.get_img_size())
+        crop_size = (img_height, org_img_width)
         Sx, Sy = self.get_grid_size(crop_size)
         _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1)
         _Cys = (
@@ -228,7 +234,8 @@ class YOGO(nn.Module):
             .transpose(0, 1)
             .expand(Sy, Sx)
         )
-
+        self.register_buffer("height_multiplier", torch.tensor(org_img_height / img_height))
+        self.register_buffer("img_size", torch.tensor(crop_size))
         self.register_buffer("_Cxs", _Cxs.clone())
         self.register_buffer("_Cys", _Cys.clone())
 
@@ -302,7 +309,7 @@ class YOGO(nn.Module):
                 (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
                 (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
                 self.anchor_w * torch.exp(x[:, 2:3, :, :]),
-                self.anchor_h * torch.exp(x[:, 3:4, :, :]),
+                self.anchor_h * torch.exp(x[:, 3:4, :, :]) * self.height_multiplier,
                 torch.sigmoid(x[:, 4:5, :, :]),
                 *torch.split(classification, 1, dim=1),
             ),

@@ -156,16 +156,8 @@ def train_parser(parser=None):
         action=boolean_action,
         help="normalize images into [0,1] (default False)",
     )
-
-    image_resize_options = parser.add_mutually_exclusive_group(required=False)
-    image_resize_options.add_argument(
-        "--resize",
-        type=int,
-        nargs=2,
-        help="resize image to these dimensions. e.g. '-r 300 400' to resize to width=300, height=400",
-    )
-    image_resize_options.add_argument(
-        "--crop",
+    parser.add_argument(
+        "--crop-height",
         type=unitary_float,
         help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
@@ -227,6 +219,12 @@ def infer_parser(parser=None):
         help="batch size for inference (default 16)",
         default=16,
     )
+    parser.add_argument(
+        "--crop-height",
+        type=unitary_float,
+        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
+    )
+
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
         "--path-to-images", type=Path, default=None, help="path to image or images"
