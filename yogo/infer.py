@@ -218,9 +218,9 @@ def predict(
         batch_size=batch_size,
         shuffle=False,
         drop_last=False,
-        num_workers=16,
         pin_memory=True,
         collate_fn=collate_fn,
+        num_workers=min(torch.multiprocessing.cpu_count(), 32),
     )
 
     if output_dir is not None:
