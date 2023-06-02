@@ -226,12 +226,16 @@ def predict(
     if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
+    batch_iterator = tqdm(
+        image_dataloader,
+        disable=not use_tqdm,
+        unit_scale=batch_size,
+        unit="images",
+        total=len(image_dataset),
+    )
+
     results = torch.zeros((len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
-    for i, (img_batch, fnames) in enumerate(
-        tqdm(
-            image_dataloader, disable=not use_tqdm, unit_scale=batch_size, unit="images"
-        )
-    ):
+    for i, (img_batch, fnames) in enumerate(batch_iterator):
         res = model(img_batch.to(device)).to("cpu", non_blocking=True)
 
         if output_dir is not None and not draw_boxes:
