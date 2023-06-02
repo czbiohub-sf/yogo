@@ -210,6 +210,28 @@ class YOGO(nn.Module):
         # int(h.item())
         return int(Sx), int(Sy)
 
+    def resize_model(self, img_height: int) -> None:
+        """
+        for YOGO's specific application of counting cells as they flow
+        past a FOV, it is useful to take a crop of the images in order
+        to reduce double-counting cells. This function resizes the
+        model to a certain image height - 193 px is about a quarter
+        of the full 772 pixel height, and is standard for our uses.
+        """
+        img_width = int(self.get_img_size()[1].item())
+        crop_size = (img_height, img_width)
+        Sx, Sy = self.get_grid_size(crop_size)
+        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1)
+        _Cys = (
+            torch.linspace(0, 1 - 1 / Sy, Sy)
+            .expand(1, -1)
+            .transpose(0, 1)
+            .expand(Sy, Sx)
+        )
+
+        self.register_buffer("_Cxs", _Cxs.clone())
+        self.register_buffer("_Cys", _Cys.clone())
+
     def gen_model(self, num_classes) -> nn.Module:
         conv_block_1 = nn.Sequential(
             nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),

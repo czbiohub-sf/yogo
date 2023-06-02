@@ -42,19 +42,7 @@ def do_export(args):
 
     if args.crop_height is not None:
         img_h = (args.crop_height * img_h).round()
-
-        crop_size = (img_h, img_w)
-        Sx, Sy = net.get_grid_size(crop_size)
-        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1)
-        _Cys = (
-            torch.linspace(0, 1 - 1 / Sy, Sy)
-            .expand(1, -1)
-            .transpose(0, 1)
-            .expand(Sy, Sx)
-        )
-
-        net.register_buffer("_Cxs", _Cxs.clone())
-        net.register_buffer("_Cys", _Cys.clone())
+        net.resize_model(img_h)
 
     dummy_input = torch.randn(
         1, 1, int(img_h.item()), int(img_w.item()), requires_grad=False
