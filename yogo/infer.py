@@ -4,7 +4,6 @@ import zarr
 import math
 import torch
 import signal
-import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,22 +12,19 @@ from torch import nn
 from tqdm import tqdm
 from pathlib import Path
 from collections.abc import Sized
-from typing import Sequence, TypeVar, List, Union, Optional, Callable, Tuple, cast
+from typing import List, Union, Optional, Callable, Tuple, cast
 
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import Resize, Compose
+from torchvision.transforms import Compose
 
 from yogo.model import YOGO
 from yogo.utils.argparsers import infer_parser
-from yogo.utils import draw_yogo_prediction, format_preds, iter_in_chunks
+from yogo.utils import draw_yogo_prediction, format_preds
 from yogo.data.dataset import read_grayscale, YOGO_CLASS_ORDERING
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff
 signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-
-T = TypeVar("T")
 
 
 def argmax(arr):
@@ -115,6 +111,12 @@ class ZarrDataset(ImageAndIdDataset):
         image_transforms: List[nn.Module] = [],
         normalize_images: bool = False,
     ):
+        """Note
+
+        zip files can be corrupted easily, so be aware that this
+        may run into some zarr corruption issues. ImagePathDataset
+        is pretty failsafe
+        """
         self.zarr_path = Path(zarr_path)
         if not self.zarr_path.exists():
             raise FileNotFoundError(f"{self.zarr_path} does not exist")
@@ -138,128 +140,17 @@ class ZarrDataset(ImageAndIdDataset):
         )
 
     def __getitem__(self, idx) -> Tuple[torch.Tensor, str]:
-        print(self.zarr_store, self.zarr_store.shape)
         image = (
             self.zarr_store[:, :, idx]
             if isinstance(self.zarr_store, zarr.Array)
             else self.zarr_store[idx][:]
         )
-        image = torch.from_numpy(image).unsqueeze(0).to(torch.float16)
+        image = torch.from_numpy(image).to(torch.float16)
         image = self.transform(image)
         if self.normalize_images:
             image = image / 255
 
         return image, self.image_name_from_idx(idx)
-
-
-class ImageLoader:
-    def __init__(self, _iter, _num_iters, _num_els):
-        self._iter = _iter
-        self._num_iters = _num_iters
-        self._num_els = _num_els
-
-    def __iter__(self):
-        return self._iter()
-
-    def __len__(self):
-        if self._iter is None:
-            raise RuntimeError(
-                "instantiate ImageLoader with `load_image_data` or `load_zarr_data`"
-            )
-        return self._num_iters
-
-    @property
-    def num_els(self) -> int:
-        return self._num_els
-
-    @staticmethod
-    def create_batch_from_fnames(
-        fnames: Sequence[Union[str, Path]],
-        transform: nn.Module,
-        normalize_images: bool = False,
-        device: Union[str, torch.device] = "cpu",
-    ):
-        img_batch = torch.stack([read_grayscale(str(fname)) for fname in fnames])
-        img_batch = img_batch.to(device, dtype=torch.float16)
-        img_batch = transform(img_batch)
-
-        if len(img_batch.shape) == 3:
-            img_batch.unsqueeze_(dim=0)
-
-        if normalize_images:
-            img_batch /= 255
-
-        return img_batch
-
-    @classmethod
-    def load_image_data(
-        cls,
-        path_to_data: Path,
-        transform_list: List[nn.Module] = [],
-        batch_size: int = 1,
-        fnames_only: bool = False,
-        normalize_images: bool = False,
-        device: Union[str, torch.device] = "cpu",
-    ):
-        "takes a path to either a single png image or a folder of pngs"
-        transform = Compose(transform_list)
-
-        data = (
-            [path_to_data]
-            if path_to_data.is_file()
-            else [f for f in path_to_data.glob("*.png") if not f.name.startswith(".")]
-        )
-
-        _num_batches = len(data) // batch_size + (len(data) % batch_size > 0)
-
-        def _iter():
-            for fnames in iter_in_chunks(sorted(data), batch_size):
-                if fnames_only:
-                    yield fnames
-                else:
-                    yield cls.create_batch_from_fnames(
-                        fnames,
-                        transform=transform,
-                        normalize_images=normalize_images,
-                        device=device,
-                    )
-
-        return cls(_iter, _num_batches, _num_els=len(data))
-
-    @classmethod
-    def load_zarr_data(
-        cls,
-        path_to_zarr: Path,
-        transform_list: List[nn.Module] = [],
-        batch_size: int = 1,
-        normalize_images: bool = False,
-        device: Union[str, torch.device] = "cpu",
-    ):
-        zarr_store = zarr.open(str(path_to_zarr), mode="r")
-        transform = Compose([torch.Tensor, *transform_list])
-
-        _num_els = (
-            zarr_store.initialized
-            if isinstance(zarr_store, zarr.Array)
-            else len(zarr_store)
-        )
-        _num_batches = _num_els // batch_size + (_num_els % batch_size > 0)
-
-        def _iter():
-            for rg in iter_in_chunks(range(_num_els), batch_size):
-                img_batch = (
-                    zarr_store[:, :, rg.start : rg.stop].transpose((2, 0, 1))
-                    if isinstance(zarr_store, zarr.Array)
-                    else np.stack([zarr_store[i][:][None, ...] for i in rg])
-                )
-                img_batch = transform(img_batch)
-                if len(img_batch.shape) == 3:
-                    img_batch.unsqueeze_(dim=1)
-                if normalize_images:
-                    img_batch /= 255
-                yield img_batch.to(device)
-
-        return cls(_iter, _num_batches, _num_els=_num_els)
 
 
 def collate_fn(
@@ -268,8 +159,13 @@ def collate_fn(
     images, fnames = zip(*batch)
     return torch.stack(images), cast(Tuple[str], fnames)
 
+
 def get_dataset(
-        path_to_images: Optional[Path]=None, path_to_zarr: Optional[Path]=None, image_transforms: List[nn.Module]=[], normalize_images: bool=False) -> ImageAndIdDataset:
+    path_to_images: Optional[Path] = None,
+    path_to_zarr: Optional[Path] = None,
+    image_transforms: List[nn.Module] = [],
+    normalize_images: bool = False,
+) -> ImageAndIdDataset:
     if path_to_images is not None and path_to_zarr is not None:
         raise ValueError(
             "can only take one of 'path_to_images' or 'path_to_zarr', but got both"
@@ -311,14 +207,10 @@ def predict(
     img_h, img_w = model.get_img_size()
     Sx, Sy = model.get_grid_size()
 
-    normalize_images = cfg["normalize_images"]
-    R = Resize([img_h, img_w], antialias=True)
-
     image_dataset = get_dataset(
         path_to_images=path_to_images,
         path_to_zarr=path_to_zarr,
-        image_transforms=[R],
-        normalize_images=normalize_images,
+        normalize_images=cfg["normalize_images"],
     )
 
     image_dataloader = DataLoader(
@@ -335,9 +227,10 @@ def predict(
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
     results = torch.zeros((len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
-    for i, (img_batch, fnames) in enumerate(tqdm(image_dataset, disable=not use_tqdm)):  # type: ignore
-        img_batch.to(device)
-        res = model(img_batch).to("cpu", non_blocking=True)
+    for i, (img_batch, fnames) in enumerate(
+        tqdm(image_dataloader, disable=not use_tqdm)
+    ):
+        res = model(img_batch.to(device)).to("cpu", non_blocking=True)
 
         if output_dir is not None and not draw_boxes:
             out_fnames = [
@@ -352,14 +245,15 @@ def predict(
                     res[img_idx, ...],
                     thresh=0.5,
                     labels=YOGO_CLASS_ORDERING,
-                    images_are_normalized=normalize_images,
+                    images_are_normalized=cfg["normalize_images"],
                 )
                 if output_dir is not None:
                     out_fname = (
                         Path(output_dir)
                         / Path(fnames[img_idx]).with_suffix(".png").name
                     )
-                    bbox_img.save(out_fname)
+                    # mypy thinks that you can't save a PIL Image which is false
+                    bbox_img.save(out_fname)  # type: ignore
                 else:
                     fig, ax = plt.subplots()
                     ax.set_axis_off()
