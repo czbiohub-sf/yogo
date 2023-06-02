@@ -206,14 +206,11 @@ def train():
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_yogo_prediction(
-                    (
-                        (255 * imgs[0, 0, ...].detach()).int()
-                        if config["normalize_images"]
-                        else imgs[0, 0, ...].detach().int()
-                    ),
+                    imgs[0,...],
                     outputs[0, ...].detach(),
                     thresh=0.5,
                     labels=class_names,
+                    images_are_normalized=config["normalize_images"],
                 )
             )
 

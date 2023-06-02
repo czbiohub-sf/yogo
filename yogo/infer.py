@@ -252,6 +252,7 @@ def predict(
                     res[img_idx, ...],
                     thresh=0.5,
                     labels=YOGO_CLASS_ORDERING,
+                    images_are_normalized=normalize_images,
                 )
                 if output_dir is not None:
                     out_fname = (
