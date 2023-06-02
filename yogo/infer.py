@@ -4,7 +4,6 @@ import zarr
 import math
 import torch
 import signal
-import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,21 +11,20 @@ import matplotlib.pyplot as plt
 from torch import nn
 from tqdm import tqdm
 from pathlib import Path
-from typing import Sequence, TypeVar, List, Union, Optional
+from collections.abc import Sized
+from typing import List, Union, Optional, Callable, Tuple, cast
 
-from torchvision.transforms import Resize, Compose
+from torch.utils.data import Dataset, DataLoader
+from torchvision.transforms import Compose
 
 from yogo.model import YOGO
 from yogo.utils.argparsers import infer_parser
-from yogo.utils import draw_yogo_prediction, format_preds, iter_in_chunks
+from yogo.utils import draw_yogo_prediction, format_preds
 from yogo.data.dataset import read_grayscale, YOGO_CLASS_ORDERING
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff
 signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-
-T = TypeVar("T")
 
 
 def argmax(arr):
@@ -57,114 +55,135 @@ def save_preds(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
             f.write(pred_string)
 
 
-class ImageLoader:
-    def __init__(self, _iter, _num_iters, _num_els):
-        self._iter = _iter
-        self._num_iters = _num_iters
-        self._num_els = _num_els
+class ImageAndIdDataset(Dataset, Sized):
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
+        raise NotImplementedError
 
-    def __iter__(self):
-        return self._iter()
 
-    def __len__(self):
-        if self._iter is None:
-            raise RuntimeError(
-                "instantiate ImageLoader with `load_image_data` or `load_zarr_data`"
-            )
-        return self._num_iters
-
-    @property
-    def num_els(self) -> int:
-        return self._num_els
-
-    @staticmethod
-    def create_batch_from_fnames(
-        fnames: Sequence[Union[str, Path]],
-        transform: nn.Module,
+class ImagePathDataset(ImageAndIdDataset):
+    def __init__(
+        self,
+        root: Union[str, Path],
+        image_transforms: List[nn.Module] = [],
+        loader: Callable[
+            [
+                Union[str, Path],
+            ],
+            torch.Tensor,
+        ] = read_grayscale,
         normalize_images: bool = False,
-        device: Union[str, torch.device] = "cpu",
     ):
-        img_batch = torch.stack([read_grayscale(str(fname)) for fname in fnames])
-        img_batch = img_batch.to(device, dtype=torch.float16)
-        img_batch = transform(img_batch)
+        self.root = Path(root)
+        if not self.root.exists():
+            raise FileNotFoundError(f"{self.root} does not exist")
 
-        if len(img_batch.shape) == 3:
-            img_batch.unsqueeze_(dim=0)
+        self.image_paths = self.make_dataset(self.root)
 
-        if normalize_images:
-            img_batch /= 255
+        self.transform = Compose(image_transforms)
+        self.loader = loader
+        self.normalize_images = normalize_images
 
-        return img_batch
+    def make_dataset(self, path_to_data: Path) -> np.ndarray:
+        img_paths = [
+            p for p in path_to_data.glob("*.png") if not p.name.startswith(".")
+        ]
+        if len(img_paths) == 0:
+            raise FileNotFoundError(f"{str(path_to_data)} does not contain any images")
+        return np.array(img_paths).astype(np.string_)
 
-    @classmethod
-    def load_image_data(
-        cls,
-        path_to_data: Path,
-        transform_list: List[nn.Module] = [],
-        batch_size: int = 1,
-        fnames_only: bool = False,
+    def __len__(self) -> int:
+        return len(self.image_paths)
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
+        image_path = str(self.image_paths[idx], encoding="utf-8")
+        image = self.loader(image_path).to(torch.float16)
+        image = self.transform(image)
+        if self.normalize_images:
+            image = image / 255
+        return image, image_path
+
+
+class ZarrDataset(ImageAndIdDataset):
+    def __init__(
+        self,
+        zarr_path: Union[str, Path],
+        image_name_from_idx: Optional[Callable[[int], str]] = None,
+        image_transforms: List[nn.Module] = [],
         normalize_images: bool = False,
-        device: Union[str, torch.device] = "cpu",
     ):
-        "takes a path to either a single png image or a folder of pngs"
-        transform = Compose(transform_list)
+        """Note
 
-        data = (
-            [path_to_data]
-            if path_to_data.is_file()
-            else [f for f in path_to_data.glob("*.png") if not f.name.startswith(".")]
+        zip files can be corrupted easily, so be aware that this
+        may run into some zarr corruption issues. ImagePathDataset
+        is pretty failsafe
+        """
+        self.zarr_path = Path(zarr_path)
+        if not self.zarr_path.exists():
+            raise FileNotFoundError(f"{self.zarr_path} does not exist")
+
+        self.zarr_store = zarr.open(str(self.zarr_path), mode="r")
+
+        self.image_name_from_idx = image_name_from_idx or self._image_name_from_idx
+
+        self.transform = Compose(image_transforms)
+        self.normalize_images = normalize_images
+        self._N = int(math.log(len(self), 10) + 1)
+
+    def _image_name_from_idx(self, idx: int) -> str:
+        return f"img_{idx:0{self._N}}.png"
+
+    def __len__(self) -> int:
+        return (
+            self.zarr_store.initialized
+            if isinstance(self.zarr_store, zarr.Array)
+            else len(self.zarr_store)
         )
 
-        _num_batches = len(data) // batch_size + (len(data) % batch_size > 0)
-
-        def _iter():
-            for fnames in iter_in_chunks(sorted(data), batch_size):
-                if fnames_only:
-                    yield fnames
-                else:
-                    yield cls.create_batch_from_fnames(
-                        fnames,
-                        transform=transform,
-                        normalize_images=normalize_images,
-                        device=device,
-                    )
-
-        return cls(_iter, _num_batches, _num_els=len(data))
-
-    @classmethod
-    def load_zarr_data(
-        cls,
-        path_to_zarr: Path,
-        transform_list: List[nn.Module] = [],
-        batch_size: int = 1,
-        normalize_images: bool = False,
-        device: Union[str, torch.device] = "cpu",
-    ):
-        zarr_store = zarr.open(str(path_to_zarr), mode="r")
-        transform = Compose([torch.Tensor, *transform_list])
-
-        _num_els = (
-            zarr_store.initialized
-            if isinstance(zarr_store, zarr.Array)
-            else len(zarr_store)
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, str]:
+        image = (
+            self.zarr_store[:, :, idx]
+            if isinstance(self.zarr_store, zarr.Array)
+            else self.zarr_store[idx][:]
         )
-        _num_batches = _num_els // batch_size + (_num_els % batch_size > 0)
+        image = torch.from_numpy(image).to(torch.float16)
+        image = self.transform(image)
+        if self.normalize_images:
+            image = image / 255
 
-        def _iter():
-            for rg in iter_in_chunks(range(_num_els), batch_size):
-                img_batch = (
-                    zarr_store[:, :, rg.start : rg.stop].transpose((2, 0, 1))
-                    if isinstance(zarr_store, zarr.Array)
-                    else np.stack([zarr_store[i][:][None, ...] for i in rg])
-                )
-                img_batch = transform(img_batch)
-                if len(img_batch.shape) == 3:
-                    img_batch.unsqueeze_(dim=1)
-                if normalize_images:
-                    img_batch /= 255
-                yield img_batch.to(device)
+        return image, self.image_name_from_idx(idx)
 
-        return cls(_iter, _num_batches, _num_els=_num_els)
+
+def collate_fn(
+    batch: List[Tuple[torch.Tensor, str]]
+) -> Tuple[torch.Tensor, Tuple[str]]:
+    images, fnames = zip(*batch)
+    return torch.stack(images), cast(Tuple[str], fnames)
+
+
+def get_dataset(
+    path_to_images: Optional[Path] = None,
+    path_to_zarr: Optional[Path] = None,
+    image_transforms: List[nn.Module] = [],
+    normalize_images: bool = False,
+) -> ImageAndIdDataset:
+    if path_to_images is not None and path_to_zarr is not None:
+        raise ValueError(
+            "can only take one of 'path_to_images' or 'path_to_zarr', but got both"
+        )
+    elif path_to_images is not None:
+        return ImagePathDataset(
+            path_to_images,
+            image_transforms=image_transforms,
+            normalize_images=normalize_images,
+        )
+    elif path_to_zarr is not None:
+        return ZarrDataset(
+            path_to_zarr,
+            image_transforms=image_transforms,
+            normalize_images=normalize_images,
+        )
+    else:
+        raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
 
 
 @torch.no_grad()
@@ -188,56 +207,30 @@ def predict(
     img_h, img_w = model.get_img_size()
     Sx, Sy = model.get_grid_size()
 
-    normalize_images = cfg["normalize_images"]
-    R = Resize([img_h, img_w], antialias=True)
+    image_dataset = get_dataset(
+        path_to_images=path_to_images,
+        path_to_zarr=path_to_zarr,
+        normalize_images=cfg["normalize_images"],
+    )
 
-    if path_to_images is not None and path_to_zarr is not None:
-        raise ValueError(
-            "can only take one of 'path_to_images' or 'path_to_zarr', but got both"
-        )
-    elif path_to_images is not None:
-        image_loader = ImageLoader.load_image_data(
-            path_to_images,
-            transform_list=[R],
-            batch_size=batch_size,
-            fnames_only=(output_dir is not None),
-            normalize_images=normalize_images,
-            device=device,
-        )
-    elif path_to_zarr is not None:
-        image_loader = ImageLoader.load_zarr_data(
-            path_to_zarr,
-            transform_list=[R],
-            batch_size=batch_size,
-            normalize_images=normalize_images,
-            device=device,
-        )
-    else:
-        raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
-
-    if len(image_loader) == 0:
-        warnings.warn(
-            f"dataset {path_to_images if path_to_images is not None else path_to_zarr} is empty"
-        )
-        return torch.zeros(0)
+    image_dataloader = DataLoader(
+        image_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        drop_last=False,
+        num_workers=16,
+        pin_memory=True,
+        collate_fn=collate_fn,
+    )
 
     if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
-    results = torch.zeros((image_loader.num_els, len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
-    for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
-        if isinstance(data, torch.Tensor):
-            N = int(math.log(image_loader.num_els, 10) + 1)
-            fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
-            img_batch = data
-            res = model(img_batch).cpu()
-        else:
-            # data is a list of filenames, so we have to create the batch here
-            fnames = data
-            img_batch = ImageLoader.create_batch_from_fnames(
-                fnames, transform=R, device=device
-            )
-            res = model(img_batch).cpu()
+    results = torch.zeros((len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
+    for i, (img_batch, fnames) in enumerate(
+        tqdm(image_dataloader, disable=not use_tqdm)
+    ):
+        res = model(img_batch.to(device)).to("cpu", non_blocking=True)
 
         if output_dir is not None and not draw_boxes:
             out_fnames = [
@@ -252,14 +245,15 @@ def predict(
                     res[img_idx, ...],
                     thresh=0.5,
                     labels=YOGO_CLASS_ORDERING,
-                    images_are_normalized=normalize_images,
+                    images_are_normalized=cfg["normalize_images"],
                 )
                 if output_dir is not None:
                     out_fname = (
                         Path(output_dir)
                         / Path(fnames[img_idx]).with_suffix(".png").name
                     )
-                    bbox_img.save(out_fname)
+                    # mypy thinks that you can't save a PIL Image which is false
+                    bbox_img.save(out_fname)  # type: ignore
                 else:
                     fig, ax = plt.subplots()
                     ax.set_axis_off()
@@ -269,7 +263,7 @@ def predict(
             print(res)
         else:
             # sometimes we return a number of images less than the batch size,
-            # namely when len(image_loader) % batch_size != 0
+            # namely when len(image_dataset) % batch_size != 0
             results[i * batch_size : i * batch_size + res.shape[0], ...] = res.cpu()
 
     if not print_results and output_dir is None:
