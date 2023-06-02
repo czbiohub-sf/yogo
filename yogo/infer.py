@@ -228,7 +228,9 @@ def predict(
 
     results = torch.zeros((len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
     for i, (img_batch, fnames) in enumerate(
-        tqdm(image_dataloader, disable=not use_tqdm)
+        tqdm(
+            image_dataloader, disable=not use_tqdm, unit_scale=batch_size, unit="images"
+        )
     ):
         res = model(img_batch.to(device)).to("cpu", non_blocking=True)
 
