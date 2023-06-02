@@ -12,8 +12,10 @@ import matplotlib.pyplot as plt
 from torch import nn
 from tqdm import tqdm
 from pathlib import Path
-from typing import Sequence, TypeVar, List, Union, Optional
+from collections.abc import Sized
+from typing import Sequence, TypeVar, List, Union, Optional, Callable, Tuple, cast
 
+from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import Resize, Compose
 
 from yogo.model import YOGO
@@ -55,6 +57,99 @@ def save_preds(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
         )
         with open(fname, "w") as f:
             f.write(pred_string)
+
+
+class ImageAndIdDataset(Dataset, Sized):
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
+        raise NotImplementedError
+
+
+class ImagePathDataset(ImageAndIdDataset):
+    def __init__(
+        self,
+        root: Union[str, Path],
+        image_transforms: List[nn.Module] = [],
+        loader: Callable[
+            [
+                Union[str, Path],
+            ],
+            torch.Tensor,
+        ] = read_grayscale,
+        normalize_images: bool = False,
+    ):
+        self.root = Path(root)
+        if not self.root.exists():
+            raise FileNotFoundError(f"{self.root} does not exist")
+
+        self.image_paths = self.make_dataset(self.root)
+
+        self.transform = Compose(image_transforms)
+        self.loader = loader
+        self.normalize_images = normalize_images
+
+    def make_dataset(self, path_to_data: Path) -> np.ndarray:
+        img_paths = [
+            p for p in path_to_data.glob("*.png") if not p.name.startswith(".")
+        ]
+        if len(img_paths) == 0:
+            raise FileNotFoundError(f"{str(path_to_data)} does not contain any images")
+        return np.array(img_paths).astype(np.string_)
+
+    def __len__(self) -> int:
+        return len(self.image_paths)
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
+        image_path = str(self.image_paths[idx], encoding="utf-8")
+        image = self.loader(image_path).to(torch.float16)
+        image = self.transform(image)
+        if self.normalize_images:
+            image = image / 255
+        return image, image_path
+
+
+class ZarrDataset(ImageAndIdDataset):
+    def __init__(
+        self,
+        zarr_path: Union[str, Path],
+        image_name_from_idx: Optional[Callable[[int], str]] = None,
+        image_transforms: List[nn.Module] = [],
+        normalize_images: bool = False,
+    ):
+        self.zarr_path = Path(zarr_path)
+        if not self.zarr_path.exists():
+            raise FileNotFoundError(f"{self.zarr_path} does not exist")
+
+        self.zarr_store = zarr.open(str(self.zarr_path), mode="r")
+
+        self.image_name_from_idx = image_name_from_idx or self._image_name_from_idx
+
+        self.transform = Compose(image_transforms)
+        self.normalize_images = normalize_images
+        self._N = int(math.log(len(self), 10) + 1)
+
+    def _image_name_from_idx(self, idx: int) -> str:
+        return f"img_{idx:0{self._N}}.png"
+
+    def __len__(self) -> int:
+        return (
+            self.zarr_store.initialized
+            if isinstance(self.zarr_store, zarr.Array)
+            else len(self.zarr_store)
+        )
+
+    def __getitem__(self, idx) -> Tuple[torch.Tensor, str]:
+        print(self.zarr_store, self.zarr_store.shape)
+        image = (
+            self.zarr_store[:, :, idx]
+            if isinstance(self.zarr_store, zarr.Array)
+            else self.zarr_store[idx][:]
+        )
+        image = torch.from_numpy(image).unsqueeze(0).to(torch.float16)
+        image = self.transform(image)
+        if self.normalize_images:
+            image = image / 255
+
+        return image, self.image_name_from_idx(idx)
 
 
 class ImageLoader:
@@ -167,6 +262,34 @@ class ImageLoader:
         return cls(_iter, _num_batches, _num_els=_num_els)
 
 
+def collate_fn(
+    batch: List[Tuple[torch.Tensor, str]]
+) -> Tuple[torch.Tensor, Tuple[str]]:
+    images, fnames = zip(*batch)
+    return torch.stack(images), cast(Tuple[str], fnames)
+
+def get_dataset(
+        path_to_images: Optional[Path]=None, path_to_zarr: Optional[Path]=None, image_transforms: List[nn.Module]=[], normalize_images: bool=False) -> ImageAndIdDataset:
+    if path_to_images is not None and path_to_zarr is not None:
+        raise ValueError(
+            "can only take one of 'path_to_images' or 'path_to_zarr', but got both"
+        )
+    elif path_to_images is not None:
+        return ImagePathDataset(
+            path_to_images,
+            image_transforms=image_transforms,
+            normalize_images=normalize_images,
+        )
+    elif path_to_zarr is not None:
+        return ZarrDataset(
+            path_to_zarr,
+            image_transforms=image_transforms,
+            normalize_images=normalize_images,
+        )
+    else:
+        raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
+
+
 @torch.no_grad()
 def predict(
     path_to_pth: str,
@@ -191,53 +314,30 @@ def predict(
     normalize_images = cfg["normalize_images"]
     R = Resize([img_h, img_w], antialias=True)
 
-    if path_to_images is not None and path_to_zarr is not None:
-        raise ValueError(
-            "can only take one of 'path_to_images' or 'path_to_zarr', but got both"
-        )
-    elif path_to_images is not None:
-        image_loader = ImageLoader.load_image_data(
-            path_to_images,
-            transform_list=[R],
-            batch_size=batch_size,
-            fnames_only=(output_dir is not None),
-            normalize_images=normalize_images,
-            device=device,
-        )
-    elif path_to_zarr is not None:
-        image_loader = ImageLoader.load_zarr_data(
-            path_to_zarr,
-            transform_list=[R],
-            batch_size=batch_size,
-            normalize_images=normalize_images,
-            device=device,
-        )
-    else:
-        raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
+    image_dataset = get_dataset(
+        path_to_images=path_to_images,
+        path_to_zarr=path_to_zarr,
+        image_transforms=[R],
+        normalize_images=normalize_images,
+    )
 
-    if len(image_loader) == 0:
-        warnings.warn(
-            f"dataset {path_to_images if path_to_images is not None else path_to_zarr} is empty"
-        )
-        return torch.zeros(0)
+    image_dataloader = DataLoader(
+        image_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        drop_last=False,
+        num_workers=16,
+        pin_memory=True,
+        collate_fn=collate_fn,
+    )
 
     if output_dir is not None:
         Path(output_dir).mkdir(exist_ok=True, parents=False)
 
-    results = torch.zeros((image_loader.num_els, len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
-    for i, data in enumerate(tqdm(image_loader, disable=not use_tqdm)):
-        if isinstance(data, torch.Tensor):
-            N = int(math.log(image_loader.num_els, 10) + 1)
-            fnames = [f"img_{i*batch_size + j:0{N}}" for j in range(batch_size)]
-            img_batch = data
-            res = model(img_batch).cpu()
-        else:
-            # data is a list of filenames, so we have to create the batch here
-            fnames = data
-            img_batch = ImageLoader.create_batch_from_fnames(
-                fnames, transform=R, device=device
-            )
-            res = model(img_batch).cpu()
+    results = torch.zeros((len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
+    for i, (img_batch, fnames) in enumerate(tqdm(image_dataset, disable=not use_tqdm)):  # type: ignore
+        img_batch.to(device)
+        res = model(img_batch).to("cpu", non_blocking=True)
 
         if output_dir is not None and not draw_boxes:
             out_fnames = [
@@ -269,7 +369,7 @@ def predict(
             print(res)
         else:
             # sometimes we return a number of images less than the batch size,
-            # namely when len(image_loader) % batch_size != 0
+            # namely when len(image_dataset) % batch_size != 0
             results[i * batch_size : i * batch_size + res.shape[0], ...] = res.cpu()
 
     if not print_results and output_dir is None:
