@@ -133,10 +133,10 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
-        "--group",
+        "--tag",
         type=str,
-        nargs="?",
-        help="group that the run belongs to (e.g. 'mAP test')",
+        help="tag for the run (e.g. 'test')",
+        default="",
     )
     parser.add_argument(
         "--device",

@@ -23,7 +23,7 @@ from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
-from yogo.utils import draw_rects, get_wandb_confusion
+from yogo.utils import draw_yogo_prediction, get_wandb_confusion
 from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
@@ -109,7 +109,9 @@ def train():
         net.to(device)
 
         global_step = net_cfg["step"]
-        config["normalize_images"] = net_cfg["normalize_images"]
+        wandb.config.update(
+            {"normalize_images": net_cfg["normalize_images"]}, allow_val_change=True
+        )
 
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
             raise RuntimeError(
@@ -203,15 +205,12 @@ def train():
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
-                draw_rects(
-                    (
-                        (255 * imgs[0, 0, ...].detach()).int()
-                        if config["normalize_images"]
-                        else imgs[0, 0, ...].detach().int()
-                    ),
+                draw_yogo_prediction(
+                    imgs[0, ...],
                     outputs[0, ...].detach(),
                     thresh=0.5,
                     labels=class_names,
+                    images_are_normalized=config["normalize_images"],
                 )
             )
 
@@ -302,7 +301,6 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
         normalize_images=config["normalize_images"],
-        blob_augmentation=Path(config["blob_aug_path"]),
     )
 
     train_dataloader = dataloaders["train"]
@@ -390,15 +388,13 @@ def do_training(args) -> None:
             "class_names": YOGO_CLASS_ORDERING,
             "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
-            "run group": args.group,
             "normalize_images": args.normalize_images,
-            "blob_aug_path": "/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/training-data-thumbnails/misc",
             "dataset_descriptor_file": args.dataset_descriptor_file,
             "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },
         name=args.name,
         notes=args.note,
-        tags=["v0.0.3"],
+        tags=[args.tag],
     )
 
     train()

@@ -2,8 +2,9 @@ from ruamel import yaml
 from pathlib import Path
 from dataclasses import dataclass
 
-
 from typing import List, Dict, Optional
+
+from yogo.data.dataset import YOGO_CLASS_ORDERING
 
 
 class InvalidDatasetDescriptionFile(Exception):
@@ -12,10 +13,11 @@ class InvalidDatasetDescriptionFile(Exception):
 
 @dataclass
 class DatasetDescription:
-    classes: List[str]
+    classes: Optional[List[str]]
     split_fractions: Dict[str, float]
     dataset_paths: List[Dict[str, Path]]
     test_dataset_paths: Optional[List[Dict[str, Path]]]
+    thumbnail_augmentation: Optional[Dict[int, Path]]
 
     def __iter__(self):
         return iter(
@@ -24,6 +26,7 @@ class DatasetDescription:
                 self.split_fractions,
                 self.dataset_paths,
                 self.test_dataset_paths,
+                self.thumbnail_augmentation,
             )
         )
 
@@ -53,7 +56,7 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
 def load_dataset_description(dataset_description: str) -> DatasetDescription:
     """Loads and validates dataset description file"""
     required_keys = [
-        "class_names",  # we don't actually use classes fm dataset desc files, but keep for now
+        "class_names",
         "dataset_split_fractions",
         "dataset_paths",
     ]
@@ -105,6 +108,27 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
                     f"split fractions was {split_fractions}"
                 )
 
+        thumbnail_data: Optional[Dict[int, Path]]
+        if "thumbnail_agumentation" in yaml_data:
+            class_to_thumbnails = yaml_data["thumbnail_agumentation"]
+            if not isinstance(class_to_thumbnails, dict):
+                raise InvalidDatasetDescriptionFile(
+                    "thumbnail_agumentation must map class names to paths to thumbnail "
+                    "directories (e.g. `misc: /path/to/thumbnails/misc`)"
+                )
+
+            thumbnail_data = dict()
+            for k in class_to_thumbnails:
+                if k not in YOGO_CLASS_ORDERING:
+                    raise InvalidDatasetDescriptionFile(
+                        f"thumbnail_agumentation class {k} is not a valid class name"
+                    )
+                thumbnail_data[YOGO_CLASS_ORDERING.index(k)] = Path(
+                    class_to_thumbnails[k]
+                )
+        else:
+            thumbnail_data = None
+
         if not sum(split_fractions.values()) == 1:
             raise InvalidDatasetDescriptionFile(
                 "invalid split fractions for dataset: split fractions must add to 1, "
@@ -112,5 +136,5 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
             )
 
         return DatasetDescription(
-            classes, split_fractions, dataset_paths, test_dataset_paths
+            classes, split_fractions, dataset_paths, test_dataset_paths, thumbnail_data
         )
