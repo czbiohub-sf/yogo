@@ -394,7 +394,7 @@ def do_training(args) -> None:
         },
         name=args.name,
         notes=args.note,
-        tags=[args.tag],
+        tags=args.tag or None,
     )
 
     train()
