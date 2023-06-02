@@ -4,7 +4,6 @@ import wandb
 import torch
 
 import PIL
-import numpy as np
 import torchvision.ops as ops
 import torchvision.transforms as transforms
 

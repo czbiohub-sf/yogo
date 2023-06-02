@@ -206,7 +206,7 @@ def train():
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
                 draw_yogo_prediction(
-                    imgs[0,...],
+                    imgs[0, ...],
                     outputs[0, ...].detach(),
                     thresh=0.5,
                     labels=class_names,
