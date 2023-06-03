@@ -2,7 +2,7 @@ import torch
 
 import torchvision.ops as ops
 
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Union, Tuple, List, Dict
 
 from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -43,14 +43,16 @@ class Metrics:
             list(range(num_classes)) if class_names is None else class_names
         )
         self.classify = classify
-        assert self.num_classes == len(self.class_names)
+        assert self.class_names is not None and self.num_classes == len(
+            self.class_names
+        )
 
-    def update(self, preds, labels):
+    def update(self, preds, labels, use_IoU: bool = True):
         bs, Sy, Sx, pred_shape = preds.shape
         bs, Sy, Sx, label_shape = labels.shape
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(
-            preds, labels, use_IoU=True, per_batch=True
+            preds, labels, use_IoU=use_IoU, per_batch=True
         )
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
@@ -94,7 +96,10 @@ class Metrics:
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
         per_batch: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Union[
+        Tuple[torch.Tensor, torch.Tensor],
+        Tuple[List[torch.Tensor], List[torch.Tensor]],
+    ]:
         """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)

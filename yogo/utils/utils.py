@@ -3,10 +3,10 @@
 import wandb
 import torch
 
+import PIL
 import torchvision.ops as ops
 import torchvision.transforms as transforms
 
-from PIL import Image, ImageDraw
 from typing import (
     Optional,
     Sequence,
@@ -15,6 +15,7 @@ from typing import (
     Union,
     List,
     Literal,
+    Tuple,
     get_args,
 )
 
@@ -67,7 +68,10 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
 
 
 def format_preds(
-    batch_pred: torch.Tensor, thresh=0.5, box_format: BoxFormat = "cxcywh"
+    batch_pred: torch.Tensor,
+    thresh: float = 0.5,
+    iou_thresh: float = 0.5,
+    box_format: BoxFormat = "cxcywh",
 ) -> torch.Tensor:
     """
     formats batch_pred, from YOGO, into [N,pred_shape], after applying NMS and
@@ -94,7 +98,7 @@ def format_preds(
     preds = reformatted_preds[objectness_mask]
 
     # if we have to convert box format to xyxy, do it to the tensor
-    # and give nms a view of the original. Otherwise, just five nms
+    # and give nms a view of the original. Otherwise, just give nms
     # the a converted clone of the boxes.
     if box_format == "xyxy":
         preds[:, :4] = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
@@ -103,80 +107,108 @@ def format_preds(
         nms_boxes = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
 
     # Non-maximal supression to remove duplicate boxes
-    keep_idxs = ops.nms(
-        nms_boxes,
-        preds[:, 4],
-        iou_threshold=0.5,
-    )
+    if iou_thresh > 0:
+        keep_idxs = ops.nms(
+            nms_boxes,
+            preds[:, 4],
+            iou_threshold=iou_thresh,
+        )
+    else:
+        keep_idxs = torch.arange(len(preds))
 
     return preds[keep_idxs]
 
 
-def draw_rects(
+def _format_tensor_for_rects(
+    rects: torch.Tensor,
+    img_h: int,
+    img_w: int,
+    thresh: float = 0.5,
+    iou_thresh: float = 0.5,
+) -> torch.Tensor:
+    pred_dim, Sy, Sx = rects.shape
+
+    formatted_preds = format_preds(
+        rects,
+        thresh=thresh,
+        iou_thresh=iou_thresh,
+        box_format="xyxy",
+    )
+
+    N = formatted_preds.shape[0]
+    formatted_rects = torch.zeros((N, 6), device=formatted_preds.device)
+    formatted_rects[:, (0, 2)] = img_w * formatted_preds[:, (0, 2)]
+    formatted_rects[:, (1, 3)] = img_h * formatted_preds[:, (1, 3)]
+    formatted_rects[:, 4] = torch.argmax(formatted_preds[:, 5:], dim=1)
+    formatted_rects[:, 5] = formatted_preds[:, 4]
+    return formatted_rects
+
+
+def bbox_colour(label: str, opacity: float = 1.0) -> Tuple[int, int, int, int]:
+    if not (0 <= opacity <= 1):
+        raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
+    if label in ("healthy", "0"):
+        return (0, 255, 0, int(opacity * 255))
+    elif label in ("misc", "6"):
+        return (0, 0, 0, int(opacity * 255))
+    return (255, 0, 0, int(opacity * 255))
+
+
+def draw_yogo_prediction(
     img: torch.Tensor,
-    rects: Union[torch.Tensor, List],
+    prediction: torch.Tensor,
     thresh: Optional[float] = None,
+    iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
-) -> Image:
+    images_are_normalized: bool = False,
+) -> PIL.Image.Image:
+    """Given an image and a prediction, return a PIL Image with bounding boxes
+
+    args:
+        img: 2d torch.Tensor of shape (h, w) or (1, h, w). We will `torch.uint8` your tensor!
+        prediction: torch.tensor of shape (pred_dim, Sy, Sx) or (1, pred_dim, Sy, Sx)
+        thresh: objectness threshold
+        iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
+        labels: list of label names for displaying
     """
-    img is the torch tensor representing an image
-    rects is either
-        - a torch.tensor of shape (pred, Sy, Sx), where
-          pred = (xc, yc, w, h, confidence, class probabilities...)
-        - a list of (class, xc, yc, w, h)
-    thresh is a threshold for confidence when rects is a torch.Tensor
-    """
-    img = img.squeeze()
-    assert (
-        len(img.shape) == 2
-    ), f"takes single grayscale image - should be 2d, got {img.shape}"
-    h, w = img.shape
+    img, prediction = img.squeeze(), prediction.squeeze()
 
-    if isinstance(rects, torch.Tensor) and len(rects.shape) == 3:
-        pred_dim, Sy, Sx = rects.shape
+    if images_are_normalized:
+        img *= 255
 
-        if thresh is None:
-            thresh = 0.5
+    img = img.to(torch.uint8)
 
-        formatted_preds = format_preds(
-            rects,
-            thresh=thresh,
-            box_format="xyxy",
-        )
-        N = formatted_preds.shape[0]
-        formatted_rects = torch.zeros((N, 5), device=formatted_preds.device)
-        formatted_rects[:, (0, 2)] = w * formatted_preds[:, (0, 2)]
-        formatted_rects[:, (1, 3)] = h * formatted_preds[:, (1, 3)]
-        formatted_rects[:, 4] = torch.argmax(formatted_preds[:, 5:], dim=1)
-
-    elif isinstance(rects, list):
-        if thresh is not None:
-            raise ValueError("threshold only valid for tensor (i.e. prediction) input")
-        # TODO fix this type error
-        formatted_rects = [
-            [
-                int(w * (r[1] - r[3] / 2)),
-                int(h * (r[2] - r[4] / 2)),
-                int(w * (r[1] + r[3] / 2)),
-                int(h * (r[2] + r[4] / 2)),
-                r[0],
-            ]
-            for r in rects
-        ]
-    else:
+    if img.ndim != 2:
         raise ValueError(
-            f"got invalid argument for rects: type={type(rects)} shape={rects.shape if hasattr(rects, 'shape') else 'no shape attribute'}"
+            "img must be 2-dimensional (i.e. grayscale), "
+            f"but has {img.ndim} dimensions"
+        )
+    elif prediction.ndim != 3:
+        raise ValueError(
+            "prediction must be 'unbatched' (i.e. shape (pred_dim, Sy, Sx) or "
+            f"(1, pred_dim, Sy, Sx)) - got shape {prediction.shape} "
         )
 
-    image = transforms.ToPILImage()(img[None, ...])
-    rgb = Image.new("RGB", image.size)
-    rgb.paste(image)
-    draw = ImageDraw.Draw(rgb)
+    img_h, img_w = img.shape
+
+    formatted_rects: Union[torch.Tensor, List] = _format_tensor_for_rects(
+        prediction,
+        img_h=img_h,
+        img_w=img_w,
+        thresh=thresh if thresh is not None else 0.5,
+        iou_thresh=iou_thresh,
+    )
+
+    pil_img = transforms.ToPILImage()(img[None, ...])
+
+    rgb = PIL.Image.new("RGBA", pil_img.size)
+    rgb.paste(pil_img)
+    draw = PIL.ImageDraw.Draw(rgb)  # type: ignore
 
     for r in formatted_rects:
         r = list(r)
-        draw.rectangle(r[:4], outline="red")
         label = labels[int(r[4])] if labels is not None else str(r[4])
-        draw.text((r[0], r[1]), label, (0, 0, 0))
+        draw.rectangle(r[:4], outline=bbox_colour(label))
+        draw.text((r[0], r[1]), label, (0, 0, 0, 255))
 
     return rgb

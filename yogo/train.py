@@ -12,9 +12,9 @@ from lion_pytorch import Lion
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast, Literal, Iterator
+from typing import Optional, cast, Literal, Iterator
 
-from yogo import DefaultHyperparams as df
+from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
 from yogo.model import YOGO
 from yogo.model_defns import get_model_func
@@ -23,7 +23,7 @@ from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
-from yogo.utils import draw_rects, get_wandb_confusion
+from yogo.utils import draw_yogo_prediction, get_wandb_confusion
 from yogo.data.dataloader import (
     load_dataset_description,
     get_dataloader,
@@ -31,29 +31,19 @@ from yogo.data.dataloader import (
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
-torch.backends.cudnn.benchmark = True
 # https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
+torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
-
-# TODO find sync points
-# https://pytorch.org/docs/stable/generated/torch.cuda.set_sync_debug_mode.html#torch-cuda-set-sync-debug-mode
-# this will error out if a synchronizing operation occurs
-
-# TUNING GUIDE - goes over this
-# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html
-
-# TODO
-# measure forward / backward pass timing w/
-# https://pytorch.org/docs/stable/notes/cuda.html#asynchronous-execution
 
 
 def checkpoint_model(
     model: torch.nn.Module,
     epoch: int,
     optimizer: torch.nn.Module,
-    name: str,
+    filename: str,
     step: int,
     normalized: bool,
+    model_name: str,
     model_version: Optional[str] = None,
     **kwargs,
 ):
@@ -62,12 +52,13 @@ def checkpoint_model(
             "epoch": epoch,
             "step": step,
             "normalize_images": normalized,
+            "model_name": model_name,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
             "model_version": model_version,
             **kwargs,
         },
-        str(name),
+        str(filename),
     )
 
 
@@ -120,7 +111,9 @@ def train():
         net.to(device)
 
         global_step = net_cfg["step"]
-        config["normalize_images"] = net_cfg["normalize_images"]
+        wandb.config.update(
+            {"normalize_images": net_cfg["normalize_images"]}, allow_val_change=True
+        )
 
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
             raise RuntimeError(
@@ -151,7 +144,10 @@ def train():
     ) = init_dataset(config, Sx, Sy)
     print("dataset initialized...")
 
-    Y_loss = YOGOLoss(classify=classify).to(device)
+    Y_loss = YOGOLoss(
+        label_smoothing=config["label_smoothing"],
+        classify=classify,
+    ).to(device)
     optimizer = get_optimizer(
         config["optimizer_type"],
         parameters=net.parameters(),
@@ -177,7 +173,7 @@ def train():
             labels = labels.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            loss, loss_components = Y_loss(outputs, labels)
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -188,6 +184,7 @@ def train():
                     "train loss": loss.item(),
                     "epoch": epoch,
                     "LR": scheduler.get_last_lr()[0],
+                    **loss_components,
                 },
                 commit=False,
                 step=global_step,
@@ -204,21 +201,18 @@ def train():
                 imgs = imgs.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
-                loss = Y_loss(outputs, labels)
+                loss, _ = Y_loss(outputs, labels)
                 val_loss += loss.item()
                 val_metrics.update(outputs.detach(), labels.detach())
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
-                draw_rects(
-                    (
-                        (255 * imgs[0, 0, ...].detach()).int()
-                        if config["normalize_images"]
-                        else imgs[0, 0, ...].detach()
-                    ),
+                draw_yogo_prediction(
+                    imgs[0, ...],
                     outputs[0, ...].detach(),
                     thresh=0.5,
                     labels=class_names,
+                    images_are_normalized=config["normalize_images"],
                 )
             )
 
@@ -251,6 +245,7 @@ def train():
                     model_save_dir / "best.pth",
                     global_step,
                     config["normalize_images"],
+                    model_name=wandb.name,
                     model_version=config["model"],
                 )
             else:
@@ -261,6 +256,7 @@ def train():
                     model_save_dir / "latest.pth",
                     global_step,
                     config["normalize_images"],
+                    model_name=wandb.name,
                     model_version=config["model"],
                 )
 
@@ -276,7 +272,7 @@ def train():
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             outputs = net(imgs)
-            loss = Y_loss(outputs, labels)
+            loss, _ = Y_loss(outputs, labels)
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
@@ -305,10 +301,8 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         config["batch_size"],
         Sx=Sx,
         Sy=Sy,
-        device=config["device"],
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
-        resize_shape=config["resize_shape"],
         normalize_images=config["normalize_images"],
     )
 
@@ -354,17 +348,14 @@ def do_training(args) -> None:
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
 
-    if args.crop:
-        vertical_crop_size = cast(float, args.crop)
+    if args.crop_height:
+        vertical_crop_size = cast(float, args.crop_height)
         if not (0 < vertical_crop_size < 1):
             raise ValueError(
                 "vertical_crop_size must be between 0 and 1; got {vertical_crop_size}"
             )
         resize_target_size = (round(vertical_crop_size * 772), 1032)
         preprocess_type = "crop"
-    elif args.resize:
-        resize_target_size = cast(Tuple[int, int], tuple(args.resize))
-        preprocess_type = "resize"
     else:
         resize_target_size = (772, 1032)
         preprocess_type = None
@@ -397,14 +388,13 @@ def do_training(args) -> None:
             "class_names": YOGO_CLASS_ORDERING,
             "pretrained_path": args.from_pretrained,
             "no_classify": args.no_classify,
-            "run group": args.group,
             "normalize_images": args.normalize_images,
             "dataset_descriptor_file": args.dataset_descriptor_file,
             "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         },
         name=args.name,
         notes=args.note,
-        tags=["v0.0.3"],
+        tags=args.tag or None,
     )
 
     train()

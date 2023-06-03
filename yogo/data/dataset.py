@@ -26,7 +26,7 @@ YOGO_CLASS_ORDERING = [
 ]
 
 
-def read_grayscale(img_path):
+def read_grayscale(img_path: Union[str, Path]) -> torch.Tensor:
     try:
         return read_image(str(img_path), ImageReadMode.GRAY)
     except RuntimeError as e:
@@ -100,33 +100,31 @@ def load_labels(
 ) -> List[List[float]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
-    try:
-        with open(label_path, "r") as f:
-            file_chunk = f.read(1024)
-            f.seek(0)
 
-            try:
-                dialect = csv.Sniffer().sniff(file_chunk)
-                has_header = csv.Sniffer().has_header(file_chunk)
-                reader = csv.reader(f, dialect)
-            except csv.Error:
-                # emtpy file, no labels, just keep moving
-                return []
+    with open(label_path, "r") as f:
+        file_chunk = f.read(1024)
+        f.seek(0)
 
-            if has_header:
-                next(reader, None)
+        try:
+            dialect = csv.Sniffer().sniff(file_chunk)
+            has_header = csv.Sniffer().has_header(file_chunk)
+            reader = csv.reader(f, dialect)
+        except csv.Error:
+            # emtpy file, no labels, just keep moving
+            return []
 
-            for row in reader:
-                assert (
-                    len(row) == 5
-                ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
+        if has_header:
+            next(reader, None)
 
-                label_idx = correct_label_idx(row[0], dataset_classes, notes_data)
+        for row in reader:
+            assert (
+                len(row) == 5
+            ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
-                # float for everything so we can make tensors of labels
-                labels.append([float(label_idx)] + [float(v) for v in row[1:]])
-    except FileNotFoundError:
-        pass
+            label_idx = correct_label_idx(row[0], dataset_classes, notes_data)
+
+            # float for everything so we can make tensors of labels
+            labels.append([float(label_idx)] + [float(v) for v in row[1:]])
 
     return labels
 
@@ -139,7 +137,12 @@ def label_file_to_tensor(
     notes_data: Optional[Dict[str, Any]] = None,
 ) -> torch.Tensor:
     "loads labels from label file into a tensor suitible for back prop, given by image path"
-    labels = load_labels(label_path, dataset_classes, notes_data=notes_data)
+
+    try:
+        labels = load_labels(label_path, dataset_classes, notes_data=notes_data)
+    except Exception as e:
+        raise RuntimeError(f"exception from {label_path}") from e
+
     labels_tensor = torch.Tensor(labels)
 
     if labels_tensor.nelement() == 0:
@@ -271,7 +274,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         target = self._labels[index, ...]
         if self.normalize_images:
             # turns our torch.uint8 tensor 'sample' into a torch.FloatTensor
-            sample = sample / 256
+            sample = sample / 255
         return sample, target
 
     def __len__(self) -> int:

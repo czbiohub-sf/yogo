@@ -29,34 +29,37 @@ def to_numpy(tensor):
 
 def do_export(args):
     pth_filename = args.input
-    onnx_filename = (
+    onnx_filename = Path(
         args.output_filename
         if args.output_filename is not None
         else pth_filename.replace("pth", "onnx")
-    )
+    ).with_suffix(".onnx")
 
-    if not onnx_filename.endswith(".onnx"):
-        onnx_filename += ".onnx"
-
-    model_save = torch.load(pth_filename, map_location=torch.device("cpu"))
-    net, _ = YOGO.from_pth(model_save, inference=True)
+    net, _ = YOGO.from_pth(pth_filename, inference=True)
     net.eval()
 
-    img_h, img_w = model_save["model_state_dict"]["img_size"]
-    dummy_input = torch.randn(1, 1, img_h, img_w, requires_grad=False)
+    img_h, img_w = net.img_size
+
+    if args.crop_height is not None:
+        img_h = (args.crop_height * img_h).round()
+        net.resize_model(img_h)
+
+    dummy_input = torch.randn(
+        1, 1, int(img_h.item()), int(img_w.item()), requires_grad=False
+    )
     torch_out = net(dummy_input)
 
     torch.onnx.export(
         net,
         dummy_input,
-        onnx_filename,
+        str(onnx_filename),
         verbose=False,
         do_constant_folding=True,
         opset_version=14,
     )
 
     # Load the ONNX model
-    model_candidate = onnx.load(onnx_filename)
+    model_candidate = onnx.load(str(onnx_filename))
 
     if args.simplify:
         model_simplified_candidate, model_simplified_OK = onnxsim.simplify(
@@ -70,7 +73,7 @@ def do_export(args):
     onnx.checker.check_model(model)
 
     # Compare model output from pure torch and onnx
-    ort_session = onnxruntime.InferenceSession(onnx_filename)
+    ort_session = onnxruntime.InferenceSession(str(onnx_filename))
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(dummy_input)}
     ort_outs = ort_session.run(None, ort_inputs)
 
@@ -82,21 +85,21 @@ def do_export(args):
         err_msg="onnx and pytorch outputs are far apart",
     )
 
-    success_msg = f"exported to {onnx_filename}"
+    success_msg = f"exported to {str(onnx_filename)}"
 
     # export to IR
     subprocess.run(
         [
             "mo",
             "--input_model",
-            onnx_filename,
+            str(onnx_filename),
             "--output_dir",
-            Path(onnx_filename).resolve().parents[0],
+            onnx_filename.resolve().parents[0],
             "--data_type",
             "FP16",
         ]
     )
-    success_msg += f", {onnx_filename.replace('onnx', 'xml')}, {onnx_filename.replace('onnx', 'bin')}"
+    success_msg += f", {str(onnx_filename.with_suffix('.xml'))}, {str(onnx_filename.with_suffix('.bin'))}"
 
     print("\n")
     print(success_msg)

@@ -2,7 +2,8 @@ import argparse
 
 from pathlib import Path
 
-from yogo import DefaultHyperparams as df
+from yogo.model_defns import MODELS
+from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
 
 try:
@@ -14,10 +15,25 @@ except AttributeError:
 def uint(val: int):
     try:
         v = int(val)
-        if v >= 0:
-            return v
     except ValueError:
         raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
+
+    if v < 0:
+        raise argparse.ArgumentTypeError(f"{val} is not a positive integer")
+
+    return v
+
+
+def unitary_float(val: float):
+    try:
+        v = float(val)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v} is not a float value")
+
+    if not (0 <= v <= 1):
+        raise argparse.ArgumentTypeError(f"{v} must be in [0,1]")
+
+    return v
 
 
 def global_parser():
@@ -66,7 +82,7 @@ def train_parser(parser=None):
     )
     parser.add_argument(
         "--label-smoothing",
-        type=float,
+        type=unitary_float,
         help=f"label smoothing - default 0.01 (default {df.LABEL_SMOOTHING})",
         default=0.01,
     )
@@ -87,14 +103,7 @@ def train_parser(parser=None):
         default=None,
         const=None,
         nargs="?",
-        choices=[
-            "base_model",
-            "model_no_dropout",
-            "model_smaller_SxSy",
-            "model_big_simple",
-            "model_big_normalized",
-            "model_big_heavy_normalized",
-        ],
+        choices=list(MODELS.keys()),
         help="model version to use - do not use with --from-pretrained, as we use the pretrained model",
     )
     parser.add_argument(
@@ -118,10 +127,10 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
-        "--group",
+        "--tag",
         type=str,
-        nargs="?",
-        help="group that the run belongs to (e.g. 'mAP test')",
+        help="tag for the run (e.g. 'test')",
+        default="",
     )
     parser.add_argument(
         "--device",
@@ -141,18 +150,10 @@ def train_parser(parser=None):
         action=boolean_action,
         help="normalize images into [0,1] (default False)",
     )
-
-    image_resize_options = parser.add_mutually_exclusive_group(required=False)
-    image_resize_options.add_argument(
-        "--resize",
-        type=int,
-        nargs=2,
-        help="resize image to these dimensions. e.g. '-r 300 400' to resize to width=300, height=400",
-    )
-    image_resize_options.add_argument(
-        "--crop",
-        type=float,
-        help="crop image verically - i.e. '-c 0.25' will crop images to (round(0.25 * height), width)",
+    parser.add_argument(
+        "--crop-height",
+        type=unitary_float,
+        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
     return parser
 
@@ -167,6 +168,11 @@ def export_parser(parser=None):
         "input",
         type=str,
         help="path to input pth file",
+    )
+    parser.add_argument(
+        "--crop-height",
+        type=unitary_float,
+        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
     parser.add_argument(
         "--output-filename",
@@ -201,6 +207,18 @@ def infer_parser(parser=None):
         action=boolean_action,
         default=False,
     )
+    parser.add_argument(
+        "--batch-size",
+        type=uint,
+        help="batch size for inference (default 16)",
+        default=16,
+    )
+    parser.add_argument(
+        "--crop-height",
+        type=unitary_float,
+        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
+    )
+
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
         "--path-to-images", type=Path, default=None, help="path to image or images"
