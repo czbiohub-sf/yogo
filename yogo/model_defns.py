@@ -1,4 +1,6 @@
-from typing import Optional, Callable
+import torch
+
+from typing import Optional, Callable, Union, Dict
 
 from torch import nn
 
@@ -144,6 +146,24 @@ def model_smaller_SxSy(num_classes: int) -> nn.Module:
     )
 
 
+class Residual(nn.Module):
+    def __init__(self, n_filters: int, kernel_size: int):
+        super().__init__()
+        self.conv1 = nn.Conv2d(n_filters, n_filters, kernel_size)
+        self.bn = nn.BatchNorm2d(n_filters)
+        self.conv2 = nn.Conv2d(n_filters, 4 * n_filters, 1)
+        self.leakyrelu = nn.LeakyReLU()
+        self.conv3 = nn.Conv2d(4 * n_filters, n_filters, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x1 = self.conv1(x)
+        x1 = self.bn(x1)
+        x1 = self.conv2(x1)
+        x1 = self.leakyrelu()
+        x1 = self.conv3(x1)
+        return x + x1
+
+
 def model_big_simple(num_classes: int) -> nn.Module:
     return nn.Sequential(
         nn.Sequential(
@@ -195,6 +215,39 @@ def model_big_simple(num_classes: int) -> nn.Module:
             nn.LeakyReLU(),
         ),
         nn.Conv2d(256, 5 + num_classes, 1),
+    )
+
+
+def model_big_residual(num_classes: int) -> nn.Module:
+    return nn.Sequential(
+        nn.Sequential(
+            nn.Conv2d(1, 16, 3, stride=2),
+            nn.LeakyReLU(),
+            nn.BatchNorm2d(16),
+        ),
+        Residual(16, 3),
+        nn.Sequential(
+            nn.Conv2d(16, 32, 3),
+            nn.LeakyReLU(),
+            nn.BatchNorm2d(32),
+        ),
+        nn.Sequential(
+            nn.Conv2d(32, 64, 3, stride=2),
+            nn.LeakyReLU(),
+        ),
+        Residual(64, 3),
+        nn.Sequential(
+            nn.Conv2d(64, 128, 3),
+            nn.LeakyReLU(),
+            nn.BatchNorm2d(128),
+        ),
+        Residual(128, 3),
+        nn.Sequential(
+            nn.Conv2d(128, 128, 3, stride=2),
+            nn.LeakyReLU(),
+        ),
+        Residual(128, 3),
+        nn.Conv2d(128, 5 + num_classes, 1),
     )
 
 
@@ -324,15 +377,26 @@ def model_big_heavy_normalized(num_classes: int) -> nn.Module:
     )
 
 
+MODELS: Dict[
+    Union[str, None],
+    Callable[
+        [
+            int,
+        ],
+        nn.Module,
+    ],
+] = {
+    "base_model": base_model,
+    "model_no_dropout": model_no_dropout,
+    "model_smaller_SxSy": model_smaller_SxSy,
+    "model_big_simple": model_big_simple,
+    "model_big_residual": model_big_residual,
+    "model_big_normalized": model_big_normalized,
+    "model_big_heavy_normalized": model_big_heavy_normalized,
+}
+
+
 def get_model_func(
     model_name: Optional[str],
 ) -> Optional[Callable[[int,], nn.Module]]:
-    models = {
-        "base_model": base_model,
-        "model_no_dropout": model_no_dropout,
-        "model_smaller_SxSy": model_smaller_SxSy,
-        "model_big_simple": model_big_simple,
-        "model_big_normalized": model_big_normalized,
-        "model_big_heavy_normalized": model_big_heavy_normalized,
-    }
-    return models.get(model_name, None)
+    return MODELS.get(model_name, None)

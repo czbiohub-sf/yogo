@@ -2,6 +2,7 @@ import argparse
 
 from pathlib import Path
 
+from yogo.model_defns import MODELS
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
 
@@ -102,14 +103,7 @@ def train_parser(parser=None):
         default=None,
         const=None,
         nargs="?",
-        choices=[
-            "base_model",
-            "model_no_dropout",
-            "model_smaller_SxSy",
-            "model_big_simple",
-            "model_big_normalized",
-            "model_big_heavy_normalized",
-        ],
+        choices=list(MODELS.keys()),
         help="model version to use - do not use with --from-pretrained, as we use the pretrained model",
     )
     parser.add_argument(
