@@ -149,7 +149,9 @@ def model_smaller_SxSy(num_classes: int) -> nn.Module:
 class Residual(nn.Module):
     def __init__(self, n_filters: int, kernel_size: int):
         super().__init__()
-        self.conv1 = nn.Conv2d(n_filters, n_filters, kernel_size)
+        self.conv1 = nn.Conv2d(
+            n_filters, n_filters, kernel_size, padding=kernel_size // 2
+        )
         self.bn = nn.BatchNorm2d(n_filters)
         self.conv2 = nn.Conv2d(n_filters, 4 * n_filters, 1)
         self.leakyrelu = nn.LeakyReLU()
