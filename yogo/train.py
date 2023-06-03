@@ -24,10 +24,8 @@ from yogo.data.dataset import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
 from yogo.utils import draw_yogo_prediction, get_wandb_confusion
-from yogo.data.dataloader import (
-    load_dataset_description,
-    get_dataloader,
-)
+from yogo.data.dataloader import get_dataloader
+from yogo.data.dataset_description_file import load_dataset_description
 
 
 # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
