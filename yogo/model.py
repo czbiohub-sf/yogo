@@ -234,7 +234,9 @@ class YOGO(nn.Module):
             .transpose(0, 1)
             .expand(Sy, Sx)
         )
-        self.register_buffer("height_multiplier", torch.tensor(org_img_height / img_height))
+        self.register_buffer(
+            "height_multiplier", torch.tensor(org_img_height / img_height)
+        )
         self.register_buffer("img_size", torch.tensor(crop_size))
         self.register_buffer("_Cxs", _Cxs.clone())
         self.register_buffer("_Cys", _Cys.clone())

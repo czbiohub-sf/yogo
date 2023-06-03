@@ -299,9 +299,7 @@ def do_infer(args):
         batch_size=args.batch_size,
         use_tqdm=(args.output_dir is not None or args.draw_boxes),
         vertical_crop_height_px=(
-            round(772 * args.crop_height)
-            if args.crop_height is not None
-            else None
+            round(772 * args.crop_height) if args.crop_height is not None else None
         ),
     )
 

@@ -12,7 +12,7 @@ from lion_pytorch import Lion
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast, Literal, Iterator
+from typing import Optional, cast, Literal, Iterator
 
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
@@ -299,7 +299,6 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         Sy=Sy,
         preprocess_type=config["preprocess_type"],
         vertical_crop_size=config["vertical_crop_size"],
-        resize_shape=config["resize_shape"],
         normalize_images=config["normalize_images"],
     )
 
@@ -345,17 +344,14 @@ def do_training(args) -> None:
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
 
-    if args.crop:
-        vertical_crop_size = cast(float, args.crop)
+    if args.crop_height:
+        vertical_crop_size = cast(float, args.crop_height)
         if not (0 < vertical_crop_size < 1):
             raise ValueError(
                 "vertical_crop_size must be between 0 and 1; got {vertical_crop_size}"
             )
         resize_target_size = (round(vertical_crop_size * 772), 1032)
         preprocess_type = "crop"
-    elif args.resize:
-        resize_target_size = cast(Tuple[int, int], tuple(args.resize))
-        preprocess_type = "resize"
     else:
         resize_target_size = (772, 1032)
         preprocess_type = None
