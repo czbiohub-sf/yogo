@@ -227,9 +227,9 @@ class YOGO(nn.Module):
         org_img_height, org_img_width = (int(d) for d in self.get_img_size())
         crop_size = (img_height, org_img_width)
         Sx, Sy = self.get_grid_size(crop_size)
-        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1)
+        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx, device=self._Cxs.device).expand(Sy, -1)
         _Cys = (
-            torch.linspace(0, 1 - 1 / Sy, Sy)
+            torch.linspace(0, 1 - 1 / Sy, Sy, device=self._Cxs.device)
             .expand(1, -1)
             .transpose(0, 1)
             .expand(Sy, Sx)

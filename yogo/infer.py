@@ -206,7 +206,6 @@ def predict(
     model.eval()
 
     img_h, img_w = model.get_img_size()
-    Sx, Sy = model.get_grid_size()
 
     transforms: List[torch.nn.Module] = []
 
@@ -241,6 +240,7 @@ def predict(
         total=len(image_dataset),
     )
 
+    Sx, Sy = model.get_grid_size()
     results = torch.zeros((len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
     for i, (img_batch, fnames) in enumerate(image_dataloader):
         res = model(img_batch.to(device)).to("cpu", non_blocking=True)
