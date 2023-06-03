@@ -92,7 +92,7 @@ class YOGO(nn.Module):
         if isinstance(module, nn.Conv2d):
             # init weights to default leaky relu neg slope, biases to 0
             torch.nn.init.kaiming_normal_(
-                module.weight, a=0.01, nonlinearity="leaky_relu"
+                module.weight, a=0.01, mode='fan_out', nonlinearity="leaky_relu"
             )
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
