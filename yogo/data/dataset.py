@@ -68,10 +68,10 @@ def correct_label_idx(
     if notes_data is None:
         # this is the best we can do
         return int(label)
-    else:
+    elif label.isnumeric():
         label_name: Optional[str] = None
         for row in notes_data["categories"]:
-            if label == int(row["id"]):
+            if int(label) == int(row["id"]):
                 label_name = row["name"]
                 break
 
@@ -79,6 +79,8 @@ def correct_label_idx(
             raise ValueError(f"label index {label} not found in notes.json file")
 
         return YOGO_CLASS_ORDERING.index(label_name)
+    else:
+        return YOGO_CLASS_ORDERING.index(label)
 
 
 def load_labels(
@@ -262,4 +264,4 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return image, labels
 
     def __len__(self) -> int:
-        return len(self._paths)
+        return len(self._image_paths)

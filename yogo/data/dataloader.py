@@ -41,7 +41,6 @@ def get_datasets(
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            dataset_classes,
             dataset_paths["image_path"],
             dataset_paths["label_path"],
             Sx,
@@ -54,7 +53,6 @@ def get_datasets(
     if test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
             ObjectDetectionDataset(
-                dataset_classes,
                 dataset_paths["image_path"],
                 dataset_paths["label_path"],
                 Sx,
