@@ -120,9 +120,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         # classification loss
         if self._classify:
-            classification_loss = self.cel(
-                formatted_preds_masked[:, 5:], formatted_labels_masked[:, 5].long()
-            ).sum() / batch_size
+            classification_loss = (
+                self.cel(
+                    formatted_preds_masked[:, 5:], formatted_labels_masked[:, 5].long()
+                ).sum()
+                / batch_size
+            )
         else:
             classification_loss = torch.tensor(
                 0, dtype=torch.float32, device=self.device
