@@ -40,9 +40,10 @@ def checkpoint_model(
     model: torch.nn.Module,
     epoch: int,
     optimizer: torch.nn.Module,
-    name: str,
+    filename: str,
     step: int,
     normalized: bool,
+    model_name: str,
     model_version: Optional[str] = None,
     **kwargs,
 ):
@@ -51,12 +52,13 @@ def checkpoint_model(
             "epoch": epoch,
             "step": step,
             "normalize_images": normalized,
+            "model_name": model_name,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
             "model_version": model_version,
             **kwargs,
         },
-        str(name),
+        str(filename),
     )
 
 
@@ -243,6 +245,7 @@ def train():
                     model_save_dir / "best.pth",
                     global_step,
                     config["normalize_images"],
+                    model_name=wandb.name,
                     model_version=config["model"],
                 )
             else:
@@ -253,6 +256,7 @@ def train():
                     model_save_dir / "latest.pth",
                     global_step,
                     config["normalize_images"],
+                    model_name=wandb.name,
                     model_version=config["model"],
                 )
 
