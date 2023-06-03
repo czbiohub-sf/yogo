@@ -161,7 +161,7 @@ class Residual(nn.Module):
         x1 = self.conv1(x)
         x1 = self.bn(x1)
         x1 = self.conv2(x1)
-        x1 = self.leakyrelu()
+        x1 = self.leakyrelu(x1)
         x1 = self.conv3(x1)
         return x + x1
 
