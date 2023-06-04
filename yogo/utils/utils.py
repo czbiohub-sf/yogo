@@ -28,13 +28,26 @@ BoxFormat = Literal["xyxy", "cxcywh"]
 
 
 @contextmanager
-def Time(message: str):
-    start = time.perf_counter()
+def Timer(
+    description: str, precision: int = 5, post_print: bool = False
+):
+    """Context manager for timing code execution.
+
+    Args:
+        description (str): description of code to be timed
+        precision (float): number of digits to print after decimal point
+        post_print (bool): whether to print information only after leaving the context
+    """
     try:
+        start_time = time.perf_counter()
+        if not post_print:
+            print(f"{description}...", end=" ", flush=True)
         yield
     finally:
-        end = time.perf_counter()
-        print(f"{message}: {end - start:.4f}s")
+        end_time = time.perf_counter()
+        print(
+            f"{str(description) + ' ' if post_print else ''}{end_time - start_time:.{precision}f} s"
+        )
 
 
 def get_wandb_confusion(
