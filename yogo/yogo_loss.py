@@ -40,15 +40,26 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self, pred_batch: torch.Tensor, label_batch: torch.Tensor
     ) -> Tuple[torch.Tensor, Dict[str, float]]:
         """
-        pred and label are both 4d. pred_batch has shape
+        pred is 4d. pred_batch has shape
         (
              batch size,
              pred_dim,      (tx, ty, tw, th, to, c1, c2, c3, c4)
              Sx,
              Sy
         )
+
+        label_batch is 2d, of shape
+            [
+                [num-labels 0 0 0 0]
+                [cls-index  x y x y]
+                [cls-index  x y x y]
+                ...
+            ]
         """
         batch_size, _, Sy, Sx = pred_batch.shape
+        num_labels = label_batch[:, 0, 0]
+        label_grid_is = (label_batch[:, :, 1] + label_batch[:, :, 3]) * Sx // 2
+        label_grid_js = (label_batch[:, :, 2] + label_batch[:, :, 4]) * Sy // 2
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 

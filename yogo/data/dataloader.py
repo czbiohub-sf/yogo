@@ -137,16 +137,22 @@ def split_dataset(
 
 
 def collate_batch(batch, transforms):
-    images, label = zip(*batch)
+    images, labels = zip(*batch)
+
     batched_images = torch.stack(images)
 
+    num_labels_per_img = [len(label) for label in labels]
     batch_size= len(labels)
-    max_num_labels = max(len(label) for label in labels)
+    num_labels = 1 + max(num_labels_per_img)
     labels_w  = len(labels[0][0])
+    batched_labels = torch.zeros((batch_size, num_labels, labels_w))
 
-    batched_labels = torch.zeros((batch_size, max_num_labels, labels_w))
-    batched_labels = torch.stack(labels)
-    return transforms(batched_images, batched_labels)
+    for i, (label_size, label) in enumerate(zip(num_labels_per_img, labels)):
+        batched_labels[i, 0, 0] = label_size
+        batched_labels[i, 1:1+label_size, :] = label
+
+    # return transforms(batched_images, batched_labels)
+    return batched_images, batched_labels
 
 
 def get_dataloader(

@@ -41,6 +41,7 @@ def split_labels_into_bins(
     """
     d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
     for label in labels:
+        # why is this not a mul????
         i = torch.div((label[1] + label[3]) / 2, (1 / Sx), rounding_mode="trunc").long()
         j = torch.div((label[2] + label[4]) / 2, (1 / Sy), rounding_mode="trunc").long()
         d[(i, j)].append(label)
@@ -48,17 +49,16 @@ def split_labels_into_bins(
 
 
 def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
-    with torch.no_grad():
-        output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
-        label_cells = split_labels_into_bins(labels, Sx, Sy)
+    output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+    label_cells = split_labels_into_bins(labels, Sx, Sy)
 
-        for (k, j), cell_label in label_cells.items():
-            pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
-            output[0, j, k] = 1  # mask that there is a prediction here
-            output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
-            output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
+    for (k, j), cell_label in label_cells.items():
+        pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
+        output[0, j, k] = 1  # mask that there is a prediction here
+        output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
+        output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
 
-        return output
+    return output
 
 
 def correct_label_idx(
@@ -143,6 +143,9 @@ def label_file_to_tensor(
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
+    """ TODO I should explain tensors here, ie why are labels
+    xyxy, why are predictions xcycwh
+    """
     def __init__(
         self,
         image_path: Path,
