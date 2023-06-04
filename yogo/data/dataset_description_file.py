@@ -40,7 +40,6 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
             and len(list(dataset_paths[i]["label_path"].iterdir())) > 0
         ):
             if prune:
-                print(f"pruning {dataset_paths[i]}")
                 to_prune.append(i)
             else:
                 raise FileNotFoundError(
@@ -50,6 +49,7 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
 
     # reverse order so we don't move around the to-delete items in the list
     for i in to_prune[::-1]:
+        print(f"pruning {dataset_paths[i]}")
         del dataset_paths[i]
 
 

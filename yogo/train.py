@@ -245,7 +245,7 @@ def train():
                     model_save_dir / "best.pth",
                     global_step,
                     config["normalize_images"],
-                    model_name=wandb.name,
+                    model_name=wandb.run.name,
                     model_version=config["model"],
                 )
             else:
@@ -256,7 +256,7 @@ def train():
                     model_save_dir / "latest.pth",
                     global_step,
                     config["normalize_images"],
-                    model_name=wandb.name,
+                    model_name=wandb.run.name,
                     model_version=config["model"],
                 )
 
