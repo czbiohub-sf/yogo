@@ -62,40 +62,29 @@ def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor
 
 
 def correct_label_idx(
-    label: Union[str, int],
-    dataset_classes: List[str],
+    label: str,
     notes_data: Optional[Dict[str, Any]] = None,
 ) -> int:
-    """
-    dataset_classes is the ordering of classes that are given by
-    label-studio. So we get the class of the prediction from
-    `int(row[0])`, and get the index of that from YOGO_CLASS_ORDERING
-    """
-    if isinstance(label, int):
-        return YOGO_CLASS_ORDERING.index(str(label))
-    elif isinstance(label, str) and label.isnumeric():
-        label = int(label)
-        if notes_data is None:
-            return YOGO_CLASS_ORDERING.index(dataset_classes[label])
-        else:
-            label_name: Optional[str] = None
-            for row in notes_data["categories"]:
-                if label == int(row["id"]):
-                    label_name = row["name"]
-                    break
+    if notes_data is None:
+        # this is the best we can do
+        return int(label)
+    elif label.isnumeric():
+        label_name: Optional[str] = None
+        for row in notes_data["categories"]:
+            if int(label) == int(row["id"]):
+                label_name = row["name"]
+                break
 
-            if label_name is None:
-                raise ValueError(f"label index {label} not found in notes.json file")
+        if label_name is None:
+            raise ValueError(f"label index {label} not found in notes.json file")
 
-            return YOGO_CLASS_ORDERING.index(label_name)
-    raise ValueError(
-        f"label must be an integer or a numeric string (i.e. '1', '2', ...); got {label}"
-    )
+        return YOGO_CLASS_ORDERING.index(label_name)
+    else:
+        return YOGO_CLASS_ORDERING.index(label)
 
 
 def load_labels(
     label_path: Path,
-    dataset_classes: List[str],
     notes_data: Optional[Dict[str, Any]] = None,
 ) -> List[List[float]]:
     "loads labels from label file, given by image path"
@@ -121,7 +110,7 @@ def load_labels(
                 len(row) == 5
             ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
-            label_idx = correct_label_idx(row[0], dataset_classes, notes_data)
+            label_idx = correct_label_idx(row[0], notes_data)
 
             # float for everything so we can make tensors of labels
             labels.append([float(label_idx)] + [float(v) for v in row[1:]])
@@ -131,7 +120,6 @@ def load_labels(
 
 def label_file_to_tensor(
     label_path: Path,
-    dataset_classes: List[str],
     Sx: int,
     Sy: int,
     notes_data: Optional[Dict[str, Any]] = None,
@@ -139,7 +127,7 @@ def label_file_to_tensor(
     "loads labels from label file into a tensor suitible for back prop, given by image path"
 
     try:
-        labels = load_labels(label_path, dataset_classes, notes_data=notes_data)
+        labels = load_labels(label_path, notes_data=notes_data)
     except Exception as e:
         raise RuntimeError(f"exception from {label_path}") from e
 
@@ -155,7 +143,6 @@ def label_file_to_tensor(
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
-        dataset_classes: List[str],
         image_path: Path,
         label_path: Path,
         Sx,
@@ -176,21 +163,24 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.label_folder_path = label_path
         self.loader = loader
         self.normalize_images = normalize_images
+        self.notes_data: Optional[Dict[str, Any]] = None
 
         # https://pytorch.org/docs/stable/data.html#multi-process-data-loading
         # https://github.com/pytorch/pytorch/issues/13246#issuecomment-905703662
         # essentially, to avoid dataloader workers from copying tonnes of mem,
         # we can't store samples in lists. Hence, the tensor and numpy array.
-        paths, tensors = self.make_dataset(
+        image_paths, label_paths = self.make_dataset(
             Sx,
             Sy,
             is_valid_file=is_valid_file,
             extensions=extensions,
-            dataset_classes=dataset_classes,
         )
 
-        self._paths = np.array(paths).astype(np.string_)
-        self._labels = torch.stack(tensors)
+        self.Sx = Sx
+        self.Sy = Sy
+
+        self._image_paths = np.array(image_paths).astype(np.string_)
+        self._label_paths = np.array(label_paths).astype(np.string_)
 
     def make_dataset(
         self,
@@ -198,8 +188,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Sy: int,
         extensions: Optional[Union[str, Tuple[str, ...]]] = None,
         is_valid_file: Optional[Callable[[str], bool]] = None,
-        dataset_classes: List[str] = YOGO_CLASS_ORDERING,
-    ) -> Tuple[List[str], List[torch.Tensor]]:
+    ) -> Tuple[List[str], List[str]]:
         """
         torchvision.datasets.folder.make_dataset doc string states:
             "Generates a list of samples of a form (path_to_sample, class)"
@@ -227,54 +216,52 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         is_valid_file = cast(Callable[[str], bool], is_valid_file)
 
-        notes_data = None
         if (self.label_folder_path.parent / "notes.json").exists():
             with open(str(self.label_folder_path.parent / "notes.json"), "r") as notes:
-                notes_data = json.load(notes)
+                self.notes_data = json.load(notes)
 
         # maps file name to a list of tuples of bounding boxes + classes
-        paths: List[str] = []
-        tensors: List[torch.Tensor] = []
+        image_paths: List[str] = []
+        label_paths: List[str] = []
         for label_file_path in self.label_folder_path.glob("*"):
             # ignore (*nix convention) hidden files
             if label_file_path.name.startswith("."):
                 continue
 
-            image_paths = [
+            possible_image_paths = [
                 self.image_folder_path / label_file_path.with_suffix(sfx).name
                 for sfx in [".png", ".jpg"]
             ]
 
             try:
                 image_file_path = next(
-                    ip for ip in image_paths if (ip.exists() and is_valid_file(str(ip)))
+                    ip
+                    for ip in possible_image_paths
+                    if (ip.exists() and is_valid_file(str(ip)))
                 )
             except StopIteration as e:
                 # raise exception here? logic being that we want to know very quickly that we don't have
-                # all the labels we need. Open to changes, though.
+                # all the images we need. Open to changes, though.
                 raise FileNotFoundError(
-                    f"None of the following images exist: {image_paths}"
+                    f"None of the following images exist: {possible_image_paths}"
                 ) from e
 
-            # if we have a `notes.json` file available, the labels are from a
-            # label studio project, so use it. Otherwise, assume YOGO_CLASS_ORDERING
+            image_paths.append(str(image_file_path))
+            label_paths.append(str(label_file_path))
 
-            labels = label_file_to_tensor(
-                label_file_path, dataset_classes, Sx, Sy, notes_data
-            )
-            paths.append(str(image_file_path))
-            tensors.append(labels)
-
-        return paths, tensors
+        return image_paths, label_paths
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        img_path = str(self._paths[index], encoding="utf-8")
-        sample = self.loader(img_path)
-        target = self._labels[index, ...]
+        image_path = str(self._image_paths[index], encoding="utf-8")
+        label_path = str(self._label_paths[index], encoding="utf-8")
+        image = self.loader(image_path)
+        labels = label_file_to_tensor(
+            Path(label_path), self.Sx, self.Sy, self.notes_data
+        )
         if self.normalize_images:
             # turns our torch.uint8 tensor 'sample' into a torch.FloatTensor
-            sample = sample / 255
-        return sample, target
+            image = image / 255
+        return image, labels
 
     def __len__(self) -> int:
-        return len(self._paths)
+        return len(self._image_paths)
