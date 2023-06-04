@@ -1,4 +1,5 @@
 from .utils import (
+    Time,
     get_wandb_confusion,
     iter_in_chunks,
     format_preds,
@@ -7,6 +8,7 @@ from .utils import (
 
 
 __all__ = (
+    "Time",
     "get_wandb_confusion",
     "iter_in_chunks",
     "format_preds",

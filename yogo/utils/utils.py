@@ -1,7 +1,10 @@
 #! /usr/bin/env python3
 
+import time
 import wandb
 import torch
+
+from contextlib import contextmanager
 
 import PIL
 import torchvision.ops as ops
@@ -22,6 +25,16 @@ from typing import (
 
 T = TypeVar("T")
 BoxFormat = Literal["xyxy", "cxcywh"]
+
+
+@contextmanager
+def Time(message: str):
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        end = time.perf_counter()
+        print(f"{message}: {end - start:.4f}s")
 
 
 def get_wandb_confusion(
