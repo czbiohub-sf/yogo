@@ -131,13 +131,15 @@ def label_file_to_tensor(
     except Exception as e:
         raise RuntimeError(f"exception from {label_path}") from e
 
-    labels_tensor = torch.Tensor(labels)
+    labels_N, labels_dim = len(labels), len(labels[0])
+    if labels_N == 0:
+        return torch.zeros((1,labels_dim))
 
-    if labels_tensor.nelement() == 0:
-        return torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+    labels_tensor = torch.zeros(labels_N + 1, labels_dim)
+    labels_tensor[0, 0] = labels_N
+    labels_tensor[1:, :] = torch.tensor(labels)
 
-    labels_tensor[:, 1:] = ops.box_convert(labels_tensor[:, 1:], "cxcywh", "xyxy")
-    return format_labels_tensor(labels_tensor, Sx, Sy)
+    return labels_tensor
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
@@ -251,17 +253,20 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         return image_paths, label_paths
 
+    def __len__(self) -> int:
+        return len(self._image_paths)
+
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
         image_path = str(self._image_paths[index], encoding="utf-8")
         label_path = str(self._label_paths[index], encoding="utf-8")
+
         image = self.loader(image_path)
         labels = label_file_to_tensor(
             Path(label_path), self.Sx, self.Sy, self.notes_data
         )
+
         if self.normalize_images:
             # turns our torch.uint8 tensor 'sample' into a torch.FloatTensor
             image = image / 255
-        return image, labels
 
-    def __len__(self) -> int:
-        return len(self._image_paths)
+        return image, labels
