@@ -133,7 +133,7 @@ def label_file_to_tensor(
 
     labels_N, labels_dim = len(labels), len(labels[0])
     if labels_N == 0:
-        return torch.zeros((1,labels_dim))
+        return torch.zeros((1, labels_dim))
 
     labels_tensor = torch.zeros(labels_N + 1, labels_dim)
     labels_tensor[0, 0] = labels_N
@@ -143,9 +143,10 @@ def label_file_to_tensor(
 
 
 class ObjectDetectionDataset(datasets.VisionDataset):
-    """ TODO I should explain tensors here, ie why are labels
+    """TODO I should explain tensors here, ie why are labels
     xyxy, why are predictions xcycwh
     """
+
     def __init__(
         self,
         image_path: Path,

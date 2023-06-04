@@ -142,14 +142,14 @@ def collate_batch(batch, transforms):
     batched_images = torch.stack(images)
 
     num_labels_per_img = [len(label) for label in labels]
-    batch_size= len(labels)
+    batch_size = len(labels)
     num_labels = 1 + max(num_labels_per_img)
-    labels_w  = len(labels[0][0])
+    labels_w = len(labels[0][0])
     batched_labels = torch.zeros((batch_size, num_labels, labels_w))
 
     for i, (label_size, label) in enumerate(zip(num_labels_per_img, labels)):
         batched_labels[i, 0, 0] = label_size
-        batched_labels[i, 1:1+label_size, :] = label
+        batched_labels[i, 1 : 1 + label_size, :] = label
 
     # return transforms(batched_images, batched_labels)
     return batched_images, batched_labels
