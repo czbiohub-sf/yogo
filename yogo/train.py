@@ -392,7 +392,7 @@ def do_training(args) -> None:
         },
         name=args.name,
         notes=args.note,
-        tags=args.tag or None,
+        tags=(args.tag,) if args.tag is not None else None,
     )
 
     train()
