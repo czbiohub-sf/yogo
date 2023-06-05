@@ -88,12 +88,6 @@ def train():
     model = get_model_func(config["model"])
     num_classes = len(class_names)
 
-    val_metrics = Metrics(
-        num_classes=num_classes,
-        device=device,
-        class_names=class_names,
-        classify=classify,
-    )
     test_metrics = Metrics(
         num_classes=num_classes,
         device=device,
@@ -163,7 +157,7 @@ def train():
 
     print("starting training")
 
-    best_mAP = 0
+    min_val_loss = float("inf")
     for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
@@ -201,7 +195,6 @@ def train():
                 outputs = net(imgs)
                 loss, _ = Y_loss(outputs, labels)
                 val_loss += loss.item()
-                val_metrics.update(outputs.detach(), labels.detach())
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
@@ -214,28 +207,17 @@ def train():
                 )
             )
 
-            mAP, confusion_data, precision, recall = val_metrics.compute()
-            val_metrics.reset()
-
             wandb.log(
                 {
                     "validation bbs": annotated_img,
                     "val loss": val_loss / len(validate_dataloader),
-                    "val mAP": mAP["map"],
-                    "val confusion": get_wandb_confusion(
-                        confusion_data, class_names, "validation confusion matrix"
-                    ),
-                    "val precision": precision,
-                    "val recall": recall,
                 },
                 step=global_step,
             )
 
-            # TODO we should choose better conditions here - e.g. mAP for no-classify isn't great,
-            # and maybe we care about recall more than mAP
-            if mAP["map"] > best_mAP:
-                best_mAP = mAP["map"]
-                wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
+            if val_loss < min_val_loss:
+                min_val_loss = val_loss
+                wandb.log({"best_val_loss": val_loss}, step=global_step)
                 checkpoint_model(
                     net,
                     epoch,
