@@ -130,7 +130,7 @@ def train_parser(parser=None):
         "--tag",
         type=str,
         help="tag for the run (e.g. 'test')",
-        default="",
+        default=None,
     )
     parser.add_argument(
         "--device",
