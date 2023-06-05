@@ -23,7 +23,7 @@ from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
-from yogo.utils import draw_yogo_prediction, get_wandb_confusion
+from yogo.utils import draw_yogo_prediction, get_wandb_confusion, Timer
 from yogo.data.dataloader import get_dataloader
 from yogo.data.dataset_description_file import load_dataset_description
 
@@ -308,13 +308,16 @@ def init_dataset(config: WandbConfig, Sx, Sy):
     validate_dataloader = dataloaders["val"]
     test_dataloader = dataloaders["test"]
 
-    wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
-            "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
-            "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
-        }
-    )
+    try:
+        wandb.config.update(
+            {  # we do this here b.c. batch_size can change wrt sweeps
+                "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
+                "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
+                "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
+            }
+        )
+    except Exception:
+        pass
 
     if wandb.run is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
@@ -358,42 +361,44 @@ def do_training(args) -> None:
         resize_target_size = (772, 1032)
         preprocess_type = None
 
-    print("loading dataset description")
-    dataset_paths = load_dataset_description(args.dataset_descriptor_file).dataset_paths
+    with Timer("loading dataset description"):
+        dataset_paths = load_dataset_description(
+            args.dataset_descriptor_file
+        ).dataset_paths
 
-    print("getting best anchor")
-    anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
+    with Timer("getting best anchor"):
+        anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
-    print("initting wandb")
-    wandb.init(
-        project="yogo",
-        entity="bioengineering",
-        config={
-            "optimizer_type": optimizer_type,
-            "learning_rate": learning_rate,
-            "decay_factor": decay_factor,
-            "weight_decay": weight_decay,
-            "label_smoothing": label_smoothing,
-            "epochs": epochs,
-            "batch_size": batch_size,
-            "device": str(device),
-            "anchor_w": anchor_w,
-            "anchor_h": anchor_h,
-            "model": args.model,
-            "resize_shape": resize_target_size,
-            "vertical_crop_size": vertical_crop_size,
-            "preprocess_type": preprocess_type,
-            "class_names": YOGO_CLASS_ORDERING,
-            "pretrained_path": args.from_pretrained,
-            "no_classify": args.no_classify,
-            "normalize_images": args.normalize_images,
-            "dataset_descriptor_file": args.dataset_descriptor_file,
-            "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
-        },
-        name=args.name,
-        notes=args.note,
-        tags=(args.tag,) if args.tag is not None else None,
-    )
+    with Timer("initting wandb"):
+        wandb.init(
+            project="yogo",
+            entity="bioengineering",
+            config={
+                "optimizer_type": optimizer_type,
+                "learning_rate": learning_rate,
+                "decay_factor": decay_factor,
+                "weight_decay": weight_decay,
+                "label_smoothing": label_smoothing,
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "device": str(device),
+                "anchor_w": anchor_w,
+                "anchor_h": anchor_h,
+                "model": args.model,
+                "resize_shape": resize_target_size,
+                "vertical_crop_size": vertical_crop_size,
+                "preprocess_type": preprocess_type,
+                "class_names": YOGO_CLASS_ORDERING,
+                "pretrained_path": args.from_pretrained,
+                "no_classify": args.no_classify,
+                "normalize_images": args.normalize_images,
+                "dataset_descriptor_file": args.dataset_descriptor_file,
+                "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
+            },
+            name=args.name,
+            notes=args.note,
+            tags=(args.tag,) if args.tag is not None else None,
+        )
 
     train()
 

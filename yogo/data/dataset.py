@@ -4,7 +4,6 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from collections import defaultdict
 
 import torchvision.ops as ops
 
@@ -33,30 +32,15 @@ def read_grayscale(img_path: Union[str, Path]) -> torch.Tensor:
         raise RuntimeError(f"file {img_path} threw: {e}")
 
 
-def split_labels_into_bins(
-    labels: torch.Tensor, Sx, Sy
-) -> Dict[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
-    """
-    labels shape is [N,5]; N is batch size, 5 is [label, x, y, x, y]
-    """
-    d: Dict[Tuple[torch.Tensor, torch.Tensor], List[torch.Tensor]] = defaultdict(list)
-    for label in labels:
-        # why is this not a mul????
-        i = torch.div((label[1] + label[3]) / 2, (1 / Sx), rounding_mode="trunc").long()
-        j = torch.div((label[2] + label[4]) / 2, (1 / Sy), rounding_mode="trunc").long()
-        d[(i, j)].append(label)
-    return {k: torch.vstack(vs) for k, vs in d.items()}
-
-
 def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
     output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
-    label_cells = split_labels_into_bins(labels, Sx, Sy)
+    iis = (labels[:, 1] + labels[:, 3]) * Sx // 2
+    jjs = (labels[:, 2] + labels[:, 4]) * Sy // 2
 
-    for (k, j), cell_label in label_cells.items():
-        pred_square_idx = 0  # TODO this is a remnant of Sx,Sy being small; remove?
-        output[0, j, k] = 1  # mask that there is a prediction here
-        output[1:5, j, k] = cell_label[pred_square_idx][1:]  # xyxy
-        output[5, j, k] = cell_label[pred_square_idx][0]  # prediction idx
+    for i, j, label in zip(iis.int(), jjs.int(), labels):
+        output[0, j, i] = 1  # mask that there is a prediction here
+        output[1:5, j, i] = label[1:]  # xyxy
+        output[5, j, i] = label[0]  # prediction idx
 
     return output
 
