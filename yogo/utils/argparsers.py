@@ -208,6 +208,12 @@ def infer_parser(parser=None):
         default=False,
     )
     parser.add_argument(
+        "--final-counts",
+        action=boolean_action,
+        default=False,
+        help="only display the final predicted counts per-class"
+    )
+    parser.add_argument(
         "--batch-size",
         type=uint,
         help="batch size for inference (default 16)",
@@ -218,7 +224,6 @@ def infer_parser(parser=None):
         type=unitary_float,
         help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
-
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
         "--path-to-images", type=Path, default=None, help="path to image or images"
