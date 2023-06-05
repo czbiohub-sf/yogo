@@ -5,7 +5,6 @@ import numpy as np
 
 from pathlib import Path
 
-import torchvision.ops as ops
 
 from torchvision import datasets
 from torchvision.io import read_image, ImageReadMode
