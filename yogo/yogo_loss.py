@@ -87,33 +87,33 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         formatted_preds_masked = formatted_preds[mask, :]
         formatted_labels_masked = formatted_labels[mask, :]
 
-        formatted_preds_xyxy = ops.box_convert(
+        formatted_preds_masked[:, :4] = ops.box_convert(
             formatted_preds_masked[:, :4],
             "cxcywh",
             "xyxy",
         )
-        formatted_labels_xyxy = formatted_labels_masked[:, 1:5]
 
+        valid_box_mask = torch.logical_and(
+            formatted_preds_masked[:, 0] != formatted_preds_masked[:, 2],
+            formatted_preds_masked[:, 1] != formatted_preds_masked[:, 3],
+        )
+
+        formatted_preds_masked = formatted_preds_masked[valid_box_mask]
+        formatted_labels_masked = formatted_labels_masked[valid_box_mask]
+
+        # need to create new tensor for preds xyxy for backward pass
         formatted_preds_xyxy = torch.clamp(
-            formatted_preds_xyxy,
+            formatted_preds_masked[:, :4],
             min=0,
             max=1,
         )
-
-        valid_box_mask = torch.logical_and(
-            formatted_preds_xyxy[:, 0] != formatted_preds_xyxy[:, 2],
-            formatted_preds_xyxy[:, 1] != formatted_preds_xyxy[:, 3],
-        )
-
-        formatted_preds_xyxy = formatted_preds_xyxy[valid_box_mask]
-        formatted_labels_masked = formatted_labels_masked[valid_box_mask]
 
         iou_loss = (
             self.coord_weight
             * (
                 ops.complete_box_iou_loss(
                     formatted_preds_xyxy,
-                    formatted_labels_xyxy,
+                    formatted_labels_masked[:, 1:5],
                 )
             ).sum()
         ) / batch_size
