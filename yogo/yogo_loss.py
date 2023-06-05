@@ -2,6 +2,7 @@ import torch
 
 from typing import Dict, Tuple
 
+from yogo.data.dataset import format_labels_tensor
 import torchvision.ops as ops
 
 
@@ -37,7 +38,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         return self
 
     def forward(
-        self, pred_batch: torch.Tensor, label_batch: torch.Tensor
+        self, pred_batch: torch.Tensor, label_batch_: torch.Tensor
     ) -> Tuple[torch.Tensor, Dict[str, float]]:
         """
         pred is 4d. pred_batch has shape
@@ -57,9 +58,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             ]
         """
         batch_size, _, Sy, Sx = pred_batch.shape
-        num_labels = label_batch[:, 0, 0]
-        label_grid_is = (label_batch[:, :, 1] + label_batch[:, :, 3]) * Sx // 2
-        label_grid_js = (label_batch[:, :, 2] + label_batch[:, :, 4]) * Sy // 2
+
+        # do slow and dumb thing first
+        label_batch = torch.stack([format_labels_tensor(l, Sx, Sy) for l in label_batch_]).to(self.device)
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
