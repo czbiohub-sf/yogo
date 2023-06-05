@@ -5,16 +5,14 @@ import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LinearLR, SequentialLR, CosineAnnealingLR
 
-from pathlib import Path
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast
+from typing import Optional
 
 from yogo.model import YOGO
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
 from yogo.data.dataloader import (
     load_dataset_description,
-    get_dataloader,
 )
 from yogo.train import init_dataset
 from yogo.utils.cluster_anchors import best_anchor

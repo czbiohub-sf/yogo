@@ -28,9 +28,7 @@ BoxFormat = Literal["xyxy", "cxcywh"]
 
 
 @contextmanager
-def Timer(
-    description: str, precision: int = 5, post_print: bool = False
-):
+def Timer(description: str, precision: int = 5, post_print: bool = False):
     """Context manager for timing code execution.
 
     Args:

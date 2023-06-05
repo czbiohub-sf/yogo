@@ -316,7 +316,7 @@ def init_dataset(config: WandbConfig, Sx, Sy):
                 "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
             }
         )
-    except:
+    except Exception:
         pass
 
     if wandb.run is not None:
@@ -362,7 +362,9 @@ def do_training(args) -> None:
         preprocess_type = None
 
     with Timer("loading dataset description"):
-        dataset_paths = load_dataset_description(args.dataset_descriptor_file).dataset_paths
+        dataset_paths = load_dataset_description(
+            args.dataset_descriptor_file
+        ).dataset_paths
 
     with Timer("getting best anchor"):
         anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
