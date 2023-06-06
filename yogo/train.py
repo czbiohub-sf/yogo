@@ -21,7 +21,7 @@ from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
-from yogo.utils import draw_yogo_prediction, get_wandb_confusion, Timer
+from yogo.utils import draw_yogo_prediction, get_wandb_line_series, get_wandb_confusion, Timer
 from yogo.data.dataloader import get_dataloader
 from yogo.data.dataset_description_file import load_dataset_description
 
@@ -164,7 +164,7 @@ def train():
             )
 
         # do validation things
-        val_loss = 0.0
+        val_loss = torch.tensor(0.0, device=device)
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
@@ -172,7 +172,7 @@ def train():
                 labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
                 loss, _ = Y_loss(outputs, labels)
-                val_loss += loss.item()
+                val_loss += loss
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
@@ -184,7 +184,7 @@ def train():
                     images_are_normalized=config["normalize_images"],
                 )
             )
-            mean_val_loss = val_loss / len(validate_dataloader)
+            mean_val_loss = val_loss.item() / len(validate_dataloader)
             wandb.log(
                 {
                     "validation bbs": annotated_img,
@@ -245,7 +245,7 @@ def train():
         test_metrics.reset()
 
         accuracy_table = wandb.Table(
-            [[labl, acc] for labl, acc in zip(class_names, accuracy)],
+            data=[[labl, acc] for labl, acc in zip(class_names, accuracy)],
             columns=["label", "accuracy"],
         )
 
@@ -263,9 +263,9 @@ def train():
                 "test accuracy": wandb.plot.bar(
                     accuracy_table, "label", "accuracy", title="test accuracy"
                 ),
-                "test ROC": wandb.plot.line_series(
-                    xs=[fpr],
-                    ys=[tpr],
+                "test ROC": get_wandb_line_series(
+                    xs=[t.tolist() for t in fpr],
+                    ys=[t.tolist() for t in tpr],
                     keys=class_names,
                     title="test ROC",
                     xname="false positive rate",

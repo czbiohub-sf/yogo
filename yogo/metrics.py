@@ -32,7 +32,7 @@ class Metrics:
                 MulticlassPrecision(num_classes=num_classes, thresholds=4),
                 MulticlassRecall(num_classes=num_classes, thresholds=4),
                 MulticlassAccuracy(num_classes=num_classes, thresholds=4, average=None),
-                MulticlassROC(num_classes=num_classes, thresholds=9, average=None),
+                MulticlassROC(num_classes=num_classes, thresholds=4, average=None),
             ]
         )
 
@@ -59,12 +59,14 @@ class Metrics:
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
 
+        fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
+
         self.confusion.update(
-            formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
+            fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze()
         )
 
         self.prediction_metrics.update(
-            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
+            fps[:, 5:], fls[:, 5:].squeeze().long()
         )
 
     def compute(self):
@@ -95,7 +97,7 @@ class Metrics:
         batch_labels: torch.Tensor,
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
@@ -171,7 +173,7 @@ class Metrics:
             masked_predictions.append(final_preds)
             masked_labels.append(img_masked_labels)
 
-        return torch.cat(masked_predictions), torch.cat(masked_labels)
+        return masked_predictions, masked_labels
 
     def format_for_mAP(
         self, formatted_preds, formatted_labels
