@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, cast, Iterator
+from typing import Optional, cast
 
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
@@ -234,7 +234,14 @@ def train():
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
-        mAP, confusion_data, precision, recall, accuracy, roc_curves = test_metrics.compute()
+        (
+            mAP,
+            confusion_data,
+            precision,
+            recall,
+            accuracy,
+            roc_curves,
+        ) = test_metrics.compute()
         test_metrics.reset()
 
         accuracy_table = wandb.Table(
@@ -253,7 +260,9 @@ def train():
                 "test confusion": get_wandb_confusion(
                     confusion_data, class_names, "test confusion matrix"
                 ),
-                "test accuracy": wandb.plot.bar(accuracy_table, "label", "accuracy", title="test accuracy"),
+                "test accuracy": wandb.plot.bar(
+                    accuracy_table, "label", "accuracy", title="test accuracy"
+                ),
                 "test ROC": wandb.plot.line_series(
                     xs=[fpr],
                     ys=[tpr],
@@ -262,7 +271,6 @@ def train():
                     xname="false positive rate",
                     yname="true positive rate",
                 ),
-
             }
         )
 

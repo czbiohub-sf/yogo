@@ -2,7 +2,7 @@ import torch
 
 import torchvision.ops as ops
 
-from typing import Optional, Union, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict
 
 from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -32,7 +32,7 @@ class Metrics:
                 MulticlassPrecision(num_classes=num_classes, thresholds=4),
                 MulticlassRecall(num_classes=num_classes, thresholds=4),
                 MulticlassAccuracy(num_classes=num_classes, thresholds=4, average=None),
-                MulticlassROC(num_classes=num_classes, thresholds=9, average=None)
+                MulticlassROC(num_classes=num_classes, thresholds=9, average=None),
             ]
         )
 
@@ -42,9 +42,7 @@ class Metrics:
 
         self.num_classes = num_classes
         self.class_names: List[str] = (
-            [str(n) for n in range(num_classes)]
-            if class_names is None
-            else class_names
+            [str(n) for n in range(num_classes)] if class_names is None else class_names
         )
         self.classify = classify
         assert self.class_names is not None and self.num_classes == len(
