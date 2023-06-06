@@ -64,6 +64,12 @@ test_paths:
     image_path: /path/to/images/
     label_path: /path/to/labels/
   ...
+ 
+If you want, you can also augment certain classes by human bbox labels!
+thumbnail_agumentation:
+  misc: /path/to/folder/of/toner/blob/thumbnails
+  wbc: /path/to/folder/of/wbc/thumbnails
+  misc: /another/path/to/misc
 ```
 
 ## Label files
