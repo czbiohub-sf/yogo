@@ -205,18 +205,18 @@ def train():
                     images_are_normalized=config["normalize_images"],
                 )
             )
-
+            mean_val_loss = val_loss / len(validate_dataloader)
             wandb.log(
                 {
                     "validation bbs": annotated_img,
-                    "val loss": val_loss / len(validate_dataloader),
+                    "val loss": mean_val_loss,
                 },
                 step=global_step,
             )
 
-            if val_loss < min_val_loss:
-                min_val_loss = val_loss
-                wandb.log({"best_val_loss": val_loss}, step=global_step)
+            if mean_val_loss < min_val_loss:
+                min_val_loss = mean_val_loss
+                wandb.log({"best_val_loss": mean_val_loss}, step=global_step)
                 checkpoint_model(
                     net,
                     epoch,
