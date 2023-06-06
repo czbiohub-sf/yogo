@@ -63,13 +63,15 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
+        "-bs",
         "--batch-size",
         type=uint,
         help=f"batch size for training (default {df.BATCH_SIZE})",
         default=None,
     )
     parser.add_argument(
-        "--lr",
+        "-lr",
+        "--learning-rate",
         type=float,
         help=f"learning rate for training (default {df.LEARNING_RATE})",
         default=None,
@@ -87,6 +89,7 @@ def train_parser(parser=None):
         default=0.01,
     )
     parser.add_argument(
+        "-wd",
         "--weight-decay",
         type=float,
         help=f"weight decay for training (default {df.WEIGHT_DECAY})",
@@ -105,14 +108,6 @@ def train_parser(parser=None):
         nargs="?",
         choices=list(MODELS.keys()),
         help="model version to use - do not use with --from-pretrained, as we use the pretrained model",
-    )
-    parser.add_argument(
-        "--optimizer",
-        default="adam",
-        const="adam",
-        nargs="?",
-        choices=["adam", "lion"],
-        help=f"optimizer for training run (default {df.OPTIMIZER_TYPE})",
     )
     parser.add_argument(
         "--note",
@@ -211,7 +206,7 @@ def infer_parser(parser=None):
         "--final-counts",
         action=boolean_action,
         default=False,
-        help="only display the final predicted counts per-class"
+        help="only display the final predicted counts per-class",
     )
     parser.add_argument(
         "--batch-size",

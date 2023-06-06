@@ -7,12 +7,10 @@ import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from lion_pytorch import Lion
-
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, cast, Literal, Iterator
+from typing import Optional, cast, Iterator
 
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
@@ -58,21 +56,6 @@ def checkpoint_model(
         },
         str(filename),
     )
-
-
-def get_optimizer(
-    optimizer_type: Literal["lion", "adam"],
-    parameters: Iterator[torch.Tensor],
-    learning_rate: float,
-    weight_decay: float,
-) -> torch.optim.Optimizer:
-    if optimizer_type == "lion":
-        return Lion(
-            parameters, lr=learning_rate, weight_decay=weight_decay, betas=(0.95, 0.98)
-        )
-    elif optimizer_type == "adam":
-        return AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
-    raise ValueError(f"got invalid optimizer_type {optimizer_type}")
 
 
 def train():
@@ -140,12 +123,8 @@ def train():
         label_smoothing=config["label_smoothing"],
         classify=classify,
     ).to(device)
-    optimizer = get_optimizer(
-        config["optimizer_type"],
-        parameters=net.parameters(),
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-    )
+
+    optimizer = AdamW(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     print("created loss and optimizer")
 
