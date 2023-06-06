@@ -177,7 +177,7 @@ def train():
                     "epoch": epoch,
                     "LR": scheduler.get_last_lr()[0],
                     "training grad norm": net.grad_norm(),
-                    "training param norm": net.param_norm()
+                    "training param norm": net.param_norm(),
                     **loss_components,
                 },
                 commit=global_step % 100 == 0,
