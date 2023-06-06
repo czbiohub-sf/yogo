@@ -176,14 +176,13 @@ def train():
                     "train loss": loss.item(),
                     "epoch": epoch,
                     "LR": scheduler.get_last_lr()[0],
+                    "training grad norm": net.grad_norm(),
+                    "training param norm": net.param_norm()
                     **loss_components,
                 },
-                commit=False,
+                commit=global_step % 100 == 0,
                 step=global_step,
             )
-
-            wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
-            wandb.log({"training param norm": net.param_norm()}, step=global_step)
 
         # do validation things
         val_loss = 0.0
