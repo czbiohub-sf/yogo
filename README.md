@@ -18,10 +18,6 @@ You will need to install PyTorch and TorchVision. Go [to PyTorch's website](http
 python3 -m pip install -e .
 ```
 
-You can also install YOGO with any/all of the options below:
-
-### Installation for Training
-
 If you want to export models, run
 
 ```console
@@ -35,7 +31,7 @@ Train locally by running
 ```console
 yogo train <path to dataset_definition.yml> [opts]
 ```
-for list of opts, run `yogo train --help`.
+for list of opts, run `yogo train --help`
 
 To train on SLURM, run
 
@@ -47,14 +43,16 @@ with the same options from above.
 To run a sweep on SLURM, first modify `sweep.yml` to fit your needs. Then, run
 
 ```console
-wandb sweep sweep.yml
+wandb sweep scripts/sweep.yml
 ```
 
 which should give you a sweep ID that looks like `bioengineering/yogo/foo`. Then start each sweep job by running
 
 ```console
-sbatch sweep_launch.sh bioengineering/yogo/foo
+sbatch scripts/sweep_launch.sh bioengineering/yogo/foo
 ```
+
+You can also periodically submit sweep jobs to SLURM w/ `scripts/periodic_slurm_submission.sh`, but choose friendly parameters for that script. Don't hog GPUs too much, and be mindful of the runtime of your training run.
 
 ## Exporting
 
