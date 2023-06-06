@@ -185,6 +185,8 @@ def get_dataloader(
     else:
         raise ValueError(f"got invalid preprocess type {preprocess_type}")
 
+    num_workers = min(len(os.sched_getaffinity(0)) // 2, 32)
+
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
@@ -197,10 +199,10 @@ def get_dataloader(
             drop_last=False,
             pin_memory=True,
             batch_size=batch_size,
-            persistent_workers=True,
-            multiprocessing_context="spawn",
+            persistent_workers=num_workers > 0,
+            multiprocessing_context="spawn" if num_workers > 0 else None,
             # optimal # of workers?
-            num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
+            num_workers=num_workers,  # type: ignore
             generator=torch.Generator().manual_seed(111111),
             collate_fn=partial(collate_batch, transforms=transforms),
         )
