@@ -317,11 +317,10 @@ def do_training(args) -> None:
 
     epochs = args.epochs or df.EPOCHS
     batch_size = args.batch_size or df.BATCH_SIZE
-    learning_rate = args.lr or df.LEARNING_RATE
+    learning_rate = args.learning_rate or df.LEARNING_RATE
     label_smoothing = args.label_smoothing or df.LABEL_SMOOTHING
     decay_factor = args.lr_decay_factor or df.DECAY_FACTOR
     weight_decay = args.weight_decay or df.WEIGHT_DECAY
-    optimizer_type = args.optimizer or df.OPTIMIZER_TYPE
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -351,7 +350,6 @@ def do_training(args) -> None:
             project="yogo",
             entity="bioengineering",
             config={
-                "optimizer_type": optimizer_type,
                 "learning_rate": learning_rate,
                 "decay_factor": decay_factor,
                 "weight_decay": weight_decay,
