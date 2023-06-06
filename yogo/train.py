@@ -234,8 +234,15 @@ def train():
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
-        mAP, confusion_data, precision, recall = test_metrics.compute()
+        mAP, confusion_data, precision, recall, accuracy, roc_curves = test_metrics.compute()
         test_metrics.reset()
+
+        accuracy_table = wandb.Table(
+            [[labl, acc] for labl, acc in zip(class_names, accuracy)],
+            columns=["label", "accuracy"],
+        )
+
+        fpr, tpr, thresholds = roc_curves
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
@@ -245,7 +252,17 @@ def train():
             {
                 "test confusion": get_wandb_confusion(
                     confusion_data, class_names, "test confusion matrix"
-                )
+                ),
+                "test accuracy": wandb.plot.bar(accuracy_table, "label", "accuracy", title="test accuracy"),
+                "test ROC": wandb.plot.line_series(
+                    xs=[fpr],
+                    ys=[tpr],
+                    keys=class_names,
+                    title="test ROC",
+                    xname="false positive rate",
+                    yname="true positive rate",
+                ),
+
             }
         )
 
