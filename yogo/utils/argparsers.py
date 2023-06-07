@@ -24,6 +24,19 @@ def uint(val: int):
     return v
 
 
+def super_unitary_float(val: float):
+    "cheeky name for a number greater than or equal to 1"
+    try:
+        v = float(val)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v} is not a float value")
+
+    if not 1 <= v:
+        raise argparse.ArgumentTypeError(f"{v} must be greater than or equal to 1")
+
+    return v
+
+
 def unitary_float(val: float):
     try:
         v = float(val)
@@ -37,19 +50,31 @@ def unitary_float(val: float):
 
 
 def global_parser():
-    parser = argparse.ArgumentParser(description="looking for a glance?")
+    parser = argparse.ArgumentParser(
+        description="looking for a glance?", allow_abbrev=False
+    )
     subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
-    train_parser(parser=subparsers.add_parser("train", help="train a model"))
-    export_parser(parser=subparsers.add_parser("export", help="export a model"))
+    train_parser(
+        parser=subparsers.add_parser("train", help="train a model", allow_abbrev=False)
+    )
+    export_parser(
+        parser=subparsers.add_parser(
+            "export", help="export a model", allow_abbrev=False
+        )
+    )
     infer_parser(
-        parser=subparsers.add_parser("infer", help="infer images using a model")
+        parser=subparsers.add_parser(
+            "infer", help="infer images using a model", allow_abbrev=False
+        )
     )
     return parser
 
 
 def train_parser(parser=None):
     if parser is None:
-        parser = argparse.ArgumentParser(description="commence a training run")
+        parser = argparse.ArgumentParser(
+            description="commence a training run", allow_abbrev=False
+        )
 
     parser.add_argument(
         "dataset_descriptor_file",
@@ -72,13 +97,14 @@ def train_parser(parser=None):
     parser.add_argument(
         "-lr",
         "--learning-rate",
-        type=float,
+        "--lr",
+        type=unitary_float,
         help=f"learning rate for training (default {df.LEARNING_RATE})",
         default=None,
     )
     parser.add_argument(
         "--lr-decay-factor",
-        type=float,
+        type=super_unitary_float,
         help=f"factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default {df.DECAY_FACTOR})",
         default=None,
     )
@@ -91,7 +117,7 @@ def train_parser(parser=None):
     parser.add_argument(
         "-wd",
         "--weight-decay",
-        type=float,
+        type=unitary_float,
         help=f"weight decay for training (default {df.WEIGHT_DECAY})",
         default=None,
     )
@@ -156,7 +182,7 @@ def train_parser(parser=None):
 def export_parser(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser(
-            description="convert a pth to onnx or Intel IR"
+            description="convert a pth to onnx or Intel IR", allow_abbrev=False
         )
 
     parser.add_argument(
@@ -185,7 +211,9 @@ def export_parser(parser=None):
 
 def infer_parser(parser=None):
     if parser is None:
-        parser = argparse.ArgumentParser(description="infer on image data")
+        parser = argparse.ArgumentParser(
+            description="infer on image data", allow_abbrev=False
+        )
 
     parser.add_argument(
         "pth_path", type=Path, help="path to .pth file defining the model"
