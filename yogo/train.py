@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, cast, Iterator
+from typing import Optional, cast
 
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
@@ -21,7 +21,7 @@ from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
-from yogo.utils import draw_yogo_prediction, get_wandb_confusion, Timer
+from yogo.utils import draw_yogo_prediction, get_wandb_line_series, get_wandb_confusion, Timer
 from yogo.data.dataloader import get_dataloader
 from yogo.data.dataset_description_file import load_dataset_description
 
@@ -164,7 +164,7 @@ def train():
             )
 
         # do validation things
-        val_loss = 0.0
+        val_loss = torch.tensor(0.0, device=device)
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
@@ -172,7 +172,7 @@ def train():
                 labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
                 loss, _ = Y_loss(outputs, labels)
-                val_loss += loss.item()
+                val_loss += loss
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
@@ -184,7 +184,7 @@ def train():
                     images_are_normalized=config["normalize_images"],
                 )
             )
-            mean_val_loss = val_loss / len(validate_dataloader)
+            mean_val_loss = val_loss.item() / len(validate_dataloader)
             wandb.log(
                 {
                     "validation bbs": annotated_img,
@@ -234,8 +234,22 @@ def train():
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
-        mAP, confusion_data, precision, recall = test_metrics.compute()
+        (
+            mAP,
+            confusion_data,
+            precision,
+            recall,
+            accuracy,
+            roc_curves,
+        ) = test_metrics.compute()
         test_metrics.reset()
+
+        accuracy_table = wandb.Table(
+            data=[[labl, acc] for labl, acc in zip(class_names, accuracy)],
+            columns=["label", "accuracy"],
+        )
+
+        fpr, tpr, thresholds = roc_curves
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
@@ -245,7 +259,18 @@ def train():
             {
                 "test confusion": get_wandb_confusion(
                     confusion_data, class_names, "test confusion matrix"
-                )
+                ),
+                "test accuracy": wandb.plot.bar(
+                    accuracy_table, "label", "accuracy", title="test accuracy"
+                ),
+                "test ROC": get_wandb_line_series(
+                    xs=[t.tolist() for t in fpr],
+                    ys=[t.tolist() for t in tpr],
+                    keys=class_names,
+                    title="test ROC",
+                    xname="false positive rate",
+                    yname="true positive rate",
+                ),
             }
         )
 
@@ -300,11 +325,10 @@ def do_training(args) -> None:
 
     epochs = args.epochs or df.EPOCHS
     batch_size = args.batch_size or df.BATCH_SIZE
-    learning_rate = args.lr or df.LEARNING_RATE
+    learning_rate = args.learning_rate or df.LEARNING_RATE
     label_smoothing = args.label_smoothing or df.LABEL_SMOOTHING
     decay_factor = args.lr_decay_factor or df.DECAY_FACTOR
     weight_decay = args.weight_decay or df.WEIGHT_DECAY
-    optimizer_type = args.optimizer or df.OPTIMIZER_TYPE
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -334,7 +358,6 @@ def do_training(args) -> None:
             project="yogo",
             entity="bioengineering",
             config={
-                "optimizer_type": optimizer_type,
                 "learning_rate": learning_rate,
                 "decay_factor": decay_factor,
                 "weight_decay": weight_decay,
