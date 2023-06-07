@@ -5,7 +5,6 @@ import wandb
 import torch
 
 from contextlib import contextmanager
-from collections.abc import Iterable
 
 import PIL
 import torchvision.ops as ops
