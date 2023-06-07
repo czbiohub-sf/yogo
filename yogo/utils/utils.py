@@ -49,7 +49,6 @@ def Timer(description: str, precision: int = 5, post_print: bool = False):
         )
 
 
-
 def get_wandb_line_series(
     xs: Union[Sequence, Sequence[Sequence]],
     ys: Sequence[Sequence],

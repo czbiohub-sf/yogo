@@ -31,7 +31,9 @@ class Metrics:
             [
                 MulticlassPrecision(num_classes=num_classes, thresholds=10),
                 MulticlassRecall(num_classes=num_classes, thresholds=10),
-                MulticlassAccuracy(num_classes=num_classes, thresholds=10, average=None),
+                MulticlassAccuracy(
+                    num_classes=num_classes, thresholds=10, average=None
+                ),
                 MulticlassROC(num_classes=num_classes, thresholds=10, average=None),
             ]
         )
@@ -61,13 +63,9 @@ class Metrics:
 
         fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
 
-        self.confusion.update(
-            fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze()
-        )
+        self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
 
-        self.prediction_metrics.update(
-            fps[:, 5:], fls[:, 5:].squeeze().long()
-        )
+        self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
 
     def compute(self):
         pr_metrics = self.prediction_metrics.compute()
