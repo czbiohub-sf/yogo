@@ -93,7 +93,7 @@ def get_wandb_line_series(
     table = wandb.Table(data=data, columns=["step", "lineKey", "lineVal"])
 
     return wandb.plot_table(
-        "wandb/lineseries/v0",
+        "class-colored-roc",
         table,
         {"step": "step", "lineKey": "lineKey", "lineVal": "lineVal"},
         {"title": title, "xname": xname or "x", "yname": yname or "y"},
