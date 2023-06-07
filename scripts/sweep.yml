@@ -7,7 +7,7 @@ command:
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
-  - trained_models/fresh-totem-448/best.pth
+  - trained_models/solar-sun-551/best.pth
   - --epochs
   - 64
   - --batch-size
@@ -17,10 +17,18 @@ metric:
   goal: maximize
   name: test mAP
 parameters:
+  classify_weight:
+    distribution: uniform
+    max: 20
+    min: 1
+  iou_weight:
+    distribution: uniform
+    max: 20
+    min: 0.01
   learning_rate:
     distribution: log_uniform_values
-    min: 0.0015
-    max: 0.0070
+    min: 0.0001
+    max: 0.007
   weight_decay:
     distribution: log_uniform_values
     min: 0.0001
@@ -28,4 +36,4 @@ parameters:
   label_smoothing:
     distribution: log_uniform_values
     min: 0.0001
-    max: 0.2
+    max: 0.5
