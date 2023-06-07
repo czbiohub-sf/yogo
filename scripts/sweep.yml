@@ -7,7 +7,7 @@ command:
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
-  - trained_models/solar-sun-551/best.pth
+  - trained_models/visionary-glade-553/best.pth
   - --epochs
   - 64
   - --batch-size
