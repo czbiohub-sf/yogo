@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from typing import Union, Callable, Tuple, List, Optional, Dict
+from typing import Union, Callable, Tuple, List, Optional, Dict, Mapping
 
 from torch.utils.data import Dataset
 
@@ -53,7 +53,7 @@ PathLike = Union[str, Path]
 class BlobDataset(Dataset):
     def __init__(
         self,
-        thumbnail_dir_paths: Dict[Union[str, int], PathLike],
+        thumbnail_dir_paths: Mapping[Union[str, int], PathLike],
         Sx: int,
         Sy: int,
         n: int = 4,
@@ -93,8 +93,10 @@ class BlobDataset(Dataset):
 
     def _convert_label(self, label: Union[str, int]) -> int:
         if isinstance(label, int):
-            if 0 <= label < len(YOGO_CLASS_ORDERING):
-                raise ValueError(f"label {label} is out of range")
+            if not (0 <= label < len(YOGO_CLASS_ORDERING)):
+                raise ValueError(
+                    f"label {label} is out of range [0, {len(YOGO_CLASS_ORDERING)})"
+                )
             return label
 
         try:

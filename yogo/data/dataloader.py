@@ -7,7 +7,7 @@ from functools import partial
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any, MutableMapping
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.dataset import ObjectDetectionDataset
@@ -29,50 +29,46 @@ def get_datasets(
     Sy: int,
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
-) -> Dict[str, Dataset]:
-    (
-        dataset_classes,
-        split_fractions,
-        dataset_paths,
-        test_dataset_paths,
-        thumbnail_augmentations,
-    ) = load_dataset_description(dataset_description_file)
-
+) -> MutableMapping[str, Dataset[Any]]:
+    dataset_description = load_dataset_description(dataset_description_file)
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            dataset_paths["image_path"],
-            dataset_paths["label_path"],
+            dsp["image_path"],
+            dsp["label_path"],
             Sx,
             Sy,
             normalize_images=normalize_images,
         )
-        for dataset_paths in tqdm(dataset_paths)
+        for dsp in tqdm(dataset_description.dataset_paths)
     )
 
-    if test_dataset_paths is not None:
+    if dataset_description.test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
             ObjectDetectionDataset(
-                dataset_paths["image_path"],
-                dataset_paths["label_path"],
+                dsp["image_path"],
+                dsp["label_path"],
                 Sx,
                 Sy,
                 normalize_images=normalize_images,
             )
-            for dataset_paths in tqdm(test_dataset_paths)
+            for dsp in tqdm(dataset_description.test_dataset_paths)
         )
-        return {
+        split_datasets: MutableMapping[str, Dataset[Any]] = {
             "train": full_dataset,
-            **split_dataset(test_dataset, split_fractions),
+            **split_dataset(test_dataset, dataset_description.split_fractions),
         }
-
-    split_datasets = split_dataset(full_dataset, split_fractions)
+    else:
+        split_datasets = split_dataset(
+            full_dataset, dataset_description.split_fractions
+        )
 
     # hardcode the blob agumentation for now
     # this should be moved into the dataset description file
-    if thumbnail_augmentations is not None:
+    if dataset_description.thumbnail_augmentation is not None:
+        # some issue w/ Dict v Mapping TODO come back to this
         bd = BlobDataset(
-            thumbnail_augmentations,
+            dataset_description.thumbnail_augmentation,  # type: ignore
             Sx=Sx,
             Sy=Sy,
             n=8,
@@ -88,7 +84,7 @@ def get_datasets(
 
 def split_dataset(
     dataset: Dataset, split_fractions: Dict[str, float]
-) -> Dict[str, Dataset]:
+) -> MutableMapping[str, Dataset[Any]]:
     if not hasattr(dataset, "__len__"):
         raise ValueError(
             f"dataset {dataset} must have a length (specifically, `__len__` must be defined)"
