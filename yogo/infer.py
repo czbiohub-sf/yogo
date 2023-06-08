@@ -144,7 +144,7 @@ class ZarrDataset(ImageAndIdDataset):
             self.zarr_store[:, :, idx]
             if isinstance(self.zarr_store, zarr.Array)
             else self.zarr_store[idx][:]
-        )
+        )[None, ...]
         image = torch.from_numpy(image).to(torch.float16)
         image = self.transform(image)
         if self.normalize_images:
