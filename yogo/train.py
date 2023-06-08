@@ -28,8 +28,6 @@ from yogo.data.dataloader import get_dataloader
 from yogo.data.dataset_description_file import load_dataset_description
 
 
-# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
-# https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 
