@@ -41,6 +41,7 @@ class YOGO(nn.Module):
                 nn.Module,
             ]
         ] = None,
+        clip_value: float = 1.0,
         device: Union[torch.device, str] = "cpu",
     ):
         super().__init__()
@@ -86,6 +87,10 @@ class YOGO(nn.Module):
         # is not necessary
         if tuning:
             self.model.apply(self.set_bn_eval)
+
+        # gradient clipping
+        for p in self.parameters():
+            p.register_hook(lambda grad: torch.clamp(grad, -clip_value, clip_value))
 
     @staticmethod
     def init_network_weights(module: nn.Module):
