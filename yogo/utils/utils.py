@@ -249,6 +249,8 @@ def draw_yogo_prediction(
     """
     img, prediction = img.squeeze(), prediction.squeeze()
 
+    # NOTE I dont know how I feel about this - perhaps it is better to accept
+    # only u8s in range [0,255]
     if images_are_normalized:
         img *= 255
 
