@@ -29,12 +29,12 @@ class Metrics:
         self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
         self.prediction_metrics = MetricCollection(
             [
-                MulticlassPrecision(num_classes=num_classes, thresholds=10),
-                MulticlassRecall(num_classes=num_classes, thresholds=10),
+                MulticlassPrecision(num_classes=num_classes, thresholds=None),
+                MulticlassRecall(num_classes=num_classes, thresholds=None),
                 MulticlassAccuracy(
-                    num_classes=num_classes, thresholds=10, average=None
+                    num_classes=num_classes, thresholds=None, average=None
                 ),
-                MulticlassROC(num_classes=num_classes, thresholds=10, average=None),
+                MulticlassROC(num_classes=num_classes, thresholds=100, average=None),
             ]
         )
 

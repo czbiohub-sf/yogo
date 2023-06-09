@@ -1,6 +1,6 @@
 from .utils import (
     Timer,
-    get_wandb_line_series,
+    get_wandb_roc,
     get_wandb_confusion,
     iter_in_chunks,
     format_preds,
@@ -10,7 +10,7 @@ from .utils import (
 
 __all__ = (
     "Timer",
-    "get_wandb_line_series",
+    "get_wandb_roc",
     "get_wandb_confusion",
     "iter_in_chunks",
     "format_preds",

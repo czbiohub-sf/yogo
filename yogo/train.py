@@ -23,8 +23,8 @@ from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
 from yogo.utils import (
     draw_yogo_prediction,
-    get_wandb_line_series,
     get_wandb_confusion,
+    get_wandb_roc,
     Timer,
 )
 from yogo.data.dataloader import get_dataloader
@@ -253,6 +253,7 @@ def train():
         )
 
         fpr, tpr, thresholds = roc_curves
+        print(thresholds)
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
@@ -266,13 +267,11 @@ def train():
                 "test accuracy": wandb.plot.bar(
                     accuracy_table, "label", "accuracy", title="test accuracy"
                 ),
-                "test ROC": get_wandb_line_series(
-                    xs=[t.tolist() for t in fpr],
-                    ys=[t.tolist() for t in tpr],
-                    keys=class_names,
-                    title="test ROC",
-                    xname="false positive rate",
-                    yname="true positive rate",
+                "test ROC": get_wandb_roc(
+                    fpr=[t.tolist() for t in fpr],
+                    tpr=[t.tolist() for t in tpr],
+                    thresholds=[t.tolist() for t in thresholds],
+                    classes=class_names,
                 ),
             }
         )

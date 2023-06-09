@@ -48,56 +48,40 @@ def Timer(description: str, precision: int = 5, post_print: bool = False):
         )
 
 
-def get_wandb_line_series(
-    xs: Union[Sequence, Sequence[Sequence]],
-    ys: Sequence[Sequence],
-    keys: Optional[Sequence] = None,
-    title: Optional[str] = None,
-    xname: Optional[str] = None,
-    yname: Optional[str] = None,
+def get_wandb_roc(
+    fpr: Union[Sequence, Sequence[Sequence]],
+    tpr: Sequence[Sequence],
+    thresholds: Union[Sequence, Sequence[Sequence]],
+    classes: Sequence,
 ):
-    """w&b line series plot (as of 72eeaa2), with some minor modifications
+    if not isinstance(fpr, Sequence):
+        raise TypeError(f"Expected fpr to be an array instead got {type(fpr)}")
 
-    - added yname option
-    - changed "Iterable" typehints to "Sequence" typehints since Sequences are
-      indexable but Iterables aren't
+    if not isinstance(tpr, Sequence):
+        raise TypeError(f"Expected tpr to be an array instead got {type(tpr)}")
 
-    https://github.com/wandb/wandb/blob/main/wandb/plot/line_series.py
-    """
-    if not isinstance(xs, Sequence):
-        raise TypeError(f"Expected xs to be an array instead got {type(xs)}")
-
-    if not isinstance(ys, Sequence):
-        raise TypeError(f"Expected ys to be an array instead got {type(xs)}")
-
-    for y in ys:
+    for y in tpr:
         if not isinstance(y, Sequence):
             raise TypeError(
-                f"Expected ys to be an array of arrays instead got {type(y)}"
+                f"Expected tpr to be an array of arrays instead got {type(y)}"
             )
 
-    if not isinstance(xs[0], Sequence) or isinstance(xs[0], (str, bytes)):
-        xs = [xs for _ in range(len(ys))]
+    if not isinstance(fpr[0], Sequence) or isinstance(fpr[0], (str, bytes)):
+        fpr = [fpr for _ in range(len(tpr))]
 
-    assert len(xs) == len(ys), "Number of x-lines and y-lines must match"
+    if not isinstance(thresholds[0], Sequence) or isinstance(thresholds[0], (str, bytes)):
+        thresholds = [thresholds for _ in range(len(tpr))]
 
-    if keys is not None:
-        assert len(keys) == len(ys), "Number of keys and y-lines must match"
+    assert len(fpr) == len(tpr), "Number of fprs and tprs must match"
+    assert len(classes) == len(tpr), "Number of classes and tprs must match"
 
     data = [
-        [x, f"key_{i}" if keys is None else keys[i], y]
-        for i, (xx, yy) in enumerate(zip(xs, ys))
-        for x, y in zip(xx, yy)
+        [x, y, thr, classes[i]]
+        for i, (xx, yy, thrs) in enumerate(zip(fpr, tpr, thresholds))
+        for x, y, thr in zip(xx, yy, thrs)
     ]
 
-    table = wandb.Table(data=data, columns=["step", "lineKey", "lineVal"])
-
-    return wandb.plot_table(
-        "bioengineering/class-colored-roc",
-        table,
-        {"step": "step", "lineKey": "lineKey", "lineVal": "lineVal"},
-        {"title": title, "xname": xname or "x", "yname": yname or "y"},
-    )
+    return wandb.Table(data=data, columns=["fpr", "tpr", "threshold", "class"])
 
 
 def get_wandb_confusion(
