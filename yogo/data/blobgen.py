@@ -213,7 +213,11 @@ class BlobDataset(Dataset):
             [self.get_background_shade(thumbnail) for thumbnail in thumbnails]
         )
 
-        img = torch.empty(self.background_img_shape).fill_(mean_background).to(torch.uint8)
+        img = (
+            torch.empty(self.background_img_shape)
+            .fill_(mean_background)
+            .to(torch.uint8)
+        )
 
         max_size = min(
             self.background_img_shape[0] // 4,

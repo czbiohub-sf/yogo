@@ -1,35 +1,29 @@
 import torch
 import wandb
 
-from torch.utils.data import DataLoader
-from torch.utils.data import ConcatDataset
 
 from torch.optim import AdamW
 
 from yogo.model import YOGO
 from yogo.utils import draw_yogo_prediction
 from yogo.yogo_loss import YOGOLoss
-from yogo.data.blobgen import BlobDataset
 from yogo.data.dataset import YOGO_CLASS_ORDERING
 
 import sys
 from yogo.data.dataloader import get_dataloader
 
 if __name__ == "__main__":
-
     wandb.init(
         project="yogo",
         entity="bioengineering",
         tags=["testing"],
     )
 
-
     def collate_batch(batch):
         inputs, labels = zip(*batch)
         batched_inputs = torch.stack(inputs)
         batched_labels = torch.stack(labels)
         return batched_inputs, batched_labels
-
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -64,15 +58,13 @@ if __name__ == "__main__":
     #     collate_fn=collate_batch,
     # )
 
-
     config = {
-            "batch_size": 16,
-            "vertical_crop_size": 772,
-            "preprocess_type": None,
-            "normalize_images": False,
-            "dataset_descriptor_file": sys.argv[1]
-        }
-
+        "batch_size": 16,
+        "vertical_crop_size": 772,
+        "preprocess_type": None,
+        "normalize_images": False,
+        "dataset_descriptor_file": sys.argv[1],
+    }
 
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
@@ -101,8 +93,13 @@ if __name__ == "__main__":
 
     global_step = 0
     for epoch in range(1000):
-        for imgs, labels in dl:#.dataset:
-            print('in toy trian', imgs[0, 0, ...].dtype, imgs[0, 0, ...].min(), imgs[0, 0, ...].max())
+        for imgs, labels in dl:  # .dataset:
+            print(
+                "in toy trian",
+                imgs[0, 0, ...].dtype,
+                imgs[0, 0, ...].min(),
+                imgs[0, 0, ...].max(),
+            )
             imgs = imgs.to(device)
             labels = labels.to(device)
 
