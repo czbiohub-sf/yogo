@@ -34,7 +34,7 @@ class Metrics:
                 MulticlassAccuracy(
                     num_classes=num_classes, thresholds=None, average=None
                 ),
-                MulticlassROC(num_classes=num_classes, thresholds=100, average=None),
+                MulticlassROC(num_classes=num_classes, thresholds=500, average=None),
             ]
         )
 
