@@ -82,6 +82,7 @@ class BlobDataset(Dataset):
         self.blend_thumbnails = blend_thumbnails
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
+        self.normalize_images = normalize_images
         self.classes, self.thumbnail_paths = self.get_thumbnail_paths(
             self.thumbnail_dir_paths
         )
@@ -212,7 +213,7 @@ class BlobDataset(Dataset):
             [self.get_background_shade(thumbnail) for thumbnail in thumbnails]
         )
 
-        img = torch.empty(self.background_img_shape).fill_(mean_background)
+        img = torch.empty(self.background_img_shape).fill_(mean_background).to(torch.uint8)
 
         max_size = min(
             self.background_img_shape[0] // 4,
@@ -233,8 +234,6 @@ class BlobDataset(Dataset):
         xforms = torch.nn.Sequential(
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            # TODO this mucks w/ bounding boxes for rectangular shapes, probably ok for rbcs
-            # T.RandomRotation(180, expand=True, fill=mean_background),
             RandomRescale((1, min(max_scale, 1.5))),
         )
 
@@ -255,7 +254,7 @@ class BlobDataset(Dataset):
 
             x, y, normalized_coords = proposed_coords
 
-            img[y : y + h, x : x + w] = thumbnail
+            img[y : y + h, x : x + w] = thumbnail.to(torch.uint8)
 
             coords.append(normalized_coords)
             classes.append(class_)
@@ -264,5 +263,8 @@ class BlobDataset(Dataset):
         classes = torch.tensor(classes).view(-1, 1)
         coords = torch.cat([classes, coords], dim=1)
         label_tensor = format_labels_tensor(coords, self.Sx, self.Sy)
+
+        if self.normalize_images:
+            img = img / 255
 
         return img.unsqueeze(0), label_tensor
