@@ -72,7 +72,7 @@ def get_datasets(
             Sx=Sx,
             Sy=Sy,
             n=8,
-            length=len(split_datasets["train"]) // 4,  # type: ignore
+            length=len(split_datasets["train"]) // 8,  # type: ignore
             blend_thumbnails=True,
             thumbnail_sigma=2,
             normalize_images=normalize_images,
@@ -197,7 +197,7 @@ def get_dataloader(
             batch_size=batch_size,
             persistent_workers=num_workers > 0,
             multiprocessing_context="spawn" if num_workers > 0 else None,
-            # optimal # of workers?
+            # optimal # of workers? >= 32
             num_workers=num_workers,  # type: ignore
             generator=torch.Generator().manual_seed(111111),
             collate_fn=partial(collate_batch, transforms=transforms),
