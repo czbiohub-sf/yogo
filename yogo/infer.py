@@ -289,7 +289,6 @@ def predict(
 
 
 def do_infer(args):
-    print(args)
     predict(
         args.pth_path,
         path_to_images=args.path_to_images,
