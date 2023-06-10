@@ -69,7 +69,9 @@ def get_wandb_roc(
     if not isinstance(fpr[0], Sequence) or isinstance(fpr[0], (str, bytes)):
         fpr = [fpr for _ in range(len(tpr))]
 
-    if not isinstance(thresholds[0], Sequence) or isinstance(thresholds[0], (str, bytes)):
+    if not isinstance(thresholds[0], Sequence) or isinstance(
+        thresholds[0], (str, bytes)
+    ):
         thresholds = [thresholds for _ in range(len(tpr))]
 
     assert len(fpr) == len(tpr), "Number of fprs and tprs must match"
