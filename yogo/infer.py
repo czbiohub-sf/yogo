@@ -45,7 +45,7 @@ def save_preds(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
         label_idx = None
 
     for fname, batch_pred in zip(fnames, batch_preds):
-        preds = format_preds(batch_pred)
+        preds = format_preds(batch_pred, thresh=thresh)
 
         pred_string = "\n".join(
             f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
