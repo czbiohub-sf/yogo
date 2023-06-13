@@ -42,7 +42,7 @@ def do_export(args):
 
     if args.crop_height is not None:
         img_h = (args.crop_height * img_h).round()
-        net.resize_model(img_h)
+        net.resize_model(img_h.item())
 
     dummy_input = torch.randn(
         1, 1, int(img_h.item()), int(img_w.item()), requires_grad=False
@@ -101,7 +101,6 @@ def do_export(args):
     )
     success_msg += f", {str(onnx_filename.with_suffix('.xml'))}, {str(onnx_filename.with_suffix('.bin'))}"
 
-    print("\n")
     print(success_msg)
 
 
