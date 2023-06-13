@@ -219,7 +219,7 @@ def bbox_colour(label: str, opacity: float = 1.0) -> Tuple[int, int, int, int]:
 def draw_yogo_prediction(
     img: torch.Tensor,
     prediction: torch.Tensor,
-    thresh: Optional[float] = None,
+    thresh: float = 0.5,
     iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
     images_are_normalized: bool = False,
@@ -259,7 +259,7 @@ def draw_yogo_prediction(
         prediction,
         img_h=img_h,
         img_w=img_w,
-        thresh=thresh if thresh is not None else 0.5,
+        thresh=thresh,
         iou_thresh=iou_thresh,
     )
 

@@ -222,7 +222,6 @@ def train():
                 draw_yogo_prediction(
                     imgs[0, ...],
                     outputs[0, ...].detach(),
-                    thresh=0.5,
                     labels=class_names,
                     images_are_normalized=config["normalize_images"],
                 )
@@ -293,7 +292,6 @@ def train():
         )
 
         fpr, tpr, thresholds = roc_curves
-        print(thresholds)
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
