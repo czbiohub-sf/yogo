@@ -139,7 +139,7 @@ def format_preds(
     formats batch_pred, from YOGO, into [N,pred_shape], after applying NMS and
     thresholding objectness at thresh.
 
-    batch_pred should be 'cxcywh' format. Can convert to other formats!
+    box_format specifies the returned box format
     """
     if len(batch_pred.shape) != 3:
         raise ValueError(
