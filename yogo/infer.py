@@ -84,9 +84,12 @@ class ImagePathDataset(ImageAndIdDataset):
         self.normalize_images = normalize_images
 
     def make_dataset(self, path_to_data: Path) -> np.ndarray:
-        img_paths = [
-            p for p in path_to_data.glob("*.png") if not p.name.startswith(".")
-        ]
+        if path_to_data.is_file() and path_to_data.suffix == ".png":
+            img_paths = [path_to_data]
+        else:
+            img_paths = [
+                p for p in path_to_data.glob("*.png") if not p.name.startswith(".")
+            ]
         if len(img_paths) == 0:
             raise FileNotFoundError(f"{str(path_to_data)} does not contain any images")
         return np.array(img_paths).astype(np.string_)
