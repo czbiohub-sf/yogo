@@ -128,12 +128,6 @@ def train_parser(parser=None):
         default=df.EPOCHS,
     )
     parser.add_argument(
-        "--iou-weight",
-        type=float,
-        help=f"weight for the iou loss (default {df.IOU_WEIGHT})",
-        default=df.IOU_WEIGHT,
-    )
-    parser.add_argument(
         "--no-obj-weight",
         type=float,
         help=f"weight for the objectness loss when there isn't an object (default {df.NO_OBJ_WEIGHT})",
