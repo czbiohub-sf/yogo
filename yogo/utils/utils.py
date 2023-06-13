@@ -1,10 +1,12 @@
 #! /usr/bin/env python3
 
+import time
 import wandb
 import torch
 
+from contextlib import contextmanager
+
 import PIL
-import numpy as np
 import torchvision.ops as ops
 import torchvision.transforms as transforms
 
@@ -23,6 +25,65 @@ from typing import (
 
 T = TypeVar("T")
 BoxFormat = Literal["xyxy", "cxcywh"]
+
+
+@contextmanager
+def Timer(description: str, precision: int = 5, post_print: bool = False):
+    """Context manager for timing code execution.
+
+    Args:
+        description (str): description of code to be timed
+        precision (float): number of digits to print after decimal point
+        post_print (bool): whether to print information only after leaving the context
+    """
+    try:
+        start_time = time.perf_counter()
+        if not post_print:
+            print(f"{description}...", end=" ", flush=True)
+        yield
+    finally:
+        end_time = time.perf_counter()
+        print(
+            f"{str(description) + ' ' if post_print else ''}{end_time - start_time:.{precision}f} s"
+        )
+
+
+def get_wandb_roc(
+    fpr: Union[Sequence, Sequence[Sequence]],
+    tpr: Sequence[Sequence],
+    thresholds: Union[Sequence, Sequence[Sequence]],
+    classes: Sequence,
+):
+    if not isinstance(fpr, Sequence):
+        raise TypeError(f"Expected fpr to be an array instead got {type(fpr)}")
+
+    if not isinstance(tpr, Sequence):
+        raise TypeError(f"Expected tpr to be an array instead got {type(tpr)}")
+
+    for y in tpr:
+        if not isinstance(y, Sequence):
+            raise TypeError(
+                f"Expected tpr to be an array of arrays instead got {type(y)}"
+            )
+
+    if not isinstance(fpr[0], Sequence) or isinstance(fpr[0], (str, bytes)):
+        fpr = [fpr for _ in range(len(tpr))]
+
+    if not isinstance(thresholds[0], Sequence) or isinstance(
+        thresholds[0], (str, bytes)
+    ):
+        thresholds = [thresholds for _ in range(len(tpr))]
+
+    assert len(fpr) == len(tpr), "Number of fprs and tprs must match"
+    assert len(classes) == len(tpr), "Number of classes and tprs must match"
+
+    data = [
+        [x, y, thr, classes[i]]
+        for i, (xx, yy, thrs) in enumerate(zip(fpr, tpr, thresholds))
+        for x, y, thr in zip(xx, yy, thrs)
+    ]
+
+    return wandb.Table(data=data, columns=["fpr", "tpr", "threshold", "class"])
 
 
 def get_wandb_confusion(
@@ -145,85 +206,73 @@ def _format_tensor_for_rects(
     return formatted_rects
 
 
-def draw_rects(
+def bbox_colour(label: str, opacity: float = 1.0) -> Tuple[int, int, int, int]:
+    if not (0 <= opacity <= 1):
+        raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
+    if label in ("healthy", "0"):
+        return (0, 255, 0, int(opacity * 255))
+    elif label in ("misc", "6"):
+        return (0, 0, 0, int(opacity * 255))
+    return (255, 0, 0, int(opacity * 255))
+
+
+def draw_yogo_prediction(
     img: torch.Tensor,
-    rects: Union[torch.Tensor, List],
+    prediction: torch.Tensor,
     thresh: Optional[float] = None,
     iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
-    objectness_opacity: bool = False,
+    images_are_normalized: bool = False,
 ) -> PIL.Image.Image:
+    """Given an image and a prediction, return a PIL Image with bounding boxes
+
+    args:
+        img: 2d torch.Tensor of shape (h, w) or (1, h, w). We will `torch.uint8` your tensor!
+        prediction: torch.tensor of shape (pred_dim, Sy, Sx) or (1, pred_dim, Sy, Sx)
+        thresh: objectness threshold
+        iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
+        labels: list of label names for displaying
     """
-    img is the torch tensor representing an image
-    rects is either
-        - a torch.tensor of shape (pred, Sy, Sx), where
-          pred = (xc, yc, w, h, confidence, class probabilities...)
-        - a list of (class, xc, yc, w, h)
-    thresh is a threshold for confidence when rects is a torch.Tensor
-    """
-    img = img.squeeze()
-    if isinstance(rects, torch.Tensor):
-        rects = rects.squeeze()
+    img, prediction = img.squeeze(), prediction.squeeze()
 
-    assert (
-        len(img.shape) == 2
-    ), f"takes single grayscale image - should be 2d, got {img.shape}"
+    # NOTE I dont know how I feel about this - perhaps it is better to accept
+    # only u8s in range [0,255]
+    if images_are_normalized:
+        img *= 255
 
-    h, w = img.shape
+    img = img.to(torch.uint8)
 
-    formatted_rects: Union[torch.Tensor, List]
-    if isinstance(rects, torch.Tensor) and len(rects.shape) == 3:
-        formatted_rects = _format_tensor_for_rects(
-            rects,
-            h,
-            w,
-            thresh=thresh if thresh is not None else 0.5,
-            iou_thresh=iou_thresh,
-        )
-    elif isinstance(rects, list):
-        if thresh is not None:
-            raise ValueError("threshold only valid for tensor (i.e. prediction) input")
-        formatted_rects = [
-            [
-                int(w * (r[1] - r[3] / 2)),
-                int(h * (r[2] - r[4] / 2)),
-                int(w * (r[1] + r[3] / 2)),
-                int(h * (r[2] + r[4] / 2)),
-                r[0],
-                1,
-            ]
-            for r in rects
-        ]
-    else:
+    if img.ndim != 2:
         raise ValueError(
-            f"got invalid argument for rects: type={type(rects)} shape={rects.shape if hasattr(rects, 'shape') else 'no shape attribute'}"
+            "img must be 2-dimensional (i.e. grayscale), "
+            f"but has {img.ndim} dimensions"
+        )
+    elif prediction.ndim != 3:
+        raise ValueError(
+            "prediction must be 'unbatched' (i.e. shape (pred_dim, Sy, Sx) or "
+            f"(1, pred_dim, Sy, Sx)) - got shape {prediction.shape} "
         )
 
-    if isinstance(img, np.ndarray):
-        image = transforms.ToPILImage()(img[..., None])
-    elif isinstance(img, torch.Tensor):
-        image = transforms.ToPILImage()(img[None, ...])
+    img_h, img_w = img.shape
 
-    rgb = PIL.Image.new("RGBA", image.size)
-    rgb.paste(image)
-    draw = PIL.ImageDraw.Draw(rgb)
+    formatted_rects: Union[torch.Tensor, List] = _format_tensor_for_rects(
+        prediction,
+        img_h=img_h,
+        img_w=img_w,
+        thresh=thresh if thresh is not None else 0.5,
+        iou_thresh=iou_thresh,
+    )
 
-    def bbox_colour(label: str, opacity: float = 1.0) -> Tuple[int, int, int, int]:
-        if not (0 <= opacity <= 1):
-            raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
-        if label in ("healthy", "0"):
-            return (0, 255, 0, int(opacity * 255))
-        elif label in ("misc", "6"):
-            return (0, 0, 0, int(opacity * 255))
-        return (255, 0, 0, int(opacity * 255))
+    pil_img = transforms.ToPILImage()(img[None, ...])
+
+    rgb = PIL.Image.new("RGBA", pil_img.size)
+    rgb.paste(pil_img)
+    draw = PIL.ImageDraw.Draw(rgb)  # type: ignore
 
     for r in formatted_rects:
         r = list(r)
         label = labels[int(r[4])] if labels is not None else str(r[4])
-        if objectness_opacity:
-            draw.rectangle(r[:4], outline=bbox_colour(label, opacity=r[5].item()))
-        else:
-            draw.rectangle(r[:4], outline=bbox_colour(label))
-            draw.text((r[0], r[1]), label, (0, 0, 0, 255))
+        draw.rectangle(r[:4], outline=bbox_colour(label))
+        draw.text((r[0], r[1]), label, (0, 0, 0, 255))
 
     return rgb

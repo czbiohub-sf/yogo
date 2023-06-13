@@ -2,17 +2,16 @@ import os
 import torch
 
 from tqdm import tqdm
-from ruamel import yaml
-from pathlib import Path
 from functools import partial
-from dataclasses import dataclass
 
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any, MutableMapping
 
+from yogo.data.blobgen import BlobDataset
 from yogo.data.dataset import ObjectDetectionDataset
+from yogo.data.dataset_description_file import load_dataset_description
 from yogo.data.data_transforms import (
     DualInputModule,
     DualInputId,
@@ -24,166 +23,68 @@ from yogo.data.data_transforms import (
 )
 
 
-class InvalidDatasetDescriptionFile(Exception):
-    ...
-
-
-@dataclass
-class DatasetDescription:
-    classes: List[str]
-    split_fractions: Dict[str, float]
-    dataset_paths: List[Dict[str, Path]]
-    test_dataset_paths: Optional[List[Dict[str, Path]]]
-
-    def __iter__(self):
-        return iter(
-            (
-                self.classes,
-                self.split_fractions,
-                self.dataset_paths,
-                self.test_dataset_paths,
-            )
-        )
-
-
-def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = False):
-    to_prune: List[int] = []
-    for i in range(len(dataset_paths)):
-        if not (
-            dataset_paths[i]["image_path"].is_dir()
-            and dataset_paths[i]["label_path"].is_dir()
-            and len(list(dataset_paths[i]["label_path"].iterdir())) > 0
-        ):
-            if prune:
-                print(f"pruning {dataset_paths[i]}")
-                to_prune.append(i)
-            else:
-                raise FileNotFoundError(
-                    f"image_path or label_path do not lead to a directory\n"
-                    f"image_path={dataset_paths[i]['image_path']}\nlabel_path={dataset_paths[i]['label_path']}"
-                )
-
-    # reverse order so we don't move around the to-delete items in the list
-    for i in to_prune[::-1]:
-        del dataset_paths[i]
-
-
-def load_dataset_description(dataset_description: str) -> DatasetDescription:
-    """Loads and validates dataset description file"""
-    required_keys = [
-        "class_names",  # we don't actually use classes fm dataset desc files, but keep for now
-        "dataset_split_fractions",
-        "dataset_paths",
-    ]
-    with open(dataset_description, "r") as desc:
-        yaml_data = yaml.safe_load(desc)
-
-        for k in required_keys:
-            if k not in yaml_data:
-                raise InvalidDatasetDescriptionFile(
-                    f"{k} is required in dataset description files, but was "
-                    f"found missing for {dataset_description}"
-                )
-
-        classes = yaml_data["class_names"]
-        split_fractions = {
-            k: float(v) for k, v in yaml_data["dataset_split_fractions"].items()
-        }
-        dataset_paths = [
-            {k: Path(v) for k, v in d.items()}
-            for d in yaml_data["dataset_paths"].values()
-        ]
-        check_dataset_paths(dataset_paths, prune=True)
-
-        if "test_paths" in yaml_data:
-            test_dataset_paths = [
-                {k: Path(v) for k, v in d.items()}
-                for d in yaml_data["test_paths"].values()
-            ]
-            check_dataset_paths(test_dataset_paths, prune=False)
-
-            # when we have 'test_paths', all the data from dataset_paths
-            # will be used for training, so we should only have 'test' and
-            # 'val' in dataset_split_fractions.
-            if "val" not in split_fractions or "test" not in split_fractions:
-                raise InvalidDatasetDescriptionFile(
-                    "'val' and 'test' are required keys for dataset_split_fractions"
-                )
-            if "train" in split_fractions:
-                raise InvalidDatasetDescriptionFile(
-                    "when `test_paths` is present in a dataset descriptor file, 'train' "
-                    "is not a valid key for `dataset_split_fractions`, since we will use "
-                    "all the data from `dataset_paths` for training"
-                )
-        else:
-            test_dataset_paths = None
-            if any(k not in split_fractions for k in ("test", "train", "val")):
-                raise InvalidDatasetDescriptionFile(
-                    "'train', 'val', and 'test' are required keys for dataset_split_fractions - missing at least one. "
-                    f"split fractions was {split_fractions}"
-                )
-
-        if not sum(split_fractions.values()) == 1:
-            raise InvalidDatasetDescriptionFile(
-                "invalid split fractions for dataset: split fractions must add to 1, "
-                f"got {split_fractions}"
-            )
-
-        return DatasetDescription(
-            classes, split_fractions, dataset_paths, test_dataset_paths
-        )
-
-
 def get_datasets(
     dataset_description_file: str,
     Sx: int,
     Sy: int,
     split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
-) -> Dict[str, Dataset]:
-    (
-        dataset_classes,
-        split_fractions,
-        dataset_paths,
-        test_dataset_paths,
-    ) = load_dataset_description(dataset_description_file)
-
+) -> MutableMapping[str, Dataset[Any]]:
+    dataset_description = load_dataset_description(dataset_description_file)
     # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            dataset_classes,
-            dataset_paths["image_path"],
-            dataset_paths["label_path"],
+            dsp["image_path"],
+            dsp["label_path"],
             Sx,
             Sy,
             normalize_images=normalize_images,
         )
-        for dataset_paths in tqdm(dataset_paths)
+        for dsp in tqdm(dataset_description.dataset_paths)
     )
 
-    if test_dataset_paths is not None:
+    if dataset_description.test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
             ObjectDetectionDataset(
-                dataset_classes,
-                dataset_paths["image_path"],
-                dataset_paths["label_path"],
+                dsp["image_path"],
+                dsp["label_path"],
                 Sx,
                 Sy,
                 normalize_images=normalize_images,
             )
-            for dataset_paths in tqdm(test_dataset_paths)
+            for dsp in tqdm(dataset_description.test_dataset_paths)
         )
-        return {
+        split_datasets: MutableMapping[str, Dataset[Any]] = {
             "train": full_dataset,
-            **split_dataset(test_dataset, split_fractions),
+            **split_dataset(test_dataset, dataset_description.split_fractions),
         }
+    else:
+        split_datasets = split_dataset(
+            full_dataset, dataset_description.split_fractions
+        )
 
-    return split_dataset(full_dataset, split_fractions)
+    # hardcode the blob agumentation for now
+    # this should be moved into the dataset description file
+    if dataset_description.thumbnail_augmentation is not None:
+        # some issue w/ Dict v Mapping TODO come back to this
+        bd = BlobDataset(
+            dataset_description.thumbnail_augmentation,  # type: ignore
+            Sx=Sx,
+            Sy=Sy,
+            n=8,
+            length=len(split_datasets["train"]) // 4,  # type: ignore
+            blend_thumbnails=True,
+            thumbnail_sigma=2,
+            normalize_images=normalize_images,
+        )
+        split_datasets["train"] = ConcatDataset([split_datasets["train"], bd])
+
+    return split_datasets
 
 
 def split_dataset(
     dataset: Dataset, split_fractions: Dict[str, float]
-) -> Dict[str, Dataset]:
+) -> MutableMapping[str, Dataset[Any]]:
     if not hasattr(dataset, "__len__"):
         raise ValueError(
             f"dataset {dataset} must have a length (specifically, `__len__` must be defined)"
@@ -257,6 +158,7 @@ def get_dataloader(
         split_fractions_override=split_fractions_override,
         normalize_images=normalize_images,
     )
+
     augmentations: List[DualInputModule] = (
         [
             ImageTransformLabelIdentity(RandomAdjustSharpness(0, p=0.5)),
@@ -279,6 +181,8 @@ def get_dataloader(
     else:
         raise ValueError(f"got invalid preprocess type {preprocess_type}")
 
+    num_workers = min(len(os.sched_getaffinity(0)) // 2, 32)
+
     d = dict()
     for designation, dataset in split_datasets.items():
         transforms = MultiArgSequential(
@@ -291,10 +195,10 @@ def get_dataloader(
             drop_last=False,
             pin_memory=True,
             batch_size=batch_size,
-            persistent_workers=True,
-            multiprocessing_context="spawn",
-            # optimal # of workers?
-            num_workers=max(4, min(len(os.sched_getaffinity(0)) // 2, 16)),  # type: ignore
+            persistent_workers=num_workers > 0,
+            multiprocessing_context="spawn" if num_workers > 0 else None,
+            # optimal # of workers? >= 32
+            num_workers=num_workers,  # type: ignore
             generator=torch.Generator().manual_seed(111111),
             collate_fn=partial(collate_batch, transforms=transforms),
         )

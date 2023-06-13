@@ -2,7 +2,7 @@ import torch
 
 import torchvision.ops as ops
 
-from typing import Optional, Union, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict
 
 from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -10,7 +10,8 @@ from torchmetrics.classification import (
     MulticlassPrecision,
     MulticlassRecall,
     MulticlassConfusionMatrix,
-    # MulticlassAccuracy,
+    MulticlassAccuracy,
+    MulticlassROC,
 )
 
 
@@ -26,60 +27,61 @@ class Metrics:
         # TODO can we put confusion in MetricCollection? mAP?
         self.mAP = MeanAveragePrecision(box_format="xyxy")
         self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
-        self.precision_recall_metrics = MetricCollection(
+        self.prediction_metrics = MetricCollection(
             [
-                MulticlassPrecision(num_classes=num_classes, thresholds=4),
-                MulticlassRecall(num_classes=num_classes, thresholds=4),
-                # MulticlassAccuracy(num_classes=num_classes, thresholds=4)
+                MulticlassPrecision(num_classes=num_classes, thresholds=None),
+                MulticlassRecall(num_classes=num_classes, thresholds=None),
+                MulticlassAccuracy(
+                    num_classes=num_classes, thresholds=None, average=None
+                ),
+                MulticlassROC(num_classes=num_classes, thresholds=500, average=None),
             ]
         )
 
         self.mAP.to(device)
         self.confusion.to(device)
-        self.precision_recall_metrics.to(device)
+        self.prediction_metrics.to(device)
 
         self.num_classes = num_classes
-        self.class_names = (
-            list(range(num_classes)) if class_names is None else class_names
+        self.class_names: List[str] = (
+            [str(n) for n in range(num_classes)] if class_names is None else class_names
         )
         self.classify = classify
-        assert self.num_classes == len(self.class_names)
+        assert self.class_names is not None and self.num_classes == len(
+            self.class_names
+        )
 
     def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
         formatted_preds, formatted_labels = self._format_preds_and_labels(
-            preds, labels, use_IoU=use_IoU, per_batch=True
+            preds, labels, use_IoU=use_IoU
         )
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
 
-        formatted_preds = torch.cat(formatted_preds)
-        formatted_labels = torch.cat(formatted_labels)
+        fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
 
-        self.confusion.update(
-            formatted_preds[:, 5:].argmax(dim=1), formatted_labels[:, 5:].squeeze()
-        )
+        self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
 
-        self.precision_recall_metrics.update(
-            formatted_preds[:, 5:], formatted_labels[:, 5:].squeeze().long()
-        )
+        self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
 
     def compute(self):
-        pr_metrics = self.precision_recall_metrics.compute()
+        pr_metrics = self.prediction_metrics.compute()
         return (
             self.mAP.compute(),
             self.confusion.compute(),
             pr_metrics["MulticlassPrecision"],
             pr_metrics["MulticlassRecall"],
-            # pr_metrics["MulticlassAccuracy"],
+            pr_metrics["MulticlassAccuracy"],
+            pr_metrics["MulticlassROC"],
         )
 
     def reset(self):
         self.mAP.reset()
         self.confusion.reset()
-        self.precision_recall_metrics.reset()
+        self.prediction_metrics.reset()
 
     def forward(self, preds, labels):
         self.update(preds, labels)
@@ -93,11 +95,7 @@ class Metrics:
         batch_labels: torch.Tensor,
         use_IoU: bool = True,
         objectness_thresh: float = 0.3,
-        per_batch: bool = False,
-    ) -> Union[
-        Tuple[torch.Tensor, torch.Tensor],
-        Tuple[List[torch.Tensor], List[torch.Tensor]],
-    ]:
+    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """A very important utility function for filtering predictions on labels
 
         Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
@@ -173,9 +171,7 @@ class Metrics:
             masked_predictions.append(final_preds)
             masked_labels.append(img_masked_labels)
 
-        if per_batch:
-            return masked_predictions, masked_labels
-        return torch.cat(masked_predictions), torch.cat(masked_labels)
+        return masked_predictions, masked_labels
 
     def format_for_mAP(
         self, formatted_preds, formatted_labels

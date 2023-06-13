@@ -7,12 +7,10 @@ import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from lion_pytorch import Lion
-
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Tuple, cast, Literal, Iterator
+from typing import Optional, cast
 
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
@@ -23,15 +21,16 @@ from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
-from yogo.utils import draw_rects, get_wandb_confusion
-from yogo.data.dataloader import (
-    load_dataset_description,
-    get_dataloader,
+from yogo.utils import (
+    draw_yogo_prediction,
+    get_wandb_confusion,
+    get_wandb_roc,
+    Timer,
 )
+from yogo.data.dataloader import get_dataloader
+from yogo.data.dataset_description_file import load_dataset_description
 
 
-# https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#enable-cudnn-auto-tuner
-# https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 
@@ -43,9 +42,10 @@ def checkpoint_model(
     model: torch.nn.Module,
     epoch: int,
     optimizer: torch.nn.Module,
-    name: str,
+    filename: str,
     step: int,
     normalized: bool,
+    model_name: str,
     model_version: Optional[str] = None,
     **kwargs,
 ):
@@ -54,28 +54,14 @@ def checkpoint_model(
             "epoch": epoch,
             "step": step,
             "normalize_images": normalized,
+            "model_name": model_name,
             "model_state_dict": deepcopy(model.state_dict()),
             "optimizer_state_dict": deepcopy(optimizer.state_dict()),
             "model_version": model_version,
             **kwargs,
         },
-        str(name),
+        str(filename),
     )
-
-
-def get_optimizer(
-    optimizer_type: Literal["lion", "adam"],
-    parameters: Iterator[torch.Tensor],
-    learning_rate: float,
-    weight_decay: float,
-) -> torch.optim.Optimizer:
-    if optimizer_type == "lion":
-        return Lion(
-            parameters, lr=learning_rate, weight_decay=weight_decay, betas=(0.95, 0.98)
-        )
-    elif optimizer_type == "adam":
-        return AdamW(parameters, lr=learning_rate, weight_decay=weight_decay)
-    raise ValueError(f"got invalid optimizer_type {optimizer_type}")
 
 
 def init_dataset(config: WandbConfig, Sx, Sy):
@@ -126,12 +112,6 @@ def train():
     model = get_model_func(config["model"])
     num_classes = len(class_names)
 
-    val_metrics = Metrics(
-        num_classes=num_classes,
-        device=device,
-        class_names=class_names,
-        classify=classify,
-    )
     test_metrics = Metrics(
         num_classes=num_classes,
         device=device,
@@ -147,7 +127,9 @@ def train():
         net.to(device)
 
         global_step = net_cfg["step"]
-        config["normalize_images"] = net_cfg["normalize_images"]
+        wandb.config.update(
+            {"normalize_images": net_cfg["normalize_images"]}, allow_val_change=True
+        )
 
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
             raise RuntimeError(
@@ -186,12 +168,7 @@ def train():
         classify=classify,
     ).to(device)
 
-    optimizer = get_optimizer(
-        config["optimizer_type"],
-        parameters=net.parameters(),
-        learning_rate=learning_rate,
-        weight_decay=weight_decay,
-    )
+    optimizer = AdamW(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     print("created loss and optimizer")
 
@@ -203,7 +180,7 @@ def train():
 
     print("starting training")
 
-    best_mAP = 0
+    min_val_loss = float("inf")
     for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
@@ -222,17 +199,16 @@ def train():
                     "train loss": loss.item(),
                     "epoch": epoch,
                     "LR": scheduler.get_last_lr()[0],
+                    "training grad norm": net.grad_norm(),
+                    "training param norm": net.param_norm(),
                     **loss_components,
                 },
-                commit=False,
+                commit=global_step % 100 == 0,
                 step=global_step,
             )
 
-            wandb.log({"training grad norm": net.grad_norm()}, step=global_step)
-            wandb.log({"training param norm": net.param_norm()}, step=global_step)
-
         # do validation things
-        val_loss = 0.0
+        val_loss = torch.tensor(0.0, device=device)
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
@@ -240,45 +216,30 @@ def train():
                 labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
                 loss, _ = Y_loss(outputs, labels)
-                val_loss += loss.item()
-                val_metrics.update(outputs.detach(), labels.detach())
+                val_loss += loss
 
             # just use the final imgs and labels for val!
             annotated_img = wandb.Image(
-                draw_rects(
-                    (
-                        (255 * imgs[0, 0, ...].detach()).int()
-                        if config["normalize_images"]
-                        else imgs[0, 0, ...].detach()
-                    ),
+                draw_yogo_prediction(
+                    imgs[0, ...],
                     outputs[0, ...].detach(),
                     thresh=0.5,
                     labels=class_names,
+                    images_are_normalized=config["normalize_images"],
                 )
             )
-
-            mAP, confusion_data, precision, recall = val_metrics.compute()
-            val_metrics.reset()
-
+            mean_val_loss = val_loss.item() / len(validate_dataloader)
             wandb.log(
                 {
                     "validation bbs": annotated_img,
-                    "val loss": val_loss / len(validate_dataloader),
-                    "val mAP": mAP["map"],
-                    "val confusion": get_wandb_confusion(
-                        confusion_data, class_names, "validation confusion matrix"
-                    ),
-                    "val precision": precision,
-                    "val recall": recall,
+                    "val loss": mean_val_loss,
                 },
                 step=global_step,
             )
 
-            # TODO we should choose better conditions here - e.g. mAP for no-classify isn't great,
-            # and maybe we care about recall more than mAP
-            if mAP["map"] > best_mAP:
-                best_mAP = mAP["map"]
-                wandb.log({"best_mAP_save": mAP["map"]}, step=global_step)
+            if mean_val_loss < min_val_loss:
+                min_val_loss = mean_val_loss
+                wandb.log({"best_val_loss": mean_val_loss}, step=global_step)
                 checkpoint_model(
                     net,
                     epoch,
@@ -286,6 +247,7 @@ def train():
                     model_save_dir / "best.pth",
                     global_step,
                     config["normalize_images"],
+                    model_name=wandb.run.name,
                     model_version=config["model"],
                 )
             else:
@@ -296,6 +258,7 @@ def train():
                     model_save_dir / "latest.pth",
                     global_step,
                     config["normalize_images"],
+                    model_name=wandb.run.name,
                     model_version=config["model"],
                 )
 
@@ -315,8 +278,23 @@ def train():
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
-        mAP, confusion_data, precision, recall = test_metrics.compute()
+        (
+            mAP,
+            confusion_data,
+            precision,
+            recall,
+            accuracy,
+            roc_curves,
+        ) = test_metrics.compute()
         test_metrics.reset()
+
+        accuracy_table = wandb.Table(
+            data=[[labl, acc] for labl, acc in zip(class_names, accuracy)],
+            columns=["label", "accuracy"],
+        )
+
+        fpr, tpr, thresholds = roc_curves
+        print(thresholds)
 
         wandb.summary["test loss"] = test_loss / len(test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
@@ -326,7 +304,16 @@ def train():
             {
                 "test confusion": get_wandb_confusion(
                     confusion_data, class_names, "test confusion matrix"
-                )
+                ),
+                "test accuracy": wandb.plot.bar(
+                    accuracy_table, "label", "accuracy", title="test accuracy"
+                ),
+                "test ROC": get_wandb_roc(
+                    fpr=[t.tolist() for t in fpr],
+                    tpr=[t.tolist() for t in tpr],
+                    thresholds=[t.tolist() for t in thresholds],
+                    classes=class_names,
+                ),
             }
         )
 
@@ -341,70 +328,68 @@ def do_training(args) -> None:
 
     epochs = args.epochs or df.EPOCHS
     batch_size = args.batch_size or df.BATCH_SIZE
-    learning_rate = args.lr or df.LEARNING_RATE
+    learning_rate = args.learning_rate or df.LEARNING_RATE
     label_smoothing = args.label_smoothing or df.LABEL_SMOOTHING
     decay_factor = args.lr_decay_factor or df.DECAY_FACTOR
     weight_decay = args.weight_decay or df.WEIGHT_DECAY
-    optimizer_type = args.optimizer or df.OPTIMIZER_TYPE
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
 
-    if args.crop:
-        vertical_crop_size = cast(float, args.crop)
+    if args.crop_height:
+        vertical_crop_size = cast(float, args.crop_height)
         if not (0 < vertical_crop_size < 1):
             raise ValueError(
                 "vertical_crop_size must be between 0 and 1; got {vertical_crop_size}"
             )
         resize_target_size = (round(vertical_crop_size * 772), 1032)
         preprocess_type = "crop"
-    elif args.resize:
-        resize_target_size = cast(Tuple[int, int], tuple(args.resize))
-        preprocess_type = "resize"
     else:
         resize_target_size = (772, 1032)
         preprocess_type = None
 
-    print("loading dataset description")
-    dataset_paths = load_dataset_description(args.dataset_descriptor_file).dataset_paths
+    with Timer("loading dataset description"):
+        dataset_paths = load_dataset_description(
+            args.dataset_descriptor_file
+        ).dataset_paths
 
-    print("getting best anchor")
-    anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
+    with Timer("getting best anchor"):
+        anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
-    print("initting wandb")
-    wandb.init(
-        project="yogo",
-        entity="bioengineering",
-        config={
-            "optimizer_type": optimizer_type,
-            "learning_rate": learning_rate,
-            "decay_factor": decay_factor,
-            "weight_decay": weight_decay,
-            "label_smoothing": label_smoothing,
-            "iou_weight": 5.0,
-            "no_obj_weight": 0.5,
-            "classify_weight": 1.0,
-            "epochs": epochs,
-            "batch_size": batch_size,
-            "device": str(device),
-            "anchor_w": anchor_w,
-            "anchor_h": anchor_h,
-            "model": args.model,
-            "resize_shape": resize_target_size,
-            "vertical_crop_size": vertical_crop_size,
-            "preprocess_type": preprocess_type,
-            "class_names": YOGO_CLASS_ORDERING,
-            "pretrained_path": args.from_pretrained,
-            "no_classify": args.no_classify,
-            "run group": args.group,
-            "normalize_images": args.normalize_images,
-            "dataset_descriptor_file": args.dataset_descriptor_file,
-            "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
-        },
-        name=args.name,
-        notes=args.note,
-        tags=["v0.0.3"],
-    )
+    with Timer("initting wandb"):
+        wandb.init(
+            project="yogo",
+            entity="bioengineering",
+            config={
+                "optimizer_type": optimizer_type,
+                "learning_rate": learning_rate,
+                "decay_factor": decay_factor,
+                "weight_decay": weight_decay,
+                "label_smoothing": label_smoothing,
+                "iou_weight": 5.0,
+                "no_obj_weight": 0.5,
+                "classify_weight": 1.0,
+                "epochs": epochs,
+                "batch_size": batch_size,
+                "device": str(device),
+                "anchor_w": anchor_w,
+                "anchor_h": anchor_h,
+                "model": args.model,
+                "resize_shape": resize_target_size,
+                "vertical_crop_size": vertical_crop_size,
+                "preprocess_type": preprocess_type,
+                "class_names": YOGO_CLASS_ORDERING,
+                "pretrained_path": args.from_pretrained,
+                "no_classify": args.no_classify,
+                "run group": args.group,
+                "normalize_images": args.normalize_images,
+                "dataset_descriptor_file": args.dataset_descriptor_file,
+                "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
+            },
+            name=args.name,
+            notes=args.note,
+            tags=(args.tag,) if args.tag is not None else None,
+        )
 
     train()
 

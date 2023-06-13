@@ -2,6 +2,7 @@ import argparse
 
 from pathlib import Path
 
+from yogo.model_defns import MODELS
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
 
@@ -23,6 +24,19 @@ def uint(val: int):
     return v
 
 
+def super_unitary_float(val: float):
+    "cheeky name for a number greater than or equal to 1"
+    try:
+        v = float(val)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v} is not a float value")
+
+    if not 1 <= v:
+        raise argparse.ArgumentTypeError(f"{v} must be greater than or equal to 1")
+
+    return v
+
+
 def unitary_float(val: float):
     try:
         v = float(val)
@@ -36,19 +50,31 @@ def unitary_float(val: float):
 
 
 def global_parser():
-    parser = argparse.ArgumentParser(description="looking for a glance?")
+    parser = argparse.ArgumentParser(
+        description="looking for a glance?", allow_abbrev=False
+    )
     subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
-    train_parser(parser=subparsers.add_parser("train", help="train a model"))
-    export_parser(parser=subparsers.add_parser("export", help="export a model"))
+    train_parser(
+        parser=subparsers.add_parser("train", help="train a model", allow_abbrev=False)
+    )
+    export_parser(
+        parser=subparsers.add_parser(
+            "export", help="export a model", allow_abbrev=False
+        )
+    )
     infer_parser(
-        parser=subparsers.add_parser("infer", help="infer images using a model")
+        parser=subparsers.add_parser(
+            "infer", help="infer images using a model", allow_abbrev=False
+        )
     )
     return parser
 
 
 def train_parser(parser=None):
     if parser is None:
-        parser = argparse.ArgumentParser(description="commence a training run")
+        parser = argparse.ArgumentParser(
+            description="commence a training run", allow_abbrev=False
+        )
 
     parser.add_argument(
         "dataset_descriptor_file",
@@ -62,20 +88,23 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
+        "-bs",
         "--batch-size",
         type=uint,
         help=f"batch size for training (default {df.BATCH_SIZE})",
         default=None,
     )
     parser.add_argument(
+        "-lr",
+        "--learning-rate",
         "--lr",
-        type=float,
+        type=unitary_float,
         help=f"learning rate for training (default {df.LEARNING_RATE})",
         default=None,
     )
     parser.add_argument(
         "--lr-decay-factor",
-        type=float,
+        type=super_unitary_float,
         help=f"factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default {df.DECAY_FACTOR})",
         default=None,
     )
@@ -86,8 +115,9 @@ def train_parser(parser=None):
         default=0.01,
     )
     parser.add_argument(
+        "-wd",
         "--weight-decay",
-        type=float,
+        type=unitary_float,
         help=f"weight decay for training (default {df.WEIGHT_DECAY})",
         default=None,
     )
@@ -102,23 +132,8 @@ def train_parser(parser=None):
         default=None,
         const=None,
         nargs="?",
-        choices=[
-            "base_model",
-            "model_no_dropout",
-            "model_smaller_SxSy",
-            "model_big_simple",
-            "model_big_normalized",
-            "model_big_heavy_normalized",
-        ],
+        choices=list(MODELS.keys()),
         help="model version to use - do not use with --from-pretrained, as we use the pretrained model",
-    )
-    parser.add_argument(
-        "--optimizer",
-        default="adam",
-        const="adam",
-        nargs="?",
-        choices=["adam", "lion"],
-        help=f"optimizer for training run (default {df.OPTIMIZER_TYPE})",
     )
     parser.add_argument(
         "--note",
@@ -133,10 +148,10 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
-        "--group",
+        "--tag",
         type=str,
-        nargs="?",
-        help="group that the run belongs to (e.g. 'mAP test')",
+        help="tag for the run (e.g. 'test')",
+        default=None,
     )
     parser.add_argument(
         "--device",
@@ -156,16 +171,8 @@ def train_parser(parser=None):
         action=boolean_action,
         help="normalize images into [0,1] (default False)",
     )
-
-    image_resize_options = parser.add_mutually_exclusive_group(required=False)
-    image_resize_options.add_argument(
-        "--resize",
-        type=int,
-        nargs=2,
-        help="resize image to these dimensions. e.g. '-r 300 400' to resize to width=300, height=400",
-    )
-    image_resize_options.add_argument(
-        "--crop",
+    parser.add_argument(
+        "--crop-height",
         type=unitary_float,
         help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
@@ -175,7 +182,7 @@ def train_parser(parser=None):
 def export_parser(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser(
-            description="convert a pth to onnx or Intel IR"
+            description="convert a pth to onnx or Intel IR", allow_abbrev=False
         )
 
     parser.add_argument(
@@ -204,7 +211,9 @@ def export_parser(parser=None):
 
 def infer_parser(parser=None):
     if parser is None:
-        parser = argparse.ArgumentParser(description="infer on image data")
+        parser = argparse.ArgumentParser(
+            description="infer on image data", allow_abbrev=False
+        )
 
     parser.add_argument(
         "pth_path", type=Path, help="path to .pth file defining the model"
@@ -222,10 +231,21 @@ def infer_parser(parser=None):
         default=False,
     )
     parser.add_argument(
+        "--final-counts",
+        action=boolean_action,
+        default=False,
+        help="only display the final predicted counts per-class",
+    )
+    parser.add_argument(
         "--batch-size",
         type=uint,
         help="batch size for inference (default 16)",
         default=16,
+    )
+    parser.add_argument(
+        "--crop-height",
+        type=unitary_float,
+        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(

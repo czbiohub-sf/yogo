@@ -5,15 +5,6 @@ from typing import Dict, Tuple
 import torchvision.ops as ops
 
 
-def valid_boxes(xyxy_boxes: torch.Tensor) -> torch.bool:
-    """
-    xyxy_boxes: torch.Tensor of shape (N, 4)
-    """
-    return (
-        (xyxy_boxes[:, 0] <= xyxy_boxes[:, 2]) & (xyxy_boxes[:, 1] <= xyxy_boxes[:, 3])
-    ).all()
-
-
 class YOGOLoss(torch.nn.modules.loss._Loss):
     __constants__ = ["no_obj_weight", "iou_weight", "classify_weight"]
     coord_weight: float
@@ -114,12 +105,13 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             "xyxy",
         )
 
-        assert valid_boxes(
-            formatted_preds_xyxy
-        ), f"invalid formatted_preds_xyxy \n{formatted_preds_xyxy}"
-        assert valid_boxes(
-            formatted_labels_masked
-        ), f"invalid formatted_labels_masked \n{formatted_labels_masked}"
+        valid_box_mask = torch.logical_and(
+            formatted_preds_xyxy[:, 0] != formatted_preds_xyxy[:, 2],
+            formatted_preds_xyxy[:, 1] != formatted_preds_xyxy[:, 3],
+        )
+
+        formatted_preds_xyxy = formatted_preds_xyxy[valid_box_mask]
+        formatted_labels_masked = formatted_labels_masked[valid_box_mask]
 
         iou_loss = (
             self.iou_weight

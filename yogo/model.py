@@ -41,6 +41,7 @@ class YOGO(nn.Module):
                 nn.Module,
             ]
         ] = None,
+        clip_value: float = 1.0,
         device: Union[torch.device, str] = "cpu",
     ):
         super().__init__()
@@ -70,26 +71,33 @@ class YOGO(nn.Module):
             .to(self.device)
         )
 
-        # TODO this feels wrong, but it works - there is some issue
+        # this feels wrong, but it works - there is some issue
         # with just giving _Cxs / _Cys directly when initting via
         # from_pth
         self.register_buffer("_Cxs", _Cxs.clone())
         self.register_buffer("_Cys", _Cys.clone())
 
-        # initialize the weights, PyTorch chooses bad defaults
-        self.model.apply(self.init_network_weights)
+        # multiplier for height - req'd when resizing model post-training
+        self.register_buffer("height_multiplier", torch.tensor(1.0))
 
         # fine tuning. If you `.eval()` the model anyways, this
         # is not necessary
         if tuning:
             self.model.apply(self.set_bn_eval)
+        else:
+            # initialize the weights, PyTorch chooses bad defaults
+            self.model.apply(self.init_network_weights)
+
+        # gradient clipping
+        for p in self.parameters():
+            p.register_hook(lambda grad: torch.clamp(grad, -clip_value, clip_value))
 
     @staticmethod
     def init_network_weights(module: nn.Module):
         if isinstance(module, nn.Conv2d):
             # init weights to default leaky relu neg slope, biases to 0
             torch.nn.init.kaiming_normal_(
-                module.weight, a=0.01, nonlinearity="leaky_relu"
+                module.weight, a=0.01, mode="fan_out", nonlinearity="leaky_relu"
             )
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
@@ -115,12 +123,16 @@ class YOGO(nn.Module):
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
 
+        if "height_multiplier" not in params:
+            params["height_multiplier"] = torch.tensor(1.0)
+
         model = cls(
             (img_size[0], img_size[1]),
             anchor_w.item(),
             anchor_h.item(),
             num_classes=num_classes.item(),
             inference=inference,
+            tuning=True,
             model_func=get_model_func(model_version),
         )
 
@@ -210,6 +222,31 @@ class YOGO(nn.Module):
         # int(h.item())
         return int(Sx), int(Sy)
 
+    def resize_model(self, img_height: int) -> None:
+        """
+        for YOGO's specific application of counting cells as they flow
+        past a FOV, it is useful to take a crop of the images in order
+        to reduce double-counting cells. This function resizes the
+        model to a certain image height - 193 px is about a quarter
+        of the full 772 pixel height, and is standard for our uses.
+        """
+        org_img_height, org_img_width = (int(d) for d in self.get_img_size())
+        crop_size = (img_height, org_img_width)
+        Sx, Sy = self.get_grid_size(crop_size)
+        _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx, device=self.device).expand(Sy, -1)
+        _Cys = (
+            torch.linspace(0, 1 - 1 / Sy, Sy, device=self.device)
+            .expand(1, -1)
+            .transpose(0, 1)
+            .expand(Sy, Sx)
+        )
+        self.register_buffer(
+            "height_multiplier", torch.tensor(org_img_height / img_height)
+        )
+        self.register_buffer("img_size", torch.tensor(crop_size))
+        self.register_buffer("_Cxs", _Cxs.clone())
+        self.register_buffer("_Cys", _Cys.clone())
+
     def gen_model(self, num_classes) -> nn.Module:
         conv_block_1 = nn.Sequential(
             nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
@@ -280,7 +317,7 @@ class YOGO(nn.Module):
                 (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
                 (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
                 self.anchor_w * torch.exp(x[:, 2:3, :, :]),
-                self.anchor_h * torch.exp(x[:, 3:4, :, :]),
+                self.anchor_h * torch.exp(x[:, 3:4, :, :]) * self.height_multiplier,
                 torch.sigmoid(x[:, 4:5, :, :]),
                 *torch.split(classification, 1, dim=1),
             ),
