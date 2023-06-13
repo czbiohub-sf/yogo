@@ -80,13 +80,13 @@ class YOGO(nn.Module):
         # multiplier for height - req'd when resizing model post-training
         self.register_buffer("height_multiplier", torch.tensor(1.0))
 
-        # initialize the weights, PyTorch chooses bad defaults
-        self.model.apply(self.init_network_weights)
-
         # fine tuning. If you `.eval()` the model anyways, this
         # is not necessary
         if tuning:
             self.model.apply(self.set_bn_eval)
+        else:
+            # initialize the weights, PyTorch chooses bad defaults
+            self.model.apply(self.init_network_weights)
 
         # gradient clipping
         for p in self.parameters():
@@ -132,6 +132,7 @@ class YOGO(nn.Module):
             anchor_h.item(),
             num_classes=num_classes.item(),
             inference=inference,
+            tuning=True,
             model_func=get_model_func(model_version),
         )
 
