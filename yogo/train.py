@@ -372,7 +372,6 @@ def do_training(args) -> None:
                 "class_names": YOGO_CLASS_ORDERING,
                 "pretrained_path": args.from_pretrained,
                 "no_classify": args.no_classify,
-                "run group": args.group,
                 "normalize_images": args.normalize_images,
                 "dataset_descriptor_file": args.dataset_descriptor_file,
                 "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
