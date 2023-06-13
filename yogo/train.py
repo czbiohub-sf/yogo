@@ -12,7 +12,6 @@ from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, cast
 
-from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
 from yogo.model import YOGO
 from yogo.model_defns import get_model_func
@@ -33,6 +32,9 @@ from yogo.data.dataset_description_file import load_dataset_description
 
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
+
+
+WandbConfig: TypeAlias = dict
 
 
 def checkpoint_model(
@@ -59,6 +61,41 @@ def checkpoint_model(
         },
         str(filename),
     )
+
+
+def init_dataset(config: WandbConfig, Sx, Sy):
+    dataloaders = get_dataloader(
+        config["dataset_descriptor_file"],
+        config["batch_size"],
+        Sx=Sx,
+        Sy=Sy,
+        preprocess_type=config["preprocess_type"],
+        vertical_crop_size=config["vertical_crop_size"],
+        resize_shape=config["resize_shape"],
+        normalize_images=config["normalize_images"],
+    )
+
+    train_dataloader = dataloaders["train"]
+    validate_dataloader = dataloaders["val"]
+    test_dataloader = dataloaders["test"]
+
+    wandb.config.update(
+        {  # we do this here b.c. batch_size can change wrt sweeps
+            "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
+            "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
+            "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
+        }
+    )
+
+    if wandb.run is not None:
+        model_save_dir = Path(f"trained_models/{wandb.run.name}")
+    else:
+        model_save_dir = Path(
+            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
+        )
+    model_save_dir.mkdir(exist_ok=True, parents=True)
+
+    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
 def train():
@@ -123,6 +160,9 @@ def train():
     print("dataset initialized...")
 
     Y_loss = YOGOLoss(
+        no_obj_weight=config["no_obj_weight"],
+        iou_weight=config["iou_weight"],
+        classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
         classify=classify,
     ).to(device)
@@ -277,46 +317,6 @@ def train():
         )
 
 
-WandbConfig: TypeAlias = dict
-
-
-def init_dataset(config: WandbConfig, Sx, Sy):
-    dataloaders = get_dataloader(
-        config["dataset_descriptor_file"],
-        config["batch_size"],
-        Sx=Sx,
-        Sy=Sy,
-        preprocess_type=config["preprocess_type"],
-        vertical_crop_size=config["vertical_crop_size"],
-        normalize_images=config["normalize_images"],
-    )
-
-    train_dataloader = dataloaders["train"]
-    validate_dataloader = dataloaders["val"]
-    test_dataloader = dataloaders["test"]
-
-    try:
-        wandb.config.update(
-            {  # we do this here b.c. batch_size can change wrt sweeps
-                "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
-                "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
-                "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
-            }
-        )
-    except Exception:
-        pass
-
-    if wandb.run is not None:
-        model_save_dir = Path(f"trained_models/{wandb.run.name}")
-    else:
-        model_save_dir = Path(
-            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
-        )
-    model_save_dir.mkdir(exist_ok=True, parents=True)
-
-    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
-
-
 def do_training(args) -> None:
     """responsible for parsing args and starting a training run"""
     device = torch.device(
@@ -324,13 +324,6 @@ def do_training(args) -> None:
         if args.device is not None
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
-
-    epochs = args.epochs or df.EPOCHS
-    batch_size = args.batch_size or df.BATCH_SIZE
-    learning_rate = args.learning_rate or df.LEARNING_RATE
-    label_smoothing = args.label_smoothing or df.LABEL_SMOOTHING
-    decay_factor = args.lr_decay_factor or df.DECAY_FACTOR
-    weight_decay = args.weight_decay or df.WEIGHT_DECAY
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
@@ -360,12 +353,15 @@ def do_training(args) -> None:
             project="yogo",
             entity="bioengineering",
             config={
-                "learning_rate": learning_rate,
-                "decay_factor": decay_factor,
-                "weight_decay": weight_decay,
-                "label_smoothing": label_smoothing,
-                "epochs": epochs,
-                "batch_size": batch_size,
+                "learning_rate": args.learning_rate,
+                "decay_factor": args.lr_decay_factor,
+                "weight_decay": args.weight_decay,
+                "label_smoothing": args.label_smoothing,
+                "iou_weight": args.iou_weight,
+                "no_obj_weight": args.no_obj_weight,
+                "classify_weight": args.classify_weight,
+                "epochs": args.epochs,
+                "batch_size": args.batch_size,
                 "device": str(device),
                 "anchor_w": anchor_w,
                 "anchor_h": anchor_h,

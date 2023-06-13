@@ -6,3 +6,6 @@ class DefaultHyperparams:
     DECAY_FACTOR = 10
     WEIGHT_DECAY = 5e-2
     OPTIMIZER_TYPE = "adam"
+    IOU_WEIGHT = 5.0
+    NO_OBJ_WEIGHT = 0.5
+    CLASSIFY_WEIGHT = 1.0

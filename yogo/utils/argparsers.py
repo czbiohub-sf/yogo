@@ -92,7 +92,7 @@ def train_parser(parser=None):
         "--batch-size",
         type=uint,
         help=f"batch size for training (default {df.BATCH_SIZE})",
-        default=None,
+        default=df.BATCH_SIZE,
     )
     parser.add_argument(
         "-lr",
@@ -100,32 +100,50 @@ def train_parser(parser=None):
         "--lr",
         type=unitary_float,
         help=f"learning rate for training (default {df.LEARNING_RATE})",
-        default=None,
+        default=df.LEARNING_RATE,
     )
     parser.add_argument(
         "--lr-decay-factor",
         type=super_unitary_float,
         help=f"factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default {df.DECAY_FACTOR})",
-        default=None,
+        default=df.DECAY_FACTOR,
     )
     parser.add_argument(
         "--label-smoothing",
         type=unitary_float,
         help=f"label smoothing - default 0.01 (default {df.LABEL_SMOOTHING})",
-        default=0.01,
+        default=df.LABEL_SMOOTHING,
     )
     parser.add_argument(
         "-wd",
         "--weight-decay",
         type=unitary_float,
         help=f"weight decay for training (default {df.WEIGHT_DECAY})",
-        default=None,
+        default=df.WEIGHT_DECAY,
     )
     parser.add_argument(
         "--epochs",
         type=uint,
         help=f"number of epochs to train (default {df.EPOCHS})",
-        default=None,
+        default=df.EPOCHS,
+    )
+    parser.add_argument(
+        "--no-obj-weight",
+        type=float,
+        help=f"weight for the objectness loss when there isn't an object (default {df.NO_OBJ_WEIGHT})",
+        default=df.NO_OBJ_WEIGHT,
+    )
+    parser.add_argument(
+        "--iou-weight",
+        type=float,
+        help=f"weight for the iou loss (default {df.IOU_WEIGHT})",
+        default=df.IOU_WEIGHT,
+    )
+    parser.add_argument(
+        "--classify-weight",
+        type=float,
+        help=f"weight for the classification loss (default {df.CLASSIFY_WEIGHT})",
+        default=df.CLASSIFY_WEIGHT,
     )
     parser.add_argument(
         "--model",
