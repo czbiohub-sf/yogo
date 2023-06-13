@@ -12,7 +12,6 @@ from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, cast
 
-from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
 from yogo.model import YOGO
 from yogo.model_defns import get_model_func
@@ -326,13 +325,6 @@ def do_training(args) -> None:
         else ("cuda" if torch.cuda.is_available() else "cpu")
     )
 
-    epochs = args.epochs or df.EPOCHS
-    batch_size = args.batch_size or df.BATCH_SIZE
-    learning_rate = args.learning_rate or df.LEARNING_RATE
-    label_smoothing = args.label_smoothing or df.LABEL_SMOOTHING
-    decay_factor = args.lr_decay_factor or df.DECAY_FACTOR
-    weight_decay = args.weight_decay or df.WEIGHT_DECAY
-
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
 
@@ -361,15 +353,15 @@ def do_training(args) -> None:
             project="yogo",
             entity="bioengineering",
             config={
-                "learning_rate": learning_rate,
-                "decay_factor": decay_factor,
-                "weight_decay": weight_decay,
-                "label_smoothing": label_smoothing,
-                "iou_weight": 5.0,
-                "no_obj_weight": 0.5,
-                "classify_weight": 1.0,
-                "epochs": epochs,
-                "batch_size": batch_size,
+                "learning_rate": args.learning_rate,
+                "decay_factor": args.lr_decay_factor,
+                "weight_decay": args.weight_decay,
+                "label_smoothing": args.label_smoothing,
+                "iou_weight": args.iou_weight,
+                "no_obj_weight": args.no_obj_weight,
+                "classify_weight": args.classify_weight,
+                "epochs": args.epochs,
+                "batch_size": args.batch_size,
                 "device": str(device),
                 "anchor_w": anchor_w,
                 "anchor_h": anchor_h,
