@@ -361,7 +361,6 @@ def do_training(args) -> None:
             project="yogo",
             entity="bioengineering",
             config={
-                "optimizer_type": optimizer_type,
                 "learning_rate": learning_rate,
                 "decay_factor": decay_factor,
                 "weight_decay": weight_decay,
