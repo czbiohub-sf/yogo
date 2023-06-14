@@ -118,8 +118,16 @@ def train():
         classify=classify,
     )
 
-    net = None
-    if config.pretrained_path:
+    if config.pretrained_path is None or config.pretrained_path == "none":
+        net = YOGO(
+            num_classes=num_classes,
+            img_size=config["resize_shape"],
+            anchor_w=anchor_w,
+            anchor_h=anchor_h,
+            model_func=model,
+        ).to(device)
+        global_step = 0
+    else:
         print(f"loading pretrained path from {config.pretrained_path}")
 
         net, net_cfg = YOGO.from_pth(config.pretrained_path)
@@ -135,15 +143,6 @@ def train():
                 "mismatch in pretrained network image resize shape and current resize shape: "
                 f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
             )
-    else:
-        net = YOGO(
-            num_classes=num_classes,
-            img_size=config["resize_shape"],
-            anchor_w=anchor_w,
-            anchor_h=anchor_h,
-            model_func=model,
-        ).to(device)
-        global_step = 0
 
     print("created network")
 

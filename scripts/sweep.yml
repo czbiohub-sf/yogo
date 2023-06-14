@@ -19,6 +19,7 @@ parameters:
     values:
       - trained_models/valiant-lion-732/best.pth
       - trained_models/fallen-puddle-730/best.pth
+      - none
   classify_weight:
     distribution: log_uniform_values
     max: 20
