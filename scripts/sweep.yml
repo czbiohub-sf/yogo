@@ -20,11 +20,11 @@ parameters:
       - trained_models/valiant-lion-732/best.pth
       - trained_models/fallen-puddle-730/best.pth
   classify_weight:
-    distribution: uniform
+    distribution: log_uniform_values
     max: 20
     min: 1
   iou_weight:
-    distribution: uniform
+    distribution: log_uniform_values
     max: 20
     min: 0.01
   learning_rate:
@@ -39,11 +39,3 @@ parameters:
     distribution: log_uniform_values
     min: 0.0001
     max: 0.2
-  iou_weight:
-    distribution: uniform
-    min: 0.01
-    max: 20
-  classify_weight:
-    distribution: uniform
-    min: 1
-    max: 20
