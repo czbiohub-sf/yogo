@@ -27,34 +27,6 @@ from yogo.data.dataset import read_grayscale, YOGO_CLASS_ORDERING
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
-def argmax(arr):
-    return max(range(len(arr)), key=arr.__getitem__)
-
-
-def choose_device():
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def save_preds(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
-    bs, pred_shape, Sy, Sx = batch_preds.shape
-
-    if label is not None:
-        label_idx = YOGO_CLASS_ORDERING.index(label)
-    else:
-        # var is not used
-        label_idx = None
-
-    for fname, batch_pred in zip(fnames, batch_preds):
-        preds = format_preds(batch_pred, thresh=thresh)
-
-        pred_string = "\n".join(
-            f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
-            for pred in preds
-        )
-        with open(fname, "w") as f:
-            f.write(pred_string)
-
-
 class ImageAndIdDataset(Dataset, Sized):
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
         raise NotImplementedError
@@ -189,6 +161,48 @@ def get_dataset(
         raise ValueError("one of 'path_to_images' or 'path_to_zarr' must not be None")
 
 
+def argmax(arr):
+    return max(range(len(arr)), key=arr.__getitem__)
+
+
+def choose_device():
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def save_preds(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
+    bs, pred_shape, Sy, Sx = batch_preds.shape
+
+    if label is not None:
+        label_idx = YOGO_CLASS_ORDERING.index(label)
+    else:
+        # var is not used
+        label_idx = None
+
+    for fname, batch_pred in zip(fnames, batch_preds):
+        preds = format_preds(batch_pred, thresh=thresh)
+
+        pred_string = "\n".join(
+            f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
+            for pred in preds
+        )
+        with open(fname, "w") as f:
+            f.write(pred_string)
+
+
+def get_prediction_class_counts(predictions: torch.Tensor) -> torch.Tensor:
+    tot_class_sum = torch.zeros(len(YOGO_CLASS_ORDERING), dtype=torch.long)
+    for pred_slice in predictions:
+        pred = format_preds(pred_slice)
+        if pred.numel() == 0:
+            continue  # ignore no predictions
+        classes = pred[:, 5:]
+        class_predictions = classes.argmax(dim=1)
+        tot_class_sum += torch.nn.functional.one_hot(
+            class_predictions, num_classes=len(YOGO_CLASS_ORDERING)
+        ).sum(dim=0)
+    return tot_class_sum
+
+
 @torch.no_grad()
 def predict(
     path_to_pth: str,
@@ -197,12 +211,12 @@ def predict(
     output_dir: Optional[str] = None,
     thresh: float = 0.5,
     draw_boxes: bool = False,
-    batch_size: int = 16,
+    batch_size: int = 64,
     use_tqdm: bool = False,
     device: Union[str, torch.device] = "cpu",
-    print_results: bool = False,
     label: Optional[str] = None,
     vertical_crop_height_px: Optional[int] = None,
+    count: bool = False,
 ) -> Optional[torch.Tensor]:
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
@@ -248,13 +262,7 @@ def predict(
     for i, (img_batch, fnames) in enumerate(image_dataloader):
         res = model(img_batch.to(device)).to("cpu", non_blocking=True)
 
-        if output_dir is not None and not draw_boxes:
-            out_fnames = [
-                Path(output_dir) / Path(fname).with_suffix(".txt").name
-                for fname in fnames
-            ]
-            save_preds(out_fnames, res, thresh=0.5, label=label)
-        elif draw_boxes:
+        if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
                 bbox_img = draw_yogo_prediction(
                     img_batch[img_idx, ...],
@@ -275,8 +283,12 @@ def predict(
                     ax.set_axis_off()
                     ax.imshow(bbox_img)
                     plt.show()
-        elif print_results:
-            print(res)
+        elif output_dir is not None:
+            out_fnames = [
+                Path(output_dir) / Path(fname).with_suffix(".txt").name
+                for fname in fnames
+            ]
+            save_preds(out_fnames, res, thresh=0.5, label=label)
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
@@ -286,12 +298,16 @@ def predict(
 
     pbar.close()
 
-    if not print_results and output_dir is None:
+    if output_dir is None:
         return results
+    elif count:
+        print(get_prediction_class_counts(results))
+        print(get_prediction_class_counts(results).tolist())
     return None
 
 
 def do_infer(args):
+    print(args)
     predict(
         args.pth_path,
         path_to_images=args.path_to_images,
@@ -299,10 +315,12 @@ def do_infer(args):
         output_dir=args.output_dir,
         draw_boxes=args.draw_boxes,
         batch_size=args.batch_size,
-        use_tqdm=(args.output_dir is not None or args.draw_boxes),
+        use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
         vertical_crop_height_px=(
             round(772 * args.crop_height) if args.crop_height is not None else None
         ),
+        device=choose_device(),
+        count=args.count,
     )
 
 
