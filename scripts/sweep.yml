@@ -26,7 +26,7 @@ parameters:
   iou_weight:
     distribution: log_uniform_values
     max: 20
-    min: 0.01
+    min: 0.1
   learning_rate:
     distribution: log_uniform_values
     min: 0.0001
