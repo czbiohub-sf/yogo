@@ -249,16 +249,16 @@ def infer_parser(parser=None):
         default=False,
     )
     parser.add_argument(
-        "--final-counts",
+        "--count",
         action=boolean_action,
         default=False,
-        help="only display the final predicted counts per-class",
+        help="display the final predicted counts per-class",
     )
     parser.add_argument(
         "--batch-size",
         type=uint,
         help="batch size for inference (default 16)",
-        default=16,
+        default=64,
     )
     parser.add_argument(
         "--crop-height",
