@@ -211,14 +211,14 @@ def _count_class_predictions(formatted_class_predictions: torch.Tensor) -> torch
     """
     if not len(formatted_class_predictions.shape) == 2:
         raise ValueError(
-            f"expected formatted_class_predictions to be shape (N, num_classes); "
+            "expected formatted_class_predictions to be shape (N, num_classes); "
             "got {formatted_class_predictions.shape}"
         )
     n_predictions, n_classes = formatted_class_predictions.shape
     class_predictions = formatted_class_predictions.argmax(dim=1)
-    return torch.nn.functional.one_hot(
-        class_predictions, num_classes=n_classes
-    ).sum(dim=0)
+    return torch.nn.functional.one_hot(class_predictions, num_classes=n_classes).sum(
+        dim=0
+    )
 
 
 @torch.no_grad()

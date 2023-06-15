@@ -144,7 +144,7 @@ def format_preds(
     if len(batch_pred.shape) != 3:
         raise ValueError(
             "argument to format_pred should be unbatched result - "
-            "shape should be (pred_shape, Sy, Sx)"
+            f"shape should be (pred_shape, Sy, Sx), got {batch_pred.shape}"
         )
     elif box_format not in get_args(BoxFormat):
         raise ValueError(
