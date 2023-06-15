@@ -240,11 +240,20 @@ def infer_parser(parser=None):
         "--output-dir",
         type=Path,
         default=None,
-        help="path to directory for results - ignore to not save results",
+        help="path to directory for results, either --draw-boxes or --save-preds",
     )
     parser.add_argument(
         "--draw-boxes",
-        help="plot and display each image",
+        help="plot and either save (if --output-dir is set) or show each image",
+        action=boolean_action,
+        default=False,
+    )
+    parser.add_argument(
+        "--save-preds",
+        help=(
+            "save predictions in YOGO label format - requires `--output-dir` "
+            " to be set"
+        ),
         action=boolean_action,
         default=False,
     )

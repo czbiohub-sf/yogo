@@ -4,6 +4,7 @@ import zarr
 import math
 import torch
 import signal
+import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -169,7 +170,7 @@ def choose_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def save_preds(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
+def save_predictions(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
     bs, pred_shape, Sy, Sx = batch_preds.shape
 
     if label is not None:
@@ -209,15 +210,32 @@ def predict(
     path_to_images: Optional[Path] = None,
     path_to_zarr: Optional[Path] = None,
     output_dir: Optional[str] = None,
-    thresh: float = 0.5,
+    save_preds: bool = False,
     draw_boxes: bool = False,
+    count_predictions: bool = False,
     batch_size: int = 64,
-    use_tqdm: bool = False,
-    device: Union[str, torch.device] = "cpu",
+    thresh: float = 0.5,
     label: Optional[str] = None,
     vertical_crop_height_px: Optional[int] = None,
-    count: bool = False,
+    use_tqdm: bool = False,
+    device: Optional[Union[str, torch.device]] = None,
 ) -> Optional[torch.Tensor]:
+    if save_preds and draw_boxes:
+        raise ValueError(
+            "cannot save predictions in YOGO format and draw_boxes at the same time"
+        )
+    elif output_dir is not None and not (save_preds or draw_boxes):
+        warnings.warn(
+            f"output dir is not None (is {output_dir}), but it will not be used "
+            "since save_preds and draw_boxes are both false"
+        )
+    elif output_dir is not None:
+        Path(output_dir).mkdir(exist_ok=True, parents=False)
+    elif save_preds:
+        raise ValueError("output_dir must not be None if save_preds is True")
+
+    device = device or choose_device()
+
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.to(device)
     model.eval()
@@ -248,9 +266,6 @@ def predict(
         num_workers=min(torch.multiprocessing.cpu_count(), 32),
     )
 
-    if output_dir is not None:
-        Path(output_dir).mkdir(exist_ok=True, parents=False)
-
     pbar = tqdm(
         disable=not use_tqdm,
         unit="images",
@@ -258,7 +273,13 @@ def predict(
     )
 
     Sx, Sy = model.get_grid_size()
-    results = torch.zeros((len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx))
+
+    # this tensor can be really big, so only create it if we need it
+    if not draw_boxes or output_dir is not None:
+        results = torch.zeros(
+            (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
+        )
+
     for i, (img_batch, fnames) in enumerate(image_dataloader):
         res = model(img_batch.to(device)).to("cpu", non_blocking=True)
 
@@ -283,12 +304,15 @@ def predict(
                     ax.set_axis_off()
                     ax.imshow(bbox_img)
                     plt.show()
-        elif output_dir is not None:
+        elif save_preds:
+            assert (
+                output_dir is not None
+            ), "output_dir must not be None if save_preds is True"
             out_fnames = [
                 Path(output_dir) / Path(fname).with_suffix(".txt").name
                 for fname in fnames
             ]
-            save_preds(out_fnames, res, thresh=0.5, label=label)
+            save_predictions(out_fnames, res, thresh=0.5, label=label)
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
@@ -298,29 +322,39 @@ def predict(
 
     pbar.close()
 
-    if output_dir is None:
-        return results
-    elif count:
-        print(get_prediction_class_counts(results))
-        print(get_prediction_class_counts(results).tolist())
-    return None
+    if count_predictions:
+        counts = get_prediction_class_counts(results).tolist()
+        tot_cells = sum(counts)
+        print(
+            list(
+                zip(
+                    YOGO_CLASS_ORDERING,
+                    counts,
+                    [round(c / tot_cells, 4) for c in counts],
+                )
+            )
+        )
+
+    if output_dir is not None:
+        return None
+
+    return results
 
 
 def do_infer(args):
-    print(args)
     predict(
         args.pth_path,
         path_to_images=args.path_to_images,
         path_to_zarr=args.path_to_zarr,
         output_dir=args.output_dir,
+        save_preds=args.save_preds,
         draw_boxes=args.draw_boxes,
         batch_size=args.batch_size,
         use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
         vertical_crop_height_px=(
             round(772 * args.crop_height) if args.crop_height is not None else None
         ),
-        device=choose_device(),
-        count=args.count,
+        count_predictions=args.count,
     )
 
 
