@@ -13,8 +13,6 @@ jobs:
       - name: install checking requirements
         run: |
           pip install --upgrade pip
-          pip install light-the-torch
-          ltt install torch
           pip install -e .
       - name: unittests :)
         run: python3 -m unittest discover tests
