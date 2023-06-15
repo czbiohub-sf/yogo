@@ -314,7 +314,7 @@ def predict(
                 if output_dir is not None:
                     out_fname = (
                         Path(output_dir)
-                        / Path(fnames[img_idx]).with_suffix(".png").name
+                        / Path(fnames[img_idx]).with_suffix(".tiff").name
                     )
                     # don't need to compress these, we delete later
                     # mypy thinks that you can't save a PIL Image which is false
