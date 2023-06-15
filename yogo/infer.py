@@ -300,11 +300,13 @@ def predict(
     for i, (img_batch, fnames) in enumerate(image_dataloader):
         res = model(img_batch.to(device)).to("cpu")
 
+        assert torch.all(res <= 1), f"returned tensor w/ max value {res.max()}"
+
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
                 bbox_img = draw_yogo_prediction(
-                    img_batch[img_idx, ...],
-                    res[img_idx, ...],
+                    img=img_batch[img_idx, ...],
+                    prediction=res[img_idx, ...],
                     thresh=0.5,
                     labels=YOGO_CLASS_ORDERING,
                     images_are_normalized=cfg["normalize_images"],
@@ -314,8 +316,9 @@ def predict(
                         Path(output_dir)
                         / Path(fnames[img_idx]).with_suffix(".png").name
                     )
+                    # don't need to compress these, we delete later
                     # mypy thinks that you can't save a PIL Image which is false
-                    bbox_img.save(out_fname)  # type: ignore
+                    bbox_img.save(out_fname, compress_level=1)  # type: ignore
                 else:
                     fig, ax = plt.subplots()
                     ax.set_axis_off()
