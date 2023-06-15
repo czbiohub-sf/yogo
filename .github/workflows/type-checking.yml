@@ -15,4 +15,4 @@ jobs:
           pip install --upgrade pip
           pip install ruff==0.0.253
       - name: ruff
-        run: ruff yogo --ignore E501 --ignore E722
+        run: ruff tests yogo --ignore E501 --ignore E722
