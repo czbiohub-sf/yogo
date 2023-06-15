@@ -191,17 +191,34 @@ def save_predictions(fnames, batch_preds, thresh=0.5, label: Optional[str] = Non
 
 
 def get_prediction_class_counts(predictions: torch.Tensor) -> torch.Tensor:
+    """
+    Count the number of predictions of each class, by argmaxing the class predictions
+    """
     tot_class_sum = torch.zeros(len(YOGO_CLASS_ORDERING), dtype=torch.long)
     for pred_slice in predictions:
         pred = format_preds(pred_slice)
         if pred.numel() == 0:
             continue  # ignore no predictions
         classes = pred[:, 5:]
-        class_predictions = classes.argmax(dim=1)
-        tot_class_sum += torch.nn.functional.one_hot(
-            class_predictions, num_classes=len(YOGO_CLASS_ORDERING)
-        ).sum(dim=0)
+        tot_class_sum += _count_class_predictions(classes)
     return tot_class_sum
+
+
+def _count_class_predictions(formatted_class_predictions: torch.Tensor) -> torch.Tensor:
+    """
+    Count the number of predictions in each class of the prediction tensor
+    Expecting shape of (N, num_classes), and each row must sum to 1
+    """
+    if not len(formatted_class_predictions.shape) == 2:
+        raise ValueError(
+            f"expected formatted_class_predictions to be shape (N, num_classes); "
+            "got {formatted_class_predictions.shape}"
+        )
+    n_predictions, n_classes = formatted_class_predictions.shape
+    class_predictions = formatted_class_predictions.argmax(dim=1)
+    return torch.nn.functional.one_hot(
+        class_predictions, num_classes=n_classes
+    ).sum(dim=0)
 
 
 @torch.no_grad()
