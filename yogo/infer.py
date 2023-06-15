@@ -298,7 +298,7 @@ def predict(
         )
 
     for i, (img_batch, fnames) in enumerate(image_dataloader):
-        res = model(img_batch.to(device)).to("cpu", non_blocking=True)
+        res = model(img_batch.to(device)).to("cpu")
 
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
