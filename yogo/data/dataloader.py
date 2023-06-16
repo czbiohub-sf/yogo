@@ -103,7 +103,7 @@ def split_dataset(
     keys = list(split_fractions)
 
     # very annoying type hint here - `Dataset` doesn't necessarily have `__len__`,
-    # so we manually check it. But I am not sure that you can cast to Sizedj so mypy complains
+    # so we manually check it. But I am not sure that you can cast to Sized, so mypy complains
     dataset_sizes = {
         k: round(split_fractions[k] * len(dataset)) for k in keys[:-1]  # type: ignore
     }
