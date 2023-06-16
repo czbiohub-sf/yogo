@@ -182,7 +182,6 @@ def get_dataloader(
 
     d = dict()
     for designation, dataset in split_datasets.items():
-
         # catch case of len(dataset) == 0
         if len(dataset) == 0:  # type: ignore
             continue
