@@ -39,7 +39,7 @@ def get_datasets(
             Sy,
             normalize_images=normalize_images,
         )
-        for dsp in tqdm(dataset_description.dataset_paths)
+        for dsp in tqdm(dataset_description.dataset_paths, desc="loading dataset")
     )
 
     if dataset_description.test_dataset_paths is not None:
@@ -51,7 +51,7 @@ def get_datasets(
                 Sy,
                 normalize_images=normalize_images,
             )
-            for dsp in tqdm(dataset_description.test_dataset_paths)
+            for dsp in tqdm(dataset_description.test_dataset_paths, desc="loading test dataset")
         )
         split_datasets: MutableMapping[str, Dataset[Any]] = {
             "train": full_dataset,
