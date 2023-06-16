@@ -27,7 +27,6 @@ def get_datasets(
     dataset_description_file: str,
     Sx: int,
     Sy: int,
-    split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> MutableMapping[str, Dataset[Any]]:
     dataset_description = load_dataset_description(dataset_description_file)
@@ -148,14 +147,12 @@ def get_dataloader(
     preprocess_type: Optional[str] = None,
     vertical_crop_size: Optional[float] = None,
     resize_shape: Optional[Tuple[int, int]] = None,
-    split_fractions_override: Optional[Dict[str, float]] = None,
     normalize_images: bool = False,
 ) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
         Sx,
         Sy,
-        split_fractions_override=split_fractions_override,
         normalize_images=normalize_images,
     )
 
