@@ -200,11 +200,13 @@ def get_prediction_class_counts(predictions: torch.Tensor) -> torch.Tensor:
         if pred.numel() == 0:
             continue  # ignore no predictions
         classes = pred[:, 5:]
-        tot_class_sum += _count_class_predictions(classes)
+        tot_class_sum += count_cells_for_formatted_preds(classes)
     return tot_class_sum
 
 
-def _count_class_predictions(formatted_class_predictions: torch.Tensor) -> torch.Tensor:
+def count_cells_for_formatted_preds(
+    formatted_class_predictions: torch.Tensor,
+) -> torch.Tensor:
     """
     Count the number of predictions in each class of the prediction tensor
     Expecting shape of (N, num_classes), and each row must sum to 1
