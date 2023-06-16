@@ -109,7 +109,7 @@ def split_dataset(
     final_dataset_size = {keys[-1]: len(dataset) - sum(dataset_sizes.values())}  # type: ignore
     split_sizes = {**dataset_sizes, **final_dataset_size}
 
-    all_sizes_are_gt_0 = all([sz > 0 for sz in split_sizes.values()])
+    all_sizes_are_gt_0 = all([sz >= 0 for sz in split_sizes.values()])
     split_sizes_eq_dataset_size = sum(split_sizes.values()) == len(dataset)  # type: ignore
     if not (all_sizes_are_gt_0 and split_sizes_eq_dataset_size):
         raise ValueError(
@@ -182,10 +182,16 @@ def get_dataloader(
 
     d = dict()
     for designation, dataset in split_datasets.items():
+
+        # catch case of len(dataset) == 0
+        if len(dataset) == 0:  # type: ignore
+            continue
+
         transforms = MultiArgSequential(
             image_preprocess,
             *augmentations if designation == "train" else [],
         )
+
         d[designation] = DataLoader(
             dataset,
             shuffle=True,

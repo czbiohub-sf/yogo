@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, cast
+from typing import Optional, cast, Iterable
 
 
 from yogo.model import YOGO
@@ -76,8 +76,9 @@ def init_dataset(config: WandbConfig, Sx, Sy):
     )
 
     train_dataloader = dataloaders["train"]
-    validate_dataloader = dataloaders["val"]
-    test_dataloader = dataloaders["test"]
+    # sneaky hack to replace non-existant datasets with emtpy list
+    validate_dataloader: Iterable = dataloaders.get("val", [])
+    test_dataloader: Iterable = dataloaders.get("test", [])
 
     wandb.config.update(
         {  # we do this here b.c. batch_size can change wrt sweeps
