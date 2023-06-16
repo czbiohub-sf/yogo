@@ -61,6 +61,7 @@ class YOGO(nn.Module):
         self.inference = inference
 
         Sx, Sy = self.get_grid_size()
+        self.Sx, self.Sy = Sx, Sy
 
         _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx).expand(Sy, -1).to(self.device)
         _Cys = (
@@ -233,6 +234,7 @@ class YOGO(nn.Module):
         org_img_height, org_img_width = (int(d) for d in self.get_img_size())
         crop_size = (img_height, org_img_width)
         Sx, Sy = self.get_grid_size(crop_size)
+        self.Sx, self.Sy = Sx, Sy
         _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx, device=self.device).expand(Sy, -1)
         _Cys = (
             torch.linspace(0, 1 - 1 / Sy, Sy, device=self.device)
