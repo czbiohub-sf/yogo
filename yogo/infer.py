@@ -266,6 +266,7 @@ def pred_single_img(
     model.to(device)
     model.eval()
     img = torch.tensor(img)
+    img = img.unsqueeze(0).unsqueeze(0)  # Format in the way the model needs
 
     res = format_preds(
         model(img).squeeze()
