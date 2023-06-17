@@ -223,6 +223,56 @@ def count_cells_for_formatted_preds(
     )
 
 
+def pred_single_img(
+    path_to_pth: str,
+    img: np.ndarray,
+    device: Union[str, torch.device] = "cpu",
+):
+    """Run a model prediction on a single image.
+
+    Params
+    ------
+    path_to_pth: str
+        Path to the model's 'pth' file (e.g 'brisk-sweep-9/best.pth')
+    img: np.ndarray
+        The model only takes in a torch tensor but we'll do that conversion in this function
+    device: Union[str, torch.device]
+        Defaults to 'cpu'
+
+    Returns
+    -------
+    np.ndarray
+        A filtered prediction tensor in the form: [N, 12] (N objects detected). See docs/dataset_description.md
+        Summarized here for convenience:
+
+        The 12 dimensions:
+        The first five describe bounding box/objectness information:
+            x_center [float: 0 - 1] (as percent of original img_width)
+            y_center [float: 0 - 1] (as percent of original img_height)
+            width [float: 0 - 1] (as percent of original img_width)
+            height [float: 0 - 1] (as percent of original img_height)
+            objectness [float: 0 - 1]
+        The remaining 7 (*at the time of writing there are seven classes being predicted):
+            prob_healthy
+            prob_ring
+            prob_troph
+            prob_schizont
+            prob_gametocyte
+            prob_wbc
+            prob_misc
+    """
+
+    model, _ = YOGO.from_pth(Path(path_to_pth), inference=True)
+    model.to(device)
+    model.eval()
+    img = torch.tensor(img)
+
+    res = format_preds(
+        model(img).squeeze()
+    )  # squeeze to remove superfluous first dimension of length 1
+    return res.numpy(force=True)
+
+
 @torch.no_grad()
 def predict(
     path_to_pth: str,
