@@ -13,7 +13,7 @@ from torch import nn
 from tqdm import tqdm
 from pathlib import Path
 from collections.abc import Sized
-from typing import List, Union, Optional, Callable, Tuple, cast
+from typing import List, Union, Optional, Callable, Tuple, cast, Literal
 
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import Compose, CenterCrop
@@ -238,6 +238,7 @@ def predict(
     vertical_crop_height_px: Optional[int] = None,
     use_tqdm: bool = False,
     device: Optional[Union[str, torch.device]] = None,
+    output_img_ftype: Literal[".png", ".tif", ".tiff"] = ".png",
 ) -> Optional[torch.Tensor]:
     if save_preds and draw_boxes:
         raise ValueError(
@@ -252,6 +253,11 @@ def predict(
         Path(output_dir).mkdir(exist_ok=True, parents=False)
     elif save_preds:
         raise ValueError("output_dir must not be None if save_preds is True")
+    elif output_img_ftype not in [".png", ".tif", ".tiff"]:
+        raise ValueError(
+            f"only .png, .tif, and .tiff are supported for output img "
+            "filetype; got {output_img_ftype}"
+        )
 
     device = device or choose_device()
 
@@ -316,7 +322,7 @@ def predict(
                 if output_dir is not None:
                     out_fname = (
                         Path(output_dir)
-                        / Path(fnames[img_idx]).with_suffix(".tiff").name
+                        / Path(fnames[img_idx]).with_suffix(output_img_ftype).name
                     )
                     # don't need to compress these, we delete later
                     # mypy thinks that you can't save a PIL Image which is false
@@ -377,6 +383,7 @@ def do_infer(args):
             round(772 * args.crop_height) if args.crop_height is not None else None
         ),
         count_predictions=args.count,
+        output_img_ftype=args.output_img_filetype,
     )
 
 

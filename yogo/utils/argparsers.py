@@ -274,6 +274,13 @@ def infer_parser(parser=None):
         type=unitary_float,
         help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
+    parser.add_argument(
+        "--output-img-filetype",
+        type=str,
+        choices=[".png", ".tif", ".tiff"],
+        default=".png",
+        help="filetype for output images (default .png)",
+    )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
         "--path-to-images", type=Path, default=None, help="path to image or images"
