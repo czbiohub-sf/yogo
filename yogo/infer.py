@@ -261,7 +261,7 @@ def predict(
         raise ValueError("output_dir must not be None if save_preds is True")
     elif output_img_ftype not in [".png", ".tif", ".tiff"]:
         raise ValueError(
-            f"only .png, .tif, and .tiff are supported for output img "
+            "only .png, .tif, and .tiff are supported for output img "
             "filetype; got {output_img_ftype}"
         )
 
