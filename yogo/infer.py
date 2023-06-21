@@ -369,7 +369,7 @@ def predict(
             )
         )
 
-    if (draw_boxes or save_preds):
+    if not (draw_boxes or save_preds):
         return results
     return None
 
