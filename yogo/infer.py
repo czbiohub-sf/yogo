@@ -170,6 +170,12 @@ def choose_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def choose_dataloader_num_workers(dataset_size):
+    if dataset_size < 1000:
+        return 0
+    return min(torch.multiprocessing.cpu_count(), 32)
+
+
 def save_predictions(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
     bs, pred_shape, Sy, Sx = batch_preds.shape
 
@@ -288,7 +294,7 @@ def predict(
         drop_last=False,
         pin_memory=True,
         collate_fn=collate_fn,
-        num_workers=min(torch.multiprocessing.cpu_count(), 32),
+        num_workers=choose_dataloader_num_workers(len(image_dataset)),
     )
 
     pbar = tqdm(
@@ -300,7 +306,7 @@ def predict(
     Sx, Sy = model.get_grid_size()
 
     # this tensor can be really big, so only create it if we need it
-    if not draw_boxes or output_dir is not None:
+    if not (draw_boxes or save_preds):
         results = torch.zeros(
             (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
         )
@@ -363,10 +369,9 @@ def predict(
             )
         )
 
-    if output_dir is not None:
-        return None
-
-    return results
+    if (draw_boxes or save_preds):
+        return results
+    return None
 
 
 def do_infer(args):
