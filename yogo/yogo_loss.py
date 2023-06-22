@@ -53,6 +53,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, _, Sy, Sx = pred_batch.shape
 
+        num_labels = label_batch[:, 0, :, :].sum()
+
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
         # objectness loss when there is no obj
@@ -65,7 +67,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     torch.zeros_like(pred_batch[:, 4, :, :]),
                 )
             ).sum()
-        ) / batch_size
+        ) / num_labels
 
         # objectness loss when there is an obj
         objectnes_loss_obj = (
@@ -74,7 +76,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 pred_batch[:, 4, :, :],
                 torch.ones_like(pred_batch[:, 4, :, :]),
             )
-        ).sum() / batch_size
+        ).sum() / num_labels
 
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
@@ -125,7 +127,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     formatted_labels_masked,
                 )
             ).sum()
-            / batch_size
+            / num_labels
         )
 
         # classification loss
@@ -136,7 +138,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                     label_batch[:, 0, :, :]
                     * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
                 ).sum()
-                / batch_size
+                / num_labels
             )
         else:
             classification_loss = torch.tensor(
