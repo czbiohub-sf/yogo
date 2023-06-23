@@ -10,6 +10,8 @@ import PIL
 import torchvision.ops as ops
 import torchvision.transforms as transforms
 
+from PIL import ImageDraw, ImageFont
+
 from typing import (
     Optional,
     Sequence,
@@ -269,10 +271,19 @@ def draw_yogo_prediction(
     rgb.paste(pil_img)
     draw = PIL.ImageDraw.Draw(rgb)  # type: ignore
 
+    # Set the font and size
+    font_size = 16  # Set this to the font size you want
+    try:
+        # Use a Truetype font
+        font = ImageFont.truetype("LiberationMono-Bold.ttf", font_size)
+    except IOError:
+        # Fallback to the default font if the specified one is not available
+        font = ImageFont.load_default()  # type: ignore
+
     for r in formatted_rects:
         r = list(r)
         label = labels[int(r[4])] if labels is not None else str(r[4])
-        draw.rectangle(r[:4], outline=bbox_colour(label))
-        draw.text((r[0], r[1]), label, (0, 0, 0, 255))
+        draw.rectangle(r[:4], outline=bbox_colour(label), width=3)
+        draw.text((r[0], r[1]), label, (0, 0, 0, 255), font=font)
 
     return rgb
