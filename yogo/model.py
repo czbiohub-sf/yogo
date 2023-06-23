@@ -47,11 +47,7 @@ class YOGO(nn.Module):
         super().__init__()
         self.device = device
 
-        self.model = (
-            self.gen_model(num_classes=num_classes)
-            if model_func is None
-            else model_func(num_classes)
-        )
+        self.model_a, self.model_b, self.model_c = self.gen_model(num_classes=num_classes)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
@@ -84,10 +80,14 @@ class YOGO(nn.Module):
         # fine tuning. If you `.eval()` the model anyways, this
         # is not necessary
         if tuning:
-            self.model.apply(self.set_bn_eval)
+            self.model_a.apply(self.set_bn_eval)
+            self.model_b.apply(self.set_bn_eval)
+            self.model_c.apply(self.set_bn_eval)
         else:
             # initialize the weights, PyTorch chooses bad defaults
-            self.model.apply(self.init_network_weights)
+            self.model_a.apply(self.init_network_weights)
+            self.model_b.apply(self.init_network_weights)
+            self.model_c.apply(self.init_network_weights)
 
         # gradient clipping
         for p in self.parameters():
@@ -249,7 +249,7 @@ class YOGO(nn.Module):
         self.register_buffer("_Cxs", _Cxs.clone())
         self.register_buffer("_Cys", _Cys.clone())
 
-    def gen_model(self, num_classes) -> nn.Module:
+    def gen_model(self, num_classes) -> Tuple[nn.Module, nn.Module, nn.Module]:
         conv_block_1 = nn.Sequential(
             nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(16),
@@ -285,21 +285,25 @@ class YOGO(nn.Module):
             nn.Conv2d(128, 128, 3, padding=1),
             nn.LeakyReLU(),
         )
-        conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
-        return nn.Sequential(
-            conv_block_1,
-            conv_block_2,
-            conv_block_3,
-            conv_block_4,
-            conv_block_5,
-            conv_block_6,
-            conv_block_7,
-            conv_block_8,
+        nn.Conv2d(128, 5 + num_classes, 1)
+        return (
+            nn.Sequential(
+                conv_block_1,
+                conv_block_2,
+                conv_block_3,
+                conv_block_4,
+                conv_block_5,
+            ),
+            nn.Conv2d(128, 5, 1),
+            nn.Sequential(conv_block_6, conv_block_7, nn.Conv2d(128, num_classes, 1)),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # we get either raw uint8 tensors or float tensors
-        x = self.model(x.float())
+        x_pre = self.model_a(x.float())
+        x_bbox = self.model_b(x_pre)
+        x_class = self.model_c(x_pre)
+        x = torch.cat((x_bbox, x_class), dim=1)
 
         _, _, Sy, Sx = x.shape
 
