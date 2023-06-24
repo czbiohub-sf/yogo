@@ -257,7 +257,7 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_2 = nn.Sequential(
-            nn.Conv2d(16, 32, 3),
+            nn.Conv2d(16, 32, 5),
             nn.LeakyReLU(),
             nn.Dropout2d(p=0.2),
         )
@@ -267,7 +267,7 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3),
+            nn.Conv2d(64, 128, 5),
             nn.LeakyReLU(),
             nn.Dropout2d(p=0.2),
         )
