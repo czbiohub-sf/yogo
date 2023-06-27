@@ -73,7 +73,7 @@ def get_datasets(
             Sx=Sx,
             Sy=Sy,
             n=8,
-            length=len(split_datasets["train"]) // 4,  # type: ignore
+            length=len(split_datasets["train"]),  # type: ignore
             blend_thumbnails=True,
             thumbnail_sigma=2,
             normalize_images=normalize_images,
