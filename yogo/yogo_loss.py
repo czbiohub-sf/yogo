@@ -53,7 +53,10 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         """
         batch_size, _, Sy, Sx = pred_batch.shape
 
-        num_labels = label_batch[:, 0, :, :].sum()
+        num_labels = torch.maximum(
+            torch.ones(1),
+            label_batch[:, 0, :, :].sum()
+        )
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
 
