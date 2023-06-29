@@ -176,7 +176,14 @@ def choose_dataloader_num_workers(dataset_size):
     return min(torch.multiprocessing.cpu_count(), 32)
 
 
-def save_predictions(fnames, batch_preds, thresh=0.5, label: Optional[str] = None):
+def save_predictions(
+    fnames,
+    batch_preds,
+    obj_thresh=0.5,
+    iou_thresh=0.5,
+    aspect_thresh: Optional[float] = None,
+    label: Optional[str] = None,
+):
     bs, pred_shape, Sy, Sx = batch_preds.shape
 
     if label is not None:
@@ -186,7 +193,9 @@ def save_predictions(fnames, batch_preds, thresh=0.5, label: Optional[str] = Non
         label_idx = None
 
     for fname, batch_pred in zip(fnames, batch_preds):
-        preds = format_preds(batch_pred, thresh=thresh)
+        preds = format_preds(
+            batch_pred, obj_thresh=obj_thresh, aspect_thresh=aspect_thresh
+        )
 
         pred_string = "\n".join(
             f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
@@ -321,7 +330,7 @@ def predict(
                 bbox_img = draw_yogo_prediction(
                     img=img_batch[img_idx, ...],
                     prediction=res[img_idx, ...],
-                    thresh=0.5,
+                    iou_thresh=0.5,
                     labels=YOGO_CLASS_ORDERING,
                     images_are_normalized=cfg["normalize_images"],
                 )
@@ -346,7 +355,7 @@ def predict(
                 Path(output_dir) / Path(fname).with_suffix(".txt").name
                 for fname in fnames
             ]
-            save_predictions(out_fnames, res, thresh=0.5, label=label)
+            save_predictions(out_fnames, res, obj_thresh=0.5, label=label)
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0

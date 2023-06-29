@@ -131,15 +131,20 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
 
 def format_preds(
     batch_pred: torch.Tensor,
-    thresh: float = 0.5,
+    obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
+    aspect_thresh: Optional[float] = None,
     box_format: BoxFormat = "cxcywh",
 ) -> torch.Tensor:
     """
-    formats batch_pred, from YOGO, into [N,pred_shape], after applying NMS and
-    thresholding objectness at thresh.
+    formats batch_pred, prediction tensor straight from YOGO, into [N,pred_shape], after applying NMS,
+    and, thresholding objectness, and filtering thin boxes. box_format specifies the returned box format.
 
-    box_format specifies the returned box format
+    aspect_ratio_threshold is the threshold for filtering out boxes with aspect ratios too far from 1:1.
+    It is the maximum allowed ratio between the width and height of a bounding box (so a value of 3
+    means that the width can be at most 3 times the height, and vice versa).
+
+    For all thresholds, set to 0 to disable.
     """
     if len(batch_pred.shape) != 3:
         raise ValueError(
@@ -156,8 +161,21 @@ def format_preds(
     reformatted_preds = batch_pred.view(pred_shape, Sx * Sy).T
 
     # Filter for objectness first
-    objectness_mask = (reformatted_preds[:, 4] > thresh).bool()
+    objectness_mask = (reformatted_preds[:, 4] > obj_thresh).bool()
     preds = reformatted_preds[objectness_mask]
+
+    if aspect_thresh is not None:
+        # Filter for aspect ratio
+        if aspect_thresh < 0:
+            raise ValueError(f"aspect_thresh should be positive, got {aspect_thresh}")
+        elif aspect_thresh < 1:
+            aspect_thresh = 1 / aspect_thresh
+
+        aspect_ratio_mask = (
+            1 / aspect_thresh <= preds[:, 2] / preds[:, 3] <= aspect_thresh
+        )
+
+        preds = preds[aspect_ratio_mask]
 
     # if we have to convert box format to xyxy, do it to the tensor
     # and give nms a view of the original. Otherwise, just give nms
@@ -185,15 +203,17 @@ def _format_tensor_for_rects(
     rects: torch.Tensor,
     img_h: int,
     img_w: int,
-    thresh: float = 0.5,
+    obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
+    aspect_thresh: Optional[float] = None,
 ) -> torch.Tensor:
     pred_dim, Sy, Sx = rects.shape
 
     formatted_preds = format_preds(
         rects,
-        thresh=thresh,
+        obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
+        aspect_thresh=aspect_thresh,
         box_format="xyxy",
     )
 
@@ -219,7 +239,7 @@ def bbox_colour(label: str, opacity: float = 1.0) -> Tuple[int, int, int, int]:
 def draw_yogo_prediction(
     img: torch.Tensor,
     prediction: torch.Tensor,
-    thresh: float = 0.5,
+    obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
     labels: Optional[List[str]] = None,
     images_are_normalized: bool = False,
@@ -229,7 +249,7 @@ def draw_yogo_prediction(
     args:
         img: 2d torch.Tensor of shape (h, w) or (1, h, w). We will `torch.uint8` your tensor!
         prediction: torch.tensor of shape (pred_dim, Sy, Sx) or (1, pred_dim, Sy, Sx)
-        thresh: objectness threshold
+        obj_thresh: objectness threshold
         iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
         labels: list of label names for displaying
     """
@@ -259,7 +279,7 @@ def draw_yogo_prediction(
         prediction,
         img_h=img_h,
         img_w=img_w,
-        thresh=thresh,
+        obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
     )
 
