@@ -192,9 +192,12 @@ def save_predictions(
         # var is not used
         label_idx = None
 
-    for fname, batch_pred in zip(fnames, batch_preds):
+    for fname, pred_slice in zip(fnames, batch_preds):
         preds = format_preds(
-            batch_pred, obj_thresh=obj_thresh, aspect_thresh=aspect_thresh
+            pred_slice,
+            obj_thresh=obj_thresh,
+            iou_thresh=iou_thresh,
+            aspect_thresh=aspect_thresh,
         )
 
         pred_string = "\n".join(
@@ -205,16 +208,26 @@ def save_predictions(
             f.write(pred_string)
 
 
-def get_prediction_class_counts(predictions: torch.Tensor) -> torch.Tensor:
+def get_prediction_class_counts(
+    batch_preds: torch.Tensor,
+    obj_thresh=0.5,
+    iou_thresh=0.5,
+    aspect_thresh: Optional[float] = None,
+) -> torch.Tensor:
     """
     Count the number of predictions of each class, by argmaxing the class predictions
     """
     tot_class_sum = torch.zeros(len(YOGO_CLASS_ORDERING), dtype=torch.long)
-    for pred_slice in predictions:
-        pred = format_preds(pred_slice)
-        if pred.numel() == 0:
+    for pred_slice in batch_preds:
+        preds = format_preds(
+            pred_slice,
+            obj_thresh=obj_thresh,
+            iou_thresh=iou_thresh,
+            aspect_thresh=aspect_thresh,
+        )
+        if preds.numel() == 0:
             continue  # ignore no predictions
-        classes = pred[:, 5:]
+        classes = preds[:, 5:]
         tot_class_sum += count_cells_for_formatted_preds(classes)
     return tot_class_sum
 
@@ -248,7 +261,9 @@ def predict(
     draw_boxes: bool = False,
     count_predictions: bool = False,
     batch_size: int = 64,
-    thresh: float = 0.5,
+    obj_thresh: float = 0.5,
+    iou_thresh: float = 0.5,
+    aspect_thresh: Optional[float] = None,
     label: Optional[str] = None,
     vertical_crop_height_px: Optional[int] = None,
     use_tqdm: bool = False,
@@ -391,6 +406,9 @@ def do_infer(args):
         output_dir=args.output_dir,
         save_preds=args.save_preds,
         draw_boxes=args.draw_boxes,
+        obj_thresh=args.obj_thresh,
+        iou_thresh=args.iou_thresh,
+        aspect_thresh=args.aspect_thresh,
         batch_size=args.batch_size,
         use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
         vertical_crop_height_px=(

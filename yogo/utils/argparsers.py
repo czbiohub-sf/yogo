@@ -37,6 +37,18 @@ def super_unitary_float(val: float):
     return v
 
 
+def unsigned_float(val: float):
+    try:
+        v = float(val)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v} is not a float value")
+
+    if not (0 <= v):
+        raise argparse.ArgumentTypeError(f"{v} must be greater than 0")
+
+    return v
+
+
 def unitary_float(val: float):
     try:
         v = float(val)
@@ -280,6 +292,27 @@ def infer_parser(parser=None):
         choices=[".png", ".tif", ".tiff"],
         default=".png",
         help="filetype for output images (default .png)",
+    )
+    parser.add_argument(
+        "--obj-thresh",
+        type=unsigned_float,
+        default=0.5,
+        help="objectness threshold for predictions (default 0.5)",
+    )
+    parser.add_argument(
+        "--iou-thresh",
+        type=unsigned_float,
+        default=0.5,
+        help="intersection over union threshold for predictions (default 0.5)",
+    )
+    parser.add_argument(
+        "--aspect-thresh",
+        type=super_unitary_float,
+        default=None,
+        help=(
+            "aspect ratio threshold for predictions - filters out boxes where one "
+            "side is --aspect-ratio times the other (disabled by default)"
+        ),
     )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
