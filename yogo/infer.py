@@ -345,7 +345,9 @@ def predict(
                 bbox_img = draw_yogo_prediction(
                     img=img_batch[img_idx, ...],
                     prediction=res[img_idx, ...],
-                    iou_thresh=0.5,
+                    obj_thresh=obj_thresh,
+                    iou_thresh=iou_thresh,
+                    aspect_thresh=aspect_thresh,
                     labels=YOGO_CLASS_ORDERING,
                     images_are_normalized=cfg["normalize_images"],
                 )
@@ -370,7 +372,14 @@ def predict(
                 Path(output_dir) / Path(fname).with_suffix(".txt").name
                 for fname in fnames
             ]
-            save_predictions(out_fnames, res, obj_thresh=0.5, label=label)
+            save_predictions(
+                out_fnames,
+                res,
+                obj_thresh=obj_thresh,
+                iou_thresh=iou_thresh,
+                aspect_thresh=aspect_thresh,
+                label=label,
+            )
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
@@ -381,14 +390,19 @@ def predict(
     pbar.close()
 
     if count_predictions:
-        counts = get_prediction_class_counts(results).tolist()
+        counts = get_prediction_class_counts(
+            results,
+            obj_thresh=obj_thresh,
+            iou_thresh=iou_thresh,
+            aspect_thresh=aspect_thresh,
+        ).tolist()
         tot_cells = sum(counts)
         print(
             list(
                 zip(
                     YOGO_CLASS_ORDERING,
                     counts,
-                    [round(c / tot_cells, 4) for c in counts],
+                    [0 if tot_cells == 0 else round(c / tot_cells, 4) for c in counts],
                 )
             )
         )

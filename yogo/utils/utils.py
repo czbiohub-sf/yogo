@@ -171,8 +171,9 @@ def format_preds(
         elif aspect_thresh < 1:
             aspect_thresh = 1 / aspect_thresh
 
-        aspect_ratio_mask = (
-            1 / aspect_thresh <= preds[:, 2] / preds[:, 3] <= aspect_thresh
+        aspect_ratios = preds[:, 2] / preds[:, 3]
+        aspect_ratio_mask = torch.logical_and(
+            1 / aspect_thresh <= aspect_ratios, aspect_ratios <= aspect_thresh
         )
 
         preds = preds[aspect_ratio_mask]
@@ -241,6 +242,7 @@ def draw_yogo_prediction(
     prediction: torch.Tensor,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
+    aspect_thresh: Optional[float] = None,
     labels: Optional[List[str]] = None,
     images_are_normalized: bool = False,
 ) -> PIL.Image.Image:
@@ -251,6 +253,7 @@ def draw_yogo_prediction(
         prediction: torch.tensor of shape (pred_dim, Sy, Sx) or (1, pred_dim, Sy, Sx)
         obj_thresh: objectness threshold
         iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
+        aspect_thresh: aspect ratio threshold
         labels: list of label names for displaying
     """
     img, prediction = img.squeeze(), prediction.squeeze()
@@ -281,6 +284,7 @@ def draw_yogo_prediction(
         img_w=img_w,
         obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
+        aspect_thresh=aspect_thresh,
     )
 
     pil_img = transforms.ToPILImage()(img[None, ...])
