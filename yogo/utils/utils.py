@@ -171,7 +171,8 @@ def format_preds(
         elif aspect_thresh < 1:
             aspect_thresh = 1 / aspect_thresh
 
-        aspect_ratios = preds[:, 2] / preds[:, 3]
+        # need to scale bbox width and height by image width and height; use Sx and Sy as approximates for this
+        aspect_ratios = (Sx / Sy) * preds[:, 2] / preds[:, 3]
         aspect_ratio_mask = torch.logical_and(
             1 / aspect_thresh <= aspect_ratios, aspect_ratios <= aspect_thresh
         )
