@@ -129,8 +129,30 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
         yield s[i : i + n]
 
 
-def per_class_aspect_thresh(formatted_preds: torch.Tensor):
-    pass
+def per_class_aspect_mask(formatted_preds: torch.Tensor, Sx: int, Sy: int):
+    """
+    formatted_preds is of shape (N, pred_dim)
+    classes are argmax(preds[:, 5:])
+
+    aspect ratios:
+        healthy, ring, schizont, troph: 2
+        gametocyte: 4
+        wbc: 2
+        misc: 4
+    """
+    classes = torch.argmax(formatted_preds[:, 5:], dim=1)
+    aspect_thresholds = (
+        classes.where(classes < 4, 2 * torch.ones_like(classes))
+        .where(classes == 4, 4 * torch.ones_like(classes))
+        .where(classes == 5, 2 * torch.ones_like(classes))
+        .where(classes == 6, 4 * torch.ones_like(classes))
+    )
+
+    aspect_ratios = (Sx / Sy) * formatted_preds[:, 2] / formatted_preds[:, 3]
+    aspect_ratio_mask = torch.logical_and(
+        1 / aspect_thresholds <= aspect_ratios, aspect_ratios <= aspect_thresholds
+    )
+    return aspect_ratio_mask
 
 
 def format_preds(
@@ -173,18 +195,7 @@ def format_preds(
     preds = reformatted_preds[objectness_mask]
 
     if aspect_thresh is not None:
-        # Filter for aspect ratio
-        if aspect_thresh < 0:
-            raise ValueError(f"aspect_thresh should be positive, got {aspect_thresh}")
-        elif aspect_thresh < 1:
-            aspect_thresh = 1 / aspect_thresh
-
-        # need to scale bbox width and height by image width and height; use Sx and Sy as approximates for this
-        aspect_ratios = (Sx / Sy) * preds[:, 2] / preds[:, 3]
-        aspect_ratio_mask = torch.logical_and(
-            1 / aspect_thresh <= aspect_ratios, aspect_ratios <= aspect_thresh
-        )
-
+        aspect_ratio_mask = per_class_aspect_mask(preds, Sx, Sy)
         preds = preds[aspect_ratio_mask]
 
     if area_thresh is not None:
