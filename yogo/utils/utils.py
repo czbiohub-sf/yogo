@@ -134,15 +134,19 @@ def format_preds(
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
     aspect_thresh: Optional[float] = None,
+    area_thresh: Optional[float] = None,
     box_format: BoxFormat = "cxcywh",
 ) -> torch.Tensor:
     """
     formats batch_pred, prediction tensor straight from YOGO, into [N,pred_shape], after applying NMS,
     and, thresholding objectness, and filtering thin boxes. box_format specifies the returned box format.
 
-    aspect_ratio_threshold is the threshold for filtering out boxes with aspect ratios too far from 1:1.
+    aspect_thresh is the threshold for filtering out boxes with aspect ratios too far from 1:1.
     It is the maximum allowed ratio between the width and height of a bounding box (so a value of 3
     means that the width can be at most 3 times the height, and vice versa).
+
+    area_thresh is the threshold for filtering out boxes that are too small (in units of pct of image).
+    An OK lower bound is 1e-6
 
     For all thresholds, set to 0 to disable.
     """
@@ -172,12 +176,19 @@ def format_preds(
             aspect_thresh = 1 / aspect_thresh
 
         # need to scale bbox width and height by image width and height; use Sx and Sy as approximates for this
-        aspect_ratios = (Sx / Sy) * preds[:, 2] / preds[:, 3]
+        aspect_ratios = (Sy / Sx) * preds[:, 2] / preds[:, 3]
         aspect_ratio_mask = torch.logical_and(
             1 / aspect_thresh <= aspect_ratios, aspect_ratios <= aspect_thresh
         )
 
         preds = preds[aspect_ratio_mask]
+
+    if area_thresh is not None:
+        # filter on area (discard small bboxes)
+        areas = (Sy / Sx) * preds[:, 2] * preds[:, 3]
+        areas_mask = area_thresh <= areas
+
+        preds = preds[areas_mask]
 
     # if we have to convert box format to xyxy, do it to the tensor
     # and give nms a view of the original. Otherwise, just give nms
