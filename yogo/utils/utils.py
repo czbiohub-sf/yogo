@@ -129,6 +129,10 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
         yield s[i : i + n]
 
 
+def per_class_aspect_thresh(formatted_preds: torch.Tensor):
+    pass
+
+
 def format_preds(
     batch_pred: torch.Tensor,
     obj_thresh: float = 0.5,
@@ -176,7 +180,7 @@ def format_preds(
             aspect_thresh = 1 / aspect_thresh
 
         # need to scale bbox width and height by image width and height; use Sx and Sy as approximates for this
-        aspect_ratios = (Sy / Sx) * preds[:, 2] / preds[:, 3]
+        aspect_ratios = (Sx / Sy) * preds[:, 2] / preds[:, 3]
         aspect_ratio_mask = torch.logical_and(
             1 / aspect_thresh <= aspect_ratios, aspect_ratios <= aspect_thresh
         )
@@ -185,7 +189,7 @@ def format_preds(
 
     if area_thresh is not None:
         # filter on area (discard small bboxes)
-        areas = (Sy / Sx) * preds[:, 2] * preds[:, 3]
+        areas = (Sx / Sy) * preds[:, 2] * preds[:, 3]
         areas_mask = area_thresh <= areas
 
         preds = preds[areas_mask]
