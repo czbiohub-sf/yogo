@@ -298,17 +298,14 @@ class YOGO(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # we get either raw uint8 tensors or float tensors
         x = self.model(x.float())
 
         _, _, Sy, Sx = x.shape
 
         if self.inference:
-            classification = torch.softmax(
-                torch.linalg.norm(x[:, 5:, :, :], dim=1, keepdim=True), dim=1
-            )
+            classification = torch.softmax(x[:, 5:, :, :], dim=1)
         else:
-            classification = torch.linalg.norm(x[:, 5:, :, :], dim=1)
+            classification = x[:, 5:, :, :]
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         #  center of bounding box in x
