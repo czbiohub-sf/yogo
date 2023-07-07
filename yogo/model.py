@@ -304,7 +304,9 @@ class YOGO(nn.Module):
         _, _, Sy, Sx = x.shape
 
         if self.inference:
-            classification = torch.softmax(torch.linalg.norm(x[:, 5:, :, :], dim=1), dim=1)
+            classification = torch.softmax(
+                torch.linalg.norm(x[:, 5:, :, :], dim=1, keepdim=True), dim=1
+            )
         else:
             classification = torch.linalg.norm(x[:, 5:, :, :], dim=1)
 
