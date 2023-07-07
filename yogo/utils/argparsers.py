@@ -305,15 +305,6 @@ def infer_parser(parser=None):
         default=0.5,
         help="intersection over union threshold for predictions (default 0.5)",
     )
-    parser.add_argument(
-        "--aspect-thresh",
-        type=super_unitary_float,
-        default=None,
-        help=(
-            "aspect ratio threshold for predictions - filters out boxes where one "
-            "side is --aspect-ratio times the other (disabled by default)"
-        ),
-    )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
         "--path-to-images", type=Path, default=None, help="path to image or images"

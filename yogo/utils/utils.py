@@ -129,47 +129,16 @@ def iter_in_chunks(s: Sequence[T], n: int = 1) -> Generator[Sequence[T], None, N
         yield s[i : i + n]
 
 
-def per_class_aspect_mask(formatted_preds: torch.Tensor, Sx: int, Sy: int):
-    """
-    formatted_preds is of shape (N, pred_dim)
-    classes are argmax(preds[:, 5:])
-
-    aspect ratios:
-        healthy, ring, schizont, troph: 2
-        gametocyte: 4
-        wbc: 2
-        misc: 4
-    """
-    classes = torch.argmax(formatted_preds[:, 5:], dim=1)
-    aspect_thresholds = (
-        classes.where(classes < 4, 2 * torch.ones_like(classes))
-        .where(classes == 4, 4 * torch.ones_like(classes))
-        .where(classes == 5, 2 * torch.ones_like(classes))
-        .where(classes == 6, 4 * torch.ones_like(classes))
-    )
-
-    aspect_ratios = (Sx / Sy) * formatted_preds[:, 2] / formatted_preds[:, 3]
-    aspect_ratio_mask = torch.logical_and(
-        1 / aspect_thresholds <= aspect_ratios, aspect_ratios <= aspect_thresholds
-    )
-    return aspect_ratio_mask
-
-
 def format_preds(
     batch_pred: torch.Tensor,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    aspect_thresh: Optional[float] = None,
     area_thresh: Optional[float] = None,
     box_format: BoxFormat = "cxcywh",
 ) -> torch.Tensor:
     """
     formats batch_pred, prediction tensor straight from YOGO, into [N,pred_shape], after applying NMS,
     and, thresholding objectness, and filtering thin boxes. box_format specifies the returned box format.
-
-    aspect_thresh is the threshold for filtering out boxes with aspect ratios too far from 1:1.
-    It is the maximum allowed ratio between the width and height of a bounding box (so a value of 3
-    means that the width can be at most 3 times the height, and vice versa).
 
     area_thresh is the threshold for filtering out boxes that are too small (in units of pct of image).
     An OK lower bound is 1e-6
@@ -193,10 +162,6 @@ def format_preds(
     # Filter for objectness first
     objectness_mask = (reformatted_preds[:, 4] > obj_thresh).bool()
     preds = reformatted_preds[objectness_mask]
-
-    if aspect_thresh is not None:
-        aspect_ratio_mask = per_class_aspect_mask(preds, Sx, Sy)
-        preds = preds[aspect_ratio_mask]
 
     if area_thresh is not None:
         # filter on area (discard small bboxes)
@@ -233,7 +198,6 @@ def _format_tensor_for_rects(
     img_w: int,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    aspect_thresh: Optional[float] = None,
 ) -> torch.Tensor:
     pred_dim, Sy, Sx = rects.shape
 
@@ -241,7 +205,6 @@ def _format_tensor_for_rects(
         rects,
         obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
-        aspect_thresh=aspect_thresh,
         box_format="xyxy",
     )
 
@@ -269,7 +232,6 @@ def draw_yogo_prediction(
     prediction: torch.Tensor,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    aspect_thresh: Optional[float] = None,
     labels: Optional[List[str]] = None,
     images_are_normalized: bool = False,
 ) -> PIL.Image.Image:
@@ -280,7 +242,6 @@ def draw_yogo_prediction(
         prediction: torch.tensor of shape (pred_dim, Sy, Sx) or (1, pred_dim, Sy, Sx)
         obj_thresh: objectness threshold
         iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
-        aspect_thresh: aspect ratio threshold
         labels: list of label names for displaying
     """
     img, prediction = img.squeeze(), prediction.squeeze()
@@ -311,7 +272,6 @@ def draw_yogo_prediction(
         img_w=img_w,
         obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
-        aspect_thresh=aspect_thresh,
     )
 
     pil_img = transforms.ToPILImage()(img[None, ...])

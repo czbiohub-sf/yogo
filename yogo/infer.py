@@ -181,7 +181,6 @@ def save_predictions(
     batch_preds,
     obj_thresh=0.5,
     iou_thresh=0.5,
-    aspect_thresh: Optional[float] = None,
     label: Optional[str] = None,
 ):
     bs, pred_shape, Sy, Sx = batch_preds.shape
@@ -197,7 +196,6 @@ def save_predictions(
             pred_slice,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
-            aspect_thresh=aspect_thresh,
         )
 
         pred_string = "\n".join(
@@ -212,7 +210,6 @@ def get_prediction_class_counts(
     batch_preds: torch.Tensor,
     obj_thresh=0.5,
     iou_thresh=0.5,
-    aspect_thresh: Optional[float] = None,
 ) -> torch.Tensor:
     """
     Count the number of predictions of each class, by argmaxing the class predictions
@@ -223,7 +220,6 @@ def get_prediction_class_counts(
             pred_slice,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
-            aspect_thresh=aspect_thresh,
         )
         if preds.numel() == 0:
             continue  # ignore no predictions
@@ -263,7 +259,6 @@ def predict(
     batch_size: int = 64,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    aspect_thresh: Optional[float] = None,
     label: Optional[str] = None,
     vertical_crop_height_px: Optional[int] = None,
     use_tqdm: bool = False,
@@ -347,7 +342,6 @@ def predict(
                     prediction=res[img_idx, ...],
                     obj_thresh=obj_thresh,
                     iou_thresh=iou_thresh,
-                    aspect_thresh=aspect_thresh,
                     labels=YOGO_CLASS_ORDERING,
                     images_are_normalized=cfg["normalize_images"],
                 )
@@ -377,7 +371,6 @@ def predict(
                 res,
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
-                aspect_thresh=aspect_thresh,
                 label=label,
             )
         else:
@@ -394,7 +387,6 @@ def predict(
             results,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
-            aspect_thresh=aspect_thresh,
         ).tolist()
         tot_cells = sum(counts)
         print(
@@ -422,7 +414,6 @@ def do_infer(args):
         draw_boxes=args.draw_boxes,
         obj_thresh=args.obj_thresh,
         iou_thresh=args.iou_thresh,
-        aspect_thresh=args.aspect_thresh,
         batch_size=args.batch_size,
         use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
         vertical_crop_height_px=(
