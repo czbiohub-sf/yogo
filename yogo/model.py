@@ -304,9 +304,9 @@ class YOGO(nn.Module):
         _, _, Sy, Sx = x.shape
 
         if self.inference:
-            classification = torch.softmax(x[:, 5:, :, :], dim=1)
+            classification = torch.softmax(torch.linalg.norm(x[:, 5:, :, :], dim=1), dim=1)
         else:
-            classification = x[:, 5:, :, :]
+            classification = torch.linalg.norm(x[:, 5:, :, :], dim=1)
 
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         #  center of bounding box in x
