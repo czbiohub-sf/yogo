@@ -7,6 +7,10 @@ from typing import Tuple, Optional, Callable, Union, Any, Dict
 from yogo.model_defns import get_model_func
 
 
+# TODO find better location for this
+PathLike = Union[Path, str]
+
+
 class YOGO(nn.Module):
     """
     Restricting assumptions:
@@ -110,8 +114,9 @@ class YOGO(nn.Module):
 
     @classmethod
     def from_pth(
-        cls, pth_path: Path, inference: bool = False
+        cls, pth_path: PathLike, inference: bool = False
     ) -> Tuple["YOGO", Dict[str, Any]]:
+        pth_path = Path(pth_path)
         loaded_pth = torch.load(pth_path, map_location="cpu")
 
         model_version = loaded_pth.get("model_version", None)
