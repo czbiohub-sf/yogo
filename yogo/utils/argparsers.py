@@ -123,8 +123,14 @@ def train_parser(parser=None):
     parser.add_argument(
         "--label-smoothing",
         type=unitary_float,
-        help=f"label smoothing - default 0.01 (default {df.LABEL_SMOOTHING})",
+        help=f"label smoothing (default {df.LABEL_SMOOTHING})",
         default=df.LABEL_SMOOTHING,
+    )
+    parser.add_argument(
+        "--logit-norm-temperature",
+        type=unitary_float,
+        help=f"LogitNorm temperature (default {df.LOGIT_NORM_TEMPERATURE})",
+        default=df.LOGIT_NORM_TEMPERATURE,
     )
     parser.add_argument(
         "-wd",

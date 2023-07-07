@@ -24,7 +24,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.no_obj_weight = no_obj_weight
         self.iou_weight = iou_weight
         self.classify_weight = classify_weight
-        slef.temperature = temperature
+        self.temperature = temperature
 
         self.mse = torch.nn.MSELoss(reduction="none")
         self._classify = classify
