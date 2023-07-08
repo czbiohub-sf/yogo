@@ -63,7 +63,7 @@ def unitary_float(val: float):
 
 def global_parser():
     parser = argparse.ArgumentParser(
-        description="looking for a glance?", allow_abbrev=False
+        description="what can yogo do for you today?", allow_abbrev=False
     )
     subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
     train_parser(
