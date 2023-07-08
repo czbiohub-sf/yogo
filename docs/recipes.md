@@ -67,11 +67,11 @@ When running many images from disk, most likely you want to run them quickly. In
 
 - [Loading images and image paths](https://github.com/czbiohub-sf/yogo/blob/main/yogo/infer.py)
 
-> `ImagePathDataset` will load and return the image and path to the image. The image path can be useful, so we include it here. Of course, you can also just ignore it if you only want images. Also note the creation of the `DataLoader`. It's very short, and tuning it to your system can speed up inference by a huge amount. I highly suggest you read the `DataLoader` documentation.
+`ImagePathDataset` will load and return the image and path to the image. The image path can be useful, so we include it here. Of course, you can also just ignore it if you only want images. Also note the creation of the `DataLoader`. It's very short, and tuning it to your system can speed up inference by a huge amount. I highly suggest you read the `DataLoader` documentation.
 
 - [Loading images and labels](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/dataset.py)
 
-> `ObjectDetectionDataset` will load and return an image and corresponding label, given a folder of images and the corresponding folder of labels. It is useful if you are doing some training, or maybe if you want to visualize bounding boxes from labelled data.
+`ObjectDetectionDataset` will load and return an image and corresponding label, given a folder of images and the corresponding folder of labels. It is useful if you are doing some training, or maybe if you want to visualize bounding boxes from labelled data.
 
 Taking the dataset and dataloader from `infer.py`, create your dataset and dataloader, and iterate through images:
 
