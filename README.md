@@ -2,7 +2,7 @@
 
 ## What
 
-A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for simpler object detection problems.
+A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for speed on slow hardware and simple object detection problems.
 
 ## Docs
 
