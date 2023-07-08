@@ -109,3 +109,23 @@ Taking the dataset and dataloader from `infer.py`, create your dataset and datal
 ...     img_batch = img_batch.to(device)
 ...     out = Y(img_batch)
 ```
+
+## Processing YOGO output
+
+When you run YOGO, you'll get a 4-d tensor back:
+
+```python3
+>>> out = Y(img).shape
+>>> out
+torch.Size([1, 12, 97, 129])
+
+# out[i, :, :, :] is the 'batch', so if you give YOGO a batch of images, the slice out[3, :, :, :] will give the YOGO result for the 3rd image
+# out[:, j, :, :] is the 'prediction' dimension; out[:, :4, :, :] is [xc, yc, w, h], out[:, 4, :, :] is objectness, and out[:, 5:, :, :] is the class prediction
+# out[:, :, k, l] is the grid dimension
+```
+
+See [docs/README.md](https://github.com/czbiohub-sf/yogo/blob/main/docs/README.md) for a little bit about the output tensor, or the latter [slides](https://docs.google.com/presentation/d/1p9k6aFVJeEl7MH0iic_kju4Ub_uUJPdb6UqJvk63rAM/edit?usp=sharing) for a presentation I gave on YOGO.
+
+Note that this output is entirely unprocessed. If you want to filter for objectness or area, apply Non-Maximal Supression (NMS), and format the tensor into a simpler format, use [`format_preds`](https://github.com/czbiohub-sf/yogo/blob/c4d4388983968bbef5decca00aad9aecdb33362b/yogo/utils/utils.py#L132).
+
+This will apply objectness thresholding (filtering out predictions were YOGO doesn't think there is a cell), area thresholding (filtering out small bboxes), NMS (removes double bounding boxes), and will also convert the bounding boxes to `xyxy` (top left and bottom right) format.
