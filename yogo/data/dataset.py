@@ -140,7 +140,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
     ):
         # the super().__init__ just sets transforms
         # the image_path is just for repr
-        super().__init__(str(image_path), *args, **kwargs)
+        super().__init__(str(image_folder_path), *args, **kwargs)
 
         self.classes = YOGO_CLASS_ORDERING
         self.image_folder_path = image_folder_path
