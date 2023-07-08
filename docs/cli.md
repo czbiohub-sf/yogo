@@ -4,6 +4,8 @@ This will show the basics on how to use YOGO from your command line interface. I
 
 I will not go through every option for each command here, but I'll point out major themes.
 
+First, what can you do with the cli?
+
 ```console
 $ yogo --help
 usage: yogo [-h] {train,export,infer} ...
@@ -20,11 +22,11 @@ optional arguments:
   -h, --help            show this help message and exit
 ```
 
-There are three options, as you can see above.
-
 ## `yogo infer`
 
-This is what you need most of the time. It lets you infer YOGO on a dataset from the command line. For specifics about this functionality, look at [infer.py](https://github.com/czbiohub-sf/yogo/blob/main/yogo/infer.py).
+This is what you need most of the time. It lets you run YOGO on a dataset from the command line. It is essentially using the function `predict` in [infer.py](https://github.com/czbiohub-sf/yogo/blob/main/yogo/infer.py).
+
+`yogo infer` will also automatically use a GPU if it can, and this will be way faster than running YOGO on a CPU.
 
 ```console
 $ yogo infer --help
@@ -70,3 +72,119 @@ There are actually two required arguments here:
 - `--path-to-images` or `--path-to-zarr`, which is just the path to the folder of images (or single image), or the path to a zarr file of images
 
 If you don't specify `--output-dir`, results will be displayed to you, either via the command line or from a pop-up window for `--draw-boxes`.
+
+## `yogo train`
+
+There are a *lot* of options here. At the most basic level, `yogo train path/to/[dataset_description.yml](dataset_description.md)` will train a model with decent default parameters. Here is `yogo train --help`:
+
+```console
+$ yogo train --help
+usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED] [-bs BATCH_SIZE]
+                  [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR]
+                  [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY]
+                  [--epochs EPOCHS] [--no-obj-weight NO_OBJ_WEIGHT]
+                  [--iou-weight IOU_WEIGHT]
+                  [--classify-weight CLASSIFY_WEIGHT]
+                  [--model [{base_model,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized}]]
+                  [--note NOTE] [--name NAME] [--tag TAG] [--device [DEVICE]]
+                  [--no-classify | --no-no-classify]
+                  [--normalize-images | --no-normalize-images]
+                  [--crop-height CROP_HEIGHT]
+                  dataset_descriptor_file
+
+positional arguments:
+  dataset_descriptor_file
+                        path to yml dataset descriptor file
+
+options:
+  -h, --help            show this help message and exit
+  --from-pretrained FROM_PRETRAINED
+                        start training from the provided pth file
+  -bs BATCH_SIZE, --batch-size BATCH_SIZE
+                        batch size for training (default 32)
+  -lr LEARNING_RATE, --learning-rate LEARNING_RATE, --lr LEARNING_RATE
+                        learning rate for training (default 0.0003)
+  --lr-decay-factor LR_DECAY_FACTOR
+                        factor by which to decay lr - e.g. '2' will give a
+                        final learning rate of `lr` / 2 (default 10)
+  --label-smoothing LABEL_SMOOTHING
+                        label smoothing - default 0.01 (default 0.01)
+  -wd WEIGHT_DECAY, --weight-decay WEIGHT_DECAY
+                        weight decay for training (default 0.05)
+  --epochs EPOCHS       number of epochs to train (default 64)
+  --no-obj-weight NO_OBJ_WEIGHT
+                        weight for the objectness loss when there isn't an
+                        object (default 0.5)
+  --iou-weight IOU_WEIGHT
+                        weight for the iou loss (default 5.0)
+  --classify-weight CLASSIFY_WEIGHT
+                        weight for the classification loss (default 1.0)
+  --model [{base_model,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized}]
+                        model version to use - do not use with --from-
+                        pretrained, as we use the pretrained model
+  --note NOTE           note for the run (e.g. 'run on a TI-82')
+  --name NAME           name for the run (e.g. 'ti-82_run')
+  --tag TAG             tag for the run (e.g. 'test')
+  --device [DEVICE]     set a device for the run - if not specified, we will
+                        try to use 'cuda', and fallback on 'cpu'
+  --no-classify, --no-no-classify
+                        turn off classification loss - good only for
+                        pretraining just a cell detector (default False)
+  --normalize-images, --no-normalize-images
+                        normalize images into [0,1] (default False)
+  --crop-height CROP_HEIGHT
+                        crop image verically - '-c 0.25' will crop images to
+                        (round(0.25 * height), width)
+```
+
+There are a lot of options. Here are some recipes:
+
+You can fine-tune YOGO by training from an existing YOGO model.
+```console
+$ yogo train path/to/ddf.yml --from-pretrained path/to/yogo_model_file.pth
+```
+
+Training data is logged to Weights and Biases. For W&B specifically,
+```console
+$ yogo train path/to/ddf.yml --note "my first training!" --tag "test training run" --name "i dont use this option frequently"
+```
+
+You can normalize input images to the network with `--normalize-images`, though I haven't found that it makes much of a difference.
+```console
+$ yogo train path/to/ddf.yml --normalize-images
+```
+
+You can also train the network on bounding boxes only with `--no-classify`. This is good for pre-training on data that doesn't have accurate labels.
+```console
+$ yogo train path/to/ddf.yml --no-classify
+```
+
+And finally, you can train with a different model architecture with `--model`. The model definitions are from [`model_defns.py`](https://github.com/czbiohub-sf/yogo/blob/main/yogo/model_defns.py). Though,I find that the default model tends to do better. Perhaps this is because I've spend a lot of time optimizing hyperparameters for it?
+```console
+$ yogo train path/to/ddf.yml --model model_big_simple
+```
+
+Most of the other options are for hyperparameters. They are all fairly standard.
+
+## `yogo export`
+
+This tool is for exporting a `.pth` file to `.onnx` and OpenVino's [IR](https://docs.openvino.ai/2023.0/openvino_ir.html). It's pretty turn-key. If you want to crop image height during inference, you can pass `--crop-height`.
+
+```console
+$ yogo export -h
+usage: yogo export [-h] [--crop-height CROP_HEIGHT] [--output-filename OUTPUT_FILENAME]
+                   [--simplify | --no-simplify]
+                   input
+
+positional arguments:
+  input                 path to input pth file
+
+options:
+  -h, --help            show this help message and exit
+  --crop-height CROP_HEIGHT
+                        crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)
+  --output-filename OUTPUT_FILENAME
+                        output filename
+  --simplify, --no-simplify
+                        attempt to simplify the onnx model
+```
