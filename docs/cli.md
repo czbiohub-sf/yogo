@@ -2,7 +2,7 @@
 
 This will show the basics on how to use YOGO from your command line interface. I suggest you use `yogo --help` liberally - the docs there should give you a better idea of how to use the tool! If it's unclear, [let me know](https://github.com/czbiohub-sf/yogo/issues/new) and I will change the docs here or in the `cli` tool.
 
-I will not go through every option for each command here, but I'll point out sticking points.
+I will not go through every option for each command here, but I'll point out major themes.
 
 ```console
 $ yogo --help
