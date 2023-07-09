@@ -171,7 +171,7 @@ Most of the other options are for hyperparameters. They are all fairly standard.
 This tool is for exporting a `.pth` file to `.onnx` and OpenVino's [IR](https://docs.openvino.ai/2023.0/openvino_ir.html). It's pretty turn-key. If you want to crop image height during inference, you can pass `--crop-height`.
 
 ```console
-$ yogo export -h
+$ yogo export --help
 usage: yogo export [-h] [--crop-height CROP_HEIGHT] [--output-filename OUTPUT_FILENAME]
                    [--simplify | --no-simplify]
                    input
