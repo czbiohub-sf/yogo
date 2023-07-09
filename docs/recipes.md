@@ -81,6 +81,7 @@ Taking the dataset and dataloader from `infer.py`, create your dataset and datal
 ...   image_transforms=image_transforms,
 ...   normalize_images=normalize_images,
 )
+
 >>> def collate_fn(
 ...     batch: List[Tuple[torch.Tensor, str]]
 ... ) -> Tuple[torch.Tensor, Tuple[str]]:
