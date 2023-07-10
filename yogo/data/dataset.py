@@ -252,7 +252,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         returns a tensor of shape (num_classes,) where each index is the number of
         times that class appears in the dataset
         """
-        class_counts = torch.zeros(len(self.classes))
+        class_counts = torch.zeros(len(self.classes), dtype=torch.long)
         for label_path in self._label_paths:
             labels = load_labels(label_path, notes_data=self.notes_data)
             for label in labels:
