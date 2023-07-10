@@ -127,8 +127,8 @@ def label_file_to_tensor(
 class ObjectDetectionDataset(datasets.VisionDataset):
     def __init__(
         self,
-        image_path: Path,
-        label_path: Path,
+        image_folder_path: Path,
+        label_folder_path: Path,
         Sx,
         Sy,
         normalize_images: bool = False,
@@ -140,11 +140,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
     ):
         # the super().__init__ just sets transforms
         # the image_path is just for repr
-        super().__init__(str(image_path), *args, **kwargs)
+        super().__init__(str(image_folder_path), *args, **kwargs)
 
         self.classes = YOGO_CLASS_ORDERING
-        self.image_folder_path = image_path
-        self.label_folder_path = label_path
+        self.image_folder_path = image_folder_path
+        self.label_folder_path = label_folder_path
         self.loader = loader
         self.normalize_images = normalize_images
         self.notes_data: Optional[Dict[str, Any]] = None

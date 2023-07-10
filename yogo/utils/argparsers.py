@@ -63,7 +63,7 @@ def unitary_float(val: float):
 
 def global_parser():
     parser = argparse.ArgumentParser(
-        description="looking for a glance?", allow_abbrev=False
+        description="what can yogo do for you today?", allow_abbrev=False
     )
     subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
     train_parser(
@@ -310,15 +310,6 @@ def infer_parser(parser=None):
         type=unsigned_float,
         default=0.5,
         help="intersection over union threshold for predictions (default 0.5)",
-    )
-    parser.add_argument(
-        "--aspect-thresh",
-        type=super_unitary_float,
-        default=None,
-        help=(
-            "aspect ratio threshold for predictions - filters out boxes where one "
-            "side is --aspect-ratio times the other (disabled by default)"
-        ),
     )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
