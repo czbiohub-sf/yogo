@@ -239,7 +239,7 @@ class BlobDataset(Dataset):
         xforms = torch.nn.Sequential(
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            RandomRescale((.5, min(max_scale, 1.5))),
+            RandomRescale((0.5, min(max_scale, 1.5))),
         )
 
         # xforms = torch.jit.script(xforms)
