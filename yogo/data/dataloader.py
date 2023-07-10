@@ -207,3 +207,35 @@ def get_dataloader(
             collate_fn=partial(collate_batch, transforms=transforms),
         )
     return d
+
+
+def get_class_counts(d: ConcatDataset) -> torch.Tensor:
+    """
+    d is a ConcatDataset of ObjectDetectionDatasets and BlobGen datasets.
+    This function should iterate through the datasets of d, ignore BlobDataset datasets,
+    and sum the (num_classes,) tensors returned by `calc_class_counts` of ObjectDetectionDatasets
+    """
+    class_counts = None
+    for dataset in d.datasets:
+        if isinstance(dataset, ObjectDetectionDataset):
+            if class_counts is None:
+                class_counts = dataset.calc_class_counts()
+            else:
+                class_counts += dataset.calc_class_counts()
+
+    if class_counts is None:
+        raise ValueError("could not find any ObjectDetectionDatasets in ConcatDataset")
+
+    return class_counts
+
+
+def get_class_weights(d: ConcatDataset) -> torch.Tensor:
+    """
+    d is a ConcatDataset of ObjectDetectionDatasets and BlobGen datasets.
+    This is a first try at picking class weights; maybe we should sweep over them??
+    """
+    class_counts = get_class_counts(d)
+    class_freq = class_counts / class_counts.sum()
+    class_weights = 1.0 / class_freq
+    class_weights = class_weights / class_weights.sum()
+    return class_weights

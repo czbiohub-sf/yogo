@@ -1,6 +1,6 @@
 import torch
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 import torchvision.ops as ops
 
@@ -16,6 +16,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         iou_weight: float = 5.0,
         classify_weight: float = 1.0,
         label_smoothing: float = 0.01,
+        class_weights: Optional[torch.Tensor] = None,
         classify: bool = True,
     ) -> None:
         super().__init__()
@@ -29,7 +30,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         if self._classify:
             self.cel = torch.nn.CrossEntropyLoss(
-                reduction="none", label_smoothing=label_smoothing
+                weight=class_weights, reduction="none", label_smoothing=label_smoothing
             )
 
         self.device = "cpu"

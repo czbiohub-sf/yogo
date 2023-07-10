@@ -18,6 +18,8 @@ from yogo.model_defns import get_model_func
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
+from yogo.data.dataloader import get_dataloader, get_class_counts
+from yogo.data.dataset_description_file import load_dataset_description
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
 from yogo.utils import (
@@ -26,9 +28,6 @@ from yogo.utils import (
     get_wandb_roc,
     Timer,
 )
-from yogo.data.dataloader import get_dataloader
-from yogo.data.dataset_description_file import load_dataset_description
-
 
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -159,11 +158,14 @@ def train():
     ) = init_dataset(config, Sx, Sy)
     print("dataset initialized...")
 
+    class_weights = get_class_weights(train_dataloader)
+
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
         iou_weight=config["iou_weight"],
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
+        class_weights=class_weights,
         classify=classify,
     ).to(device)
 
