@@ -18,7 +18,7 @@ from yogo.model_defns import get_model_func
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
 from yogo.data.dataset import YOGO_CLASS_ORDERING
-from yogo.data.dataloader import get_dataloader, get_class_counts
+from yogo.data.dataloader import get_dataloader, get_class_weights
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
