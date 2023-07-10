@@ -114,6 +114,8 @@ Taking the dataset from `image_path_dataset.py`, create your dataset and dataloa
 ...     out = Y(img_batch)
 ```
 
+(note on CUDA/GPUs [^1])
+
 ## Processing YOGO output
 
 When you run YOGO, you'll get a 4-d tensor back:
@@ -133,3 +135,19 @@ See [docs/README.md](https://github.com/czbiohub-sf/yogo/blob/main/docs/README.m
 Note that this output is entirely unprocessed. If you want to filter for objectness or area, apply Non-Maximal Supression (NMS), and format the tensor into a simpler format, use [`format_preds`](https://github.com/czbiohub-sf/yogo/blob/c4d4388983968bbef5decca00aad9aecdb33362b/yogo/utils/utils.py#L132).
 
 This will apply objectness thresholding (filtering out predictions were YOGO doesn't think there is a cell), area thresholding (filtering out small bboxes), NMS (removes double bounding boxes), and will also convert the bounding boxes to `xyxy` (top left and bottom right) format.
+
+
+## Footnotes
+
+[^1] Making sure all tensors are on the same device can sometimes be annoying, but at least the error messages are good!
+
+```python3
+>>> t1 = torch.rand(10,10, device="cuda")
+>>> t2 = torch.rand(10,10)
+>>> t1 + t2
+---------------------------------------------------------------------------
+RuntimeError                              Traceback (most recent call last)
+----> 1 t1 + t2
+
+RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu!
+```
