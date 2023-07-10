@@ -1,6 +1,9 @@
 # Recipes
 
+This file will mostly cover inference, and will ignore training. For information on how to train YOGO, see [cli.md](cli.md) for information on setting up a training run, and [dataset_description.md](dataset_description.md) for setting up your dataset.
+
 There are three components to running YOGO:
+
 - Creating the model
 - Loading images
 - Processing the output
