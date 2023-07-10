@@ -156,9 +156,11 @@ def train():
         validate_dataloader,
         test_dataloader,
     ) = init_dataset(config, Sx, Sy)
+    class_weights = get_class_weights(
+        train_dataloader, num_classes=len(config["class_names"])
+    )
+    wandb.config.update({"class_weights": class_weights})
     print("dataset initialized...")
-
-    class_weights = get_class_weights(train_dataloader)
 
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
