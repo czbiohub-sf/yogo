@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 from typing import List, Dict, Tuple, Optional, Any, MutableMapping
 
 from yogo.data.blobgen import BlobDataset
-from yogo.data.dataset import ObjectDetectionDataset
+from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.data.data_transforms import (
     DualInputModule,

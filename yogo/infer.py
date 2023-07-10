@@ -16,8 +16,8 @@ from torchvision.transforms import CenterCrop
 from yogo.model import YOGO
 from yogo.utils.argparsers import infer_parser
 from yogo.utils import draw_yogo_prediction, format_preds
-from yogo.data.dataset import YOGO_CLASS_ORDERING
-from yogo.data.image_dataset import get_dataset, collate_fn
+from yogo.data import YOGO_CLASS_ORDERING
+from yogo.data.image_path_dataset import get_dataset, collate_fn
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff

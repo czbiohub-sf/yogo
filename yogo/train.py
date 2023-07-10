@@ -14,10 +14,10 @@ from typing import Optional, cast, Iterable
 
 
 from yogo.model import YOGO
-from yogo.model_defns import get_model_func
-from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
-from yogo.data.dataset import YOGO_CLASS_ORDERING
+from yogo.yogo_loss import YOGOLoss
+from yogo.data import YOGO_CLASS_ORDERING
+from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
 from yogo.utils import (
@@ -26,7 +26,7 @@ from yogo.utils import (
     get_wandb_roc,
     Timer,
 )
-from yogo.data.dataloader import get_dataloader
+from yogo.data.yogo_dataloader import get_dataloader
 from yogo.data.dataset_description_file import load_dataset_description
 
 

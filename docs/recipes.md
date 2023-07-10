@@ -68,15 +68,15 @@ Note that you can also use `PIL`, or `opencv`, or whatever other package that yo
 
 When running many images from disk, most likely you want to run them quickly. In this case, you want to load / preprocess images in the background and collate them into a batch before you feed it to YOGO. I suggest using a PyTorch [Dataset](https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset) and [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader). Implementing a dataset for your needs is very easy, and the PyTorch dataloader is very easy to tune to your needs. You may also be able to use one that I've already written if your use case is one of these:
 
-- [Loading images and image paths](https://github.com/czbiohub-sf/yogo/blob/main/yogo/infer.py)
+- [Loading images and image paths (`image_path_dataset.py`)](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/image_path_dataset.py)
 
 `ImagePathDataset` will load and return the image and path to the image. The image path can be useful, so we include it here. Of course, you can also just ignore it if you only want images. Also note the creation of the `DataLoader`. It's very short, and tuning it to your system can speed up inference by a huge amount. I highly suggest you read the `DataLoader` documentation.
 
-- [Loading images and labels](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/dataset.py)
+- [Loading images and labels (`yogo_dataset.py`)](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/yogo_dataset.py)
 
 `ObjectDetectionDataset` will load and return an image and corresponding label, given a folder of images and the corresponding folder of labels. It is useful if you are doing some training, or maybe if you want to visualize bounding boxes from labelled data.
 
-Taking the dataset and dataloader from `infer.py`, create your dataset and dataloader, and iterate through images:
+Taking the dataset from `image_path_dataset.py`, create your dataset and dataloader, and iterate through images:
 
 ```python3
 >>> dataset = ImagePathDataset(

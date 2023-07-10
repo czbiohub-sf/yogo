@@ -14,7 +14,7 @@ from typing import List, Union, Optional, Callable, Tuple, cast
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose
 
-from yogo.data.dataset import read_grayscale
+from yogo.data.yogo_dataset import read_grayscale
 
 
 class ImageAndIdDataset(Dataset, Sized):
