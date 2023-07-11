@@ -38,6 +38,6 @@ parameters:
     min: 0.0009
     max: 0.1
   logit_norm_temperature:
-    distribution: uniform_values
+    distribution: uniform
     min: 0.1
     max: 1
