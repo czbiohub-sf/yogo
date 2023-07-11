@@ -8,28 +8,14 @@ from pathlib import Path
 import torchvision.ops as ops
 
 from torchvision import datasets
-from torchvision.io import read_image, ImageReadMode
 
 from typing import List, Dict, Union, Tuple, Optional, Callable, Any, cast
 
+from yogo.data import YOGO_CLASS_ORDERING
+from yogo.data.utils import read_grayscale
+
 
 LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
-YOGO_CLASS_ORDERING = [
-    "healthy",
-    "ring",
-    "trophozoite",
-    "schizont",
-    "gametocyte",
-    "wbc",
-    "misc",
-]
-
-
-def read_grayscale(img_path: Union[str, Path]) -> torch.Tensor:
-    try:
-        return read_image(str(img_path), ImageReadMode.GRAY)
-    except RuntimeError as e:
-        raise RuntimeError(f"file {img_path} threw: {e}")
 
 
 def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:

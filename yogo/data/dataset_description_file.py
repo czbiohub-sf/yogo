@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from typing import List, Dict, Optional
 
-from yogo.data.dataset import YOGO_CLASS_ORDERING
+from yogo.data import YOGO_CLASS_ORDERING
 
 
 class InvalidDatasetDescriptionFile(Exception):
