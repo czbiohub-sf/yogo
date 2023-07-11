@@ -235,13 +235,9 @@ def get_class_counts(d: DataLoader[ConcatDataset], num_classes: int) -> torch.Te
     return class_counts
 
 
-def get_class_weights(d: DataLoader[ConcatDataset], num_classes: int) -> torch.Tensor:
-    """
-    d is a ConcatDataset of ObjectDetectionDatasets and BlobGen datasets.
-    This is a first try at picking class weights; maybe we should sweep over them??
-    """
-    class_counts = get_class_counts(d, num_classes=num_classes)
-    class_freq = class_counts / class_counts.sum()
+def normalized_inverse_frequencies(d: List[int]) -> torch.Tensor:
+    t = torch.tensor(d)
+    class_freq = t / t.sum()
     class_weights = 1.0 / class_freq
     class_weights = class_weights / class_weights.sum()
     return class_weights

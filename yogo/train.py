@@ -16,7 +16,7 @@ from typing import Optional, cast, Iterable
 from yogo.model import YOGO
 from yogo.metrics import Metrics
 from yogo.data import YOGO_CLASS_ORDERING
-from yogo.data.yogo_dataloader import get_dataloader, get_class_weights
+from yogo.data.yogo_dataloader import get_dataloader, normalized_inverse_frequencies
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
@@ -157,10 +157,6 @@ def train():
         validate_dataloader,
         test_dataloader,
     ) = init_dataset(config, Sx, Sy)
-    class_weights = get_class_weights(
-        train_dataloader, num_classes=len(config["class_names"])
-    )
-    wandb.config.update({"class_weights": class_weights})
     print("dataset initialized...")
 
     Y_loss = YOGOLoss(
@@ -168,7 +164,7 @@ def train():
         iou_weight=config["iou_weight"],
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
-        class_weights=class_weights,
+        class_weights=config["class_weights"],
         classify=classify,
     ).to(device)
 
@@ -363,6 +359,7 @@ def do_training(args) -> None:
                 "iou_weight": args.iou_weight,
                 "no_obj_weight": args.no_obj_weight,
                 "classify_weight": args.classify_weight,
+                "class_weights": normalized_inverse_frequencies([4,2,1,1,1,2,2]),
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
                 "device": str(device),
