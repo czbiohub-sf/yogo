@@ -94,7 +94,7 @@ class Metrics:
         batch_preds: torch.Tensor,
         batch_labels: torch.Tensor,
         use_IoU: bool = True,
-        objectness_thresh: float = 0.3,
+        objectness_thresh: float = 0.5,
     ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """A very important utility function for filtering predictions on labels
 
