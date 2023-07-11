@@ -14,10 +14,10 @@ from typing import Optional, cast, Iterable
 
 
 from yogo.model import YOGO
-from yogo.model_defns import get_model_func
-from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
-from yogo.data.dataset import YOGO_CLASS_ORDERING
+from yogo.yogo_loss import YOGOLoss
+from yogo.data import YOGO_CLASS_ORDERING
+from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
 from yogo.utils import (
@@ -26,7 +26,7 @@ from yogo.utils import (
     get_wandb_roc,
     Timer,
 )
-from yogo.data.dataloader import get_dataloader
+from yogo.data.yogo_dataloader import get_dataloader
 from yogo.data.dataset_description_file import load_dataset_description
 
 
@@ -145,39 +145,32 @@ def train():
                 f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
             )
 
-    print("created network")
-
     Sx, Sy = net.get_grid_size()
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
-    print("initializing dataset...")
     (
         model_save_dir,
         train_dataloader,
         validate_dataloader,
         test_dataloader,
     ) = init_dataset(config, Sx, Sy)
-    print("dataset initialized...")
 
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
         iou_weight=config["iou_weight"],
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
+        temperature=config["logit_norm_temperature"],
         classify=classify,
     ).to(device)
 
     optimizer = AdamW(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
-
-    print("created loss and optimizer")
 
     scheduler = CosineAnnealingLR(
         optimizer,
         T_max=epochs * len(train_dataloader),
         eta_min=learning_rate / config["decay_factor"],
     )
-
-    print("starting training")
 
     min_val_loss = float("inf")
     for epoch in range(epochs):
@@ -358,6 +351,7 @@ def do_training(args) -> None:
                 "iou_weight": args.iou_weight,
                 "no_obj_weight": args.no_obj_weight,
                 "classify_weight": args.classify_weight,
+                "logit_norm_temperature": args.logit_norm_temperature,
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
                 "device": str(device),

@@ -37,6 +37,18 @@ def super_unitary_float(val: float):
     return v
 
 
+def unsigned_float(val: float):
+    try:
+        v = float(val)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v} is not a float value")
+
+    if not (0 <= v):
+        raise argparse.ArgumentTypeError(f"{v} must be greater than 0")
+
+    return v
+
+
 def unitary_float(val: float):
     try:
         v = float(val)
@@ -51,7 +63,7 @@ def unitary_float(val: float):
 
 def global_parser():
     parser = argparse.ArgumentParser(
-        description="looking for a glance?", allow_abbrev=False
+        description="what can yogo do for you today?", allow_abbrev=False
     )
     subparsers = parser.add_subparsers(help="here is what you can do", dest="task")
     train_parser(
@@ -111,8 +123,14 @@ def train_parser(parser=None):
     parser.add_argument(
         "--label-smoothing",
         type=unitary_float,
-        help=f"label smoothing - default 0.01 (default {df.LABEL_SMOOTHING})",
+        help=f"label smoothing (default {df.LABEL_SMOOTHING})",
         default=df.LABEL_SMOOTHING,
+    )
+    parser.add_argument(
+        "--logit-norm-temperature",
+        type=unitary_float,
+        help=f"LogitNorm temperature (default {df.LOGIT_NORM_TEMPERATURE})",
+        default=df.LOGIT_NORM_TEMPERATURE,
     )
     parser.add_argument(
         "-wd",
@@ -280,6 +298,18 @@ def infer_parser(parser=None):
         choices=[".png", ".tif", ".tiff"],
         default=".png",
         help="filetype for output images (default .png)",
+    )
+    parser.add_argument(
+        "--obj-thresh",
+        type=unsigned_float,
+        default=0.5,
+        help="objectness threshold for predictions (default 0.5)",
+    )
+    parser.add_argument(
+        "--iou-thresh",
+        type=unsigned_float,
+        default=0.5,
+        help="intersection over union threshold for predictions (default 0.5)",
     )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(

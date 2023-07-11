@@ -1,6 +1,5 @@
 import torch
 
-import torchvision.ops as ops
 
 from typing import Optional, Tuple, List, Dict
 
@@ -13,6 +12,8 @@ from torchmetrics.classification import (
     MulticlassAccuracy,
     MulticlassROC,
 )
+
+from yogo.utils.utils import format_preds_and_labels
 
 
 class Metrics:
@@ -55,8 +56,11 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        formatted_preds, formatted_labels = self._format_preds_and_labels(
-            preds, labels, use_IoU=use_IoU
+        formatted_preds, formatted_labels = zip(
+            *[
+                format_preds_and_labels(pred, label, use_IoU=use_IoU)
+                for pred, label in zip(preds, labels)
+            ]
         )
 
         self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
@@ -88,90 +92,6 @@ class Metrics:
         res = self.compute()
         self.reset()
         return res
-
-    def _format_preds_and_labels(
-        self,
-        batch_preds: torch.Tensor,
-        batch_labels: torch.Tensor,
-        use_IoU: bool = True,
-        objectness_thresh: float = 0.3,
-    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
-        """A very important utility function for filtering predictions on labels
-
-        Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
-        We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
-
-        batch_preds and batch_labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
-        use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
-        objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
-            only be used with use_IoU == True
-
-        returns
-            (
-                tensor of predictions shape=[N, x y x y objectness *classes],
-                tensor of labels shape=[N, mask x y x y class]
-            )
-        """
-        if not (0 <= objectness_thresh < 1):
-            raise ValueError(
-                f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
-            )
-
-        (
-            bs1,
-            pred_shape,
-            Sy,
-            Sx,
-        ) = batch_preds.shape  # pred_shape is xc yc w h objectness *classes
-        (
-            bs2,
-            label_shape,
-            Sy,
-            Sx,
-        ) = batch_labels.shape  # label_shape is mask x y x y class
-        assert bs1 == bs2, "sanity check, pred batch size should equal"
-
-        masked_predictions, masked_labels = [], []
-        for b in range(bs1):
-            reformatted_preds = batch_preds[b, ...].view(pred_shape, Sx * Sy).T
-            reformatted_labels = batch_labels[b, ...].view(label_shape, Sx * Sy).T
-
-            # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
-            labels_mask = reformatted_labels[:, 0].bool()
-            objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
-
-            img_masked_labels = reformatted_labels[labels_mask]
-
-            if use_IoU and objectness_mask.sum() >= len(img_masked_labels):
-                # filter on objectness
-                preds_with_objects = reformatted_preds[objectness_mask]
-
-                preds_with_objects[:, 0:4] = ops.box_convert(
-                    preds_with_objects[:, 0:4], "cxcywh", "xyxy"
-                )
-
-                # choose predictions from argmaxed IoU along label dim to get best prediction per label
-                prediction_matrix = ops.box_iou(
-                    img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]
-                )
-                n, m = prediction_matrix.shape
-                if m > 0:
-                    prediction_indices = prediction_matrix.argmax(dim=1)
-                else:
-                    # no predictions!
-                    prediction_indices = []
-                final_preds = preds_with_objects[prediction_indices]
-            else:
-                # filter on label tensor idx
-                final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
-                final_preds[:, 0:4] = ops.box_convert(
-                    final_preds[:, 0:4], "cxcywh", "xyxy"
-                )
-
-            masked_predictions.append(final_preds)
-            masked_labels.append(img_masked_labels)
-
-        return masked_predictions, masked_labels
 
     def format_for_mAP(
         self, formatted_preds, formatted_labels

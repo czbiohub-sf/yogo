@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 from typing import List, Dict, Tuple, Optional, Any, MutableMapping
 
 from yogo.data.blobgen import BlobDataset
-from yogo.data.dataset import ObjectDetectionDataset
+from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.data.data_transforms import (
     DualInputModule,
@@ -73,7 +73,7 @@ def get_datasets(
             Sx=Sx,
             Sy=Sy,
             n=8,
-            length=len(split_datasets["train"]) // 4,  # type: ignore
+            length=len(split_datasets["train"]),  # type: ignore
             blend_thumbnails=True,
             thumbnail_sigma=2,
             normalize_images=normalize_images,
