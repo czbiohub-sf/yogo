@@ -11,7 +11,7 @@ from typing import Optional
 from yogo.model import YOGO
 from yogo.yogo_loss import YOGOLoss
 from yogo.metrics import Metrics
-from yogo.data.dataloader import (
+from yogo.data.yogo_dataloader import (
     load_dataset_description,
 )
 from yogo.train import init_dataset

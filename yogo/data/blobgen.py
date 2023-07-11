@@ -14,7 +14,8 @@ from torchvision import transforms as T
 from torchvision.ops import box_iou
 from torchvision.transforms import functional as F
 
-from yogo.data.dataset import read_grayscale, format_labels_tensor, YOGO_CLASS_ORDERING
+from yogo.data import YOGO_CLASS_ORDERING
+from yogo.data.yogo_dataset import read_grayscale, format_labels_tensor
 
 
 class RandomRescale(torch.nn.Module):
@@ -238,7 +239,7 @@ class BlobDataset(Dataset):
         xforms = torch.nn.Sequential(
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            RandomRescale((1, min(max_scale, 1.5))),
+            RandomRescale((0.5, min(max_scale, 1.5))),
         )
 
         # xforms = torch.jit.script(xforms)
