@@ -145,19 +145,15 @@ def train():
                 f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
             )
 
-    print("created network")
-
     Sx, Sy = net.get_grid_size()
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
-    print("initializing dataset...")
     (
         model_save_dir,
         train_dataloader,
         validate_dataloader,
         test_dataloader,
     ) = init_dataset(config, Sx, Sy)
-    print("dataset initialized...")
 
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
@@ -165,20 +161,17 @@ def train():
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
         class_weights=torch.tensor(config["class_weights"]),
+        temperature=config["logit_norm_temperature"],
         classify=classify,
     ).to(device)
 
     optimizer = AdamW(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
-
-    print("created loss and optimizer")
 
     scheduler = CosineAnnealingLR(
         optimizer,
         T_max=epochs * len(train_dataloader),
         eta_min=learning_rate / config["decay_factor"],
     )
-
-    print("starting training")
 
     min_val_loss = float("inf")
     for epoch in range(epochs):
@@ -360,6 +353,7 @@ def do_training(args) -> None:
                 "no_obj_weight": args.no_obj_weight,
                 "classify_weight": args.classify_weight,
                 "class_weights": normalized_inverse_frequencies([4, 2, 1, 1, 1, 2, 2]),
+                "logit_norm_temperature": args.logit_norm_temperature,
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
                 "device": str(device),
