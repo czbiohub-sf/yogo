@@ -28,8 +28,6 @@ from yogo.utils import (
     get_wandb_roc,
     Timer,
 )
-from yogo.data.yogo_dataloader import get_dataloader
-from yogo.data.dataset_description_file import load_dataset_description
 
 
 torch.backends.cudnn.benchmark = True
