@@ -107,9 +107,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             "xyxy",
         )
 
+        # need to filter out boxes where x1 >= x2 or y1 >= y2; I don't *think* that
+        # ops.box_convert would convert cxcywh into having x2 > x1, but better
+        # to be save than have NANs in our loss
         valid_box_mask = torch.logical_and(
-            formatted_preds_xyxy[:, 0] != formatted_preds_xyxy[:, 2],
-            formatted_preds_xyxy[:, 1] != formatted_preds_xyxy[:, 3],
+            formatted_preds_xyxy[:, 0] < formatted_preds_xyxy[:, 2],
+            formatted_preds_xyxy[:, 1] < formatted_preds_xyxy[:, 3],
         )
 
         formatted_preds_xyxy = formatted_preds_xyxy[valid_box_mask]
