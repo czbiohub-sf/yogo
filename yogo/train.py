@@ -164,7 +164,7 @@ def train():
         iou_weight=config["iou_weight"],
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
-        class_weights=config["class_weights"],
+        class_weights=torch.tensor(config["class_weights"]),
         classify=classify,
     ).to(device)
 
