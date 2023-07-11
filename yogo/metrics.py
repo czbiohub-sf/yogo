@@ -89,8 +89,8 @@ class Metrics:
         self.reset()
         return res
 
+    @staticmethod
     def _format_preds_and_labels(
-        self,
         batch_preds: torch.Tensor,
         batch_labels: torch.Tensor,
         use_IoU: bool = True,
