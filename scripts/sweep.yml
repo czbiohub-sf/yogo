@@ -3,7 +3,7 @@ command:
   - run
   - yogo
   - train
-  - ../dataset_defs/all-labelled-data-test-auggd.yml
+  -  /hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/biohub-labels/dataset_defs/human-labels/all-labelled-data-test-auggd.yml
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
