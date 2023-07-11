@@ -58,8 +58,8 @@ class Metrics:
 
         formatted_preds, formatted_labels = zip(
             *[
-                format_preds_and_labels(p, l, use_IoU=use_IoU)
-                for p, l in zip(preds, labels)
+                format_preds_and_labels(pred, label, use_IoU=use_IoU)
+                for pred, label in zip(preds, labels)
             ]
         )
 
