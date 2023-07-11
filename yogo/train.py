@@ -359,7 +359,7 @@ def do_training(args) -> None:
                 "iou_weight": args.iou_weight,
                 "no_obj_weight": args.no_obj_weight,
                 "classify_weight": args.classify_weight,
-                "class_weights": normalized_inverse_frequencies([4,2,1,1,1,2,2]),
+                "class_weights": normalized_inverse_frequencies([4, 2, 1, 1, 1, 2, 2]),
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
                 "device": str(device),
