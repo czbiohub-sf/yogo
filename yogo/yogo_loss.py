@@ -115,6 +115,15 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             formatted_preds_xyxy[:, 1] < formatted_preds_xyxy[:, 3],
         )
 
+        torch._assert(
+            formatted_labels[:, 0] < formatted_labels[:, 2],
+            "x1 >= x2 in label!",
+        )
+        torch._assert(
+            formatted_labels[:, 1] < formatted_labels[:, 3],
+            "y1 >= y2 in label!",
+        )
+
         formatted_preds_xyxy = formatted_preds_xyxy[valid_box_mask]
         formatted_labels_masked = formatted_labels_masked[valid_box_mask]
 
