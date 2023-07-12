@@ -174,7 +174,7 @@ def train():
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
         class_weights=class_weights,
-        temperature=config["logit_norm_temperature"],
+        logit_norm_temperature=config["logit_norm_temperature"],
         classify=classify,
     ).to(device)
 
