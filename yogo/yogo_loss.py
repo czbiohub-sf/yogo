@@ -132,10 +132,14 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         # classification loss
         if self._classify:
-            norm = 1 if self.temperature is None else (
-                self.temperature
-                * torch.linalg.norm(pred_batch[:, 5:, :, :], dim=1, keepdim=True)
-                + 1e-7
+            norm = (
+                1
+                if self.temperature is None
+                else (
+                    self.temperature
+                    * torch.linalg.norm(pred_batch[:, 5:, :, :], dim=1, keepdim=True)
+                    + 1e-7
+                )
             )
             classification_loss = (
                 self.classify_weight
