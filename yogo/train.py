@@ -373,8 +373,7 @@ def do_training(args) -> None:
             tags=(args.tag,) if args.tag is not None else None,
         )
 
-    with torch.autograd.set_detect_anomaly(True):
-        train()
+    train()
 
 
 if __name__ == "__main__":
