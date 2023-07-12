@@ -160,7 +160,7 @@ def train():
         iou_weight=config["iou_weight"],
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
-        temperature=config["logit_norm_temperature"],
+        logit_norm_temperature=config["logit_norm_temperature"],
         classify=classify,
     ).to(device)
 
