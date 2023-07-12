@@ -11,6 +11,7 @@ from torchmetrics.classification import (
     MulticlassConfusionMatrix,
     MulticlassAccuracy,
     MulticlassROC,
+    MulticlassCalibrationError,
 )
 
 from yogo.utils.utils import format_preds_and_labels
@@ -30,12 +31,27 @@ class Metrics:
         self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
         self.prediction_metrics = MetricCollection(
             [
-                MulticlassPrecision(num_classes=num_classes, thresholds=None),
-                MulticlassRecall(num_classes=num_classes, thresholds=None),
-                MulticlassAccuracy(
-                    num_classes=num_classes, thresholds=None, average=None
+                MulticlassPrecision(
+                    num_classes=num_classes, thresholds=None, validate_args=False
                 ),
-                MulticlassROC(num_classes=num_classes, thresholds=500, average=None),
+                MulticlassRecall(
+                    num_classes=num_classes, thresholds=None, validate_args=False
+                ),
+                MulticlassAccuracy(
+                    num_classes=num_classes,
+                    thresholds=None,
+                    average=None,
+                    validate_args=False,
+                ),
+                MulticlassROC(
+                    num_classes=num_classes,
+                    thresholds=500,
+                    average=None,
+                    validate_args=False,
+                ),
+                MulticlassCalibrationError(
+                    num_classes=num_classes, n_bins=20, validate_args=False
+                ),
             ]
         )
 
@@ -80,6 +96,7 @@ class Metrics:
             pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassAccuracy"],
             pr_metrics["MulticlassROC"],
+            pr_metrics["MulticlassCalibrationError"].item(),
         )
 
     def reset(self):
