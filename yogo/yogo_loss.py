@@ -116,12 +116,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         )
 
         torch._assert(
-            formatted_labels[:, 0] < formatted_labels[:, 2],
-            "x1 >= x2 in label!",
+            (formatted_labels_masked[:, 0] < formatted_labels_masked[:, 2]).any(),
+            f"x1 >= x2 in label!, {(formatted_labels_masked[:, (0,2)])}",
         )
         torch._assert(
-            formatted_labels[:, 1] < formatted_labels[:, 3],
-            "y1 >= y2 in label!",
+            (formatted_labels_masked[:, 1] < formatted_labels_masked[:, 3]).any(),
+            f"y1 >= y2 in label!, {(formatted_labels_masked[:, (1,3)])}",
         )
 
         formatted_preds_xyxy = formatted_preds_xyxy[valid_box_mask]
