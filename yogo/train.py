@@ -160,15 +160,17 @@ def train():
         iou_weight=config["iou_weight"],
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
-        class_weights=normalized_inverse_frequencies([
-            config["healthy_weight"],
-            config["ring_weight"],
-            config["troph_weight"],
-            config["schizont_weight"],
-            config["gametocyte_weight"],
-            config["wbc_weight"],
-            config["misc_weight"],
-        ]),
+        class_weights=normalized_inverse_frequencies(
+            [
+                config["healthy_weight"],
+                config["ring_weight"],
+                config["troph_weight"],
+                config["schizont_weight"],
+                config["gametocyte_weight"],
+                config["wbc_weight"],
+                config["misc_weight"],
+            ]
+        ),
         temperature=config["logit_norm_temperature"],
         classify=classify,
     ).to(device)
