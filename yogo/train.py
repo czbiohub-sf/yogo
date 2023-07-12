@@ -290,6 +290,7 @@ def train():
             recall,
             accuracy,
             roc_curves,
+            calibration_error,
         ) = test_metrics.compute()
         test_metrics.reset()
 
@@ -304,6 +305,8 @@ def train():
         wandb.summary["test mAP"] = mAP["map"]
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
+        wandb.summary["calibration error"] = calibration_error
+
         wandb.log(
             {
                 "test confusion": get_wandb_confusion(

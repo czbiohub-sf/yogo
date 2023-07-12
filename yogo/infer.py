@@ -35,7 +35,7 @@ def choose_device():
 def choose_dataloader_num_workers(dataset_size):
     if dataset_size < 1000:
         return 0
-    return min(torch.multiprocessing.cpu_count(), 32)
+    return min(torch.multiprocessing.cpu_count(), 64)
 
 
 def save_predictions(
@@ -92,18 +92,36 @@ def get_prediction_class_counts(
 
 def count_cells_for_formatted_preds(
     formatted_class_predictions: torch.Tensor,
+    min_confidence_threshold: Optional[float] = None,
 ) -> torch.Tensor:
     """
     Count the number of predictions in each class of the prediction tensor
-    Expecting shape of (N, num_classes), and each row must sum to 1
+    Expecting shape of (N, num_classes), and each row must sum to 1.
+
+    if min_confidence_threshold is not None, this will ignore predictions
+    with a maximum confidence below min_confidence_threshold. Should be between
+    0 and 1.
     """
     if not len(formatted_class_predictions.shape) == 2:
         raise ValueError(
             "expected formatted_class_predictions to be shape (N, num_classes); "
             "got {formatted_class_predictions.shape}"
         )
-    n_predictions, n_classes = formatted_class_predictions.shape
-    class_predictions = formatted_class_predictions.argmax(dim=1)
+    if min_confidence_threshold is not None:
+        if min_confidence_threshold < 0 or min_confidence_threshold > 1:
+            raise ValueError(
+                "min_confidence_threshold should be between 0 and 1; "
+                f"is {min_confidence_threshold}"
+            )
+    else:
+        min_confidence_threshold = 0
+
+    _, n_classes = formatted_class_predictions.shape
+
+    values, indices = formatted_class_predictions.max(dim=1)
+    mask = values > min_confidence_threshold
+    class_predictions = indices[mask]
+
     return torch.nn.functional.one_hot(class_predictions, num_classes=n_classes).sum(
         dim=0
     )
