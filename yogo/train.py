@@ -291,9 +291,10 @@ def train():
         wandb.summary["test mAP"] = mAP["map"]
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
+        wandb.summary["calibration error"] = calibration_error
+
         wandb.log(
             {
-                "calibration error": calibration_error,
                 "test confusion": get_wandb_confusion(
                     confusion_data, class_names, "test confusion matrix"
                 ),
