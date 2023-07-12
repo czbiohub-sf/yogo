@@ -272,9 +272,7 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 5),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.2),
+            nn.Conv2d(64, 128, 5), nn.LeakyReLU(), nn.Dropout2d(p=0.2)
         )
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 128, 3, stride=2, bias=False),
@@ -322,17 +320,30 @@ class YOGO(nn.Module):
         #  width of bounding box
         #  height of bounding box
         #  'objectness' score
-        if torch.isnan(x).any():
-            import IPython
-            IPython.embed()
-            raise ValueError(f"value in x is nan: {x[:, 2:3, :, :]=}")
+        # if torch.isnan(x).any():
+        #     print("nany")
+        #     import IPython
+        #     IPython.embed()
+        #     raise ValueError(f"value in x is nan: {x[:, 2:3, :, :]=}")
+        # elif torch.any(x[:, 2:3, :, :].abs() > 80):
+        #     print("value in x is > 80")
+        #     import IPython
+        #     IPython.embed()
+        #     raise ValueError(f"value in x is > 709: {x[:, 2:3, :, :]=}")
+
+        # torch.exp(89) == tensor(inf)!
+        # so clamp the max value to 80 (for good measure)
+        # torch.exp(80) == 5.5406e+34, so that's plenty.
+        clamped_whs = torch.clamp(x[:, 2:4, :, :], max=80)
 
         return torch.cat(
             (
                 (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
                 (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
-                self.anchor_w * torch.exp(x[:, 2:3, :, :]),
-                self.anchor_h * torch.exp(x[:, 3:4, :, :]) * self.height_multiplier,
+                self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
+                self.anchor_h
+                * torch.exp(clamped_whs[:, 1:2, :, :])
+                * self.height_multiplier,
                 torch.sigmoid(x[:, 4:5, :, :]),
                 *torch.split(classification, 1, dim=1),
             ),
