@@ -22,8 +22,6 @@ command:
   - 0.0005690962636948274
   - --weight-decay
   - 0.01930025077473428
-  - --logit-norm-temperature
-  - None
 method: bayes
 metric:
   goal: maximize
