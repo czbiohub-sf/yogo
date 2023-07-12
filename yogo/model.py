@@ -259,22 +259,22 @@ class YOGO(nn.Module):
             nn.Conv2d(1, 16, 3, stride=2, bias=False),
             nn.BatchNorm2d(16),
             nn.LeakyReLU(),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.2),
         )
         conv_block_2 = nn.Sequential(
             nn.Conv2d(16, 32, 5),
             nn.LeakyReLU(),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.2),
         )
         conv_block_3 = nn.Sequential(
             nn.Conv2d(32, 64, 3, stride=2),
             nn.LeakyReLU(),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.2),
         )
         conv_block_4 = nn.Sequential(
             nn.Conv2d(64, 128, 5),
             nn.LeakyReLU(),
-            nn.Dropout2d(p=0.5),
+            nn.Dropout2d(p=0.2),
         )
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 128, 3, stride=2, bias=False),
@@ -322,6 +322,11 @@ class YOGO(nn.Module):
         #  width of bounding box
         #  height of bounding box
         #  'objectness' score
+        if torch.isnan(x).any():
+            import IPython
+            IPython.embed()
+            raise ValueError(f"value in x is nan: {x[:, 2:3, :, :]=}")
+
         return torch.cat(
             (
                 (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
