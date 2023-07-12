@@ -276,6 +276,7 @@ def train():
             recall,
             accuracy,
             roc_curves,
+            calibration_error,
         ) = test_metrics.compute()
         test_metrics.reset()
 
@@ -292,6 +293,7 @@ def train():
         wandb.summary["test recall"] = recall
         wandb.log(
             {
+                "calibration error": calibration_error,
                 "test confusion": get_wandb_confusion(
                     confusion_data, class_names, "test confusion matrix"
                 ),
