@@ -7,7 +7,7 @@ command:
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
-  - /home/axel.jacobsen/celldiagnosis/yogo/trained_models/floral-night-1322/best.pth
+  - /home/axel.jacobsen/celldiagnosis/yogo/trained_models/valiant-lion-732/best.pth
   - --epochs
   - 64
   - --batch-size
@@ -17,13 +17,13 @@ command:
   - --iou-weight
   - 5.975860753120121
   - --label-smoothing
-  -  0.14015766222196957
+  - 0.14015766222196957
   - --learning-rate
   - 0.0005690962636948274
   - --weight-decay
   - 0.01930025077473428
   - --logit-norm-temperature
-  - 0.7
+  - None
 method: bayes
 metric:
   goal: maximize
