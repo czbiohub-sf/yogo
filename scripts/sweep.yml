@@ -9,7 +9,7 @@ command:
   - --from-pretrained
   - /home/axel.jacobsen/celldiagnosis/yogo/trained_models/twilight-aardvark-1094/best.pth
   - --epochs
-  - 32
+  - 16
   - --batch-size
   - 128
   - --classify-weight
