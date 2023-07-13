@@ -16,7 +16,7 @@ from typing import Optional, cast, Iterable
 from yogo.model import YOGO
 from yogo.metrics import Metrics
 from yogo.data import YOGO_CLASS_ORDERING
-from yogo.data.yogo_dataloader import get_dataloader, normalized_inverse_frequencies
+from yogo.data.yogo_dataloader import get_dataloader
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
