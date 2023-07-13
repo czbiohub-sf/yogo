@@ -156,7 +156,7 @@ def train():
     ) = init_dataset(config, Sx, Sy)
 
     class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
-    wandb.config.update({"class_weights": class_weights.tolist()})
+    wandb.config.update({"class_weights": class_weights})
 
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
