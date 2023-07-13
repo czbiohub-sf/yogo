@@ -29,29 +29,5 @@ metric:
 parameters:
   healthy_weight:
     distribution: uniform
-    min: 1
-    max: 16
-  ring_weight:
-    distribution: uniform
-    min: 1
-    max: 8
-  troph_weight:
-    distribution: uniform
-    min: 1
-    max: 6
-  schizont_weight:
-    distribution: uniform
-    min: 1
-    max: 6
-  gametocyte_weight:
-    distribution: uniform
-    min: 1
-    max: 6
-  wbc_weight:
-    distribution: uniform
-    min: 1
-    max: 6
-  misc_weight:
-    distribution: uniform
-    min: 1
-    max: 6
+    min: 0
+    max: 1
