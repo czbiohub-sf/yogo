@@ -155,17 +155,7 @@ def train():
         test_dataloader,
     ) = init_dataset(config, Sx, Sy)
 
-    class_weights = normalized_inverse_frequencies(
-        [
-            config["healthy_weight"],
-            config["ring_weight"],
-            config["troph_weight"],
-            config["schizont_weight"],
-            config["gametocyte_weight"],
-            config["wbc_weight"],
-            config["misc_weight"],
-        ]
-    )
+    class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
     wandb.config.update({"class_weights": class_weights.tolist()})
 
     Y_loss = YOGOLoss(
@@ -368,15 +358,7 @@ def do_training(args) -> None:
                 "iou_weight": args.iou_weight,
                 "no_obj_weight": args.no_obj_weight,
                 "classify_weight": args.classify_weight,
-                # class weights
-                "healthy_weight": 8,
-                "ring_weight": 2,
-                "troph_weight": 1,
-                "schizont_weight": 1,
-                "gametocyte_weight": 1,
-                "wbc_weight": 2,
-                "misc_weight": 2,
-                # end class weights
+                "healthy_weight": 1,
                 "logit_norm_temperature": args.logit_norm_temperature,
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
