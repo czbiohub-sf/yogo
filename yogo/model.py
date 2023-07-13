@@ -316,6 +316,11 @@ class YOGO(nn.Module):
         else:
             classification = x[:, 5:, :, :]
 
+        # torch.exp(89) == tensor(inf)!
+        # so clamp the max value to 80 (for good measure)
+        # torch.exp(80) == 5.5406e+34, so that's plenty.
+        clamped_whs = torch.clamp(x[:, 2:4, :, :], max=80)
+
         # implementation of "Direct Location Prediction" from YOLO9000 paper
         #  center of bounding box in x
         #  center of bounding box in y
@@ -326,8 +331,12 @@ class YOGO(nn.Module):
             (
                 (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
                 (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
-                self.anchor_w * torch.exp(x[:, 2:3, :, :]),
-                self.anchor_h * torch.exp(x[:, 3:4, :, :]) * self.height_multiplier,
+                self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
+                (
+                    self.anchor_h
+                    * torch.exp(clamped_whs[:, 1:2, :, :])
+                    * self.height_multiplier
+                ),
                 torch.sigmoid(x[:, 4:5, :, :]),
                 *torch.split(classification, 1, dim=1),
             ),
