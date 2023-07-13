@@ -1,7 +1,7 @@
 #! /bin/bash
 
 #SBATCH --job-name=ULCMalariaYOGOTraining
-#SBATCH --time=16:00:00
+#SBATCH --time=3:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --partition=gpu
