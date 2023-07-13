@@ -7,11 +7,11 @@ command:
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
-  - /home/axel.jacobsen/celldiagnosis/yogo/trained_models/valiant-lion-732/best.pth
+  - /home/axel.jacobsen/celldiagnosis/yogo/trained_models/twilight-aardvark-1094/best.pth
   - --epochs
-  - 64
+  - 32
   - --batch-size
-  - 64
+  - 128
   - --classify-weight
   - 1.8575974263426545
   - --iou-weight
