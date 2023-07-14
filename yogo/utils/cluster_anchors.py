@@ -111,7 +111,7 @@ def k_means(data: CornerBox, k=3) -> CornerBox:
     means = np.concatenate([gen_random_box() for _ in range(k)], axis=0)
 
     boxes = []
-    for _ in range(100):
+    for _ in range(20):
         boxes.append(means.copy())
         mean_groups = get_closest_mean(data, means)
 
@@ -135,8 +135,8 @@ def _calculate_best_anchor(data: CenterBox) -> Tuple[float, float]:
     def f(x: CenterBox):
         return (1 - centered_wh_iou(x, data)).sum()
 
-    corners = k_means(centers_to_corners(data), k=1)[0]
-    centers = corners_to_centers(corners)
+    corners = k_means(centers_to_corners(data), k=1)[0]  # x y x y
+    centers = corners_to_centers(corners)  # xc yc w h
     return cast(Tuple[float, float], (centers[2], centers[3]))
 
 

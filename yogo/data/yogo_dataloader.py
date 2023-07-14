@@ -207,3 +207,37 @@ def get_dataloader(
             collate_fn=partial(collate_batch, transforms=transforms),
         )
     return d
+
+
+def get_class_counts(d: DataLoader[ConcatDataset], num_classes: int) -> torch.Tensor:
+    """
+    d is a Dataloader of one ConcatDataset of ObjectDetectionDatasets and BlobGen datasets.
+    This function should iterate through the datasets of d, ignore BlobDataset datasets,
+    and sum the (num_classes,) tensors returned by `calc_class_counts` of ObjectDetectionDatasets
+
+    it's sort of a weird tree-like structure. from `get_dataloader(path_to_auggd_data)['train']`, you
+    get a Dataloader[ConcatDataset], and the ConcatDataset has [ConcatDataset, BlobGen], and the inner
+    ConcatDataset is the concat of all ObjectDetectionDatasets. So just traverse the tree, adding the
+    datasets in ConcatDatasets, calculating the class counts in
+    """
+    class_counts = torch.zeros(num_classes, dtype=torch.long)
+    dset_iters = [d.dataset.datasets]  # type:ignore
+    for dset_iter in dset_iters:
+        for dataset in tqdm(dset_iter, desc="calculating class weights"):
+            if isinstance(dataset, ConcatDataset):
+                dset_iters.append(dataset.datasets)
+            elif isinstance(dataset, ObjectDetectionDataset):
+                class_counts += dataset.calc_class_counts()
+
+    if class_counts is None:
+        raise ValueError("could not find any ObjectDetectionDatasets in ConcatDataset")
+
+    return class_counts
+
+
+def normalized_inverse_frequencies(d: List[int]) -> torch.Tensor:
+    t = torch.tensor(d)
+    class_freq = t / t.sum()
+    class_weights = 1.0 / class_freq
+    class_weights = class_weights / class_weights.sum()
+    return class_weights

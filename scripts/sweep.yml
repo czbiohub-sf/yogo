@@ -3,41 +3,31 @@ command:
   - run
   - yogo
   - train
-  -  /hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/biohub-labels/dataset_defs/human-labels/all-labelled-data-test-auggd.yml
+  -  /hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/biohub-labels/dataset_defs/human-labels/all-labelled-data-test-auggd-good-healthy.yml
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
-  - trained_models/floral-night-1322/best.pth
+  - /home/axel.jacobsen/celldiagnosis/yogo/trained_models/twilight-aardvark-1094/best.pth
   - --epochs
-  - 64
+  - 16
   - --batch-size
-  - 64
+  - 128
+  - --classify-weight
+  - 1.8575974263426545
+  - --iou-weight
+  - 5.975860753120121
+  - --label-smoothing
+  - 0.14015766222196957
+  - --learning-rate
+  - 0.0005690962636948274
+  - --weight-decay
+  - 0.01930025077473428
 method: bayes
 metric:
   goal: maximize
   name: test mAP
 parameters:
-  classify_weight:
-    distribution: log_uniform_values
-    max: 10
-    min: 1
-  iou_weight:
-    distribution: log_uniform_values
-    max: 10
-    min: 1
-  learning_rate:
-    distribution: log_uniform_values
-    min: 0.0001
-    max: 0.007
-  weight_decay:
-    distribution: log_uniform_values
-    min: 0.0001
-    max: 0.5
-  label_smoothing:
-    distribution: log_uniform_values
-    min: 0.0009
-    max: 0.1
-  logit_norm_temperature:
+  healthy_weight:
     distribution: uniform
-    min: 0.1
+    min: 0
     max: 1

@@ -9,4 +9,5 @@ class DefaultHyperparams:
     IOU_WEIGHT = 5.0
     NO_OBJ_WEIGHT = 0.5
     CLASSIFY_WEIGHT = 1.0
+    HEALTHY_WEIGHT = 1.0
     LOGIT_NORM_TEMPERATURE = None

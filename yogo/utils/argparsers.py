@@ -164,6 +164,12 @@ def train_parser(parser=None):
         default=df.CLASSIFY_WEIGHT,
     )
     parser.add_argument(
+        "--healthy-weight",
+        type=unitary_float,
+        help=f"weight for healthy class, between 0 and 1 (default {df.HEALTHY_WEIGHT})",
+        default=df.HEALTHY_WEIGHT,
+    )
+    parser.add_argument(
         "--model",
         default=None,
         const=None,

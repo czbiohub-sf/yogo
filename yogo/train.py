@@ -15,8 +15,10 @@ from typing import Optional, cast, Iterable
 
 from yogo.model import YOGO
 from yogo.metrics import Metrics
-from yogo.yogo_loss import YOGOLoss
 from yogo.data import YOGO_CLASS_ORDERING
+from yogo.data.yogo_dataloader import get_dataloader
+from yogo.data.dataset_description_file import load_dataset_description
+from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
@@ -26,8 +28,6 @@ from yogo.utils import (
     get_wandb_roc,
     Timer,
 )
-from yogo.data.yogo_dataloader import get_dataloader
-from yogo.data.dataset_description_file import load_dataset_description
 
 
 torch.backends.cudnn.benchmark = True
@@ -155,11 +155,15 @@ def train():
         test_dataloader,
     ) = init_dataset(config, Sx, Sy)
 
+    class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
+    wandb.config.update({"class_weights": class_weights})
+
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
         iou_weight=config["iou_weight"],
         classify_weight=config["classify_weight"],
         label_smoothing=config["label_smoothing"],
+        class_weights=torch.tensor(class_weights),
         logit_norm_temperature=config["logit_norm_temperature"],
         classify=classify,
     ).to(device)
@@ -354,6 +358,7 @@ def do_training(args) -> None:
                 "iou_weight": args.iou_weight,
                 "no_obj_weight": args.no_obj_weight,
                 "classify_weight": args.classify_weight,
+                "healthy_weight": args.healthy_weight,
                 "logit_norm_temperature": args.logit_norm_temperature,
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
