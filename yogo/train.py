@@ -358,7 +358,7 @@ def do_training(args) -> None:
                 "iou_weight": args.iou_weight,
                 "no_obj_weight": args.no_obj_weight,
                 "classify_weight": args.classify_weight,
-                "healthy_weight": 1,
+                "healthy_weight": args.healthy_weight,
                 "logit_norm_temperature": args.logit_norm_temperature,
                 "epochs": args.epochs,
                 "batch_size": args.batch_size,
