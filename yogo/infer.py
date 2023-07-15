@@ -213,8 +213,6 @@ def predict(
     for i, (img_batch, fnames) in enumerate(image_dataloader):
         res = model(img_batch.to(device)).to("cpu")
 
-        assert torch.all(res <= 1), f"returned tensor w/ max value {res.max()}"
-
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
                 bbox_img = draw_yogo_prediction(
