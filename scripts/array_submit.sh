@@ -12,12 +12,22 @@
 #SBATCH --gpus-per-node=a100:1
 #SBATCH --cpus-per-task=64
 
-FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p uganda_runs.txt)
+# check if there is an input
+if [ -z "$1" ]; then
+  echo "usage: $0 <path-to-file>"
+  exit 1
+fi
+
+FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$1")
 FILE_NAME=$(basename "$FILE_PATH")
 
-echo $FILE_PATH > "results/${FILE_NAME}.txt"
-
-conda run yogo infer \
+out=conda run yogo infer \
   /home/axel.jacobsen/celldiagnosis/yogo/trained_models/fallen-wind-1668/best.pth \
   --path-to-images "${FILE_PATH}/images" \
-  --count >> "results/${FILE_NAME}.txt"
+  --count
+
+# if the prev command is successful, pipe output to "results/${FILE_NAME}.txt"
+if [ $? -eq 0 ]; then
+  echo $FILE_PATH > "results/${FILE_NAME}.txt"
+  echo "$out" >> "results/${FILE_NAME}.txt"
+fi
