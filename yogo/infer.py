@@ -210,7 +210,18 @@ def predict(
             (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
         )
 
-    for i, (img_batch, fnames) in enumerate(image_dataloader):
+    file_iterator = enumerate(image_dataloader)
+    while True:
+        # attempting to be forgiving to malformed images, which sometimes occurs
+        # when exporting zip files
+        try:
+            i, (img_batch, fnames) = next(file_iterator)
+        except StopIteration:
+            break
+        except RuntimeError as e:
+            warnings.warn(f"got error {e}; continuing")
+            continue
+
         res = model(img_batch.to(device)).to("cpu")
 
         if draw_boxes:
