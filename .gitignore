@@ -24,3 +24,4 @@ training_profile.json
 *.json.gz
 yogo.egg-info
 poetry.lock
+temp_output
