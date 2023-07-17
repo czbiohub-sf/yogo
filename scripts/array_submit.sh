@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #SBATCH --job-name=yogoUgandaInfer
-#SBATCH --output=logs/%A_%a.out
-#SBATCH --error=logs/%A_%a.err
+#SBATCH --output=temp_output/logs/%A_%a.out
+#SBATCH --error=temp_output/logs/%A_%a.err
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
@@ -21,13 +21,17 @@ fi
 FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$1")
 FILE_NAME=$(basename "$FILE_PATH")
 
-out=conda run yogo infer \
-  /home/axel.jacobsen/celldiagnosis/yogo/trained_models/fallen-wind-1668/best.pth \
-  --path-to-images "${FILE_PATH}/images" \
-  --count
+mkdir -p temp_output/results
+
+out=$(
+  conda run yogo infer \
+    /home/axel.jacobsen/celldiagnosis/yogo/trained_models/fallen-wind-1668/best.pth \
+    --path-to-images "${FILE_PATH}/images" \
+    --count
+)
 
 # if the prev command is successful, pipe output to "results/${FILE_NAME}.txt"
 if [ $? -eq 0 ]; then
-  echo $FILE_PATH > "results/${FILE_NAME}.txt"
-  echo "$out" >> "results/${FILE_NAME}.txt"
+  echo $FILE_PATH > "temp_output/results/${FILE_NAME}.txt"
+  echo "$out" >> "temp_output/results/${FILE_NAME}.txt"
 fi
