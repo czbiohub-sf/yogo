@@ -21,6 +21,16 @@ fi
 FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$1")
 FILE_NAME=$(basename "$FILE_PATH")
 
+if [ ! -d "${FILE_PATH}/images" ]; then
+   >&2 echo "${FILE_PATH}/images doesn't exist"
+  exit 1
+fi
+
+if [ ! -d "${FILE_PATH//_images/}/sub_sample_imgs" ]; then
+   >&2 echo "${FILE_PATH//_images/}/sub_sample_imgs doesn't exist"
+  exit 1
+fi
+
 mkdir -p temp_output/results
 
 out=$(
