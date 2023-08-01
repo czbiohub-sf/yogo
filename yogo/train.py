@@ -102,7 +102,9 @@ def init_dataset(config: WandbConfig, Sx, Sy):
 
 
 def train(rank, world_size):
-    torch.distributed.init_process_group(backend="nccl", rank=rank, world_size=world_size)
+    torch.distributed.init_process_group(
+        backend="nccl", rank=rank, world_size=world_size
+    )
 
     config = wandb.config
     epochs = config["epochs"]
@@ -171,7 +173,7 @@ def train(rank, world_size):
         class_weights=torch.tensor(class_weights),
         logit_norm_temperature=config["logit_norm_temperature"],
         classify=classify,
-    ).to(device)
+    ).to(rank)
 
     optimizer = AdamW(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
@@ -185,8 +187,8 @@ def train(rank, world_size):
     for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
-            imgs = imgs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
+            imgs = imgs.to(rank, non_blocking=True)
+            labels = labels.to(rank, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             outputs = net(imgs)
             loss, loss_components = Y_loss(outputs, labels)
@@ -209,12 +211,12 @@ def train(rank, world_size):
             )
 
         # do validation things
-        val_loss = torch.tensor(0.0, device=device)
+        val_loss = torch.tensor(0.0, device=rank)
         net.eval()
         with torch.no_grad():
             for imgs, labels in validate_dataloader:
-                imgs = imgs.to(device, non_blocking=True)
-                labels = labels.to(device, non_blocking=True)
+                imgs = imgs.to(rank, non_blocking=True)
+                labels = labels.to(rank, non_blocking=True)
                 outputs = net(imgs)
                 loss, _ = Y_loss(outputs, labels)
                 val_loss += loss
@@ -264,61 +266,62 @@ def train(rank, world_size):
 
         net.train()
 
-    net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
-    print(f"loaded best.pth from step {cfg['step']} for test inference")
-    net.to(device)
+    if rank == 0:
+        net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
+        print(f"loaded best.pth from step {cfg['step']} for test inference")
+        net.to(0)
 
-    test_loss = 0.0
-    with torch.no_grad():
-        for imgs, labels in test_dataloader:
-            imgs = imgs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
-            outputs = net(imgs)
-            loss, _ = Y_loss(outputs, labels)
-            test_loss += loss.item()
-            test_metrics.update(outputs.detach(), labels.detach())
+        test_loss = 0.0
+        with torch.no_grad():
+            for imgs, labels in test_dataloader:
+                imgs = imgs.to(rank, non_blocking=True)
+                labels = labels.to(rank, non_blocking=True)
+                outputs = net(imgs)
+                loss, _ = Y_loss(outputs, labels)
+                test_loss += loss.item()
+                test_metrics.update(outputs.detach(), labels.detach())
 
-        (
-            mAP,
-            confusion_data,
-            precision,
-            recall,
-            accuracy,
-            roc_curves,
-            calibration_error,
-        ) = test_metrics.compute()
-        test_metrics.reset()
+            (
+                mAP,
+                confusion_data,
+                precision,
+                recall,
+                accuracy,
+                roc_curves,
+                calibration_error,
+            ) = test_metrics.compute()
+            test_metrics.reset()
 
-        accuracy_table = wandb.Table(
-            data=[[labl, acc] for labl, acc in zip(class_names, accuracy)],
-            columns=["label", "accuracy"],
-        )
+            accuracy_table = wandb.Table(
+                data=[[labl, acc] for labl, acc in zip(class_names, accuracy)],
+                columns=["label", "accuracy"],
+            )
 
-        fpr, tpr, thresholds = roc_curves
+            fpr, tpr, thresholds = roc_curves
 
-        wandb.summary["test loss"] = test_loss / len(test_dataloader)
-        wandb.summary["test mAP"] = mAP["map"]
-        wandb.summary["test precision"] = precision
-        wandb.summary["test recall"] = recall
-        wandb.summary["calibration error"] = calibration_error
+            wandb.summary["test loss"] = test_loss / len(test_dataloader)
+            wandb.summary["test mAP"] = mAP["map"]
+            wandb.summary["test precision"] = precision
+            wandb.summary["test recall"] = recall
+            wandb.summary["calibration error"] = calibration_error
 
-        wandb.log(
-            {
-                "test confusion": get_wandb_confusion(
-                    confusion_data, class_names, "test confusion matrix"
-                ),
-                "test accuracy": wandb.plot.bar(
-                    accuracy_table, "label", "accuracy", title="test accuracy"
-                ),
-                "test ROC": get_wandb_roc(
-                    fpr=[t.tolist() for t in fpr],
-                    tpr=[t.tolist() for t in tpr],
-                    thresholds=[t.tolist() for t in thresholds],
-                    classes=class_names,
-                ),
-            }
-        )
-        wandb.finish()
+            wandb.log(
+                {
+                    "test confusion": get_wandb_confusion(
+                        confusion_data, class_names, "test confusion matrix"
+                    ),
+                    "test accuracy": wandb.plot.bar(
+                        accuracy_table, "label", "accuracy", title="test accuracy"
+                    ),
+                    "test ROC": get_wandb_roc(
+                        fpr=[t.tolist() for t in fpr],
+                        tpr=[t.tolist() for t in tpr],
+                        thresholds=[t.tolist() for t in thresholds],
+                        classes=class_names,
+                    ),
+                }
+            )
+            wandb.finish()
 
 
 def do_training(args) -> None:
@@ -392,7 +395,7 @@ def do_training(args) -> None:
 
     world_size = 2
 
-    mp.spawn(train, args=(world_size,),nprocs=world_size,join=True)
+    mp.spawn(train, args=(world_size,), nprocs=world_size, join=True)
 
 
 if __name__ == "__main__":
