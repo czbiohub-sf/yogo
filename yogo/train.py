@@ -4,14 +4,16 @@ import os
 import wandb
 import torch
 
+import torch.multiprocessing as mp
+
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.nn.parallel import DistributedDataParallell as DDP
 
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, cast, Iterable
-
 
 from yogo.model import YOGO
 from yogo.metrics import Metrics
@@ -99,9 +101,10 @@ def init_dataset(config: WandbConfig, Sx, Sy):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-def train():
+def train(rank, world_size):
+    torch.distributed.init_process_group(backend="nccl", rank=rank, world_size=world_size)
+
     config = wandb.config
-    device = config["device"]
     epochs = config["epochs"]
     learning_rate = config["learning_rate"]
     anchor_w = config["anchor_w"]
@@ -114,7 +117,7 @@ def train():
 
     test_metrics = Metrics(
         num_classes=num_classes,
-        device=device,
+        device=0,
         class_names=class_names,
         classify=classify,
     )
@@ -126,13 +129,13 @@ def train():
             anchor_w=anchor_w,
             anchor_h=anchor_h,
             model_func=model,
-        ).to(device)
+        ).to(rank)
         global_step = 0
     else:
         print(f"loading pretrained path from {config.pretrained_path}")
 
         net, net_cfg = YOGO.from_pth(config.pretrained_path)
-        net.to(device)
+        net.to(rank)
 
         global_step = net_cfg["step"]
         wandb.config.update(
@@ -144,6 +147,8 @@ def train():
                 "mismatch in pretrained network image resize shape and current resize shape: "
                 f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
             )
+
+    net = DDP(net, device_ids=[rank])
 
     Sx, Sy = net.get_grid_size()
     wandb.config.update({"Sx": Sx, "Sy": Sy})
@@ -313,6 +318,7 @@ def train():
                 ),
             }
         )
+        wandb.finish()
 
 
 def do_training(args) -> None:
@@ -381,7 +387,12 @@ def do_training(args) -> None:
             tags=(args.tag,) if args.tag is not None else None,
         )
 
-    train()
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "29500"
+
+    world_size = 2
+
+    mp.spawn(train, args=(world_size,),nprocs=world_size,join=True)
 
 
 if __name__ == "__main__":
