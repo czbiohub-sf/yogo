@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import os
 import torch
 import signal
 import warnings
@@ -35,7 +36,7 @@ def choose_device():
 def choose_dataloader_num_workers(dataset_size):
     if dataset_size < 1000:
         return 0
-    return min(torch.multiprocessing.cpu_count(), 64)
+    return min(len(os.sched_getaffinity(0)), 64)
 
 
 def save_predictions(
