@@ -292,8 +292,11 @@ class YOGO(nn.Module):
         )
         conv_block_8 = nn.Sequential(
             nn.Conv2d(128, 5 + num_classes, 1),
+            nn.Flatten(),
+            nn.Linear((5 + num_classes) * 97 * 129, (5 + num_classes) * 97 * 129),
             nn.LeakyReLU(),
-            nn.Conv2d(5 + num_classes, 5 + num_classes, 1),
+            nn.Linear((5 + num_classes) * 97 * 129, (5 + num_classes) * 97 * 129),
+            nn.Unflatten(1, (12, 97, 129)),
         )
         return nn.Sequential(
             conv_block_1,
