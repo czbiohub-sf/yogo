@@ -8,7 +8,7 @@ import torch.multiprocessing as mp
 
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.nn.parallel import DistributedDataParallell as DDP
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from pathlib import Path
 from copy import deepcopy
@@ -101,12 +101,25 @@ def init_dataset(config: WandbConfig, Sx, Sy):
     return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
 
 
-def train(rank, world_size):
+def train(rank, world_size, config):
+    if rank!=0:
+        os.environ['WANDB_MODE'] = 'disabled'
+
+    if rank == 0:
+        wandb.init(
+            project="yogo",
+            entity="bioengineering",
+            config=config,
+            name=config["name"],
+            notes=config["note"],
+            tags=(config["tag"],) if config["tag"] is not None else None,
+        )
+
+
     torch.distributed.init_process_group(
         backend="nccl", rank=rank, world_size=world_size
     )
 
-    config = wandb.config
     epochs = config["epochs"]
     learning_rate = config["learning_rate"]
     anchor_w = config["anchor_w"]
@@ -124,7 +137,7 @@ def train(rank, world_size):
         classify=classify,
     )
 
-    if config.pretrained_path is None or config.pretrained_path == "none":
+    if config['pretrained_path'] is None or config['pretrained_path'] == "none":
         net = YOGO(
             num_classes=num_classes,
             img_size=config["resize_shape"],
@@ -134,15 +147,16 @@ def train(rank, world_size):
         ).to(rank)
         global_step = 0
     else:
-        print(f"loading pretrained path from {config.pretrained_path}")
+        print(f"loading pretrained path from {config['pretrained_path']}")
 
-        net, net_cfg = YOGO.from_pth(config.pretrained_path)
+        net, net_cfg = YOGO.from_pth(config["pretrained_path"])
         net.to(rank)
 
         global_step = net_cfg["step"]
-        wandb.config.update(
-            {"normalize_images": net_cfg["normalize_images"]}, allow_val_change=True
-        )
+        if rank == 0:
+            wandb.config.update(
+                {"normalize_images": net_cfg["normalize_images"]}, allow_val_change=True
+            )
 
         if any(net.img_size.cpu().numpy() != config["resize_shape"]):
             raise RuntimeError(
@@ -153,7 +167,8 @@ def train(rank, world_size):
     net = DDP(net, device_ids=[rank])
 
     Sx, Sy = net.get_grid_size()
-    wandb.config.update({"Sx": Sx, "Sy": Sy})
+    if rank == 0:
+        wandb.config.update({"Sx": Sx, "Sy": Sy})
 
     (
         model_save_dir,
@@ -163,7 +178,8 @@ def train(rank, world_size):
     ) = init_dataset(config, Sx, Sy)
 
     class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
-    wandb.config.update({"class_weights": class_weights})
+    if rank == 0:
+        wandb.config.update({"class_weights": class_weights})
 
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
@@ -197,7 +213,8 @@ def train(rank, world_size):
             scheduler.step()
 
             global_step += 1
-            wandb.log(
+            if rank == 0:
+                wandb.log(
                 {
                     "train loss": loss.item(),
                     "epoch": epoch,
@@ -210,61 +227,62 @@ def train(rank, world_size):
                 step=global_step,
             )
 
-        # do validation things
-        val_loss = torch.tensor(0.0, device=rank)
-        net.eval()
-        with torch.no_grad():
-            for imgs, labels in validate_dataloader:
-                imgs = imgs.to(rank, non_blocking=True)
-                labels = labels.to(rank, non_blocking=True)
-                outputs = net(imgs)
-                loss, _ = Y_loss(outputs, labels)
-                val_loss += loss
+        if rank == 0:
+            # do validation things
+            val_loss = torch.tensor(0.0, device=rank)
+            net.eval()
+            with torch.no_grad():
+                for imgs, labels in validate_dataloader:
+                    imgs = imgs.to(rank, non_blocking=True)
+                    labels = labels.to(rank, non_blocking=True)
+                    outputs = net(imgs)
+                    loss, _ = Y_loss(outputs, labels)
+                    val_loss += loss
 
-            # just use the final imgs and labels for val!
-            annotated_img = wandb.Image(
-                draw_yogo_prediction(
-                    imgs[0, ...],
-                    outputs[0, ...].detach(),
-                    labels=class_names,
-                    images_are_normalized=config["normalize_images"],
+                # just use the final imgs and labels for val!
+                annotated_img = wandb.Image(
+                    draw_yogo_prediction(
+                        imgs[0, ...],
+                        outputs[0, ...].detach(),
+                        labels=class_names,
+                        images_are_normalized=config["normalize_images"],
+                    )
                 )
-            )
-            mean_val_loss = val_loss.item() / len(validate_dataloader)
-            wandb.log(
-                {
-                    "validation bbs": annotated_img,
-                    "val loss": mean_val_loss,
-                },
-                step=global_step,
-            )
-
-            if mean_val_loss < min_val_loss:
-                min_val_loss = mean_val_loss
-                wandb.log({"best_val_loss": mean_val_loss}, step=global_step)
-                checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "best.pth",
-                    global_step,
-                    config["normalize_images"],
-                    model_name=wandb.run.name,
-                    model_version=config["model"],
-                )
-            else:
-                checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "latest.pth",
-                    global_step,
-                    config["normalize_images"],
-                    model_name=wandb.run.name,
-                    model_version=config["model"],
+                mean_val_loss = val_loss.item() / len(validate_dataloader)
+                wandb.log(
+                    {
+                        "validation bbs": annotated_img,
+                        "val loss": mean_val_loss,
+                    },
+                    step=global_step,
                 )
 
-        net.train()
+                if mean_val_loss < min_val_loss:
+                    min_val_loss = mean_val_loss
+                    wandb.log({"best_val_loss": mean_val_loss}, step=global_step)
+                    checkpoint_model(
+                        net,
+                        epoch,
+                        optimizer,
+                        model_save_dir / "best.pth",
+                        global_step,
+                        config["normalize_images"],
+                        model_name=wandb.run.name,
+                        model_version=config["model"],
+                    )
+                else:
+                    checkpoint_model(
+                        net,
+                        epoch,
+                        optimizer,
+                        model_save_dir / "latest.pth",
+                        global_step,
+                        config["normalize_images"],
+                        model_name=wandb.run.name,
+                        model_version=config["model"],
+                    )
+
+            net.train()
 
     if rank == 0:
         net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
@@ -355,47 +373,42 @@ def do_training(args) -> None:
     with Timer("getting best anchor"):
         anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
-    with Timer("initting wandb"):
-        wandb.init(
-            project="yogo",
-            entity="bioengineering",
-            config={
-                "learning_rate": args.learning_rate,
-                "decay_factor": args.lr_decay_factor,
-                "weight_decay": args.weight_decay,
-                "label_smoothing": args.label_smoothing,
-                "iou_weight": args.iou_weight,
-                "no_obj_weight": args.no_obj_weight,
-                "classify_weight": args.classify_weight,
-                "healthy_weight": args.healthy_weight,
-                "logit_norm_temperature": args.logit_norm_temperature,
-                "epochs": args.epochs,
-                "batch_size": args.batch_size,
-                "device": str(device),
-                "anchor_w": anchor_w,
-                "anchor_h": anchor_h,
-                "model": args.model,
-                "resize_shape": resize_target_size,
-                "vertical_crop_size": vertical_crop_size,
-                "preprocess_type": preprocess_type,
-                "class_names": YOGO_CLASS_ORDERING,
-                "pretrained_path": args.from_pretrained,
-                "no_classify": args.no_classify,
-                "normalize_images": args.normalize_images,
-                "dataset_descriptor_file": args.dataset_descriptor_file,
-                "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
-            },
-            name=args.name,
-            notes=args.note,
-            tags=(args.tag,) if args.tag is not None else None,
-        )
+    config={
+        "learning_rate": args.learning_rate,
+        "decay_factor": args.lr_decay_factor,
+        "weight_decay": args.weight_decay,
+        "label_smoothing": args.label_smoothing,
+        "iou_weight": args.iou_weight,
+        "no_obj_weight": args.no_obj_weight,
+        "classify_weight": args.classify_weight,
+        "healthy_weight": args.healthy_weight,
+        "logit_norm_temperature": args.logit_norm_temperature,
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "device": str(device),
+        "anchor_w": anchor_w,
+        "anchor_h": anchor_h,
+        "model": args.model,
+        "resize_shape": resize_target_size,
+        "vertical_crop_size": vertical_crop_size,
+        "preprocess_type": preprocess_type,
+        "class_names": YOGO_CLASS_ORDERING,
+        "pretrained_path": args.from_pretrained,
+        "no_classify": args.no_classify,
+        "normalize_images": args.normalize_images,
+        "dataset_descriptor_file": args.dataset_descriptor_file,
+        "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
+        "name": args.name,
+        "note": args.note,
+        "tag": args.tag,
+    }
 
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "29500"
 
-    world_size = 2
+    world_size = 4
 
-    mp.spawn(train, args=(world_size,), nprocs=world_size, join=True)
+    mp.spawn(train, args=(world_size,config), nprocs=world_size, join=True)
 
 
 if __name__ == "__main__":
