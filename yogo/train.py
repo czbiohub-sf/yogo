@@ -178,7 +178,6 @@ def train():
 
     min_val_loss = float("inf")
     for epoch in range(epochs):
-        # train
         for imgs, labels in train_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
@@ -203,7 +202,6 @@ def train():
                 step=global_step,
             )
 
-        # do validation things
         val_loss = torch.tensor(0.0, device=device)
         net.eval()
         with torch.no_grad():
