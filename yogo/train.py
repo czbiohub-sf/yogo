@@ -82,14 +82,6 @@ def init_dataset(config: WandbConfig, Sx, Sy):
     validate_dataloader: Iterable = dataloaders.get("val", [])
     test_dataloader: Iterable = dataloaders.get("test", [])
 
-    wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
-            "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
-            "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
-        }
-    )
-
     if wandb.run is not None:
         model_save_dir = Path(f"trained_models/{wandb.run.name}")
     else:
@@ -105,7 +97,9 @@ def train(rank, world_size, config):
     if rank!=0:
         os.environ['WANDB_MODE'] = 'disabled'
 
+    print(rank)
     if rank == 0:
+        print("YO")
         wandb.init(
             project="yogo",
             entity="bioengineering",
@@ -114,6 +108,9 @@ def train(rank, world_size, config):
             notes=config["note"],
             tags=(config["tag"],) if config["tag"] is not None else None,
         )
+    else:
+        import time
+        time.sleep(20)
 
 
     torch.distributed.init_process_group(
@@ -129,6 +126,8 @@ def train(rank, world_size, config):
     classify = not config["no_classify"]
     model = get_model_func(config["model"])
     num_classes = len(class_names)
+    device = f"cuda:{rank}"
+    print(f"{device=}, {type(device)=} ")
 
     test_metrics = Metrics(
         num_classes=num_classes,
@@ -144,13 +143,13 @@ def train(rank, world_size, config):
             anchor_w=anchor_w,
             anchor_h=anchor_h,
             model_func=model,
-        ).to(rank)
+        ).to(device)
         global_step = 0
     else:
         print(f"loading pretrained path from {config['pretrained_path']}")
 
         net, net_cfg = YOGO.from_pth(config["pretrained_path"])
-        net.to(rank)
+        net.to(device)
 
         global_step = net_cfg["step"]
         if rank == 0:
@@ -164,11 +163,9 @@ def train(rank, world_size, config):
                 f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
             )
 
-    net = DDP(net, device_ids=[rank])
-
     Sx, Sy = net.get_grid_size()
-    if rank == 0:
-        wandb.config.update({"Sx": Sx, "Sy": Sy})
+
+    net = DDP(net, device_ids=[rank])
 
     (
         model_save_dir,
@@ -180,6 +177,15 @@ def train(rank, world_size, config):
     class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
     if rank == 0:
         wandb.config.update({"class_weights": class_weights})
+        wandb.config.update({"Sx": Sx, "Sy": Sy})
+        wandb.config.update(
+            {  # we do this here b.c. batch_size can change wrt sweeps
+                "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
+                "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
+                "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
+            }
+        )
+
 
     Y_loss = YOGOLoss(
         no_obj_weight=config["no_obj_weight"],
@@ -189,7 +195,7 @@ def train(rank, world_size, config):
         class_weights=torch.tensor(class_weights),
         logit_norm_temperature=config["logit_norm_temperature"],
         classify=classify,
-    ).to(rank)
+    ).to(device)
 
     optimizer = AdamW(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
@@ -203,8 +209,8 @@ def train(rank, world_size, config):
     for epoch in range(epochs):
         # train
         for imgs, labels in train_dataloader:
-            imgs = imgs.to(rank, non_blocking=True)
-            labels = labels.to(rank, non_blocking=True)
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
             outputs = net(imgs)
             loss, loss_components = Y_loss(outputs, labels)
@@ -219,8 +225,8 @@ def train(rank, world_size, config):
                     "train loss": loss.item(),
                     "epoch": epoch,
                     "LR": scheduler.get_last_lr()[0],
-                    "training grad norm": net.grad_norm(),
-                    "training param norm": net.param_norm(),
+                    # "training grad norm": net.grad_norm(),
+                    # "training param norm": net.param_norm(),
                     **loss_components,
                 },
                 commit=global_step % 100 == 0,
@@ -233,8 +239,8 @@ def train(rank, world_size, config):
             net.eval()
             with torch.no_grad():
                 for imgs, labels in validate_dataloader:
-                    imgs = imgs.to(rank, non_blocking=True)
-                    labels = labels.to(rank, non_blocking=True)
+                    imgs = imgs.to(device, non_blocking=True)
+                    labels = labels.to(device, non_blocking=True)
                     outputs = net(imgs)
                     loss, _ = Y_loss(outputs, labels)
                     val_loss += loss
@@ -287,13 +293,13 @@ def train(rank, world_size, config):
     if rank == 0:
         net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
         print(f"loaded best.pth from step {cfg['step']} for test inference")
-        net.to(0)
+        net.to(device)
 
         test_loss = 0.0
         with torch.no_grad():
             for imgs, labels in test_dataloader:
-                imgs = imgs.to(rank, non_blocking=True)
-                labels = labels.to(rank, non_blocking=True)
+                imgs = imgs.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
                 outputs = net(imgs)
                 loss, _ = Y_loss(outputs, labels)
                 test_loss += loss.item()
@@ -340,6 +346,7 @@ def train(rank, world_size, config):
                 }
             )
             wandb.finish()
+            torch.distributed.destroy_process_group()
 
 
 def do_training(args) -> None:
