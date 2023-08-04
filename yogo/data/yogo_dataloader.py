@@ -163,8 +163,6 @@ def get_dataloader(
 
     augmentations: List[DualInputModule] = (
         [
-            ImageTransformLabelIdentity(RandomAdjustSharpness(0, p=0.5)),
-            ImageTransformLabelIdentity(ColorJitter(brightness=0.2, contrast=0.2)),
             RandomHorizontalFlipWithBBs(0.5),
             RandomVerticalFlipWithBBs(0.5),
         ]
