@@ -184,7 +184,6 @@ def get_dataloader(
         raise ValueError(f"got invalid preprocess type {preprocess_type}")
 
     num_workers = min(len(os.sched_getaffinity(0)) // 2, 32)
-    num_workers = 0
 
     d = dict()
     for designation, dataset in split_datasets.items():
@@ -202,7 +201,7 @@ def get_dataloader(
             dataset,
             shuffle=False,
             drop_last=False,
-            pin_memory=False,
+            pin_memory=True,
             batch_size=batch_size,
             persistent_workers=num_workers > 0,
             multiprocessing_context="spawn" if num_workers > 0 else None,
