@@ -183,7 +183,7 @@ def get_dataloader(
     else:
         raise ValueError(f"got invalid preprocess type {preprocess_type}")
 
-    num_workers = min(len(os.sched_getaffinity(0)) // 2, 32)
+    num_workers = min(len(os.sched_getaffinity(0)) // world_size, 32)
 
     d = dict()
     for designation, dataset in split_datasets.items():
