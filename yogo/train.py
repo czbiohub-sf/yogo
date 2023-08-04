@@ -65,7 +65,7 @@ def checkpoint_model(
     )
 
 
-def init_dataset(config: WandbConfig, Sx, Sy):
+def init_dataset(config: WandbConfig, Sx, Sy, rank, world_size):
     dataloaders = get_dataloader(
         config["dataset_descriptor_file"],
         config["batch_size"],
@@ -75,6 +75,8 @@ def init_dataset(config: WandbConfig, Sx, Sy):
         vertical_crop_size=config["vertical_crop_size"],
         resize_shape=config["resize_shape"],
         normalize_images=config["normalize_images"],
+        rank=rank,
+        world_size=world_size,
     )
 
     train_dataloader = dataloaders["train"]
@@ -108,11 +110,9 @@ def train(rank, world_size, config):
             notes=config["note"],
             tags=(config["tag"],) if config["tag"] is not None else None,
         )
-    else:
-        import time
-        time.sleep(20)
 
-
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
     torch.distributed.init_process_group(
         backend="nccl", rank=rank, world_size=world_size
     )
@@ -172,7 +172,7 @@ def train(rank, world_size, config):
         train_dataloader,
         validate_dataloader,
         test_dataloader,
-    ) = init_dataset(config, Sx, Sy)
+    ) = init_dataset(config, Sx, Sy, rank, world_size)
 
     class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
     if rank == 0:
@@ -413,9 +413,9 @@ def do_training(args) -> None:
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "29500"
 
-    world_size = 4
-
-    mp.spawn(train, args=(world_size,config), nprocs=world_size, join=True)
+    world_size = torch.cuda.device_count()
+    print(f"{world_size=}")
+    mp.spawn(train, args=(world_size, config), nprocs=world_size, join=True)
 
 
 if __name__ == "__main__":
