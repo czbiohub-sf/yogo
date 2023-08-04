@@ -126,13 +126,12 @@ def train():
             anchor_w=anchor_w,
             anchor_h=anchor_h,
             model_func=model,
-        ).to(device)
+        )
         global_step = 0
     else:
         print(f"loading pretrained path from {config.pretrained_path}")
 
         net, net_cfg = YOGO.from_pth(config.pretrained_path)
-        net.to(device)
 
         global_step = net_cfg["step"]
         wandb.config.update(
@@ -147,6 +146,12 @@ def train():
 
     Sx, Sy = net.get_grid_size()
     wandb.config.update({"Sx": Sx, "Sy": Sy})
+
+    if torch.cuda.device_count() > 1:
+        print(f"using {torch.cuda.device_count()} GPUs")
+        net = torch.nn.DataParallel(net)
+
+    net.to(device)
 
     (
         model_save_dir,
