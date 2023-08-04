@@ -52,8 +52,6 @@ class Trainer:
         self.global_step = 0
         self.min_val_loss = float("inf")
 
-        self.init_model()
-
     @classmethod
     def train_from_ddp(cls, _rank: int, _world_size: int, config: WandbConfig) -> None:
         """
@@ -75,7 +73,7 @@ class Trainer:
             or self.config["pretrained_path"] == "none"
         ):
             net = YOGO(
-                num_classes=self.config["num_classes"],
+                num_classes=len(self.config["class_names"]),
                 img_size=self.config["resize_shape"],
                 anchor_w=self.config["anchor_w"],
                 anchor_h=self.config["anchor_h"],
@@ -83,8 +81,6 @@ class Trainer:
             ).to(self.device)
             self.global_step = 0
         else:
-            print(f"loading pretrained path from {self.config['pretrained_path']}")
-
             net, net_cfg = YOGO.from_pth(self.config["pretrained_path"])
 
             if any(net.img_size.cpu().numpy() != self.config["resize_shape"]):
@@ -105,11 +101,14 @@ class Trainer:
 
         self.Sx, self.Sy = net.get_grid_size()
 
-        if self._rank == 0:
-            wandb.watch(net)
-            wandb.config.update({"Sx": self.Sx, "Sy": self.Sy})
-
         if self._world_size > 1:
+            os.environ["MASTER_ADDR"] = "localhost"
+            os.environ["MASTER_PORT"] = "12355"
+
+            torch.distributed.init_process_group(
+                backend="nccl", rank=self._rank, world_size=self._world_size
+            )
+
             net = DDP(net, device_ids=[self._rank])
 
         self.net = net
@@ -146,22 +145,14 @@ class Trainer:
         self.validate_dataloader = validate_dataloader
         self.test_dataloader = test_dataloader
 
-        if self._rank == 0:
-            wandb.config.update(
-                {  # we do this here b.c. batch_size can change wrt sweeps
-                    "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
-                    "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
-                    "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
-                }
-            )
-
     def init_training_tools(self):
+        class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
+
         self.Y_loss = YOGOLoss(
             no_obj_weight=self.config["no_obj_weight"],
             iou_weight=self.config["iou_weight"],
-            classify_weight=self.config["classify_weight"],
             label_smoothing=self.config["label_smoothing"],
-            class_weights=torch.tensor(self.config["class_weights"]),
+            class_weights=torch.tensor(class_weights),
             logit_norm_temperature=self.config["logit_norm_temperature"],
             classify=not self.config["no_classify"],
         ).to(self.device)
@@ -177,11 +168,6 @@ class Trainer:
             T_max=self.config["epochs"] * len(self.train_dataloader),
             eta_min=self.config["learning_rate"] / self.config["decay_factor"],
         )
-
-        if self._rank == 0:
-            wandb.config.update(
-                {"class_weights": [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]}
-            )
 
     def checkpoint(
         self,
@@ -218,13 +204,16 @@ class Trainer:
                 tags=(self.config["tag"],) if self.config["tag"] is not None else None,
             )
 
-        if self._world_size > 1:
-            os.environ["MASTER_ADDR"] = "localhost"
-            os.environ["MASTER_PORT"] = "12355"
-
-            torch.distributed.init_process_group(
-                backend="nccl", rank=self.rank, world_size=self.world_size
+            wandb.config.update(
+                {  # we do this here b.c. batch_size can change wrt sweeps
+                    "training set size": f"{len(self.train_dataloader.dataset)} images",  # type:ignore
+                    "validation set size": f"{len(self.validate_dataloader.dataset)} images",  # type:ignore
+                    "testing set size": f"{len(self.test_dataloader.dataset)} images",  # type:ignore
+                }
             )
+            wandb.config.update({"Sx": self.Sx, "Sy": self.Sy})
+
+            wandb.watch(self.net)
 
         device = self.device
 
