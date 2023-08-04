@@ -12,6 +12,9 @@ from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, cast, Iterable
 
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel
+from torch.utils.data.distributed import DistributedSampler
 
 from yogo.model import YOGO
 from yogo.metrics import Metrics
@@ -100,6 +103,8 @@ def init_dataset(config: WandbConfig, Sx, Sy):
 
 
 def train():
+    dist.init_process_group(backend="nccl")
+
     config = wandb.config
     device = config["device"]
     epochs = config["epochs"]
@@ -148,6 +153,8 @@ def train():
     Sx, Sy = net.get_grid_size()
     wandb.config.update({"Sx": Sx, "Sy": Sy})
 
+    net = DistributedDataParallel(net)
+
     (
         model_save_dir,
         train_dataloader,
@@ -178,6 +185,7 @@ def train():
 
     min_val_loss = float("inf")
     for epoch in range(epochs):
+        train_dataloader.dataset.set_epoch(epoch)
         for imgs, labels in train_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)

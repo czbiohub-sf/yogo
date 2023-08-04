@@ -6,6 +6,7 @@ from functools import partial
 
 from torchvision.transforms import Resize, RandomAdjustSharpness, ColorJitter
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
+from torch.utils.data.distributed import DistributedSampler
 
 from typing import List, Dict, Tuple, Optional, Any, MutableMapping
 
@@ -192,7 +193,7 @@ def get_dataloader(
         )
 
         d[designation] = DataLoader(
-            dataset,
+            DistributedSampler(dataset),
             shuffle=True,
             drop_last=False,
             pin_memory=True,
