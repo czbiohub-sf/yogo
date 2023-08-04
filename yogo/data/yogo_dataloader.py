@@ -196,7 +196,9 @@ def get_dataloader(
             *augmentations if designation == "train" else [],
         )
 
-        sampler = DistributedSampler(dataset, rank=rank, num_replicas=world_size)  # type:ignore
+        sampler = DistributedSampler(
+            dataset, rank=rank, num_replicas=world_size
+        )  # type:ignore
         d[designation] = DataLoader(
             dataset,
             shuffle=False,
