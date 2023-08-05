@@ -48,9 +48,14 @@ class Trainer:
         self._rank = _rank
         self._world_size = _world_size
 
+        self.Sx: Optional[int] = None
+        self.Sy: Optional[int] = None
+
         self.epoch = 0
         self.global_step = 0
         self.min_val_loss = float("inf")
+
+        self._initialized = True
 
     @classmethod
     def train_from_ddp(cls, _rank: int, _world_size: int, config: WandbConfig) -> None:
@@ -63,11 +68,13 @@ class Trainer:
         trainer.train()
 
     def init(self) -> None:
-        self.init_model()
-        self.init_dataset()
-        self.init_training_tools()
+        self._init_model()
+        self._init_dataset()
+        self._init_training_tools()
+        self._init_wandb()
+        self._initialized = True
 
-    def init_model(self) -> None:
+    def _init_model(self) -> None:
         if (
             self.config["pretrained_path"] is None
             or self.config["pretrained_path"] == "none"
@@ -82,16 +89,14 @@ class Trainer:
             self.global_step = 0
         else:
             net, net_cfg = YOGO.from_pth(self.config["pretrained_path"])
-
             if any(net.img_size.cpu().numpy() != self.config["resize_shape"]):
                 raise RuntimeError(
                     "mismatch in pretrained network image resize shape and current resize shape: "
                     f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {self.config['resize_shape']}"
                 )
-
             net.to(self.device)
-
             self.global_step = net_cfg["step"]
+            self.config["normalize_images"] = net_cfg["normalize_images"]
 
         self.Sx, self.Sy = net.get_grid_size()
 
@@ -107,7 +112,10 @@ class Trainer:
 
         self.net = net
 
-    def init_dataset(self) -> None:
+    def _init_dataset(self) -> None:
+        if self.Sx is None or self.Sy is None:
+            raise RuntimeError("model not initialized")
+
         dataloaders = get_dataloader(
             self.config["dataset_descriptor_file"],
             self.config["batch_size"],
@@ -139,7 +147,7 @@ class Trainer:
         self.validate_dataloader = validate_dataloader
         self.test_dataloader = test_dataloader
 
-    def init_training_tools(self):
+    def _init_training_tools(self):
         class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
 
         self.Y_loss = YOGOLoss(
@@ -163,6 +171,32 @@ class Trainer:
             eta_min=self.config["learning_rate"] / self.config["decay_factor"],
         )
 
+    def _init_wandb(self):
+        if self._rank != 0:
+            return
+
+        wandb.init(
+            project="yogo",
+            entity="bioengineering",
+            config=self.config,
+            name=self.config["name"],
+            notes=self.config["note"],
+            tags=(self.config["tag"],) if self.config["tag"] is not None else None,
+        )
+
+        wandb.watch(self.net)
+        wandb.config.update(
+            {
+                "Sx": self.Sx,
+                "Sy": self.Sy,
+                "training set size": f"{len(self.train_dataloader.dataset)} images",  # type:ignore
+                "validation set size": f"{len(self.validate_dataloader.dataset)} images",  # type:ignore
+                "testing set size": f"{len(self.test_dataloader.dataset)} images",  # type:ignore
+                "normalize_images": self.config["normalize_images"],
+            },
+            allow_val_change=True,
+        )
+
     def checkpoint(
         self,
         filename: str,
@@ -170,6 +204,9 @@ class Trainer:
         model_version: Optional[str] = None,
         **kwargs,
     ):
+        if isinstance(self.net, DDP):
+            pass
+
         torch.save(
             {
                 "epoch": self.epoch,
@@ -185,36 +222,10 @@ class Trainer:
         )
 
     def train(self):
-        if self._rank != 0:
-            os.environ["WANDB_MODE"] = "disabled"
-
-        if self._rank == 0:
-            wandb.init(
-                project="yogo",
-                entity="bioengineering",
-                config=self.config,
-                name=self.config["name"],
-                notes=self.config["note"],
-                tags=(self.config["tag"],) if self.config["tag"] is not None else None,
-            )
-
-            wandb.watch(self.net)
-            wandb.config.update(
-                {
-                    "Sx": self.Sx,
-                    "Sy": self.Sy,
-                    "training set size": f"{len(self.train_dataloader.dataset)} images",  # type:ignore
-                    "validation set size": f"{len(self.validate_dataloader.dataset)} images",  # type:ignore
-                    "testing set size": f"{len(self.test_dataloader.dataset)} images",  # type:ignore
-                    "normalize_images": net_cfg["normalize_images"],
-                },
-                allow_val_change=True,
-            )
+        if not self._initialized:
+            raise RuntimeError("trainer not initialized")
 
         device = self.device
-
-        self.init_dataset()
-        self.init_training_tools()
 
         for epoch in range(self.config["epochs"]):
             self.epoch = epoch
@@ -249,13 +260,13 @@ class Trainer:
                     )
 
             if self._rank == 0:
-                self.validate()
+                self._validate()
 
         if self._rank == 0:
-            self.test()
+            self._test()
 
     @torch.no_grad()
-    def validate(self):
+    def _validate(self):
         self.net.eval()
         device = self.device
 
@@ -307,7 +318,11 @@ class Trainer:
         self.net.train()
 
     @torch.no_grad()
-    def test(self):
+    def _test(self):
+        """
+        TODO could make this static so we can evaluate YOGO
+        separately from training
+        """
         device = self.device
 
         test_metrics = Metrics(
