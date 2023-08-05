@@ -93,12 +93,6 @@ class Trainer:
 
             self.global_step = net_cfg["step"]
 
-            if self._rank == 0:
-                wandb.config.update(
-                    {"normalize_images": net_cfg["normalize_images"]},
-                    allow_val_change=True,
-                )
-
         self.Sx, self.Sy = net.get_grid_size()
 
         if self._world_size > 1:
@@ -204,16 +198,18 @@ class Trainer:
                 tags=(self.config["tag"],) if self.config["tag"] is not None else None,
             )
 
+            wandb.watch(self.net)
             wandb.config.update(
-                {  # we do this here b.c. batch_size can change wrt sweeps
+                {
+                    "Sx": self.Sx,
+                    "Sy": self.Sy,
                     "training set size": f"{len(self.train_dataloader.dataset)} images",  # type:ignore
                     "validation set size": f"{len(self.validate_dataloader.dataset)} images",  # type:ignore
                     "testing set size": f"{len(self.test_dataloader.dataset)} images",  # type:ignore
-                }
+                    "normalize_images": net_cfg["normalize_images"],
+                },
+                allow_val_change=True,
             )
-            wandb.config.update({"Sx": self.Sx, "Sy": self.Sy})
-
-            wandb.watch(self.net)
 
         device = self.device
 
