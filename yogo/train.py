@@ -205,7 +205,9 @@ class Trainer:
         **kwargs,
     ):
         if isinstance(self.net, DDP):
-            pass
+            state_dict = self.net.module.state_dict()
+        else:
+            state_dict = self.net.state_dict()
 
         torch.save(
             {
@@ -213,7 +215,7 @@ class Trainer:
                 "step": self.global_step,
                 "normalize_images": self.config["normalize_images"],
                 "model_name": model_name,
-                "model_state_dict": deepcopy(self.net.state_dict()),
+                "model_state_dict": deepcopy(state_dict),
                 "optimizer_state_dict": deepcopy(self.optimizer.state_dict()),
                 "model_version": model_version,
                 **kwargs,
