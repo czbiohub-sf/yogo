@@ -134,15 +134,6 @@ class Trainer:
         validate_dataloader: Iterable = dataloaders.get("val", [])
         test_dataloader: Iterable = dataloaders.get("test", [])
 
-        if wandb.run is not None:
-            model_save_dir = Path(f"trained_models/{wandb.run.name}")
-        else:
-            model_save_dir = Path(
-                f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
-            )
-        model_save_dir.mkdir(exist_ok=True, parents=True)
-
-        self.model_save_dir = model_save_dir
         self.train_dataloader = train_dataloader
         self.validate_dataloader = validate_dataloader
         self.test_dataloader = test_dataloader
@@ -196,6 +187,15 @@ class Trainer:
             },
             allow_val_change=True,
         )
+
+        if wandb.run is not None:
+            model_save_dir = Path(f"trained_models/{wandb.run.name}")
+        else:
+            model_save_dir = Path(
+                f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
+            )
+        model_save_dir.mkdir(exist_ok=True, parents=True)
+        self.model_save_dir = model_save_dir
 
     def checkpoint(
         self,
