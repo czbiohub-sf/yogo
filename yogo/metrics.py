@@ -1,7 +1,7 @@
 import torch
 
 
-from typing import Optional, Tuple, List, Dict
+from typing import Tuple, List, Dict
 
 from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -21,36 +21,39 @@ class Metrics:
     @torch.no_grad()
     def __init__(
         self,
-        num_classes: int,
+        class_names: List[str],
         device: str = "cpu",
-        class_names: Optional[List[str]] = None,
         classify: bool = True,
     ):
+        self.class_names: List[str] = class_names
+        self.num_classes = len(self.class_names)
+        self.classify = classify
+
         # TODO can we put confusion in MetricCollection? mAP?
         self.mAP = MeanAveragePrecision(box_format="xyxy")
-        self.confusion = MulticlassConfusionMatrix(num_classes=num_classes)
+        self.confusion = MulticlassConfusionMatrix(num_classes=self.num_classes)
         self.prediction_metrics = MetricCollection(
             [
                 MulticlassPrecision(
-                    num_classes=num_classes, thresholds=None, validate_args=False
+                    num_classes=self.num_classes, thresholds=None, validate_args=False
                 ),
                 MulticlassRecall(
-                    num_classes=num_classes, thresholds=None, validate_args=False
+                    num_classes=self.num_classes, thresholds=None, validate_args=False
                 ),
                 MulticlassAccuracy(
-                    num_classes=num_classes,
+                    num_classes=self.num_classes,
                     thresholds=None,
                     average=None,
                     validate_args=False,
                 ),
                 MulticlassROC(
-                    num_classes=num_classes,
+                    num_classes=self.num_classes,
                     thresholds=500,
                     average=None,
                     validate_args=False,
                 ),
                 MulticlassCalibrationError(
-                    num_classes=num_classes, n_bins=20, validate_args=False
+                    num_classes=self.num_classes, n_bins=20, validate_args=False
                 ),
             ]
         )
@@ -58,15 +61,6 @@ class Metrics:
         self.mAP.to(device)
         self.confusion.to(device)
         self.prediction_metrics.to(device)
-
-        self.num_classes = num_classes
-        self.class_names: List[str] = (
-            [str(n) for n in range(num_classes)] if class_names is None else class_names
-        )
-        self.classify = classify
-        assert self.class_names is not None and self.num_classes == len(
-            self.class_names
-        )
 
     def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape

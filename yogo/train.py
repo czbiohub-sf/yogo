@@ -1,17 +1,17 @@
-#! /usr/bin/env python3
-
 import os
 import wandb
 import torch
-
-from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Optional, cast, Iterable
 
+import torch.multiprocessing as mp
+
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from yogo.model import YOGO
 from yogo.metrics import Metrics
@@ -37,237 +37,311 @@ torch.backends.cuda.matmul.allow_tf32 = True
 WandbConfig: TypeAlias = dict
 
 
-def checkpoint_model(
-    model: torch.nn.Module,
-    epoch: int,
-    optimizer: torch.nn.Module,
-    filename: str,
-    step: int,
-    normalized: bool,
-    model_name: str,
-    model_version: Optional[str] = None,
-    **kwargs,
-):
-    torch.save(
-        {
-            "epoch": epoch,
-            "step": step,
-            "normalize_images": normalized,
-            "model_name": model_name,
-            "model_state_dict": deepcopy(model.state_dict()),
-            "optimizer_state_dict": deepcopy(optimizer.state_dict()),
-            "model_version": model_version,
-            **kwargs,
-        },
-        str(filename),
-    )
+class Trainer:
+    def __init__(
+        self, config: WandbConfig, _rank: int = 0, _world_size: int = 1
+    ) -> None:
+        self.config = config
 
+        self.device = f"cuda:{_rank}"
 
-def init_dataset(config: WandbConfig, Sx, Sy):
-    dataloaders = get_dataloader(
-        config["dataset_descriptor_file"],
-        config["batch_size"],
-        Sx=Sx,
-        Sy=Sy,
-        preprocess_type=config["preprocess_type"],
-        vertical_crop_size=config["vertical_crop_size"],
-        resize_shape=config["resize_shape"],
-        normalize_images=config["normalize_images"],
-    )
+        self._rank = _rank
+        self._world_size = _world_size
 
-    train_dataloader = dataloaders["train"]
-    # sneaky hack to replace non-existant datasets with emtpy list
-    validate_dataloader: Iterable = dataloaders.get("val", [])
-    test_dataloader: Iterable = dataloaders.get("test", [])
+        self.Sx: Optional[int] = None
+        self.Sy: Optional[int] = None
 
-    wandb.config.update(
-        {  # we do this here b.c. batch_size can change wrt sweeps
-            "training set size": f"{len(train_dataloader.dataset)} images",  # type:ignore
-            "validation set size": f"{len(validate_dataloader.dataset)} images",  # type:ignore
-            "testing set size": f"{len(test_dataloader.dataset)} images",  # type:ignore
-        }
-    )
+        self.epoch = 0
+        self.global_step = 0
+        self.min_val_loss = float("inf")
 
-    if wandb.run is not None:
-        model_save_dir = Path(f"trained_models/{wandb.run.name}")
-    else:
-        model_save_dir = Path(
-            f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
+        self._initialized = True
+
+    @classmethod
+    def train_from_ddp(cls, _rank: int, _world_size: int, config: WandbConfig) -> None:
+        """
+        Due to mp spawn not giving a kwarg option, we have to give `rank` first. But, for
+        the sake of consistency, we want to give the config first. A bit messy.
+        """
+        trainer = cls(config, _rank=_rank, _world_size=_world_size)
+        trainer.init()
+        trainer.train()
+
+    def init(self) -> None:
+        self._init_model()
+        self._init_dataset()
+        self._init_training_tools()
+        self._init_wandb()
+        self._initialized = True
+
+    def _init_model(self) -> None:
+        if (
+            self.config["pretrained_path"] is None
+            or self.config["pretrained_path"] == "none"
+        ):
+            net = YOGO(
+                num_classes=len(self.config["class_names"]),
+                img_size=self.config["resize_shape"],
+                anchor_w=self.config["anchor_w"],
+                anchor_h=self.config["anchor_h"],
+                model_func=get_model_func(self.config["model"]),
+            ).to(self.device)
+            self.global_step = 0
+        else:
+            net, net_cfg = YOGO.from_pth(self.config["pretrained_path"])
+            if any(net.img_size.cpu().numpy() != self.config["resize_shape"]):
+                raise RuntimeError(
+                    "mismatch in pretrained network image resize shape and current resize shape: "
+                    f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {self.config['resize_shape']}"
+                )
+            net.to(self.device)
+            self.global_step = net_cfg["step"]
+            self.config["normalize_images"] = net_cfg["normalize_images"]
+
+        self.Sx, self.Sy = net.get_grid_size()
+
+        if self._world_size > 1:
+            os.environ["MASTER_ADDR"] = "localhost"
+            os.environ["MASTER_PORT"] = "12355"
+
+            torch.distributed.init_process_group(
+                backend="nccl", rank=self._rank, world_size=self._world_size
+            )
+
+            net = DDP(net, device_ids=[self._rank])
+
+        self.net = net
+
+    def _init_dataset(self) -> None:
+        if self.Sx is None or self.Sy is None:
+            raise RuntimeError("model not initialized")
+
+        dataloaders = get_dataloader(
+            self.config["dataset_descriptor_file"],
+            self.config["batch_size"],
+            Sx=self.Sx,
+            Sy=self.Sy,
+            preprocess_type=self.config["preprocess_type"],
+            vertical_crop_size=self.config["vertical_crop_size"],
+            resize_shape=self.config["resize_shape"],
+            normalize_images=self.config["normalize_images"],
+            rank=self._rank,
+            world_size=self._world_size,
         )
-    model_save_dir.mkdir(exist_ok=True, parents=True)
 
-    return model_save_dir, train_dataloader, validate_dataloader, test_dataloader
+        train_dataloader = dataloaders["train"]
+        # sneaky hack to replace non-existant datasets with emtpy list
+        validate_dataloader: Iterable = dataloaders.get("val", [])
+        test_dataloader: Iterable = dataloaders.get("test", [])
 
+        if wandb.run is not None:
+            model_save_dir = Path(f"trained_models/{wandb.run.name}")
+        else:
+            model_save_dir = Path(
+                f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
+            )
+        model_save_dir.mkdir(exist_ok=True, parents=True)
 
-def train():
-    config = wandb.config
-    device = config["device"]
-    epochs = config["epochs"]
-    learning_rate = config["learning_rate"]
-    anchor_w = config["anchor_w"]
-    anchor_h = config["anchor_h"]
-    class_names = config["class_names"]
-    weight_decay = config["weight_decay"]
-    classify = not config["no_classify"]
-    model = get_model_func(config["model"])
-    num_classes = len(class_names)
+        self.model_save_dir = model_save_dir
+        self.train_dataloader = train_dataloader
+        self.validate_dataloader = validate_dataloader
+        self.test_dataloader = test_dataloader
 
-    test_metrics = Metrics(
-        num_classes=num_classes,
-        device=device,
-        class_names=class_names,
-        classify=classify,
-    )
+    def _init_training_tools(self):
+        class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
 
-    if config.pretrained_path is None or config.pretrained_path == "none":
-        net = YOGO(
-            num_classes=num_classes,
-            img_size=config["resize_shape"],
-            anchor_w=anchor_w,
-            anchor_h=anchor_h,
-            model_func=model,
-        ).to(device)
-        global_step = 0
-    else:
-        print(f"loading pretrained path from {config.pretrained_path}")
+        self.Y_loss = YOGOLoss(
+            no_obj_weight=self.config["no_obj_weight"],
+            iou_weight=self.config["iou_weight"],
+            label_smoothing=self.config["label_smoothing"],
+            class_weights=torch.tensor(class_weights),
+            logit_norm_temperature=self.config["logit_norm_temperature"],
+            classify=not self.config["no_classify"],
+        ).to(self.device)
 
-        net, net_cfg = YOGO.from_pth(config.pretrained_path)
-        net.to(device)
+        self.optimizer = AdamW(
+            self.net.parameters(),
+            lr=self.config["learning_rate"],
+            weight_decay=self.config["weight_decay"],
+        )
 
-        global_step = net_cfg["step"]
+        self.scheduler = CosineAnnealingLR(
+            self.optimizer,
+            T_max=self.config["epochs"] * len(self.train_dataloader),
+            eta_min=self.config["learning_rate"] / self.config["decay_factor"],
+        )
+
+    def _init_wandb(self):
+        if self._rank != 0:
+            return
+
+        wandb.init(
+            project="yogo",
+            entity="bioengineering",
+            config=self.config,
+            name=self.config["name"],
+            notes=self.config["note"],
+            tags=(self.config["tag"],) if self.config["tag"] is not None else None,
+        )
+
+        wandb.watch(self.net)
         wandb.config.update(
-            {"normalize_images": net_cfg["normalize_images"]}, allow_val_change=True
+            {
+                "Sx": self.Sx,
+                "Sy": self.Sy,
+                "training set size": f"{len(self.train_dataloader.dataset)} images",  # type:ignore
+                "validation set size": f"{len(self.validate_dataloader.dataset)} images",  # type:ignore
+                "testing set size": f"{len(self.test_dataloader.dataset)} images",  # type:ignore
+                "normalize_images": self.config["normalize_images"],
+            },
+            allow_val_change=True,
         )
 
-        if any(net.img_size.cpu().numpy() != config["resize_shape"]):
-            raise RuntimeError(
-                "mismatch in pretrained network image resize shape and current resize shape: "
-                f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {config['resize_shape']}"
-            )
+    def checkpoint(
+        self,
+        filename: str,
+        model_name: str,
+        model_version: Optional[str] = None,
+        **kwargs,
+    ):
+        if isinstance(self.net, DDP):
+            pass
 
-    Sx, Sy = net.get_grid_size()
-    wandb.config.update({"Sx": Sx, "Sy": Sy})
+        torch.save(
+            {
+                "epoch": self.epoch,
+                "step": self.global_step,
+                "normalize_images": self.config["normalize_images"],
+                "model_name": model_name,
+                "model_state_dict": deepcopy(self.net.state_dict()),
+                "optimizer_state_dict": deepcopy(self.optimizer.state_dict()),
+                "model_version": model_version,
+                **kwargs,
+            },
+            str(filename),
+        )
 
-    (
-        model_save_dir,
-        train_dataloader,
-        validate_dataloader,
-        test_dataloader,
-    ) = init_dataset(config, Sx, Sy)
+    def train(self):
+        if not self._initialized:
+            raise RuntimeError("trainer not initialized")
 
-    class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
-    wandb.config.update({"class_weights": class_weights})
+        device = self.device
 
-    Y_loss = YOGOLoss(
-        no_obj_weight=config["no_obj_weight"],
-        iou_weight=config["iou_weight"],
-        classify_weight=config["classify_weight"],
-        label_smoothing=config["label_smoothing"],
-        class_weights=torch.tensor(class_weights),
-        logit_norm_temperature=config["logit_norm_temperature"],
-        classify=classify,
-    ).to(device)
+        for epoch in range(self.config["epochs"]):
+            self.epoch = epoch
+            self.train_dataloader.sampler.set_epoch(epoch)
 
-    optimizer = AdamW(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
-
-    scheduler = CosineAnnealingLR(
-        optimizer,
-        T_max=epochs * len(train_dataloader),
-        eta_min=learning_rate / config["decay_factor"],
-    )
-
-    min_val_loss = float("inf")
-    for epoch in range(epochs):
-        for imgs, labels in train_dataloader:
-            imgs = imgs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
-            optimizer.zero_grad(set_to_none=True)
-            outputs = net(imgs)
-            loss, loss_components = Y_loss(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-
-            global_step += 1
-            wandb.log(
-                {
-                    "train loss": loss.item(),
-                    "epoch": epoch,
-                    "LR": scheduler.get_last_lr()[0],
-                    "training grad norm": net.grad_norm(),
-                    "training param norm": net.param_norm(),
-                    **loss_components,
-                },
-                commit=global_step % 100 == 0,
-                step=global_step,
-            )
-
-        val_loss = torch.tensor(0.0, device=device)
-        net.eval()
-        with torch.no_grad():
-            for imgs, labels in validate_dataloader:
+            for imgs, labels in self.train_dataloader:
                 imgs = imgs.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
-                outputs = net(imgs)
-                loss, _ = Y_loss(outputs, labels)
-                val_loss += loss
 
-            # just use the final imgs and labels for val!
-            annotated_img = wandb.Image(
-                draw_yogo_prediction(
-                    imgs[0, ...],
-                    outputs[0, ...].detach(),
-                    labels=class_names,
-                    images_are_normalized=config["normalize_images"],
-                )
-            )
-            mean_val_loss = val_loss.item() / len(validate_dataloader)
-            wandb.log(
-                {
-                    "validation bbs": annotated_img,
-                    "val loss": mean_val_loss,
-                },
-                step=global_step,
-            )
+                self.optimizer.zero_grad(set_to_none=True)
 
-            if mean_val_loss < min_val_loss:
-                min_val_loss = mean_val_loss
-                wandb.log({"best_val_loss": mean_val_loss}, step=global_step)
-                checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "best.pth",
-                    global_step,
-                    config["normalize_images"],
-                    model_name=wandb.run.name,
-                    model_version=config["model"],
-                )
-            else:
-                checkpoint_model(
-                    net,
-                    epoch,
-                    optimizer,
-                    model_save_dir / "latest.pth",
-                    global_step,
-                    config["normalize_images"],
-                    model_name=wandb.run.name,
-                    model_version=config["model"],
-                )
+                outputs = self.net(imgs)
 
-        net.train()
+                loss, loss_components = self.Y_loss(outputs, labels)
+                loss.backward()
 
-    net, cfg = YOGO.from_pth(model_save_dir / "best.pth")
-    print(f"loaded best.pth from step {cfg['step']} for test inference")
-    net.to(device)
+                self.optimizer.step()
+                self.scheduler.step()
 
-    test_loss = 0.0
-    with torch.no_grad():
-        for imgs, labels in test_dataloader:
+                self.global_step += 1
+
+                if self._rank == 0:
+                    wandb.log(
+                        {
+                            "train loss": loss.item(),
+                            "epoch": epoch,
+                            "LR": self.scheduler.get_last_lr()[0],
+                            **loss_components,
+                        },
+                        commit=self.global_step % 100 == 0,
+                        step=self.global_step,
+                    )
+
+            if self._rank == 0:
+                self._validate()
+
+        if self._rank == 0:
+            self._test()
+
+    @torch.no_grad()
+    def _validate(self):
+        self.net.eval()
+        device = self.device
+
+        val_loss = torch.tensor(0.0, device=device)
+        for imgs, labels in self.validate_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            outputs = net(imgs)
-            loss, _ = Y_loss(outputs, labels)
+
+            outputs = self.net(imgs)
+
+            loss, _ = self.Y_loss(outputs, labels)
+            val_loss += loss
+
+        # just use the final imgs and labels for val!
+        annotated_img = wandb.Image(
+            draw_yogo_prediction(
+                imgs[0, ...],
+                outputs[0, ...].detach(),
+                labels=self.config["class_names"],
+                images_are_normalized=self.config["normalize_images"],
+            )
+        )
+
+        mean_val_loss = val_loss.item() / len(self.validate_dataloader)
+
+        wandb.log(
+            {
+                "validation bbs": annotated_img,
+                "val loss": mean_val_loss,
+            },
+            step=self.global_step,
+        )
+
+        if mean_val_loss < self.min_val_loss:
+            self.min_val_loss = mean_val_loss
+            wandb.log({"best_val_loss": mean_val_loss}, step=self.global_step)
+            self.checkpoint(
+                self.model_save_dir / "best.pth",
+                model_name=wandb.run.name,
+                model_version=self.config["model"],
+            )
+        else:
+            self.checkpoint(
+                self.model_save_dir / "latest.pth",
+                model_name=wandb.run.name,
+                model_version=self.config["model"],
+            )
+
+        self.net.train()
+
+    @torch.no_grad()
+    def _test(self):
+        """
+        TODO could make this static so we can evaluate YOGO
+        separately from training
+        """
+        device = self.device
+
+        test_metrics = Metrics(
+            class_names=self.config["class_names"],
+            classify=not self.config["no_classify"],
+            device=device,
+        )
+
+        net, cfg = YOGO.from_pth(self.model_save_dir / "best.pth")
+        net.to(device)
+
+        test_loss = 0.0
+        for imgs, labels in self.test_dataloader:
+            imgs = imgs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+
+            outputs = self.net(imgs)
+            loss, _ = self.Y_loss(outputs, labels)
+
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
@@ -283,13 +357,15 @@ def train():
         test_metrics.reset()
 
         accuracy_table = wandb.Table(
-            data=[[labl, acc] for labl, acc in zip(class_names, accuracy)],
+            data=[
+                [labl, acc] for labl, acc in zip(self.config["class_names"], accuracy)
+            ],
             columns=["label", "accuracy"],
         )
 
         fpr, tpr, thresholds = roc_curves
 
-        wandb.summary["test loss"] = test_loss / len(test_dataloader)
+        wandb.summary["test loss"] = test_loss / len(self.test_dataloader)
         wandb.summary["test mAP"] = mAP["map"]
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
@@ -298,7 +374,7 @@ def train():
         wandb.log(
             {
                 "test confusion": get_wandb_confusion(
-                    confusion_data, class_names, "test confusion matrix"
+                    confusion_data, self.config["class_names"], "test confusion matrix"
                 ),
                 "test accuracy": wandb.plot.bar(
                     accuracy_table, "label", "accuracy", title="test accuracy"
@@ -307,10 +383,12 @@ def train():
                     fpr=[t.tolist() for t in fpr],
                     tpr=[t.tolist() for t in tpr],
                     thresholds=[t.tolist() for t in thresholds],
-                    classes=class_names,
+                    classes=self.config["class_names"],
                 ),
             }
         )
+        wandb.finish()
+        torch.distributed.destroy_process_group()
 
 
 def do_training(args) -> None:
@@ -344,42 +422,41 @@ def do_training(args) -> None:
     with Timer("getting best anchor"):
         anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
 
-    with Timer("initting wandb"):
-        wandb.init(
-            project="yogo",
-            entity="bioengineering",
-            config={
-                "learning_rate": args.learning_rate,
-                "decay_factor": args.lr_decay_factor,
-                "weight_decay": args.weight_decay,
-                "label_smoothing": args.label_smoothing,
-                "iou_weight": args.iou_weight,
-                "no_obj_weight": args.no_obj_weight,
-                "classify_weight": args.classify_weight,
-                "healthy_weight": args.healthy_weight,
-                "logit_norm_temperature": args.logit_norm_temperature,
-                "epochs": args.epochs,
-                "batch_size": args.batch_size,
-                "device": str(device),
-                "anchor_w": anchor_w,
-                "anchor_h": anchor_h,
-                "model": args.model,
-                "resize_shape": resize_target_size,
-                "vertical_crop_size": vertical_crop_size,
-                "preprocess_type": preprocess_type,
-                "class_names": YOGO_CLASS_ORDERING,
-                "pretrained_path": args.from_pretrained,
-                "no_classify": args.no_classify,
-                "normalize_images": args.normalize_images,
-                "dataset_descriptor_file": args.dataset_descriptor_file,
-                "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
-            },
-            name=args.name,
-            notes=args.note,
-            tags=(args.tag,) if args.tag is not None else None,
-        )
+    config = {
+        "learning_rate": args.learning_rate,
+        "decay_factor": args.lr_decay_factor,
+        "weight_decay": args.weight_decay,
+        "label_smoothing": args.label_smoothing,
+        "iou_weight": args.iou_weight,
+        "no_obj_weight": args.no_obj_weight,
+        "classify_weight": args.classify_weight,
+        "healthy_weight": args.healthy_weight,
+        "logit_norm_temperature": args.logit_norm_temperature,
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "device": str(device),
+        "anchor_w": anchor_w,
+        "anchor_h": anchor_h,
+        "model": args.model,
+        "resize_shape": resize_target_size,
+        "vertical_crop_size": vertical_crop_size,
+        "preprocess_type": preprocess_type,
+        "class_names": YOGO_CLASS_ORDERING,
+        "pretrained_path": args.from_pretrained,
+        "no_classify": args.no_classify,
+        "normalize_images": args.normalize_images,
+        "dataset_descriptor_file": args.dataset_descriptor_file,
+        "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
+        "name": args.name,
+        "note": args.note,
+        "tag": args.tag,
+    }
 
-    train()
+    world_size = torch.cuda.device_count()
+
+    mp.spawn(
+        Trainer.train_from_ddp, args=(world_size, config), nprocs=world_size, join=True
+    )
 
 
 if __name__ == "__main__":
