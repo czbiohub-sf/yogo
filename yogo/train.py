@@ -380,18 +380,17 @@ class Trainer:
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
-        with Timer("computing metrics"):
-            # I *think* that test_metrics syncs automatically (it hangs
-            # due to a barrier, so it *must* be syncing)
-            (
-                mAP,
-                confusion_data,
-                accuracy,
-                roc_curves,
-                precision,
-                recall,
-                calibration_error,
-            ) = test_metrics.compute()
+        # I *think* that test_metrics syncs automatically (it hangs
+        # due to a barrier, so it *must* be syncing)
+        (
+            mAP,
+            confusion_data,
+            accuracy,
+            roc_curves,
+            precision,
+            recall,
+            calibration_error,
+        ) = test_metrics.compute()
 
         accuracy_table = wandb.Table(
             data=[
