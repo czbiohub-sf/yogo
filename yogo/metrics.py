@@ -140,7 +140,9 @@ class Metrics:
                 {
                     "boxes": fp[:, :4],
                     "scores": fp[:, 4],
-                    "labels": fp[:, 5:].argmax(dim=1) if self.classify else fl[:, 5].long(),
+                    "labels": fp[:, 5:].argmax(dim=1)
+                    if self.classify
+                    else fl[:, 5].long(),
                 }
             )
             labels.append(
