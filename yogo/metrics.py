@@ -107,10 +107,10 @@ class Metrics:
         return (
             mAP_metrics,
             confusion_metrics,
-            pr_metrics["MulticlassPrecision"],
-            pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassAccuracy"],
             pr_metrics["MulticlassROC"],
+            pr_metrics["MulticlassPrecision"],
+            pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassCalibrationError"].item(),
         )
 
@@ -140,13 +140,13 @@ class Metrics:
                 {
                     "boxes": fp[:, :4],
                     "scores": fp[:, 4],
-                    "labels": fp[:, 5:].argmax(dim=1) if self.classify else fl[:, 5],
+                    "labels": fp[:, 5:].argmax(dim=1) if self.classify else fl[:, 5].long(),
                 }
             )
             labels.append(
                 {
                     "boxes": fl[:, 1:5],
-                    "labels": fl[:, 5],
+                    "labels": fl[:, 5].long(),
                 }
             )
 
