@@ -195,7 +195,7 @@ def get_dataloader(
 
         sampler: Optional[Iterable] = (
             DistributedSampler(dataset, rank=rank, num_replicas=world_size)
-            if designation == "train"
+            if world_size > 1 and designation in ("train", "val")
             else None
         )
 

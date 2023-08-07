@@ -14,6 +14,7 @@ from torchmetrics.classification import (
     MulticlassCalibrationError,
 )
 
+from yogo.utils import Timer
 from yogo.utils.utils import format_preds_and_labels
 
 
@@ -31,31 +32,27 @@ class Metrics:
 
         # TODO can we put confusion in MetricCollection? mAP?
         self.mAP = MeanAveragePrecision(box_format="xyxy")
-        self.confusion = MulticlassConfusionMatrix(num_classes=self.num_classes)
+        self.confusion = MulticlassConfusionMatrix(
+            num_classes=self.num_classes, validate_args=False
+        )
         self.prediction_metrics = MetricCollection(
             [
-                MulticlassPrecision(
-                    num_classes=self.num_classes, thresholds=None, validate_args=False
-                ),
-                MulticlassRecall(
-                    num_classes=self.num_classes, thresholds=None, validate_args=False
-                ),
                 MulticlassAccuracy(
                     num_classes=self.num_classes,
-                    thresholds=None,
                     average=None,
                     validate_args=False,
                 ),
                 MulticlassROC(
                     num_classes=self.num_classes,
-                    thresholds=500,
-                    average=None,
                     validate_args=False,
                 ),
+                MulticlassPrecision(num_classes=self.num_classes, validate_args=False),
+                MulticlassRecall(num_classes=self.num_classes, validate_args=False),
                 MulticlassCalibrationError(
                     num_classes=self.num_classes, n_bins=20, validate_args=False
                 ),
-            ]
+            ],
+            sync_on_compute=False
         )
 
         self.mAP.to(device)
@@ -66,26 +63,38 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        formatted_preds, formatted_labels = zip(
-            *[
-                format_preds_and_labels(pred, label, use_IoU=use_IoU)
-                for pred, label in zip(preds, labels)
-            ]
-        )
+        with Timer("formatting"):
+            formatted_preds, formatted_labels = zip(
+                *[
+                    format_preds_and_labels(pred, label, use_IoU=use_IoU)
+                    for pred, label in zip(preds, labels)
+                ]
+            )
 
-        self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
+        with Timer("updating mAP"):
+            self.mAP.update(*self._format_for_mAP(formatted_preds, formatted_labels))
 
         fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
 
-        self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
+        with Timer("updating confusion"):
+            self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
 
-        self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
+        with Timer("updating prediction metrics"):
+            self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
 
     def compute(self):
-        pr_metrics = self.prediction_metrics.compute()
+        with Timer("computing pr metrics"):
+            pr_metrics = self.prediction_metrics.compute()
+
+        with Timer("computing mAP"):
+            mAP_metrics = self.mAP.compute()
+
+        with Timer("computing confusion"):
+            confusion_metrics = self.confusion.compute()
+
         return (
-            self.mAP.compute(),
-            self.confusion.compute(),
+            mAP_metrics,
+            confusion_metrics,
             pr_metrics["MulticlassPrecision"],
             pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassAccuracy"],
@@ -104,7 +113,7 @@ class Metrics:
         self.reset()
         return res
 
-    def format_for_mAP(
+    def _format_for_mAP(
         self, formatted_preds, formatted_labels
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
         """
