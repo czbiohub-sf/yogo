@@ -14,7 +14,6 @@ from torchmetrics.classification import (
     MulticlassCalibrationError,
 )
 
-from yogo.utils import Timer
 from yogo.utils.utils import format_preds_and_labels
 
 
@@ -75,34 +74,27 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        with Timer("formatting"):
-            formatted_preds, formatted_labels = zip(
-                *[
-                    format_preds_and_labels(pred, label, use_IoU=use_IoU)
-                    for pred, label in zip(preds, labels)
-                ]
-            )
+        formatted_preds, formatted_labels = zip(
+            *[
+                format_preds_and_labels(pred, label, use_IoU=use_IoU)
+                for pred, label in zip(preds, labels)
+            ]
+        )
 
-        with Timer("updating mAP"):
-            self.mAP.update(*self._format_for_mAP(formatted_preds, formatted_labels))
+        self.mAP.update(*self._format_for_mAP(formatted_preds, formatted_labels))
 
         fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
 
-        with Timer("updating confusion"):
-            self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
+        self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
 
-        with Timer("updating prediction metrics"):
-            self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
+        self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
 
     def compute(self):
-        with Timer("computing pr metrics"):
-            pr_metrics = self.prediction_metrics.compute()
+        pr_metrics = self.prediction_metrics.compute()
 
-        with Timer("computing mAP"):
-            mAP_metrics = self.mAP.compute()
+        mAP_metrics = self.mAP.compute()
 
-        with Timer("computing confusion"):
-            confusion_metrics = self.confusion.compute()
+        confusion_metrics = self.confusion.compute()
 
         return (
             mAP_metrics,
