@@ -360,8 +360,8 @@ class Trainer:
             device=device,
         )
 
-        self.model_save_dir = Path(self._store.get("model_save_dir").decode('utf-8'))
-        checkpoint = torch.load(self.model_save_dir / "best.pth", map_location=device)
+        self.model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
+        torch.load(self.model_save_dir / "best.pth", map_location=device)
         self.net.module.to(device)
 
         test_loss = 0.0
