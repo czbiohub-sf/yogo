@@ -267,6 +267,9 @@ class Trainer:
         if self._rank == 0:
             self._test()
 
+            wandb.finish()
+            torch.distributed.destroy_process_group()
+
     @torch.no_grad()
     def _validate(self):
         self.net.eval()
@@ -316,8 +319,6 @@ class Trainer:
                 model_name=wandb.run.name,
                 model_version=self.config["model"],
             )
-
-        self.net.train()
 
     @torch.no_grad()
     def _test(self):
@@ -389,8 +390,6 @@ class Trainer:
                 ),
             }
         )
-        wandb.finish()
-        torch.distributed.destroy_process_group()
 
 
 def do_training(args) -> None:
