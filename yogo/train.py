@@ -213,7 +213,6 @@ class Trainer:
         self.model_save_dir = model_save_dir
 
         self._store.set("model_save_dir", str(model_save_dir.resolve()))
-        print(self.model_save_dir)
 
     def checkpoint(
         self,
