@@ -7,7 +7,7 @@ from functools import partial
 from torchvision.transforms import Resize
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Tuple, Optional, Any, MutableMapping
+from typing import List, Dict, Tuple, Optional, Any, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
 from torch.utils.data.distributed import DistributedSampler
@@ -193,21 +193,24 @@ def get_dataloader(
             *augmentations if designation == "train" else [],
         )
 
-        sampler = DistributedSampler(
-            dataset, rank=rank, num_replicas=world_size
-        )  # type:ignore
+        sampler: Optional[Iterable] = (
+            DistributedSampler(dataset, rank=rank, num_replicas=world_size)
+            if designation == "train"
+            else None
+        )
+
         d[designation] = DataLoader(
             dataset,
             shuffle=False,
             drop_last=False,
             pin_memory=True,
+            sampler=sampler,
             batch_size=batch_size,
-            persistent_workers=num_workers > 0,
-            multiprocessing_context="spawn" if num_workers > 0 else None,
             num_workers=num_workers,  # type: ignore
+            persistent_workers=num_workers > 0,
             generator=torch.Generator().manual_seed(111111),
             collate_fn=partial(collate_batch, transforms=transforms),
-            sampler=sampler,
+            multiprocessing_context="spawn" if num_workers > 0 else None,
         )
     return d
 
