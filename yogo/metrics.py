@@ -30,32 +30,40 @@ class Metrics:
         self.classify = classify
 
         # TODO can we put confusion in MetricCollection? mAP?
-        self.mAP = MeanAveragePrecision(box_format="xyxy")
-        self.confusion = MulticlassConfusionMatrix(num_classes=self.num_classes)
+        self.mAP = MeanAveragePrecision(box_format="xyxy", sync_on_compute=False)
+        self.confusion = MulticlassConfusionMatrix(
+            num_classes=self.num_classes, validate_args=False, sync_on_compute=False
+        )
         self.prediction_metrics = MetricCollection(
             [
-                MulticlassPrecision(
-                    num_classes=self.num_classes, thresholds=None, validate_args=False
-                ),
-                MulticlassRecall(
-                    num_classes=self.num_classes, thresholds=None, validate_args=False
-                ),
                 MulticlassAccuracy(
                     num_classes=self.num_classes,
-                    thresholds=None,
                     average=None,
                     validate_args=False,
+                    sync_on_compute=False,
                 ),
                 MulticlassROC(
                     num_classes=self.num_classes,
-                    thresholds=500,
-                    average=None,
                     validate_args=False,
+                    sync_on_compute=False,
+                ),
+                MulticlassPrecision(
+                    num_classes=self.num_classes,
+                    validate_args=False,
+                    sync_on_compute=False,
+                ),
+                MulticlassRecall(
+                    num_classes=self.num_classes,
+                    validate_args=False,
+                    sync_on_compute=False,
                 ),
                 MulticlassCalibrationError(
-                    num_classes=self.num_classes, n_bins=20, validate_args=False
+                    num_classes=self.num_classes,
+                    n_bins=20,
+                    validate_args=False,
+                    sync_on_compute=False,
                 ),
-            ]
+            ],
         )
 
         self.mAP.to(device)
@@ -73,7 +81,7 @@ class Metrics:
             ]
         )
 
-        self.mAP.update(*self.format_for_mAP(formatted_preds, formatted_labels))
+        self.mAP.update(*self._format_for_mAP(formatted_preds, formatted_labels))
 
         fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
 
@@ -83,13 +91,18 @@ class Metrics:
 
     def compute(self):
         pr_metrics = self.prediction_metrics.compute()
+
+        mAP_metrics = self.mAP.compute()
+
+        confusion_metrics = self.confusion.compute()
+
         return (
-            self.mAP.compute(),
-            self.confusion.compute(),
-            pr_metrics["MulticlassPrecision"],
-            pr_metrics["MulticlassRecall"],
+            mAP_metrics,
+            confusion_metrics,
             pr_metrics["MulticlassAccuracy"],
             pr_metrics["MulticlassROC"],
+            pr_metrics["MulticlassPrecision"],
+            pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassCalibrationError"].item(),
         )
 
@@ -104,7 +117,7 @@ class Metrics:
         self.reset()
         return res
 
-    def format_for_mAP(
+    def _format_for_mAP(
         self, formatted_preds, formatted_labels
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
         """
@@ -119,13 +132,15 @@ class Metrics:
                 {
                     "boxes": fp[:, :4],
                     "scores": fp[:, 4],
-                    "labels": fp[:, 5:].argmax(dim=1) if self.classify else fl[:, 5],
+                    "labels": fp[:, 5:].argmax(dim=1)
+                    if self.classify
+                    else fl[:, 5].long(),
                 }
             )
             labels.append(
                 {
                     "boxes": fl[:, 1:5],
-                    "labels": fl[:, 5],
+                    "labels": fl[:, 5].long(),
                 }
             )
 

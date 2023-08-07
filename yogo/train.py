@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import wandb
 import torch
@@ -5,7 +7,7 @@ import torch
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, cast, Iterable
+from typing import Optional, Iterable, cast
 
 import torch.multiprocessing as mp
 
@@ -50,15 +52,26 @@ class Trainer:
 
         self.Sx: Optional[int] = None
         self.Sy: Optional[int] = None
+        self.model_save_dir: Optional[Path] = None
 
         self.epoch = 0
         self.global_step = 0
         self.min_val_loss = float("inf")
 
-        self._initialized = True
+        # store for distributed training (so far just using it for model_save_dir)
+        self._store = torch.distributed.TCPStore(
+            "0.0.0.0",
+            10101,
+            _world_size,  # number of clients
+            _rank == 0,  # only rank 0 should be the server, others are clients
+        )
+
+        self._initialized = False
 
     @classmethod
-    def train_from_ddp(cls, _rank: int, _world_size: int, config: WandbConfig) -> None:
+    def train_from_ddp(
+        cls, _rank: int, _world_size: int, config: WandbConfig
+    ) -> Trainer:
         """
         Due to mp spawn not giving a kwarg option, we have to give `rank` first. But, for
         the sake of consistency, we want to give the config first. A bit messy.
@@ -66,6 +79,7 @@ class Trainer:
         trainer = cls(config, _rank=_rank, _world_size=_world_size)
         trainer.init()
         trainer.train()
+        return trainer
 
     def init(self) -> None:
         self._init_model()
@@ -194,8 +208,11 @@ class Trainer:
             model_save_dir = Path(
                 f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
             )
+
         model_save_dir.mkdir(exist_ok=True, parents=True)
         self.model_save_dir = model_save_dir
+
+        self._store.set("model_save_dir", str(model_save_dir.resolve()))
 
     def checkpoint(
         self,
@@ -224,6 +241,8 @@ class Trainer:
         )
 
     def train(self):
+        torch.distributed.barrier()
+
         if not self._initialized:
             raise RuntimeError("trainer not initialized")
 
@@ -261,13 +280,17 @@ class Trainer:
                         step=self.global_step,
                     )
 
-            if self._rank == 0:
+            with Timer("val"):
                 self._validate()
 
         if self._rank == 0:
-            self._test()
+            with Timer("test"):
+                self._test()
 
-            wandb.finish()
+            with Timer("wandb finishing"):
+                wandb.finish()
+
+        if self._world_size > 1:
             torch.distributed.destroy_process_group()
 
     @torch.no_grad()
@@ -284,6 +307,12 @@ class Trainer:
 
             loss, _ = self.Y_loss(outputs, labels)
             val_loss += loss
+
+        # sync val loss across all processes
+        torch.distributed.all_reduce(val_loss)
+
+        if self._rank != 0:
+            return
 
         # just use the final imgs and labels for val!
         annotated_img = wandb.Image(
@@ -338,7 +367,10 @@ class Trainer:
         net.to(device)
 
         test_loss = 0.0
-        for imgs, labels in self.test_dataloader:
+
+        from tqdm import tqdm
+
+        for imgs, labels in tqdm(self.test_dataloader, desc="testing..."):
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
@@ -348,16 +380,17 @@ class Trainer:
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
+        # I *think* that test_metrics syncs automatically (it hangs
+        # due to a barrier, so it *must* be syncing)
         (
             mAP,
             confusion_data,
-            precision,
-            recall,
             accuracy,
             roc_curves,
+            precision,
+            recall,
             calibration_error,
         ) = test_metrics.compute()
-        test_metrics.reset()
 
         accuracy_table = wandb.Table(
             data=[
