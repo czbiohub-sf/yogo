@@ -29,10 +29,9 @@ class Metrics:
         self.num_classes = len(self.class_names)
         self.classify = classify
 
-        # TODO can we put confusion in MetricCollection? mAP?
-        self.mAP = MeanAveragePrecision(box_format="xyxy", sync_on_compute=False)
+        self.mAP = MeanAveragePrecision(box_format="xyxy", sync_on_compute=True)
         self.confusion = MulticlassConfusionMatrix(
-            num_classes=self.num_classes, validate_args=False, sync_on_compute=False
+            num_classes=self.num_classes, validate_args=False, sync_on_compute=True
         )
         self.prediction_metrics = MetricCollection(
             [
@@ -40,28 +39,28 @@ class Metrics:
                     num_classes=self.num_classes,
                     average=None,
                     validate_args=False,
-                    sync_on_compute=False,
+                    sync_on_compute=True,
                 ),
                 MulticlassROC(
                     num_classes=self.num_classes,
                     validate_args=False,
-                    sync_on_compute=False,
+                    sync_on_compute=True,
                 ),
                 MulticlassPrecision(
                     num_classes=self.num_classes,
                     validate_args=False,
-                    sync_on_compute=False,
+                    sync_on_compute=True,
                 ),
                 MulticlassRecall(
                     num_classes=self.num_classes,
                     validate_args=False,
-                    sync_on_compute=False,
+                    sync_on_compute=True,
                 ),
                 MulticlassCalibrationError(
                     num_classes=self.num_classes,
                     n_bins=20,
                     validate_args=False,
-                    sync_on_compute=False,
+                    sync_on_compute=True,
                 ),
             ],
         )

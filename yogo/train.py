@@ -281,15 +281,12 @@ class Trainer:
                         step=self.global_step,
                     )
 
-            with Timer("val"):
-                self._validate()
+            self._validate()
 
-        if self._rank == 0:
-            with Timer("test"):
-                self._test()
+        with Timer("test"):
+            self._test()
 
-            with Timer("wandb finishing"):
-                wandb.finish()
+        wandb.finish()
 
         torch.distributed.destroy_process_group()
 
@@ -363,8 +360,9 @@ class Trainer:
             device=device,
         )
 
-        net, cfg = YOGO.from_pth(self.model_save_dir / "best.pth")
-        net.to(device)
+        self.model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
+        torch.load(self.model_save_dir / "best.pth", map_location=device)
+        self.net.module.to(device)
 
         test_loss = 0.0
 
@@ -380,8 +378,6 @@ class Trainer:
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
 
-        # I *think* that test_metrics syncs automatically (it hangs
-        # due to a barrier, so it *must* be syncing)
         (
             mAP,
             confusion_data,
@@ -391,6 +387,9 @@ class Trainer:
             recall,
             calibration_error,
         ) = test_metrics.compute()
+
+        if self._rank != 0:
+            return
 
         accuracy_table = wandb.Table(
             data=[
