@@ -63,7 +63,7 @@ class Trainer:
             "0.0.0.0",
             10101,
             _world_size,  # number of clients
-            _rank == 0    # only rank 0 should be the server, others are clients
+            _rank == 0,  # only rank 0 should be the server, others are clients
         )
 
         self._initialized = False
@@ -284,7 +284,6 @@ class Trainer:
             with Timer("val"):
                 self._validate()
 
-
         if self._rank == 0:
             with Timer("test"):
                 self._test()
@@ -371,6 +370,7 @@ class Trainer:
         test_loss = 0.0
 
         from tqdm import tqdm
+
         for imgs, labels in tqdm(self.test_dataloader, desc="testing..."):
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
