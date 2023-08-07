@@ -193,10 +193,8 @@ def get_dataloader(
             *augmentations if designation == "train" else [],
         )
 
-        sampler: Optional[Iterable] = (
-            DistributedSampler(dataset, rank=rank, num_replicas=world_size)
-            if world_size > 1 and designation in ("train", "val")
-            else None
+        sampler: Iterable = DistributedSampler(
+            dataset, rank=rank, num_replicas=world_size
         )
 
         d[designation] = DataLoader(

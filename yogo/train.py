@@ -103,26 +103,27 @@ class Trainer:
             self.global_step = 0
         else:
             net, net_cfg = YOGO.from_pth(self.config["pretrained_path"])
+
             if any(net.img_size.cpu().numpy() != self.config["resize_shape"]):
                 raise RuntimeError(
                     "mismatch in pretrained network image resize shape and current resize shape: "
                     f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {self.config['resize_shape']}"
                 )
+
             net.to(self.device)
             self.global_step = net_cfg["step"]
             self.config["normalize_images"] = net_cfg["normalize_images"]
 
         self.Sx, self.Sy = net.get_grid_size()
 
-        if self._world_size > 1:
-            os.environ["MASTER_ADDR"] = "localhost"
-            os.environ["MASTER_PORT"] = "12355"
+        os.environ["MASTER_ADDR"] = "localhost"
+        os.environ["MASTER_PORT"] = "12355"
 
-            torch.distributed.init_process_group(
-                backend="nccl", rank=self._rank, world_size=self._world_size
-            )
+        torch.distributed.init_process_group(
+            backend="nccl", rank=self._rank, world_size=self._world_size
+        )
 
-            net = DDP(net, device_ids=[self._rank])
+        net = DDP(net, device_ids=[self._rank])
 
         self.net = net
 
@@ -290,8 +291,7 @@ class Trainer:
             with Timer("wandb finishing"):
                 wandb.finish()
 
-        if self._world_size > 1:
-            torch.distributed.destroy_process_group()
+        torch.distributed.destroy_process_group()
 
     @torch.no_grad()
     def _validate(self):
