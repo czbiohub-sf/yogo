@@ -306,7 +306,7 @@ class Trainer:
             val_loss += loss
 
         # sync val loss across all processes
-        torch.distributed.all_reduce(val_loss)
+        torch.distributed.all_reduce(val_loss, op=torch.distributed.ReduceOp.AVG)
 
         if self._rank != 0:
             return
