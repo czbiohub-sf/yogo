@@ -33,10 +33,16 @@ def choose_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def choose_dataloader_num_workers(dataset_size):
+def choose_dataloader_num_workers(
+    dataset_size: int, requested_num_workers: Optional[int] = None
+):
     if dataset_size < 1000:
         return 0
-    return min(len(os.sched_getaffinity(0)), 64)
+    return (
+        requested_num_workers
+        if requested_num_workers is not None
+        else min(len(os.sched_getaffinity(0)), 64)
+    )
 
 
 def save_predictions(
@@ -188,6 +194,10 @@ def predict(
         normalize_images=cfg["normalize_images"],
     )
 
+    print(f"NUM WORKERS REQUESTED WOOOOOO WOOOO {num_workers}")
+    print(
+        f"{choose_dataloader_num_workers(len(image_dataset), requested_num_workers=num_workers)=}"
+    )
     image_dataloader = DataLoader(
         image_dataset,
         batch_size=batch_size,
@@ -195,7 +205,9 @@ def predict(
         drop_last=False,
         pin_memory=True,
         collate_fn=collate_fn,
-        num_workers=num_workers or choose_dataloader_num_workers(len(image_dataset)),
+        num_workers=choose_dataloader_num_workers(
+            len(image_dataset), requested_num_workers=num_workers
+        ),
     )
 
     pbar = tqdm(
