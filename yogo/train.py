@@ -362,7 +362,7 @@ class Trainer:
         torch.load(self.model_save_dir / "best.pth", map_location=device)
         self.net.module.to(device)
 
-        test_loss = torch.zeros(1)
+        test_loss = torch.zeros(1, device=device)
         for imgs, labels in self.test_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
