@@ -179,6 +179,15 @@ def get_dataloader(
         else []
     )
 
+    # if ddp hasn't been initialized, these will raise
+    # runtime errors instead of returning 0 and 1 respectively.
+    try:
+        rank = torch.distributed.get_rank()
+        world_size = torch.distributed.get_world_size()
+    except RuntimeError:
+        rank = 0
+        world_size = 1
+
     image_preprocess: DualInputModule
     if preprocess_type == "crop":
         assert vertical_crop_size is not None, "must be None if cropping"
@@ -203,7 +212,9 @@ def get_dataloader(
         )
 
         sampler: Iterable = DistributedSampler(
-            dataset, rank=torch.distributed.get_rank(), num_replicas=torch.distributed.get_world_size()
+            dataset,
+            rank=rank,
+            num_replicas=world_size,
         )
 
         num_workers = choose_dataloader_num_workers(dataset_len)

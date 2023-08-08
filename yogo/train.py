@@ -140,8 +140,6 @@ class Trainer:
             vertical_crop_size=self.config["vertical_crop_size"],
             resize_shape=self.config["resize_shape"],
             normalize_images=self.config["normalize_images"],
-            rank=self._rank,
-            world_size=self._world_size,
         )
 
         train_dataloader = dataloaders["train"]
