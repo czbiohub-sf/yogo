@@ -23,6 +23,18 @@ from yogo.data.data_transforms import (
 )
 
 
+def choose_dataloader_num_workers(
+    dataset_size: int, requested_num_workers: Optional[int] = None
+):
+    if dataset_size < 1000:
+        return 0
+    return (
+        requested_num_workers
+        if requested_num_workers is not None
+        else min(len(os.sched_getaffinity(0)), 64)
+    )
+
+
 def get_datasets(
     dataset_description_file: str,
     Sx: int,
@@ -146,8 +158,6 @@ def get_dataloader(
     Sx: int,
     Sy: int,
     training: bool = True,
-    rank: int = 0,
-    world_size: int = 1,
     preprocess_type: Optional[str] = None,
     vertical_crop_size: Optional[float] = None,
     resize_shape: Optional[Tuple[int, int]] = None,
@@ -180,12 +190,11 @@ def get_dataloader(
     else:
         raise ValueError(f"got invalid preprocess type {preprocess_type}")
 
-    num_workers = min(len(os.sched_getaffinity(0)) // world_size, 32)
-
     d = dict()
     for designation, dataset in split_datasets.items():
         # catch case of len(dataset) == 0
-        if len(dataset) == 0:  # type: ignore
+        dataset_len = len(dataset)  # type: ignore
+        if dataset_len == 0:
             continue
 
         transforms = MultiArgSequential(
@@ -194,8 +203,10 @@ def get_dataloader(
         )
 
         sampler: Iterable = DistributedSampler(
-            dataset, rank=rank, num_replicas=world_size
+            dataset, rank=torch.distributed.get_rank(), num_replicas=torch.distributed.get_world_size()
         )
+
+        num_workers = choose_dataloader_num_workers(dataset_len)
 
         d[designation] = DataLoader(
             dataset,

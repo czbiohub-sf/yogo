@@ -15,10 +15,11 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import CenterCrop
 
 from yogo.model import YOGO
+from yogo.data import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import infer_parser
 from yogo.utils import draw_yogo_prediction, format_preds
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.image_path_dataset import get_dataset, collate_fn
+from yogo.data.yogo_dataloader import choose_dataloader_num_workers
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff
@@ -31,18 +32,6 @@ def argmax(arr):
 
 def choose_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def choose_dataloader_num_workers(
-    dataset_size: int, requested_num_workers: Optional[int] = None
-):
-    if dataset_size < 1000:
-        return 0
-    return (
-        requested_num_workers
-        if requested_num_workers is not None
-        else min(len(os.sched_getaffinity(0)), 64)
-    )
 
 
 def save_predictions(
@@ -194,10 +183,6 @@ def predict(
         normalize_images=cfg["normalize_images"],
     )
 
-    print(f"NUM WORKERS REQUESTED WOOOOOO WOOOO {num_workers}")
-    print(
-        f"{choose_dataloader_num_workers(len(image_dataset), requested_num_workers=num_workers)=}"
-    )
     image_dataloader = DataLoader(
         image_dataset,
         batch_size=batch_size,
