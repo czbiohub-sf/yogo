@@ -23,7 +23,6 @@ from yogo.data.dataset_description_file import load_dataset_description
 from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
-from yogo.utils.cluster_anchors import best_anchor
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 from yogo.utils import (
     draw_yogo_prediction,
@@ -446,9 +445,7 @@ def do_training(args) -> None:
         preprocess_type = None
 
     with Timer("loading dataset description"):
-        dataset_paths = load_dataset_description(
-            args.dataset_descriptor_file
-        ).dataset_paths
+        load_dataset_description(args.dataset_descriptor_file).dataset_paths
 
     # finding anchors when training can be slow, and they don't change for a given dataset
     # with Timer("getting best anchor"):
