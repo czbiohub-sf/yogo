@@ -24,6 +24,7 @@ from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
 from yogo.utils.cluster_anchors import best_anchor
+from yogo.utils.default_hyperparams import DefaultHyperparams as df
 from yogo.utils import (
     draw_yogo_prediction,
     get_wandb_confusion,
@@ -449,8 +450,10 @@ def do_training(args) -> None:
             args.dataset_descriptor_file
         ).dataset_paths
 
-    with Timer("getting best anchor"):
-        anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
+    # finding anchors when training can be slow, and they don't change for a given dataset
+    # with Timer("getting best anchor"):
+    #     anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
+    anchor_w, anchor_h = df.ANCHOR_W, df.ANCHOR_H
 
     config = {
         "learning_rate": args.learning_rate,
