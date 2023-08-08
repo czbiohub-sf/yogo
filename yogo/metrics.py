@@ -14,7 +14,7 @@ from torchmetrics.classification import (
     MulticlassCalibrationError,
 )
 
-from yogo.utils.utils import format_preds_and_labels
+from yogo.utils import format_preds_and_labels
 
 
 class Metrics:
