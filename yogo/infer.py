@@ -145,6 +145,7 @@ def predict(
     use_tqdm: bool = False,
     device: Optional[Union[str, torch.device]] = None,
     output_img_ftype: Literal[".png", ".tif", ".tiff"] = ".png",
+    num_workers: Optional[int] = None,
 ) -> Optional[torch.Tensor]:
     if save_preds and draw_boxes:
         raise ValueError(
@@ -194,7 +195,7 @@ def predict(
         drop_last=False,
         pin_memory=True,
         collate_fn=collate_fn,
-        num_workers=choose_dataloader_num_workers(len(image_dataset)),
+        num_workers=num_workers or choose_dataloader_num_workers(len(image_dataset)),
     )
 
     pbar = tqdm(
