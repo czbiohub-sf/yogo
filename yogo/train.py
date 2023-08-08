@@ -364,8 +364,7 @@ class Trainer:
         torch.load(self.model_save_dir / "best.pth", map_location=device)
         self.net.module.to(device)
 
-        test_loss = 0.0
-
+        test_loss = torch.zeros(1)
         for imgs, labels in self.test_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
@@ -373,7 +372,7 @@ class Trainer:
             outputs = self.net(imgs)
             loss, _ = self.Y_loss(outputs, labels)
 
-            test_loss += loss.item()
+            test_loss += loss
             test_metrics.update(outputs.detach(), labels.detach())
 
         torch.distributed.all_reduce(test_loss, op=torch.distributed.ReduceOp.AVG)
