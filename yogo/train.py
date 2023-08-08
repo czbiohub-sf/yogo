@@ -366,9 +366,7 @@ class Trainer:
 
         test_loss = 0.0
 
-        from tqdm import tqdm
-
-        for imgs, labels in tqdm(self.test_dataloader, desc="testing..."):
+        for imgs, labels in self.test_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
@@ -377,6 +375,8 @@ class Trainer:
 
             test_loss += loss.item()
             test_metrics.update(outputs.detach(), labels.detach())
+
+        torch.distributed.all_reduce(test_loss, op=torch.distributed.ReduceOp.AVG)
 
         (
             mAP,
