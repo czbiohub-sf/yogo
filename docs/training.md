@@ -6,21 +6,11 @@ Note that there are also other *ways* to train. Just be careful to isolate your 
 
 Finally, look at the [cli guide](https://github.com/czbiohub-sf/yogo/blob/main/docs/cli.md#yogo-train) for brief instructions on `yogo train`.
 
-## Initiating Training
-
-Start training YOGO with:
-
-```
-yogo train path_to/dataset_defn.yml
-```
-
 ## Dataset Definition
 
 The `dataset_defn.yml` file provides data definitions, guiding the dataloader on splitting data for testing, validation, and training. A detailed explanation is in [dataset_description.md](dataset_description.md).
 
-### Locations of Dataset Definitions
-
-Dataset files and labels are in: 
+Dataset files and labels are in:
 
 ```
 /hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/biohub-labels
@@ -28,10 +18,10 @@ Dataset files and labels are in:
 
 Common files include:
 
-- **Pre-training:** 
+- **Pre-training:**
     - `pre-training/yogo_parasite_data_with_tests.yml` : Contains YOGO and hand-labelled test data. Most of the time, use existing pretrained models like "expert-night-1797" or "rare-valley-1798".
 
-- **Human Labels:** 
+- **Human Labels:**
     - `human-labels/all-labelled-data-test.yml` : Only hand-labelled data.
     - `human-labels/all-labelled-data-test-good-healthy.yml` : Hand-labelled data and healthy YOGO labels. Parasite classes are marked as healthy.
 
@@ -41,13 +31,13 @@ The last two files are often used for training. Add new data to them as needed.
 
 For efficient training, use a GPU by connecting to Bruno.
 
-### Resource Scripts
-
-In the `scripts` directory:
+In the `yogo/scripts` directory:
 
 - `submit_cmd.sh`: Asks for one GPU.
 - `submit_cmd_multi_gpu.sh`: Asks for four GPUs.
 - `array_submit.sh`: Can ask for many GPUs.
+
+The multi-gpu scripts will train yogo much faster, but if Bruno is being heavily used, it may be difficult to get 4 gpus at once.
 
 **Note:** Don't use `array_submit.sh` for training, it is intended for many short jobs that each require a gpu.
 
@@ -65,25 +55,12 @@ with whatever hyperparameters / options that you want. Read `yogo train --help` 
 
 Slurm manages jobs on Bruno. To check job statuses:
 
-```
+```console
 squeue
+squeue --me  // for your jobs
 ```
 
-For your jobs:
-
-```
-squeue --me
-```
-
-## Choosing Single or Multi-GPU
-
-The multi-GPU script runs faster, but if Bruno is busy, use the single GPU script.
-
-## Monitoring Model Progress
-
-Track the model using "Weights and Biases". Make sure you're registered to see the progress.
-
-## Training: A Dialogue
+# Training: A Dialogue
 
 *A* Ah yes, beauty divine! Labels assigned! YOGO shall know, though how does it learn?
 
