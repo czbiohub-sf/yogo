@@ -8,7 +8,7 @@ Finally, look at the [cli guide](https://github.com/czbiohub-sf/yogo/blob/main/d
 
 ## Dataset Definition
 
-The `dataset_defn.yml` file provides data definitions, guiding the dataloader on splitting data for testing, validation, and training. A detailed explanation is in [dataset_definition.md](dataset_definition.md).
+The `dataset_defn.yml` file provides data definitions, guiding the dataloader on splitting data for testing, validation, and training. A detailed explanation is in [dataset-definition.md](dataset-definition.md).
 
 Dataset files and labels are in:
 
@@ -68,7 +68,7 @@ squeue --me  // for your jobs
 
 *A* Wait, what is this `dataset_defn.yml`?
 
-*B* Simply [this](dataset_definition.md) - a way to define your dataset. In short, tells the dataloader how to split the data for testing, validation and training.
+*B* Simply [this](dataset-definition.md) - a way to define your dataset. In short, tells the dataloader how to split the data for testing, validation and training.
 
 *A* We already have many datasets of labelled data, where are those definition files?
 
