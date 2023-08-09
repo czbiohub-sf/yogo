@@ -16,15 +16,19 @@ Finally, look at the [cli guide](https://github.com/czbiohub-sf/yogo/blob/main/d
 
 *B* Simply [this](dataset_description.md) - a way to define your dataset. In short, tells the dataloader how to split the data for testing, validation and training.
 
+*A* We already have many datasets of labelled data, where are those definition files?
+
+*B* Our dataset definition files and labels for the data are in `biohub_labels` (full path `/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/biohub-labels`). The runs that I commonly 
+
 *A* Ah, makes sense. My data is on Flexo, so I'll just mount it to my laptop and train!
 
-*B* Patience is sometimes not a virtue. That will take too long, `ssh` into Bruno and borrow a GPU! The scripts directory has some of what you need; `submit_cmd.sh` requests one GPU, `submit_cmd_multi_gpu.sh` requests four, and `array_submit.sh` can requests thousands.
+*B* Patience is sometimes not a virtue. That will take too long, `ssh` into Bruno and borrow a GPU. The scripts directory has some of what you need; `submit_cmd.sh` requests one GPU, `submit_cmd_multi_gpu.sh` requests four, and `array_submit.sh` can requests thousands.
 
 *A* Good god! OK, I guess `array_submit.sh` isn't typically used for training?
 
 *B* Correct, do NOT use that for training.
 
-*A* Roger! So how do I use `submit_cmd.sh`?
+*A* Roger. How do I use `submit_cmd.sh`?
 
 *B* Assuming you're in the root YOGO directory, `sbatch scripts/submit_cmd(_multi_gpu.sh) yogo train path_to/dataset_defn.yml` will submit that job to Bruno. When there are resources, YOGO will start running the script.
 
@@ -49,3 +53,5 @@ This shows the Job ID, where you are running the job (`gpu` if on a gpu node), t
 *B* Weights and Biases. You need a seat on our account. Assuming you have one, you should see it there.
 
 *A* Oh
+
+*B* 
