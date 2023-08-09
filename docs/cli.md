@@ -75,7 +75,7 @@ If you don't specify `--output-dir`, results will be displayed to you, either vi
 
 ## `yogo train`
 
-There are a *lot* of options here. At the most basic level, `yogo train path/to/[dataset_description.yml](dataset_description.md)` will train a model with decent default parameters. Here is `yogo train --help`:
+There are a *lot* of options here. At the most basic level, `yogo train path/to/dataset_description.yml` (docs for [`dataset_description.yml`](dataset_description.md)) will train a model with decent default parameters. Here is `yogo train --help`:
 
 ```console
 $ yogo train --help

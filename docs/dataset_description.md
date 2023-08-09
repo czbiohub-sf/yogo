@@ -1,7 +1,6 @@
 # Dataset Definition Files
 
-There are many different conditions over which we may want to train - e.g. only fast flowrates, only human-annotated labels, e.t.c. Therefore we would like
-a dataset definition format for YOGO that is easily machine-readable (so YOGO can process it) and human-readable (so we can edit the files by hand, if we wish).
+There are many different conditions over which we may want to train - e.g. only fast flowrates, only human-annotated labels, e.t.c. Therefore we would like a dataset definition format for YOGO that is easily machine-readable (so YOGO can process it) and human-readable (so we can edit the files by hand, if we wish).
 
 Dataset definition files are central to training: it is the first argument you pass to YOGO when starting a training run (i.e. `yogo train dataset_defn.yml`). They are also generated when you label data via our [labelling scripts](https://github.com/czbiohub/lfm-data-utilities/blob/main/lfm_data_utilities/malaria-labelling/scripts.md#creating-cellpose-or-yogo-labels).
 
@@ -32,14 +31,7 @@ dataset_split_fractions:
   test:  0.25
   val:   0.05
 
-# Finally, we have to actually point to our data. If we have just one set of
-# folders for images and labels, then we just define the image path and label
-# path, like below:
-image_path: /path/to/images/
-label_path: /path/to/labels/
-
-# However, if we want multiple sets of folders for training and inference, we
-# use `dataset_paths` to define the paths to folders individually.
+# We use `dataset_paths` to define the paths to folders individually.
 dataset_paths:
   set1:  # this name is just for your convenience!
     image_path: /path/to/images/
@@ -51,6 +43,8 @@ dataset_paths:
 
 # You can also specify test paths. The data specified here will be isolated
 # from training data, so we can get proper measurements of model quality.
+#
+# NOTE!
 # If you specify `test_paths`, the `dataset_split_fractions` section above
 # can only have `test` and `val` as keys, and remember that their values must
 # still sum to 1. E.g.,
@@ -69,7 +63,7 @@ If you want, you can also augment certain classes by human bbox labels!
 thumbnail_agumentation:
   misc: /path/to/folder/of/toner/blob/thumbnails
   wbc: /path/to/folder/of/wbc/thumbnails
-  misc: /another/path/to/misc
+  gametocyte: /path/to/gametocytes
 ```
 
 ## Label files
