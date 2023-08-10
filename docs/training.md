@@ -1,8 +1,6 @@
 # Training
 
-This document will discuss the training process that I (Axel) undertook to get YOGO to where it is now, along with any other notes that I could think of.
-
-Note that there are also other *ways* to train. Just be careful to isolate your testing set from your training set, and to look at the right metrics.
+This document will cover the practical details of training YOGO - where to look for data, how to format your data, how to get a GPU, e.t.c.
 
 Finally, look at the [cli guide](https://github.com/czbiohub-sf/yogo/blob/main/docs/cli.md#yogo-train) for brief instructions on `yogo train`.
 
