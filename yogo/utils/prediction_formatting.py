@@ -63,7 +63,7 @@ def format_preds(
 
     pred_shape, Sy, Sx = pred.shape
 
-    if heatmap_mask != None:
+    if heatmap_mask is not None:
         # Only mask rings/trophs/schizonts/gametocytes
         # Indices for the above: 6, 7, 8, 9
         idxs = [6, 7, 8, 9]
