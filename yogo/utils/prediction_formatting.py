@@ -20,16 +20,37 @@ def format_preds(
     iou_thresh: float = 0.5,
     area_thresh: Optional[float] = None,
     box_format: BoxFormat = "cxcywh",
+    heatmap_mask: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """
     formats pred, prediction tensor straight from YOGO, into [N,pred_shape], after applying NMS,
     and, thresholding objectness, and filtering thin boxes. box_format specifies the returned box format.
 
+    If heatmap_mask is provided, then the raw prediction's objectness scores for each of the heatmap's classes are set to zero wherever the heatmap mask is true.
+    The heatmap mask is a true/false array of 'hot spots' in the dataset. This mask will have been created by running YOGO on this dataset once already
+    and then applying thresholded on the heatmap that was generated.
+
     area_thresh is the threshold for filtering out boxes that are too small (in units of pct of image).
     An OK lower bound is 1e-6
 
     For all thresholds, set to 0 to disable.
+
+    Parameters
+    ----------
+    pred: torch.Tensor
+        Raw YOGO output (unbatched)
+    obj_thresh: float = 0.5
+        Objectness threshold
+    iou_thresh: float = 0.5
+        Intersection over union threshold (for non-maximal suppression (NMS))
+    area_thresh: Optional[float] = None
+        Optionally filter out prediction bounding boxes smaller than this area_thresh parameter
+    box_format: BoxFormat = 'cxcywh'
+        Bounding box format, defaults to (center x, center y, width, height). Can also be (top left x, top left y, bottom right x, bottom right y)
+    heatmap_mask: Optional[torch.Tensor / np.ndarray]
+        sx * sy * num_classes shaped array, containing heatmap masks.
     """
+
     if len(pred.shape) != 3:
         raise ValueError(
             "argument to format_pred should be unbatched result - "
@@ -41,6 +62,13 @@ def format_preds(
         )
 
     pred_shape, Sy, Sx = pred.shape
+
+    if heatmap_mask != None:
+        # Only mask rings/trophs/schizonts/gametocytes
+        # Indices for the above: 6, 7, 8, 9
+        idxs = [6, 7, 8, 9]
+        for idx in idxs:
+            pred[idx, :, :][heatmap_mask[:, :, idx]] = 0
 
     reformatted_preds = pred.view(pred_shape, Sx * Sy).T
 
