@@ -65,10 +65,10 @@ def format_preds(
 
     if heatmap_mask is not None:
         # Only mask rings/trophs/schizonts/gametocytes
-        # Indices for the above: 6, 7, 8, 9
-        idxs = [6, 7, 8, 9]
+        # Indices for the above in the heatmap are: 1, 2, 3, 4
+        idxs = [1, 2, 3, 4]
         for idx in idxs:
-            pred[idx, :, :][heatmap_mask[:, :, idx]] = 0
+            pred[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
 
     reformatted_preds = pred.view(pred_shape, Sx * Sy).T
 
