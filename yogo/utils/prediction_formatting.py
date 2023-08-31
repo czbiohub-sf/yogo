@@ -68,7 +68,7 @@ def format_preds(
         # Indices for the above in the heatmap are: 1, 2, 3, 4
         idxs = [1, 2, 3, 4]
         for idx in idxs:
-            pred[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
+            pred[5 + idx, :, :][heatmap_mask[:, :, idx].bool()] = 0
 
     reformatted_preds = pred.view(pred_shape, Sx * Sy).T
 
