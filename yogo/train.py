@@ -7,11 +7,12 @@ import torch
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Iterable, cast
+from typing import Optional, Iterable, Union, List, cast
 
 import torch.multiprocessing as mp
 
 from torch.optim import AdamW
+from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.nn.parallel import DistributedDataParallel as DDP
 
@@ -151,6 +152,14 @@ class Trainer:
         self.validate_dataloader = validate_dataloader
         self.test_dataloader = test_dataloader
 
+    def _dataset_size(self, dataloader: Union[List, DataLoader]) -> int:
+        # type ignore for dataset-sized type error
+        return (
+            len(dataloader.dataset)  # type: ignore
+            if isinstance(dataloader, DataLoader)
+            else len(dataloader)
+        )
+
     def _init_training_tools(self):
         class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
 
@@ -193,9 +202,9 @@ class Trainer:
             {
                 "Sx": self.Sx,
                 "Sy": self.Sy,
-                "training set size": f"{len(self.train_dataloader.dataset)} images",  # type:ignore
-                "validation set size": f"{len(self.validate_dataloader.dataset)} images",  # type:ignore
-                "testing set size": f"{len(self.test_dataloader.dataset)} images",  # type:ignore
+                "training set size": f"{self._dataset_size(self.train_dataloader)} images",  # type:ignore
+                "validation set size": f"{self._dataset_size(self.validate_dataloader)} images",  # type:ignore
+                "testing set size": f"{self._dataset_size(self.test_dataloader)} images",  # type:ignore
                 "normalize_images": self.config["normalize_images"],
             },
             allow_val_change=True,
