@@ -3,11 +3,12 @@ from __future__ import annotations
 import os
 import wandb
 import torch
+import warnings
 
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Iterable, Union, List, cast
+from typing import Optional, Iterable, Sized, Union, List, Any, cast
 
 import torch.multiprocessing as mp
 
@@ -145,14 +146,20 @@ class Trainer:
 
         train_dataloader = dataloaders["train"]
         # sneaky hack to replace non-existant datasets with emtpy list
-        validate_dataloader: Iterable = dataloaders.get("val", [])
-        test_dataloader: Iterable = dataloaders.get("test", [])
+        validate_dataloader: Sized = dataloaders.get("val", [])
+        test_dataloader: Sized = dataloaders.get("test", [])
+
+        if self._dataset_size(validate_dataloader) == 0:
+            warnings.warn("no validation dataset found")
+
+        if self._dataset_size(test_dataloader) == 0:
+            warnings.warn("no test dataset found")
 
         self.train_dataloader = train_dataloader
         self.validate_dataloader = validate_dataloader
         self.test_dataloader = test_dataloader
 
-    def _dataset_size(self, dataloader: Union[List, DataLoader]) -> int:
+    def _dataset_size(self, dataloader: Union[Sized, DataLoader]) -> int:
         # type ignore for dataset-sized type error
         return (
             len(dataloader.dataset)  # type: ignore
