@@ -306,6 +306,9 @@ class Trainer:
 
     @torch.no_grad()
     def _validate(self):
+        if self._dataset_size(self.validate_dataloader) == 0:
+            return
+
         self.net.eval()
         device = self.device
 
@@ -366,6 +369,9 @@ class Trainer:
         TODO could make this static so we can evaluate YOGO
         separately from training
         """
+        if self._dataset_size(self.test_dataloader) == 0:
+            return
+
         device = self.device
 
         test_metrics = Metrics(
