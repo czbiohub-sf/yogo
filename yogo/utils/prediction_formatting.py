@@ -21,6 +21,7 @@ def format_preds(
     area_thresh: Optional[float] = None,
     box_format: BoxFormat = "cxcywh",
     heatmap_mask: Optional[torch.Tensor] = None,
+    min_class_confidence_threshold: float = 0.0,
 ) -> torch.Tensor:
     """
     formats pred, prediction tensor straight from YOGO, into [N,pred_shape], after applying NMS,
@@ -47,8 +48,10 @@ def format_preds(
         Optionally filter out prediction bounding boxes smaller than this area_thresh parameter
     box_format: BoxFormat = 'cxcywh'
         Bounding box format, defaults to (center x, center y, width, height). Can also be (top left x, top left y, bottom right x, bottom right y)
-    heatmap_mask: Optional[torch.Tensor / np.ndarray]
+    heatmap_mask: Optional[torch.Tensor | np.ndarray]
         sx * sy * num_classes shaped array, containing heatmap masks.
+    min_class_confidence_threshold: float = 0.0
+        filters out all predictions with a maximum confidence less than this threshold
     """
 
     if len(pred.shape) != 3:
@@ -99,10 +102,14 @@ def format_preds(
             preds[:, 4],
             iou_threshold=iou_thresh,
         )
-    else:
-        keep_idxs = torch.arange(len(preds))
+        preds = preds[keep_idxs]
 
-    return preds[keep_idxs]
+    # Filter out predictions with low class confidence
+    if min_class_confidence_threshold > 0:
+        keep_idxs = preds[:, 5:].max(dim=1).values > min_class_confidence_threshold
+        preds = preds[keep_idxs]
+
+    return preds
 
 
 def format_preds_and_labels(
