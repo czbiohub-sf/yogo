@@ -1,8 +1,9 @@
 from .utils import (
     Timer,
     get_wandb_roc,
-    get_wandb_confusion,
+    get_free_port,
     iter_in_chunks,
+    get_wandb_confusion,
     draw_yogo_prediction,
 )
 
@@ -15,6 +16,7 @@ from .prediction_formatting import (
 __all__ = (
     "Timer",
     "get_wandb_roc",
+    "get_free_port",
     "get_wandb_confusion",
     "iter_in_chunks",
     "draw_yogo_prediction",

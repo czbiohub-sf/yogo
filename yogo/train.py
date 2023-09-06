@@ -30,6 +30,7 @@ from yogo.utils import (
     draw_yogo_prediction,
     get_wandb_confusion,
     get_wandb_roc,
+    get_free_port,
     Timer,
 )
 
@@ -119,7 +120,7 @@ class Trainer:
         self.Sx, self.Sy = net.get_grid_size()
 
         os.environ["MASTER_ADDR"] = "localhost"
-        os.environ["MASTER_PORT"] = "12355"
+        os.environ["MASTER_PORT"] = str(get_free_port())
 
         torch.distributed.init_process_group(
             backend="nccl", rank=self._rank, world_size=self._world_size
