@@ -67,6 +67,7 @@ def get_prediction_class_counts(
     batch_preds: torch.Tensor,
     obj_thresh=0.5,
     iou_thresh=0.5,
+    min_class_confidence_threshold: float = 0,
 ) -> torch.Tensor:
     """
     Count the number of predictions of each class, by argmaxing the class predictions
@@ -77,6 +78,7 @@ def get_prediction_class_counts(
             pred_slice,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
+            min_class_confidence_threshold=min_class_confidence_threshold,
         )
         if preds.numel() == 0:
             continue  # ignore no predictions
@@ -140,6 +142,7 @@ def predict(
     device: Optional[Union[str, torch.device]] = None,
     output_img_ftype: Literal[".png", ".tif", ".tiff"] = ".png",
     num_workers: Optional[int] = None,
+    min_class_confidence_threshold: float = 0.0,
 ) -> Optional[torch.Tensor]:
     if save_preds and draw_boxes:
         raise ValueError(
@@ -274,6 +277,7 @@ def predict(
             results,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
+            min_class_confidence_threshold=min_class_confidence_threshold,
         ).tolist()
         tot_cells = sum(counts)
         print(
@@ -308,6 +312,7 @@ def do_infer(args):
         ),
         count_predictions=args.count,
         output_img_ftype=args.output_img_filetype,
+        min_class_confidence_threshold=args.min_class_confidence_threshold,
     )
 
 
