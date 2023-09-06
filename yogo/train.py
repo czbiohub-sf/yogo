@@ -61,14 +61,6 @@ class Trainer:
         self.global_step = 0
         self.min_val_loss = float("inf")
 
-        # store for distributed training (so far just using it for model_save_dir)
-        self._store = torch.distributed.TCPStore(
-            "0.0.0.0",
-            10101,
-            _world_size,  # number of clients
-            _rank == 0,  # only rank 0 should be the server, others are clients
-        )
-
         self._initialized = False
 
     @classmethod
@@ -85,11 +77,23 @@ class Trainer:
         return trainer
 
     def init(self) -> None:
+        self._init_tcp_store()
         self._init_model()
         self._init_dataset()
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
+
+    def _init_tcp_store(self) -> None:
+        os.environ["YOGO_TCP_STORE_PORT"] = self.config["tcp_store_port"]
+
+        # store for distributed training (so far just using it for model_save_dir)
+        self._store = torch.distributed.TCPStore(
+            "localhost",
+            int(os.environ["YOGO_TCP_STORE_PORT"]),
+            self._world_size,  # number of clients
+            self._rank == 0,  # only rank 0 should be the server, others are clients
+        )
 
     def _init_model(self) -> None:
         if (
@@ -119,8 +123,8 @@ class Trainer:
 
         self.Sx, self.Sy = net.get_grid_size()
 
-        os.environ["MASTER_ADDR"] = "localhost"
-        os.environ["MASTER_PORT"] = str(get_free_port())
+        os.environ["MASTER_ADDR"] = "0.0.0.0"
+        os.environ["MASTER_PORT"] = self.config["master_port"]
 
         torch.distributed.init_process_group(
             backend="nccl", rank=self._rank, world_size=self._world_size
@@ -485,6 +489,8 @@ def do_training(args) -> None:
         "classify_weight": args.classify_weight,
         "healthy_weight": args.healthy_weight,
         "logit_norm_temperature": args.logit_norm_temperature,
+        "tcp_store_port": str(get_free_port()),
+        "master_port": str(get_free_port()),
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "device": str(device),
