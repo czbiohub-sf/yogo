@@ -6,19 +6,20 @@
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --array=1-961%16
+#SBATCH --array=1-290%16
 #SBATCH --cpus-per-task=32
 #SBATCH --partition=gpu
-#SBATCH --gpus-per-node=a100:1
-#SBATCH --cpus-per-task=64
+#SBATCH --gpus-per-node=1
 
 # check if there is an input
-if [ -z "$1" ]; then
-  echo "usage: $0 <path-to-file>"
+if [ -z "$2" ]; then
+  echo "usage: $0 <path to yogo pth> <path-to-file>"
   exit 1
 fi
 
-FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$1")
+PTH_FILE="$1"
+
+FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
 FILE_NAME=$(basename "$FILE_PATH")
 
 if [ ! -d "${FILE_PATH}/images" ]; then
@@ -35,7 +36,7 @@ mkdir -p temp_output/results
 
 out=$(
   conda run yogo infer \
-    /home/axel.jacobsen/celldiagnosis/yogo/trained_models/fallen-wind-1668/best.pth \
+    "$PTH_FILE" \
     --path-to-images "${FILE_PATH}/images" \
     --count
 )
