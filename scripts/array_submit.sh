@@ -38,6 +38,7 @@ out=$(
   conda run yogo infer \
     "$PTH_FILE" \
     --path-to-images "${FILE_PATH}/images" \
+    --min-class-confidence-threshold 0.9 \
     --count
 )
 
