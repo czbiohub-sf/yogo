@@ -17,7 +17,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         classify_weight: float = 1.0,
         label_smoothing: float = 0.01,
         class_weights: Optional[torch.Tensor] = None,
-        logit_norm_temperature: Optional[float] = 1.0,
         classify: bool = True,
     ) -> None:
         super().__init__()
@@ -25,7 +24,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.no_obj_weight = no_obj_weight
         self.iou_weight = iou_weight
         self.classify_weight = classify_weight
-        self.temperature = logit_norm_temperature
 
         self.mse = torch.nn.MSELoss(reduction="none")
         self._classify = classify
@@ -133,21 +131,12 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         # classification loss
         if self._classify:
-            norm = (
-                1
-                if self.temperature is None
-                else (
-                    self.temperature
-                    * torch.linalg.norm(pred_batch[:, 5:, :, :], dim=1, keepdim=True)
-                    + 1e-7
-                )
-            )
             classification_loss = (
                 self.classify_weight
                 * (
                     label_batch[:, 0, :, :]
                     * self.cel(
-                        pred_batch[:, 5:, :, :] / norm, label_batch[:, 5, :, :].long()
+                        pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long()
                     )
                 ).sum()
                 / batch_size

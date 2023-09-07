@@ -180,7 +180,6 @@ class Trainer:
             iou_weight=self.config["iou_weight"],
             label_smoothing=self.config["label_smoothing"],
             class_weights=torch.tensor(class_weights),
-            logit_norm_temperature=self.config["logit_norm_temperature"],
             classify=not self.config["no_classify"],
         ).to(self.device)
 
@@ -488,7 +487,6 @@ def do_training(args) -> None:
         "no_obj_weight": args.no_obj_weight,
         "classify_weight": args.classify_weight,
         "healthy_weight": args.healthy_weight,
-        "logit_norm_temperature": args.logit_norm_temperature,
         "tcp_store_port": str(get_free_port()),
         "master_port": str(get_free_port()),
         "epochs": args.epochs,

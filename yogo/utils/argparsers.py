@@ -127,12 +127,6 @@ def train_parser(parser=None):
         default=df.LABEL_SMOOTHING,
     )
     parser.add_argument(
-        "--logit-norm-temperature",
-        type=unitary_float,
-        help=f"LogitNorm temperature (default {df.LOGIT_NORM_TEMPERATURE})",
-        default=df.LOGIT_NORM_TEMPERATURE,
-    )
-    parser.add_argument(
         "-wd",
         "--weight-decay",
         type=unitary_float,
