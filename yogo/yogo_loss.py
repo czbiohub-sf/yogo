@@ -135,9 +135,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 self.classify_weight
                 * (
                     label_batch[:, 0, :, :]
-                    * self.cel(
-                        pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long()
-                    )
+                    * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
                 ).sum()
                 / batch_size
             )
