@@ -9,3 +9,5 @@ To install, you will need to install PyTorch and TorchVision. Go [to PyTorch's w
 ```console
 python3 -m pip install -e .
 ```
+
+If you want to export a model to Openvino's format, you will also need to install [their code](https://docs.openvino.ai/2023.0/openvino_docs_install_guides_overview.html?ENVIRONMENT=DEV_TOOLS&OP_SYSTEM=LINUX&VERSION=v_2023_0_2&DISTRIBUTION=PIP).
