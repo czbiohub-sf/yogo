@@ -22,6 +22,8 @@ PTH_FILE="$1"
 FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
 FILE_NAME=$(basename "$FILE_PATH")
 
+MASK_PATH="/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/Uganda_heatmaps/masks_npy"
+
 if [ ! -d "${FILE_PATH}/images" ]; then
    >&2 echo "${FILE_PATH}/images doesn't exist"
   exit 1
@@ -39,6 +41,7 @@ out=$(
     "$PTH_FILE" \
     --path-to-images "${FILE_PATH}/images" \
     --min-class-confidence-threshold 0.95 \
+    --heatmap-mask-path "$MASK_PATH/$FILE_NAME.npy" \
     --count
 )
 
