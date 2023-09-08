@@ -320,6 +320,12 @@ def infer_parser(parser=None):
             "max confidence must be greater than this value (default 0.0)"
         ),
     )
+    parser.add_argument(
+        "--heatmap-mask-path",
+        type=Path,
+        default=None,
+        help="path to heatmap mask for the run (default None)",
+    )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
         "--path-to-images", type=Path, default=None, help="path to image or images"
