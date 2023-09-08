@@ -17,6 +17,7 @@ torchvision = ">=0.14.1"
 tqdm = "^4.61.2"
 wandb = ">=0.14.2"
 matplotlib = "^3.4.2"
+protobuf = "3.20.0"
 
 [tool.poetry.extras]
 onnx = ["onnx", "onnxruntime", "onnx-simplifier"]
