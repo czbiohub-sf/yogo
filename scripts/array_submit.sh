@@ -6,7 +6,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --array=1-290%16
+#SBATCH --array=1-360%16
 #SBATCH --cpus-per-task=32
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-node=1
@@ -38,7 +38,7 @@ out=$(
   conda run yogo infer \
     "$PTH_FILE" \
     --path-to-images "${FILE_PATH}/images" \
-    --min-class-confidence-threshold 0.9 \
+    --min-class-confidence-threshold 0.95 \
     --count
 )
 
