@@ -22,7 +22,11 @@ protobuf = "3.20.0"
 numpy = "1.20.0"
 
 [tool.poetry.extras]
-onnx = ["onnx", "onnxruntime", "onnx-simplifier"]
+onnx = [
+  "onnx",
+  "onnxruntime",
+  "onnx-simplifier"
+]
 
 [tool.poetry.scripts]
 yogo = "yogo.__main__:main"
