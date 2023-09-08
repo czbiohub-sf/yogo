@@ -4,6 +4,7 @@ import torch
 import signal
 import warnings
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 from tqdm import tqdm
@@ -68,17 +69,20 @@ def get_prediction_class_counts(
     obj_thresh=0.5,
     iou_thresh=0.5,
     min_class_confidence_threshold: float = 0,
+    heatmap_mask_path: Optional[Path] = None,
 ) -> torch.Tensor:
     """
     Count the number of predictions of each class, by argmaxing the class predictions
     """
     tot_class_sum = torch.zeros(len(YOGO_CLASS_ORDERING), dtype=torch.long)
+    heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
     for pred_slice in batch_preds:
         preds = format_preds(
             pred_slice,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
             min_class_confidence_threshold=min_class_confidence_threshold,
+            heatmap_mask=heatmap_mask,
         )
         if preds.numel() == 0:
             continue  # ignore no predictions
@@ -143,6 +147,7 @@ def predict(
     output_img_ftype: Literal[".png", ".tif", ".tiff"] = ".png",
     num_workers: Optional[int] = None,
     min_class_confidence_threshold: float = 0.0,
+    heatmap_mask_path: Optional[Path] = None,
 ) -> Optional[torch.Tensor]:
     if save_preds and draw_boxes:
         raise ValueError(
@@ -278,6 +283,7 @@ def predict(
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
             min_class_confidence_threshold=min_class_confidence_threshold,
+            heatmap_mask_path=heatmap_mask_path,
         ).tolist()
         tot_cells = sum(counts)
         print(
