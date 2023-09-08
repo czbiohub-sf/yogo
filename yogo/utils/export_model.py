@@ -95,8 +95,8 @@ def do_export(args):
             str(onnx_filename),
             "--output_dir",
             onnx_filename.resolve().parents[0],
-            "--data_type",
-            "FP16",
+            "--compress_to_fp16",
+            "True",
         ]
     )
     success_msg += f", {str(onnx_filename.with_suffix('.xml'))}, {str(onnx_filename.with_suffix('.bin'))}"
