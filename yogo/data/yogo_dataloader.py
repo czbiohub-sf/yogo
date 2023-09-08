@@ -28,11 +28,10 @@ def choose_dataloader_num_workers(
 ):
     if dataset_size < 1000:
         return 0
-    return (
-        requested_num_workers
-        if requested_num_workers is not None
-        else min(len(os.sched_getaffinity(0)), 64)
-    )
+    elif requested_num_workers is not None:
+        return requested_num_workers
+    else:
+        return min(len(os.sched_getaffinity(0)), 64)
 
 
 def get_datasets(
