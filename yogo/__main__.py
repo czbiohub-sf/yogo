@@ -22,7 +22,7 @@ def main():
         do_training(args)
     elif args.task == "export":
         if no_onnx:
-            print("onnx is not installed; install yogo with `pip3 install yogo[onnx]`")
+            print("onnx is not installed; install yogo with `pip3 install .[onnx]`")
             print(f"recieved error {onnx_err}")
             sys.exit(1)
         do_export(args)
