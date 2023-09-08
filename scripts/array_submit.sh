@@ -40,7 +40,7 @@ out=$(
   conda run yogo infer \
     "$PTH_FILE" \
     --path-to-images "${FILE_PATH}/images" \
-    --min-class-confidence-threshold 0.95 \
+    --min-class-confidence-threshold 0.90 \
     --heatmap-mask-path "$MASK_PATH/$FILE_NAME.npy" \
     --count
 )
