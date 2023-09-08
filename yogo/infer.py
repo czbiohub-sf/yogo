@@ -319,6 +319,7 @@ def do_infer(args):
         count_predictions=args.count,
         output_img_ftype=args.output_img_filetype,
         min_class_confidence_threshold=args.min_class_confidence_threshold,
+        heatmap_mask_path=args.heatmap_mask_path,
     )
 
 
