@@ -12,8 +12,8 @@
 #SBATCH --gpus-per-node=1
 
 # check if there is an input
-if [ -z "$2" ]; then
-  echo "usage: $0 <path to yogo pth> <path-to-file>"
+if [ -z "$3" ]; then
+  echo "usage: $0 <path to yogo pth> <path-to-file> <run name>"
   exit 1
 fi
 
@@ -21,6 +21,8 @@ PTH_FILE="$1"
 
 FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
 FILE_NAME=$(basename "$FILE_PATH")
+
+RUN_NAME="$3"
 
 MASK_PATH="/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/Uganda_heatmaps/masks_npy"
 
@@ -34,7 +36,9 @@ if [ ! -d "${FILE_PATH//_images/}/sub_sample_imgs" ]; then
   exit 1
 fi
 
-mkdir -p temp_output/results
+mkdir -p "temp_output/results/$RUN_NAME"
+
+echo "$MASK_PATH/$FILE_NAME.npy"
 
 out=$(
   conda run yogo infer \
@@ -45,8 +49,8 @@ out=$(
     --count
 )
 
-# if the prev command is successful, pipe output to "results/${FILE_NAME}.txt"
+# if the prev command is successful, pipe output to "results/$R{UN_NAME}/${FILE_NAME}.txt"
 if [ $? -eq 0 ]; then
-  echo $FILE_PATH > "temp_output/results/${FILE_NAME}.txt"
-  echo "$out" >> "temp_output/results/${FILE_NAME}.txt"
+  echo $FILE_PATH > "temp_output/results/${RUN_NAME}/${FILE_NAME}.txt"
+  echo "$out" >> "temp_output/results/${RUN_NAME}/${FILE_NAME}.txt"
 fi
