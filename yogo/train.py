@@ -299,7 +299,8 @@ class Trainer:
                         step=self.global_step,
                     )
 
-            self._validate()
+            if epoch % 4 == 0:
+                self._validate()
 
         with Timer("test"):
             self._test()
