@@ -70,8 +70,10 @@ def format_preds(
         # Only mask rings/trophs/schizonts/gametocytes
         # We mask classes by position since some areas of a chip can preferentially
         # predict certain classes incorrectly while predicting other classes correctly.
-        heatmap_mask = heatmap_mask.permute(2, 0, 1)
-        pred[6:10, :, :][heatmap_mask] = 0
+        # Indices for the above in the heatmap are: 1, 2, 3, 4
+        idxs = [1, 2, 3, 4]
+        for idx in idxs:
+            pred[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
 
     reformatted_preds = pred.view(pred_shape, Sx * Sy).T
 
