@@ -312,6 +312,7 @@ def do_infer(args):
         obj_thresh=args.obj_thresh,
         iou_thresh=args.iou_thresh,
         batch_size=args.batch_size,
+        device=args.device,
         use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
         vertical_crop_height_px=(
             round(772 * args.crop_height) if args.crop_height is not None else None

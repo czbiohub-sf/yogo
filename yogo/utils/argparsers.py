@@ -288,6 +288,12 @@ def infer_parser(parser=None):
         default=64,
     )
     parser.add_argument(
+        "--device",
+        type=str,
+        nargs="?",
+        help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
+    )
+    parser.add_argument(
         "--crop-height",
         type=unitary_float,
         help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
