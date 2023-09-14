@@ -1,5 +1,6 @@
 import os
 import torch
+import multiprocessing as mp
 
 from tqdm import tqdm
 from functools import partial
@@ -31,7 +32,7 @@ def choose_dataloader_num_workers(
     elif requested_num_workers is not None:
         return requested_num_workers
     else:
-        return min(len(os.sched_getaffinity(0)), 64)
+        return min(mp.cpu_count(), 64)
 
 
 def get_datasets(
