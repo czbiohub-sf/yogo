@@ -1,8 +1,7 @@
 import torch
-import torchvision
 import torchvision.transforms.functional as F
 
-from typing import Tuple, List
+from typing import Tuple
 
 
 class DualInputModule(torch.nn.Module):

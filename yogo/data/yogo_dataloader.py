@@ -18,7 +18,6 @@ from yogo.data.data_transforms import (
     DualInputId,
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
-    RandomVerticalCrop,
     MultiArgSequential,
 )
 
@@ -188,10 +187,7 @@ def get_dataloader(
         world_size = 1
 
     image_preprocess: DualInputModule
-    if preprocess_type == "crop":
-        assert vertical_crop_size is not None, "must be None if cropping"
-        image_preprocess = RandomVerticalCrop(vertical_crop_size)
-    elif preprocess_type == "resize":
+    if preprocess_type == "resize":
         image_preprocess = Resize(resize_shape, antialias=True)
     elif preprocess_type is None:
         image_preprocess = DualInputId()
