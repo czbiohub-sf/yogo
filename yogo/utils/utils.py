@@ -229,3 +229,12 @@ def draw_yogo_prediction(
         draw.text((r[0], r[1]), label, (0, 0, 0, 255))
 
     return rgb
+
+
+def choose_device():
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        return torch.device("mps")
+    else:
+        return torch.device("cpu")

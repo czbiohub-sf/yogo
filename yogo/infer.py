@@ -17,9 +17,9 @@ from torchvision.transforms import CenterCrop
 from yogo.model import YOGO
 from yogo.data import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import infer_parser
-from yogo.utils import draw_yogo_prediction, format_preds
 from yogo.data.image_path_dataset import get_dataset, collate_fn
 from yogo.data.yogo_dataloader import choose_dataloader_num_workers
+from yogo.utils import draw_yogo_prediction, format_preds, choose_device
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff
@@ -28,15 +28,6 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 def argmax(arr):
     return max(range(len(arr)), key=arr.__getitem__)
-
-
-def choose_device():
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    elif torch.backends.mps.is_available():
-        return torch.device("mps")
-    else:
-        return torch.device("cpu")
 
 
 def save_predictions(

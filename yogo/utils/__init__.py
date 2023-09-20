@@ -5,6 +5,7 @@ from .utils import (
     iter_in_chunks,
     get_wandb_confusion,
     draw_yogo_prediction,
+    choose_device,
 )
 
 from .prediction_formatting import (
@@ -22,4 +23,5 @@ __all__ = (
     "draw_yogo_prediction",
     "format_preds",
     "format_preds_and_labels",
+    "choose_device",
 )

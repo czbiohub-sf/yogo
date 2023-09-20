@@ -32,6 +32,7 @@ from yogo.utils import (
     get_wandb_roc,
     get_free_port,
     Timer,
+    choose_device,
 )
 
 
@@ -450,11 +451,7 @@ class Trainer:
 
 def do_training(args) -> None:
     """responsible for parsing args and starting a training run"""
-    device = torch.device(
-        args.device
-        if args.device is not None
-        else ("cuda" if torch.cuda.is_available() else "cpu")
-    )
+    device = torch.device(args.device) if args.device is not None else choose_device()
 
     preprocess_type: Optional[str]
     vertical_crop_size: Optional[float] = None
