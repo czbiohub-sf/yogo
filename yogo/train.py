@@ -474,9 +474,6 @@ def do_training(args) -> None:
     with Timer("loading dataset description"):
         load_dataset_description(args.dataset_descriptor_file).dataset_paths
 
-    # finding anchors when training can be slow, and they don't change for a given dataset
-    # with Timer("getting best anchor"):
-    #     anchor_w, anchor_h = best_anchor([d["label_path"] for d in dataset_paths])
     anchor_w, anchor_h = df.ANCHOR_W, df.ANCHOR_H
 
     config = {
