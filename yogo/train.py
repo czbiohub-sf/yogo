@@ -8,7 +8,7 @@ import warnings
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Sized, Union, cast
+from typing import Optional, Sized, Union
 
 import torch.multiprocessing as mp
 
@@ -144,9 +144,6 @@ class Trainer:
             self.config["batch_size"],
             Sx=self.Sx,
             Sy=self.Sy,
-            preprocess_type=self.config["preprocess_type"],
-            vertical_crop_size=self.config["vertical_crop_size"],
-            resize_shape=self.config["resize_shape"],
             normalize_images=self.config["normalize_images"],
         )
 
@@ -453,21 +450,6 @@ def do_training(args) -> None:
     """responsible for parsing args and starting a training run"""
     device = torch.device(args.device) if args.device is not None else choose_device()
 
-    preprocess_type: Optional[str]
-    vertical_crop_size: Optional[float] = None
-
-    if args.crop_height:
-        vertical_crop_size = cast(float, args.crop_height)
-        if not (0 < vertical_crop_size < 1):
-            raise ValueError(
-                "vertical_crop_size must be between 0 and 1; got {vertical_crop_size}"
-            )
-        resize_target_size = (round(vertical_crop_size * 772), 1032)
-        preprocess_type = "crop"
-    else:
-        resize_target_size = (772, 1032)
-        preprocess_type = None
-
     with Timer("loading dataset description"):
         load_dataset_description(args.dataset_descriptor_file).dataset_paths
 
@@ -490,9 +472,6 @@ def do_training(args) -> None:
         "anchor_w": anchor_w,
         "anchor_h": anchor_h,
         "model": args.model,
-        "resize_shape": resize_target_size,
-        "vertical_crop_size": vertical_crop_size,
-        "preprocess_type": preprocess_type,
         "class_names": YOGO_CLASS_ORDERING,
         "pretrained_path": args.from_pretrained,
         "no_classify": args.no_classify,

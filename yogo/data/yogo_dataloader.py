@@ -4,10 +4,9 @@ import multiprocessing as mp
 from tqdm import tqdm
 from functools import partial
 
-from torchvision.transforms import Resize
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Tuple, Optional, Any, MutableMapping, Iterable
+from typing import List, Dict, Optional, Any, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
 from torch.utils.data.distributed import DistributedSampler
@@ -15,7 +14,6 @@ from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.data.data_transforms import (
     DualInputModule,
-    DualInputId,
     RandomHorizontalFlipWithBBs,
     RandomVerticalFlipWithBBs,
     MultiArgSequential,
@@ -156,9 +154,6 @@ def get_dataloader(
     Sx: int,
     Sy: int,
     training: bool = True,
-    preprocess_type: Optional[str] = None,
-    vertical_crop_size: Optional[float] = None,
-    resize_shape: Optional[Tuple[int, int]] = None,
     normalize_images: bool = False,
 ) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
@@ -177,22 +172,14 @@ def get_dataloader(
         else []
     )
 
-    # if ddp hasn't been initialized, these will raise
-    # runtime errors instead of returning 0 and 1 respectively.
+    # if ddp hasn't been initialized, these will raise a
+    # RuntimeError instead of returning 0 and 1 respectively.
     try:
         rank = torch.distributed.get_rank()
         world_size = torch.distributed.get_world_size()
     except RuntimeError:
         rank = 0
         world_size = 1
-
-    image_preprocess: DualInputModule
-    if preprocess_type == "resize":
-        image_preprocess = Resize(resize_shape, antialias=True)
-    elif preprocess_type is None:
-        image_preprocess = DualInputId()
-    else:
-        raise ValueError(f"got invalid preprocess type {preprocess_type}")
 
     d = dict()
     for designation, dataset in split_datasets.items():
@@ -202,7 +189,6 @@ def get_dataloader(
             continue
 
         transforms = MultiArgSequential(
-            image_preprocess,
             *augmentations if designation == "train" else [],
         )
 

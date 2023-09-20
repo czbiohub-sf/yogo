@@ -207,11 +207,6 @@ def train_parser(parser=None):
         action=boolean_action,
         help="normalize images into [0,1] (default False)",
     )
-    parser.add_argument(
-        "--crop-height",
-        type=unitary_float,
-        help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
-    )
     return parser
 
 
