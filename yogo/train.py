@@ -102,20 +102,20 @@ class Trainer:
             or self.config["pretrained_path"] == "none"
         ):
             net = YOGO(
-                num_classes=len(self.config["class_names"]),
-                img_size=self.config["resize_shape"],
+                img_size=self.config["image_shape"],
                 anchor_w=self.config["anchor_w"],
                 anchor_h=self.config["anchor_h"],
+                num_classes=len(self.config["class_names"]),
                 model_func=get_model_func(self.config["model"]),
             ).to(self.device)
             self.global_step = 0
         else:
             net, net_cfg = YOGO.from_pth(self.config["pretrained_path"])
 
-            if any(net.img_size.cpu().numpy() != self.config["resize_shape"]):
+            if any(net.img_size.cpu().numpy() != self.config["image_shape"]):
                 raise RuntimeError(
                     "mismatch in pretrained network image resize shape and current resize shape: "
-                    f"pretrained network resize_shape = {net.img_size}, requested resize_shape = {self.config['resize_shape']}"
+                    f"pretrained network image_shape = {net.img_size}, requested image_shape = {self.config['image_shape']}"
                 )
 
             net.to(self.device)
@@ -472,6 +472,7 @@ def do_training(args) -> None:
         "anchor_w": anchor_w,
         "anchor_h": anchor_h,
         "model": args.model,
+        "image_shape": args.image_shape,
         "class_names": YOGO_CLASS_ORDERING,
         "pretrained_path": args.from_pretrained,
         "no_classify": args.no_classify,
@@ -484,6 +485,11 @@ def do_training(args) -> None:
     }
 
     world_size = torch.cuda.device_count()
+    if world_size == 0:
+        raise RuntimeError(
+            "at least 1 gpu is required for training; if cpu training "
+            "is required, we can add it back"
+        )
 
     mp.spawn(
         Trainer.train_from_ddp, args=(world_size, config), nprocs=world_size, join=True

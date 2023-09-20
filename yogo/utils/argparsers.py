@@ -207,6 +207,13 @@ def train_parser(parser=None):
         action=boolean_action,
         help="normalize images into [0,1] (default False)",
     )
+    parser.add_argument(
+        "--image-shape",
+        default=(772,1032),
+        nargs=2,
+        type=int,
+        help="size of images for training (e.g. --image-shape 772 1032) (default 772 1032)",
+    )
     return parser
 
 
