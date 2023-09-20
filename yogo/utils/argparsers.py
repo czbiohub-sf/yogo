@@ -209,7 +209,7 @@ def train_parser(parser=None):
     )
     parser.add_argument(
         "--image-shape",
-        default=(772,1032),
+        default=(772, 1032),
         nargs=2,
         type=int,
         help="size of images for training (e.g. --image-shape 772 1032) (default 772 1032)",
