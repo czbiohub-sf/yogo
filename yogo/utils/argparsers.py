@@ -164,12 +164,37 @@ def train_parser(parser=None):
         default=df.HEALTHY_WEIGHT,
     )
     parser.add_argument(
+        "--no-classify",
+        default=False,
+        action=boolean_action,
+        help="turn off classification loss - good only for pretraining just a cell detector (default False)",
+    )
+    parser.add_argument(
+        "--normalize-images",
+        default=False,
+        action=boolean_action,
+        help="normalize images into [0,1] (default False)",
+    )
+    parser.add_argument(
+        "--image-shape",
+        default=(772, 1032),
+        nargs=2,
+        type=int,
+        help="size of images for training (e.g. --image-shape 772 1032) (default 772 1032)",
+    )
+    parser.add_argument(
         "--model",
         default=None,
         const=None,
         nargs="?",
         choices=list(MODELS.keys()),
         help="model version to use - do not use with --from-pretrained, as we use the pretrained model",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        nargs="?",
+        help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
     )
     parser.add_argument(
         "--note",
@@ -188,31 +213,6 @@ def train_parser(parser=None):
         type=str,
         help="tag for the run (e.g. 'test')",
         default=None,
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        nargs="?",
-        help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
-    )
-    parser.add_argument(
-        "--no-classify",
-        default=False,
-        action=boolean_action,
-        help="turn off classification loss - good only for pretraining just a cell detector (default False)",
-    )
-    parser.add_argument(
-        "--normalize-images",
-        default=False,
-        action=boolean_action,
-        help="normalize images into [0,1] (default False)",
-    )
-    parser.add_argument(
-        "--image-shape",
-        default=(772, 1032),
-        nargs=2,
-        type=int,
-        help="size of images for training (e.g. --image-shape 772 1032) (default 772 1032)",
     )
     return parser
 
