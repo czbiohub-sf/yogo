@@ -1,5 +1,5 @@
-import unittest
 import torch
+import unittest
 
 from yogo.infer import count_cells_for_formatted_preds
 
