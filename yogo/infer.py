@@ -167,7 +167,6 @@ def predict(
     device = device or choose_device()
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
-    model.to(device)
     model.eval()
 
     img_h, img_w = model.get_img_size()
@@ -184,6 +183,7 @@ def predict(
         for _ in range(100)
     ]
     model_jit = torch.jit.script(model, example_inputs=dummy_input)
+    model_jit.to(device)
 
     transforms: List[torch.nn.Module] = []
 
