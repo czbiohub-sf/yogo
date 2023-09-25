@@ -44,8 +44,8 @@ def do_export(args):
         img_h = (args.crop_height * img_h).round()
         net.resize_model(img_h.item())
 
-    dummy_input = torch.randn(
-        1, 1, int(img_h.item()), int(img_w.item()), requires_grad=False
+    dummy_input = torch.randint(
+        0, 256, (1, 1, int(img_h.item()), int(img_w.item())), requires_grad=False
     )
     torch_out = net(dummy_input)
 
