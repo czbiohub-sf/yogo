@@ -172,6 +172,19 @@ def predict(
 
     img_h, img_w = model.get_img_size()
 
+    dummy_input = [
+        (
+            torch.randint(
+                0,
+                256,
+                (1, 1, int(img_h.item()), int(img_w.item())),
+                requires_grad=False,
+            ),
+        )
+        for _ in range(100)
+    ]
+    model = torch.jit.script(model, example_inputs=dummy_input)
+
     transforms: List[torch.nn.Module] = []
 
     if vertical_crop_height_px:
