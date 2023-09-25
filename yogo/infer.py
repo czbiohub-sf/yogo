@@ -183,7 +183,7 @@ def predict(
         )
         for _ in range(100)
     ]
-    model = torch.jit.script(model, example_inputs=dummy_input)
+    model_jit = torch.jit.script(model, example_inputs=dummy_input)
 
     transforms: List[torch.nn.Module] = []
 
@@ -237,7 +237,7 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
-        res = model(img_batch.to(device)).to("cpu")
+        res = model_jit(img_batch.to(device)).to("cpu")
 
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
