@@ -38,7 +38,6 @@ def get_datasets(
     normalize_images: bool = False,
 ) -> MutableMapping[str, Dataset[Any]]:
     dataset_description = load_dataset_description(dataset_description_file)
-    # can we speed this up? multiproc dataset creation?
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dsp["image_path"],
