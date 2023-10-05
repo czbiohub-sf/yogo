@@ -170,7 +170,7 @@ class Trainer:
             else len(dataloader)
         )
 
-    def _init_training_tools(self):
+    def _init_training_tools(self) -> None:
         class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
 
         self.Y_loss = YOGOLoss(
@@ -193,7 +193,7 @@ class Trainer:
             eta_min=self.config["learning_rate"] / self.config["decay_factor"],
         )
 
-    def _init_wandb(self):
+    def _init_wandb(self) -> None:
         if self._rank != 0:
             return
 
@@ -237,7 +237,7 @@ class Trainer:
         model_name: str,
         model_version: Optional[str] = None,
         **kwargs,
-    ):
+    ) -> None:
         if isinstance(self.net, DDP):
             state_dict = self.net.module.state_dict()
         else:
@@ -257,7 +257,7 @@ class Trainer:
             str(filename),
         )
 
-    def train(self):
+    def train(self) -> None:
         torch.distributed.barrier()
 
         if not self._initialized:
@@ -308,7 +308,7 @@ class Trainer:
         torch.distributed.destroy_process_group()
 
     @torch.no_grad()
-    def _validate(self):
+    def _validate(self) -> None:
         if self._dataset_size(self.validate_dataloader) == 0:
             return
 
@@ -367,7 +367,7 @@ class Trainer:
             )
 
     @torch.no_grad()
-    def _test(self):
+    def _test(self) -> None:
         """
         TODO could make this static so we can evaluate YOGO
         separately from training
