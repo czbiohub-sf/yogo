@@ -19,7 +19,6 @@ wandb = ">=0.14.2"
 matplotlib = "^3.4.2"
 # onnx gives us some trouble, so we have to fix these versions. Sorry!
 protobuf = "3.20.0"
-numpy = "1.20.0"
 openvino-dev = "2023.0.2"
 
 [tool.poetry.extras]
