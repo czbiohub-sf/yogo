@@ -19,11 +19,11 @@ And finally, if you want to export a model to Openvino's format, you will also n
 
 Documentation for YOGO. If you want documentation in a specific area, [let me know](https://github.com/czbiohub-sf/yogo/issues/new)!
 
-- [recipes.md](recipes.md) has the basics of using YOGO in your own code
-- [cli.md](cli.md) is a short guide on how to use YOGO from the command line (via `yogo`)
-- [yogo-high-level.md](yogo-high-level.md) is a high level guide of the YOGO architecture
-- [training.md](training.md) has some basic information about training YOGO
-- [dataset-definition.md](dataset-definition.md) defines the dataset description files, the files YOGO uses to define datasets for training
+- [docs/recipes.md](recipes.md) has the basics of using YOGO in your own code
+- [docs/cli.md](cli.md) is a short guide on how to use YOGO from the command line (via `yogo`)
+- [docs/yogo-high-level.md](yogo-high-level.md) is a high level guide of the YOGO architecture
+- [docs/training.md](training.md) has some basic information about training YOGO
+- [docs/dataset-definition.md](dataset-definition.md) defines the dataset description files, the files YOGO uses to define datasets for training
 
 Also, see my talk discussing how we interpret parasite classifications from YOGO prediction tensors [here](https://drive.google.com/file/d/1S5UZEGtEtVwHKBzKIGvCUJlRAFgw-b9H/view) (start around 24:00)
 
