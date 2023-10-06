@@ -168,22 +168,8 @@ def predict(
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.eval()
-
-    img_h, img_w = model.get_img_size()
-
-    dummy_input = [
-        (
-            torch.randint(
-                0,
-                256,
-                (1, 1, int(img_h.item()), int(img_w.item())),
-                requires_grad=False,
-            ),
-        )
-        for _ in range(100)
-    ]
-    model_jit = torch.jit.script(model, example_inputs=dummy_input)
-    model_jit.to(device)
+    model.to(device)
+    model_jit = torch.compile(model)
 
     transforms: List[torch.nn.Module] = []
 
@@ -237,7 +223,7 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
-        res = model_jit(img_batch.to(device)).to("cpu")
+        res = model_jit(img_batch.to(device))
 
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
@@ -280,7 +266,7 @@ def predict(
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
-            results[i * batch_size : i * batch_size + res.shape[0], ...] = res.cpu()
+            results[i * batch_size : i * batch_size + res.shape[0], ...] = res
 
         pbar.update(res.shape[0])
 
@@ -307,6 +293,7 @@ def predict(
 
     if not (draw_boxes or save_preds):
         return results
+
     return None
 
 
