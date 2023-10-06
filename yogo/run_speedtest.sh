@@ -11,8 +11,8 @@ for power in $(seq 0 10); do
 
   if [ $bs -eq 1 ]
   then
-    ./speedtest.py bumbling-night-1847/best.pth --N 1000 --BS $bs --print-header >> speedtest_results.csv
+    ./speedtest.py ../trained_models/bumbling-night-1847/best.pth --N 1000 --BS $bs --print-header >> speedtest_results.csv
   else
-    ./speedtest.py bumbling-night-1847/best.pth --N 1000 --BS $bs >> speedtest_results.csv
+    ./speedtest.py ../trained_models/bumbling-night-1847/best.pth --N 1000 --BS $bs >> speedtest_results.csv
   fi
 done

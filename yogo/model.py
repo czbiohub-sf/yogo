@@ -327,27 +327,22 @@ class YOGO(nn.Module):
         #  width of bounding box
         #  height of bounding box
         #  'objectness' score
-        return torch.cat(
+        outputs = [
+            (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
+            (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
+            self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
             (
-                (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
-                (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
-                self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
-                (
-                    self.anchor_h
-                    * torch.exp(clamped_whs[:, 1:2, :, :])
-                    * self.height_multiplier
-                ),
-                torch.sigmoid(x[:, 4:5, :, :]),
-                # # TODO this fixes the number of classes to 7, but we are fixing it
-                # # in order to torch script
-                # classification[:, 0:1, :, :],
-                # classification[:, 1:2, :, :],
-                # classification[:, 2:3, :, :],
-                # classification[:, 3:4, :, :],
-                # classification[:, 4:5, :, :],
-                # classification[:, 5:6, :, :],
-                # classification[:, 6:7, :, :],
-                *torch.split(classification, 1, dim=1),
+                self.anchor_h
+                * torch.exp(clamped_whs[:, 1:2, :, :])
+                * self.height_multiplier
             ),
-            dim=1,
-        )
+            torch.sigmoid(x[:, 4:5, :, :]),
+        ]
+
+
+        classification_chunks = torch.chunk(classification, classification.size(1), dim=1)
+        outputs.extend(classification_chunks)
+        # for i in range(self.num_classes):
+        #     outputs.append(classification[:, i : i + 1, :, :])
+
+        return torch.cat(outputs, dim=1)

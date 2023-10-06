@@ -30,7 +30,7 @@ model, cfg = YOGO.from_pth(Path(args.pth_path), inference=True)
 model.resize_model(193)
 model.eval()
 model.to(device)
-model = torch.jit.trace(model, inp)
+model = torch.compile(model)
 
 
 # warmup
