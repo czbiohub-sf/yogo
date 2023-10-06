@@ -9,14 +9,14 @@ from pathlib import Path
 from yogo.model import YOGO
 from yogo.utils import choose_device
 
-parser=argparse.ArgumentParser()
+parser = argparse.ArgumentParser()
 parser.add_argument("pth_path", help="path to pth", type=Path)
 parser.add_argument("--N", help="num inferences", type=int, default=100)
 parser.add_argument("--BS", help="batch size", type=int, default=1)
-parser.add_argument("--print-header", action='store_true')
+parser.add_argument("--print-header", action="store_true")
 args = parser.parse_args()
 
-device=choose_device()
+device = choose_device()
 
 model, cfg = YOGO.from_pth(Path(args.pth_path), inference=True)
 model.resize_model(193)
