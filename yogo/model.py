@@ -54,7 +54,7 @@ class YOGO(nn.Module):
         self.model = (
             self.gen_model(num_classes=num_classes)
             if model_func is None
-            else model_func(num_classes)
+            else model_func(num_classes=num_classes)
         )
 
         self.register_buffer("img_size", torch.tensor(img_size))
