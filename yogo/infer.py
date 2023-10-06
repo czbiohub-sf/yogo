@@ -169,7 +169,8 @@ def predict(
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.eval()
     model.to(device)
-    model_jit = torch.compile(model)
+    # mypy thinks that compile isn't in the torch package, but it is
+    model_jit = torch.compile(model)  # type: ignore
 
     transforms: List[torch.nn.Module] = []
 

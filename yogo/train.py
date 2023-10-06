@@ -8,7 +8,7 @@ import warnings
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Optional, Sized, Union
+from typing import Any, Optional, Collection, Union
 
 import torch.multiprocessing as mp
 
@@ -132,7 +132,8 @@ class Trainer:
         )
 
         net = DDP(net, device_ids=[self._rank])
-        net = torch.compile(net)
+        # mypy thinks torch doesn't have this function?
+        net = torch.compile(net)  # type: ignore
 
         self.net = net
 
@@ -150,8 +151,12 @@ class Trainer:
 
         train_dataloader = dataloaders["train"]
         # sneaky hack to replace non-existant datasets with emtpy list
-        validate_dataloader: Sized = dataloaders.get("val", [])
-        test_dataloader: Sized = dataloaders.get("test", [])
+        validate_dataloader: Union[DataLoader[Any], Collection] = dataloaders.get(
+            "val", []
+        )
+        test_dataloader: Union[DataLoader[Any], Collection] = dataloaders.get(
+            "test", []
+        )
 
         if self._dataset_size(validate_dataloader) == 0:
             warnings.warn("no validation dataset found")
@@ -163,7 +168,7 @@ class Trainer:
         self.validate_dataloader = validate_dataloader
         self.test_dataloader = test_dataloader
 
-    def _dataset_size(self, dataloader: Union[Sized, DataLoader]) -> int:
+    def _dataset_size(self, dataloader: Union[Collection, DataLoader]) -> int:
         # type ignore for dataset-sized type error
         return (
             len(dataloader.dataset)  # type: ignore
@@ -234,7 +239,7 @@ class Trainer:
 
     def checkpoint(
         self,
-        filename: str,
+        filename: Union[str, Path],
         model_name: str,
         model_version: Optional[str] = None,
         **kwargs,
@@ -268,7 +273,8 @@ class Trainer:
 
         for epoch in range(self.config["epochs"]):
             self.epoch = epoch
-            self.train_dataloader.sampler.set_epoch(epoch)
+            # mypy thinks that self.train_dataloader has type Iterable[Any]?
+            self.train_dataloader.sampler.set_epoch(epoch)  # type: ignore
 
             for imgs, labels in self.train_dataloader:
                 imgs = imgs.to(device, non_blocking=True)
@@ -317,7 +323,8 @@ class Trainer:
         device = self.device
 
         val_loss = torch.tensor(0.0, device=device)
-        for imgs, labels in self.validate_dataloader:
+        # TODO figure out correct type for dataloader
+        for imgs, labels in self.validate_dataloader:  # type: ignore
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
@@ -326,8 +333,9 @@ class Trainer:
             loss, _ = self.Y_loss(outputs, labels)
             val_loss += loss
 
-        # sync val loss across all processes
-        torch.distributed.all_reduce(val_loss, op=torch.distributed.ReduceOp.AVG)
+        # mypy thinks that ReduceOp doesn't have AVG; maybe because AVG is only
+        # available for nccl backend? How to address?
+        torch.distributed.all_reduce(val_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
         if self._rank != 0:
             return
@@ -352,18 +360,23 @@ class Trainer:
             step=self.global_step,
         )
 
+        self.model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
         if mean_val_loss < self.min_val_loss:
             self.min_val_loss = mean_val_loss
             wandb.log({"best_val_loss": mean_val_loss}, step=self.global_step)
             self.checkpoint(
                 self.model_save_dir / "best.pth",
-                model_name=wandb.run.name,
+                model_name=wandb.run.name
+                if wandb.run is not None
+                else "recent_run_best",
                 model_version=self.config["model"],
             )
         else:
             self.checkpoint(
                 self.model_save_dir / "latest.pth",
-                model_name=wandb.run.name,
+                model_name=wandb.run.name
+                if wandb.run is not None
+                else "recent_run_latest",
                 model_version=self.config["model"],
             )
 
@@ -399,7 +412,9 @@ class Trainer:
             test_loss += loss
             test_metrics.update(outputs.detach(), labels.detach())
 
-        torch.distributed.all_reduce(test_loss, op=torch.distributed.ReduceOp.AVG)
+        # mypy thinks that ReduceOp doesn't have AVG; maybe because AVG is only
+        # available for nccl backend? How to address?
+        torch.distributed.all_reduce(test_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
         (
             mAP,
