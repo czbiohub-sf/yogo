@@ -5,7 +5,7 @@
 
 
 rm speedtest_results.csv
-for power in $(seq 0 12); do
+for power in $(seq 0 10); do
 
   bs=$(echo "2^$power" | bc)
 

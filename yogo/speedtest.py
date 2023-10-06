@@ -9,6 +9,9 @@ from pathlib import Path
 from yogo.model import YOGO
 from yogo.utils import choose_device
 
+
+torch.cuda.empty_cache()
+
 parser = argparse.ArgumentParser()
 parser.add_argument("pth_path", help="path to pth", type=Path)
 parser.add_argument("--N", help="num inferences", type=int, default=100)
@@ -20,8 +23,9 @@ device = choose_device()
 
 model, cfg = YOGO.from_pth(Path(args.pth_path), inference=True)
 model.resize_model(193)
-model.to(device)
 model.eval()
+model = torch.compile(model)
+model.to(device)
 
 BS = args.BS
 N = args.N
