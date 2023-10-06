@@ -168,21 +168,7 @@ def predict(
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.eval()
-
-    img_h, img_w = model.get_img_size()
-
-    dummy_input = [
-        (
-            torch.randint(
-                0,
-                256,
-                (1, 1, int(img_h.item()), int(img_w.item())),
-                requires_grad=False,
-            ),
-        )
-        for _ in range(100)
-    ]
-    model_jit = torch.jit.script(model, example_inputs=dummy_input)
+    model_jit = torch.compile(model)
     model_jit.to(device)
 
     transforms: List[torch.nn.Module] = []
