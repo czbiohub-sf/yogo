@@ -21,16 +21,17 @@ args = parser.parse_args()
 
 device = choose_device()
 
-model, cfg = YOGO.from_pth(Path(args.pth_path), inference=True)
-model.resize_model(193)
-model.eval()
-model = torch.compile(model)
-model.to(device)
-
 BS = args.BS
 N = args.N
 
 inp = torch.rand(BS, 1, 193, 1032).to(device)
+
+model, cfg = YOGO.from_pth(Path(args.pth_path), inference=True)
+model.resize_model(193)
+model.eval()
+model.to(device)
+model = torch.jit.trace(model, inp)
+
 
 # warmup
 for _ in range(100):

@@ -338,15 +338,16 @@ class YOGO(nn.Module):
                     * self.height_multiplier
                 ),
                 torch.sigmoid(x[:, 4:5, :, :]),
-                # TODO this fixes the number of classes to 7, but we are fixing it
-                # in order to torch script
-                classification[:, 0:1, :, :],
-                classification[:, 1:2, :, :],
-                classification[:, 2:3, :, :],
-                classification[:, 3:4, :, :],
-                classification[:, 4:5, :, :],
-                classification[:, 5:6, :, :],
-                classification[:, 6:7, :, :],
+                # # TODO this fixes the number of classes to 7, but we are fixing it
+                # # in order to torch script
+                # classification[:, 0:1, :, :],
+                # classification[:, 1:2, :, :],
+                # classification[:, 2:3, :, :],
+                # classification[:, 3:4, :, :],
+                # classification[:, 4:5, :, :],
+                # classification[:, 5:6, :, :],
+                # classification[:, 6:7, :, :],
+                *torch.split(classification, 1, dim=1),
             ),
             dim=1,
         )
