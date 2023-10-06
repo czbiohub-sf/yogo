@@ -167,10 +167,23 @@ def predict(
     device = device or choose_device()
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
-    model.to(device)
     model.eval()
 
     img_h, img_w = model.get_img_size()
+
+    dummy_input = [
+        (
+            torch.randint(
+                0,
+                256,
+                (1, 1, int(img_h.item()), int(img_w.item())),
+                requires_grad=False,
+            ),
+        )
+        for _ in range(100)
+    ]
+    model_jit = torch.jit.script(model, example_inputs=dummy_input)
+    model_jit.to(device)
 
     transforms: List[torch.nn.Module] = []
 
@@ -224,7 +237,7 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
-        res = model(img_batch.to(device)).to("cpu")
+        res = model_jit(img_batch.to(device)).to("cpu")
 
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
