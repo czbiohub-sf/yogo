@@ -132,6 +132,7 @@ class Trainer:
         )
 
         net = DDP(net, device_ids=[self._rank])
+        net = torch.compile(net)
 
         self.net = net
 
