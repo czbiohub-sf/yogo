@@ -24,7 +24,7 @@ FILE_NAME=$(basename "$FILE_PATH")
 
 RUN_NAME="$3"
 
-MASK_PATH="/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/Uganda_heatmaps/thresh_90/masks_npy"
+MASK_PATH="/hpc/projects/group.bioengineering/LFM_scope/Uganda_heatmaps/thresh_90/masks_npy"
 
 if [ ! -d "${FILE_PATH}/images" ]; then
    >&2 echo "${FILE_PATH}/images doesn't exist"
