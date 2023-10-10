@@ -11,7 +11,7 @@ The `dataset_defn.yml` file provides data definitions, guiding the dataloader on
 Dataset files and labels are in:
 
 ```
-/hpc/projects/flexo/MicroscopyData/Bioengineering/LFM_scope/biohub-labels
+.../LFM_scope/biohub-labels
 ```
 
 Common files include:
