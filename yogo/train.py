@@ -132,6 +132,7 @@ class Trainer:
         )
 
         net = DDP(net, device_ids=[self._rank])
+
         # mypy thinks torch doesn't have this function?
         net = torch.compile(net)  # type: ignore
 

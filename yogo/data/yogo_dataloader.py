@@ -126,8 +126,8 @@ def split_dataset(
             f"full dataset size is {len(dataset)}"  # type: ignore
         )
 
-    # YUCK! Want a map from the dataset designation to teh set itself, but "random_split" takes a list
-    # of lengths of dataset. So we do this verbose rigamarol.
+    # YUCK! Want a map from the dataset designation to the set itself, but "random_split" takes a list
+    # of lengths of dataset. So we do this verbose rigamarole.
     return dict(
         zip(
             keys,
