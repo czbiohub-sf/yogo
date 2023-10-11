@@ -197,7 +197,9 @@ def get_dataloader(
             num_replicas=world_size,
         )
 
-        num_workers = choose_dataloader_num_workers(dataset_len)
+        # TODO this division by world_size is hacky. Starting up the dataloaders
+        # are in*sane*ly slow. This helps reduce the problem, but tbh not by much
+        num_workers = max(1, choose_dataloader_num_workers(dataset_len) // world_size)
 
         d[designation] = DataLoader(
             dataset,
