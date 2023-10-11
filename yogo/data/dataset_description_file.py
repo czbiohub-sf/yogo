@@ -53,7 +53,11 @@ def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = Fals
 
 
 def load_dataset_description(dataset_description: str) -> DatasetDescription:
-    """Loads and validates dataset description file"""
+    """Loads and validates dataset description file
+
+    TODO this fcn is too large to be nice, and could probably
+    be happily refactored to a smaller size
+    """
     required_keys = [
         "class_names",
         "dataset_split_fractions",
@@ -89,9 +93,10 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
             # when we have 'test_paths', all the data from dataset_paths
             # will be used for training, so we should only have 'test' and
             # 'val' in dataset_split_fractions.
-            if "val" not in split_fractions or "test" not in split_fractions:
+            if "test" not in split_fractions:
                 raise InvalidDatasetDescriptionFile(
-                    "'val' and 'test' are required keys for dataset_split_fractions"
+                    "'test' is a required key for dataset_split_fractions "
+                    "when test dataset paths are present"
                 )
             if "train" in split_fractions:
                 raise InvalidDatasetDescriptionFile(
@@ -101,7 +106,7 @@ def load_dataset_description(dataset_description: str) -> DatasetDescription:
                 )
         else:
             test_dataset_paths = None
-            if any(k not in split_fractions for k in ("test", "train", "val")):
+            if any(k not in split_fractions for k in ("test", "train")):
                 raise InvalidDatasetDescriptionFile(
                     "'train', 'val', and 'test' are required keys for dataset_split_fractions - missing at least one. "
                     f"split fractions was {split_fractions}"
