@@ -18,9 +18,9 @@ tqdm = "^4.61.2"
 wandb = ">=0.14.2"
 matplotlib = "^3.4.2"
 MonkeyType = "23.3.0"
-onnx = "1.14.0"
-onnxruntime = "1.14.1"
-onnx-simplifier = "0.4.17"
+onnx = ">=1.14.0"
+onnxruntime = ">=1.14.1"
+onnx-simplifier = ">=0.4.17"
 openvino-dev = "2023.0.2"
 
 
