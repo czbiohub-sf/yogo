@@ -334,8 +334,8 @@ class Trainer:
             loss, _ = self.Y_loss(outputs, labels)
             val_loss += loss
 
-        # mypy thinks that ReduceOp doesn't have AVG; maybe because AVG is only
-        # available for nccl backend? How to address?
+        # TODO mypy thinks that ReduceOp doesn't have AVG;
+        # maybe because AVG is only available for nccl backend? How to address?
         torch.distributed.all_reduce(val_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
         if self._rank != 0:
@@ -413,8 +413,8 @@ class Trainer:
             test_loss += loss
             test_metrics.update(outputs.detach(), labels.detach())
 
-        # mypy thinks that ReduceOp doesn't have AVG; maybe because AVG is only
-        # available for nccl backend? How to address?
+        # TODO mypy thinks that ReduceOp doesn't have AVG;
+        # maybe because AVG is only available for nccl backend? How to address?
         torch.distributed.all_reduce(test_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
         (
