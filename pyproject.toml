@@ -11,7 +11,7 @@ license = "BSD-3-Clause"
 python = ">=3.8,<3.11"
 zarr = ">=2.14"
 torch = ">=1.13.1"
-torchmetrics = ">=0.11.4"
+torchmetrics = { version = ">=0.11.4", extras = ["detection"] }
 torchvision = ">=0.14.1"
 "ruamel.yaml" = "0.17.21"
 tqdm = "^4.61.2"
