@@ -4,12 +4,12 @@ import multiprocessing as mp
 from tqdm import tqdm
 from functools import partial
 
+from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
 from typing import List, Dict, Optional, Any, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
-from torch.utils.data.distributed import DistributedSampler
 from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.data.data_transforms import (
