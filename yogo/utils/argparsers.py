@@ -89,9 +89,7 @@ def train_parser(parser=None):
         )
 
     parser.add_argument(
-        "dataset_descriptor_file",
-        type=str,
-        help="path to yml dataset descriptor file",
+        "dataset_descriptor_file", type=str, help="path to yml dataset descriptor file",
     )
     parser.add_argument(
         "--from-pretrained",
@@ -203,16 +201,10 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
-        "--name",
-        type=str,
-        help="name for the run (e.g. 'ti-82_run')",
-        default=None,
+        "--name", type=str, help="name for the run (e.g. 'ti-82_run')", default=None,
     )
     parser.add_argument(
-        "--tag",
-        type=str,
-        help="tag for the run (e.g. 'test')",
-        default=None,
+        "--tag", type=str, help="tag for the run (e.g. 'test')", default=None,
     )
     return parser
 
@@ -224,9 +216,7 @@ def export_parser(parser=None):
         )
 
     parser.add_argument(
-        "input",
-        type=str,
-        help="path to input pth file",
+        "input", type=str, help="path to input pth file",
     )
     parser.add_argument(
         "--crop-height",
@@ -234,9 +224,7 @@ def export_parser(parser=None):
         help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",
     )
     parser.add_argument(
-        "--output-filename",
-        type=str,
-        help="output filename",
+        "--output-filename", type=str, help="output filename",
     )
     parser.add_argument(
         "--simplify",

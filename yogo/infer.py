@@ -31,11 +31,7 @@ def argmax(arr):
 
 
 def save_predictions(
-    fnames,
-    batch_preds,
-    obj_thresh=0.5,
-    iou_thresh=0.5,
-    label: Optional[str] = None,
+    fnames, batch_preds, obj_thresh=0.5, iou_thresh=0.5, label: Optional[str] = None,
 ):
     bs, pred_shape, Sy, Sx = batch_preds.shape
 
@@ -46,11 +42,7 @@ def save_predictions(
         label_idx = None
 
     for fname, pred_slice in zip(fnames, batch_preds):
-        preds = format_preds(
-            pred_slice,
-            obj_thresh=obj_thresh,
-            iou_thresh=iou_thresh,
-        )
+        preds = format_preds(pred_slice, obj_thresh=obj_thresh, iou_thresh=iou_thresh,)
 
         pred_string = "\n".join(
             f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
@@ -198,11 +190,7 @@ def predict(
         ),
     )
 
-    pbar = tqdm(
-        disable=not use_tqdm,
-        unit="images",
-        total=len(image_dataset),
-    )
+    pbar = tqdm(disable=not use_tqdm, unit="images", total=len(image_dataset),)
 
     Sx, Sy = model.get_grid_size()
 

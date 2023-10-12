@@ -9,7 +9,7 @@ import warnings
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Any, Optional, Collection, Union
+from typing import Any, Optional, Collection, Callable, Dict, Union
 
 import torch.multiprocessing as mp
 
@@ -47,9 +47,9 @@ class Trainer:
     def __init__(
         self,
         config: WandbConfig,
-        dataset_init_function: Optional[Callable[
-            [], Dict[str, Union[DataLoader[Any], Collection]]
-        ]] = None,
+        dataset_init_function: Optional[
+            Callable[[], Dict[str, Union[DataLoader[Any], Collection]]]
+        ] = None,
         _rank: int = 0,
         _world_size: int = 1,
     ) -> None:

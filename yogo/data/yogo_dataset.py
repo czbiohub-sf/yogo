@@ -31,10 +31,7 @@ def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor
     return output
 
 
-def correct_label_idx(
-    label: str,
-    notes_data: Optional[Dict[str, Any]] = None,
-) -> int:
+def correct_label_idx(label: str, notes_data: Optional[Dict[str, Any]] = None,) -> int:
     if notes_data is None:
         # this is the best we can do
         return int(label)
@@ -54,8 +51,7 @@ def correct_label_idx(
 
 
 def load_labels(
-    label_path: Path,
-    notes_data: Optional[Dict[str, Any]] = None,
+    label_path: Path, notes_data: Optional[Dict[str, Any]] = None,
 ) -> List[List[float]]:
     "loads labels from label file, given by image path"
     labels: List[List[float]] = []
@@ -89,10 +85,7 @@ def load_labels(
 
 
 def label_file_to_tensor(
-    label_path: Path,
-    Sx: int,
-    Sy: int,
-    notes_data: Optional[Dict[str, Any]] = None,
+    label_path: Path, Sx: int, Sy: int, notes_data: Optional[Dict[str, Any]] = None,
 ) -> torch.Tensor:
     "loads labels from label file into a tensor suitible for back prop, given by image path"
 
@@ -140,10 +133,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # essentially, to avoid dataloader workers from copying tonnes of mem,
         # we can't store samples in lists. Hence, numpy arrays.
         image_paths, label_paths = self.make_dataset(
-            Sx,
-            Sy,
-            is_valid_file=is_valid_file,
-            extensions=extensions,
+            Sx, Sy, is_valid_file=is_valid_file, extensions=extensions,
         )
 
         self.Sx = Sx
