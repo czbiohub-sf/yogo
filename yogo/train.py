@@ -47,9 +47,9 @@ class Trainer:
     def __init__(
         self,
         config: WandbConfig,
-        dataset_init_function: Optional[Callable[
-            [], Dict[str, Union[DataLoader[Any], Collection]]
-        ]] = None,
+        dataset_init_function: Optional[
+            Callable[[], Dict[str, Union[DataLoader[Any], Collection]]]
+        ] = None,
         _rank: int = 0,
         _world_size: int = 1,
     ) -> None:
@@ -68,19 +68,30 @@ class Trainer:
         self.global_step = 0
         self.min_val_loss = float("inf")
 
-        self._dataset_init_function = dataset_init_function or self._init_dataset
+        self._dataset_init_function = (
+            dataset_init_function or self._init_yogo_dataloaders
+        )
 
         self._initialized = False
 
     @classmethod
     def train_from_ddp(
-        cls, _rank: int, _world_size: int, config: WandbConfig, dataset_init_function = None
+        cls,
+        _rank: int,
+        _world_size: int,
+        config: WandbConfig,
+        dataset_init_function=None,
     ) -> Trainer:
         """
         Due to mp spawn not giving a kwarg option, we have to give `rank` first. But, for
         the sake of consistency, we want to give the config first. A bit messy.
         """
-        trainer = cls(config, dataset_init_function=dataset_init_function, _rank=_rank, _world_size=_world_size)
+        trainer = cls(
+            config,
+            dataset_init_function=dataset_init_function,
+            _rank=_rank,
+            _world_size=_world_size,
+        )
         trainer.init()
         trainer.train()
         return trainer
@@ -88,9 +99,7 @@ class Trainer:
     def init(self) -> None:
         self._init_tcp_store()
         self._init_model()
-
-        self.train_dataloader, self.validate_dataloader, self.test_dataloader = self._dataset_init_function()
-
+        self._init_dataloaders()
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
@@ -143,9 +152,9 @@ class Trainer:
 
         self.net = DDP(net, device_ids=[self._rank])
 
-    def _init_dataset(self) -> Callable[
-            [], Dict[str, Union[DataLoader[Any], Collection]]
-        ]:
+    def _init_yogo_dataloaders(
+        self,
+    ) -> Callable[[], Dict[str, Union[DataLoader[Any], Collection]]]:
         if self.Sx is None or self.Sy is None:
             raise RuntimeError("model not initialized")
 
@@ -172,7 +181,17 @@ class Trainer:
         if self._dataset_size(test_dataloader) == 0:
             warnings.warn("no test dataset found")
 
-        return {"train": train_dataloader, "val": validate_dataloader, "test": test_dataloader}
+        return {
+            "train": train_dataloader,
+            "val": validate_dataloader,
+            "test": test_dataloader,
+        }
+
+    def _init_dataloaders(self):
+        dataloader_dict = self._dataset_init_function()
+        self.train_dataloader = dataloader_dict["train"]
+        self.validate_dataloader = dataloader_dict["val"]
+        self.test_dataloader = dataloader_dict["test"]
 
     def _dataset_size(self, dataloader: Union[Collection, DataLoader]) -> int:
         # type ignore for dataset-sized type error
