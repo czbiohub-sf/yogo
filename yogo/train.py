@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import wandb
 import torch
 import warnings
@@ -496,6 +497,8 @@ def do_training(args) -> None:
         "normalize_images": args.normalize_images,
         "dataset_descriptor_file": args.dataset_descriptor_file,
         "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
+        "torch-version": torch.__version__,
+        "python-version": sys.version,
         "name": args.name,
         "note": args.note,
         "tag": args.tag,
