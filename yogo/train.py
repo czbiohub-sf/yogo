@@ -74,13 +74,13 @@ class Trainer:
 
     @classmethod
     def train_from_ddp(
-        cls, _rank: int, _world_size: int, config: WandbConfig
+        cls, _rank: int, _world_size: int, config: WandbConfig, dataset_init_function = None
     ) -> Trainer:
         """
         Due to mp spawn not giving a kwarg option, we have to give `rank` first. But, for
         the sake of consistency, we want to give the config first. A bit messy.
         """
-        trainer = cls(config, _rank=_rank, _world_size=_world_size)
+        trainer = cls(config, dataset_init_function=dataset_init_function, _rank=_rank, _world_size=_world_size)
         trainer.init()
         trainer.train()
         return trainer
@@ -88,7 +88,9 @@ class Trainer:
     def init(self) -> None:
         self._init_tcp_store()
         self._init_model()
-        self._dataset_init_function()
+
+        self.train_dataloader, self.validate_dataloader, self.test_dataloader = self._dataset_init_function()
+
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
@@ -141,7 +143,9 @@ class Trainer:
 
         self.net = DDP(net, device_ids=[self._rank])
 
-    def _init_dataset(self) -> None:
+    def _init_dataset(self) -> Callable[
+            [], Dict[str, Union[DataLoader[Any], Collection]]
+        ]:
         if self.Sx is None or self.Sy is None:
             raise RuntimeError("model not initialized")
 
@@ -168,9 +172,7 @@ class Trainer:
         if self._dataset_size(test_dataloader) == 0:
             warnings.warn("no test dataset found")
 
-        self.train_dataloader = train_dataloader
-        self.validate_dataloader = validate_dataloader
-        self.test_dataloader = test_dataloader
+        return {"train": train_dataloader, "val": validate_dataloader, "test": test_dataloader}
 
     def _dataset_size(self, dataloader: Union[Collection, DataLoader]) -> int:
         # type ignore for dataset-sized type error
