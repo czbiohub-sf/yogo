@@ -22,7 +22,6 @@ from yogo.model import YOGO
 from yogo.metrics import Metrics
 from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.yogo_dataloader import get_dataloader
-from yogo.data.dataset_description_file import load_dataset_description
 from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
@@ -467,9 +466,6 @@ class Trainer:
 def do_training(args) -> None:
     """responsible for parsing args and starting a training run"""
     device = torch.device(args.device) if args.device is not None else choose_device()
-
-    with Timer("loading dataset description"):
-        load_dataset_description(args.dataset_descriptor_file).dataset_paths
 
     anchor_w, anchor_h = df.ANCHOR_W, df.ANCHOR_H
 
