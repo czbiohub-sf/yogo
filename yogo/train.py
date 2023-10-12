@@ -132,12 +132,7 @@ class Trainer:
             backend="nccl", rank=self._rank, world_size=self._world_size
         )
 
-        net = DDP(net, device_ids=[self._rank])
-
-        # mypy thinks torch doesn't have this function?
-        net = torch.compile(net)  # type: ignore
-
-        self.net = net
+        self.net = DDP(net, device_ids=[self._rank])
 
     def _init_dataset(self) -> None:
         if self.Sx is None or self.Sy is None:
