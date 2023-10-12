@@ -103,7 +103,7 @@ def train_parser(parser=None):
         "-bs",
         "--batch-size",
         type=uint,
-        help=f"batch size for training (default {df.BATCH_SIZE})",
+        help=f"batch size for training (default: {df.BATCH_SIZE})",
         default=df.BATCH_SIZE,
     )
     parser.add_argument(
@@ -111,76 +111,76 @@ def train_parser(parser=None):
         "--learning-rate",
         "--lr",
         type=unitary_float,
-        help=f"learning rate for training (default {df.LEARNING_RATE})",
+        help=f"learning rate for training (default: {df.LEARNING_RATE})",
         default=df.LEARNING_RATE,
     )
     parser.add_argument(
         "--lr-decay-factor",
         type=super_unitary_float,
-        help=f"factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default {df.DECAY_FACTOR})",
+        help=f"factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default: {df.DECAY_FACTOR})",
         default=df.DECAY_FACTOR,
     )
     parser.add_argument(
         "--label-smoothing",
         type=unitary_float,
-        help=f"label smoothing (default {df.LABEL_SMOOTHING})",
+        help=f"label smoothing (default: {df.LABEL_SMOOTHING})",
         default=df.LABEL_SMOOTHING,
     )
     parser.add_argument(
         "-wd",
         "--weight-decay",
         type=unitary_float,
-        help=f"weight decay for training (default {df.WEIGHT_DECAY})",
+        help=f"weight decay for training (default: {df.WEIGHT_DECAY})",
         default=df.WEIGHT_DECAY,
     )
     parser.add_argument(
         "--epochs",
         type=uint,
-        help=f"number of epochs to train (default {df.EPOCHS})",
+        help=f"number of epochs to train (default: {df.EPOCHS})",
         default=df.EPOCHS,
     )
     parser.add_argument(
         "--no-obj-weight",
         type=float,
-        help=f"weight for the objectness loss when there isn't an object (default {df.NO_OBJ_WEIGHT})",
+        help=f"weight for the objectness loss when there isn't an object (default: {df.NO_OBJ_WEIGHT})",
         default=df.NO_OBJ_WEIGHT,
     )
     parser.add_argument(
         "--iou-weight",
         type=float,
-        help=f"weight for the iou loss (default {df.IOU_WEIGHT})",
+        help=f"weight for the iou loss (default: {df.IOU_WEIGHT})",
         default=df.IOU_WEIGHT,
     )
     parser.add_argument(
         "--classify-weight",
         type=float,
-        help=f"weight for the classification loss (default {df.CLASSIFY_WEIGHT})",
+        help=f"weight for the classification loss (default: {df.CLASSIFY_WEIGHT})",
         default=df.CLASSIFY_WEIGHT,
     )
     parser.add_argument(
         "--healthy-weight",
         type=unitary_float,
-        help=f"weight for healthy class, between 0 and 1 (default {df.HEALTHY_WEIGHT})",
+        help=f"weight for healthy class, between 0 and 1 (default: {df.HEALTHY_WEIGHT})",
         default=df.HEALTHY_WEIGHT,
     )
     parser.add_argument(
         "--no-classify",
         default=False,
         action=boolean_action,
-        help="turn off classification loss - good only for pretraining just a cell detector (default False)",
+        help="turn off classification loss - good only for pretraining just a cell detector",
     )
     parser.add_argument(
         "--normalize-images",
         default=False,
         action=boolean_action,
-        help="normalize images into [0,1] (default False)",
+        help="normalize images into [0,1]",
     )
     parser.add_argument(
         "--image-shape",
         default=(772, 1032),
         nargs=2,
         type=int,
-        help="size of images for training (e.g. --image-shape 772 1032) (default 772 1032)",
+        help="size of images for training (e.g. --image-shape 772 1032) (default: 772 1032)",
     )
     parser.add_argument(
         "--model",
@@ -286,7 +286,7 @@ def infer_parser(parser=None):
     parser.add_argument(
         "--batch-size",
         type=uint,
-        help="batch size for inference (default 16)",
+        help="batch size for inference (default: 64)",
         default=64,
     )
     parser.add_argument(
@@ -305,19 +305,19 @@ def infer_parser(parser=None):
         type=str,
         choices=[".png", ".tif", ".tiff"],
         default=".png",
-        help="filetype for output images (default .png)",
+        help="filetype for output images (default: .png)",
     )
     parser.add_argument(
         "--obj-thresh",
         type=unsigned_float,
         default=0.5,
-        help="objectness threshold for predictions (default 0.5)",
+        help="objectness threshold for predictions (default: 0.5)",
     )
     parser.add_argument(
         "--iou-thresh",
         type=unsigned_float,
         default=0.5,
-        help="intersection over union threshold for predictions (default 0.5)",
+        help="intersection over union threshold for predictions (default: 0.5)",
     )
     parser.add_argument(
         "--min-class-confidence-threshold",
@@ -325,14 +325,14 @@ def infer_parser(parser=None):
         default=0.0,
         help=(
             "minimum confidence for a class to be considered - i.e. the "
-            "max confidence must be greater than this value (default 0.0)"
+            "max confidence must be greater than this value (default: 0.0)"
         ),
     )
     parser.add_argument(
         "--heatmap-mask-path",
         type=Path,
         default=None,
-        help="path to heatmap mask for the run (default None)",
+        help="path to heatmap mask for the run (default: None)",
     )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
