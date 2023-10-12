@@ -46,7 +46,13 @@ WandbConfig: TypeAlias = dict
 
 class Trainer:
     def __init__(
-        self, config: WandbConfig, _rank: int = 0, _world_size: int = 1
+        self,
+        config: WandbConfig,
+        dataset_init_function: Optional[Callable[
+            [], Dict[str, Union[DataLoader[Any], Collection]]
+        ]] = None,
+        _rank: int = 0,
+        _world_size: int = 1,
     ) -> None:
         self.config = config
 
@@ -62,6 +68,8 @@ class Trainer:
         self.epoch = 0
         self.global_step = 0
         self.min_val_loss = float("inf")
+
+        self._dataset_init_function = dataset_init_function or self._init_dataset
 
         self._initialized = False
 
@@ -81,7 +89,7 @@ class Trainer:
     def init(self) -> None:
         self._init_tcp_store()
         self._init_model()
-        self._init_dataset()
+        self._dataset_init_function()
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
@@ -350,10 +358,7 @@ class Trainer:
         mean_val_loss = val_loss.item() / len(self.validate_dataloader)
 
         wandb.log(
-            {
-                "validation bbs": annotated_img,
-                "val loss": mean_val_loss,
-            },
+            {"validation bbs": annotated_img, "val loss": mean_val_loss,},
             step=self.global_step,
         )
 
