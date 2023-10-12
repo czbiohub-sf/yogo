@@ -19,10 +19,7 @@ from yogo.utils import format_preds_and_labels
 class Metrics:
     @torch.no_grad()
     def __init__(
-        self,
-        class_names: List[str],
-        device: str = "cpu",
-        classify: bool = True,
+        self, class_names: List[str], device: str = "cpu", classify: bool = True,
     ):
         self.class_names: List[str] = class_names
         self.num_classes = len(self.class_names)
@@ -136,10 +133,7 @@ class Metrics:
                 }
             )
             labels.append(
-                {
-                    "boxes": fl[:, 1:5],
-                    "labels": fl[:, 5].long(),
-                }
+                {"boxes": fl[:, 1:5], "labels": fl[:, 5].long(),}
             )
 
         return preds, labels

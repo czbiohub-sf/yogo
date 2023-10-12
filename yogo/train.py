@@ -9,7 +9,7 @@ import warnings
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Any, Optional, Collection, Union
+from typing import Any, Optional, Collection, Callable, Dict, Union
 
 import torch.multiprocessing as mp
 

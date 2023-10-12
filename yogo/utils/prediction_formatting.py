@@ -99,11 +99,7 @@ def format_preds(
 
     # Non-maximal supression to remove duplicate boxes
     if iou_thresh > 0:
-        keep_idxs = ops.nms(
-            nms_boxes,
-            preds[:, 4],
-            iou_threshold=iou_thresh,
-        )
+        keep_idxs = ops.nms(nms_boxes, preds[:, 4], iou_threshold=iou_thresh,)
         preds = preds[keep_idxs]
 
     # Filter out predictions with low class confidence
@@ -150,16 +146,8 @@ def format_preds_and_labels(
             f"must have 0 <= objectness_thresh < 1; got objectness_thresh={objectness_thresh}"
         )
 
-    (
-        pred_shape,
-        Sy,
-        Sx,
-    ) = pred.shape  # pred_shape is xc yc w h objectness *classes
-    (
-        label_shape,
-        Sy,
-        Sx,
-    ) = label.shape  # label_shape is mask x y x y class
+    (pred_shape, Sy, Sx,) = pred.shape  # pred_shape is xc yc w h objectness *classes
+    (label_shape, Sy, Sx,) = label.shape  # label_shape is mask x y x y class
 
     reformatted_preds = pred.view(pred_shape, Sx * Sy).T
     reformatted_labels = label.view(label_shape, Sx * Sy).T

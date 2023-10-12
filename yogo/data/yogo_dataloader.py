@@ -32,10 +32,7 @@ def choose_dataloader_num_workers(
 
 
 def get_datasets(
-    dataset_description_file: str,
-    Sx: int,
-    Sy: int,
-    normalize_images: bool = False,
+    dataset_description_file: str, Sx: int, Sy: int, normalize_images: bool = False,
 ) -> MutableMapping[str, Dataset[Any]]:
     dataset_description = load_dataset_description(dataset_description_file)
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
@@ -156,17 +153,11 @@ def get_dataloader(
     normalize_images: bool = False,
 ) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
-        dataset_descriptor_file,
-        Sx,
-        Sy,
-        normalize_images=normalize_images,
+        dataset_descriptor_file, Sx, Sy, normalize_images=normalize_images,
     )
 
     augmentations: List[DualInputModule] = (
-        [
-            RandomHorizontalFlipWithBBs(0.5),
-            RandomVerticalFlipWithBBs(0.5),
-        ]
+        [RandomHorizontalFlipWithBBs(0.5), RandomVerticalFlipWithBBs(0.5),]
         if training
         else []
     )
@@ -192,9 +183,7 @@ def get_dataloader(
         )
 
         sampler: Iterable = DistributedSampler(
-            dataset,
-            rank=rank,
-            num_replicas=world_size,
+            dataset, rank=rank, num_replicas=world_size,
         )
 
         # TODO this division by world_size is hacky. Starting up the dataloaders

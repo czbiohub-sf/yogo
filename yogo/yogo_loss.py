@@ -62,8 +62,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             * (
                 (1 - label_batch[:, 0, :, :])
                 * self.mse(
-                    pred_batch[:, 4, :, :],
-                    torch.zeros_like(pred_batch[:, 4, :, :]),
+                    pred_batch[:, 4, :, :], torch.zeros_like(pred_batch[:, 4, :, :]),
                 )
             ).sum()
         ) / batch_size
@@ -71,10 +70,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # objectness loss when there is an obj
         objectnes_loss_obj = (
             label_batch[:, 0, :, :]
-            * self.mse(
-                pred_batch[:, 4, :, :],
-                torch.ones_like(pred_batch[:, 4, :, :]),
-            )
+            * self.mse(pred_batch[:, 4, :, :], torch.ones_like(pred_batch[:, 4, :, :]),)
         ).sum() / batch_size
 
         # bounding box loss
@@ -101,9 +97,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         formatted_labels_masked = formatted_labels[:, mask].permute((1, 0))
 
         formatted_preds_xyxy = ops.box_convert(
-            formatted_preds_masked,
-            "cxcywh",
-            "xyxy",
+            formatted_preds_masked, "cxcywh", "xyxy",
         )
 
         valid_box_mask = torch.logical_and(
@@ -118,11 +112,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             self.iou_weight
             * (
                 ops.complete_box_iou_loss(
-                    torch.clamp(
-                        formatted_preds_xyxy,
-                        min=0,
-                        max=1,
-                    ),
+                    torch.clamp(formatted_preds_xyxy, min=0, max=1,),
                     formatted_labels_masked,
                 )
             ).sum()
