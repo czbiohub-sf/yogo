@@ -26,6 +26,8 @@ class Metrics:
         self.classify = classify
 
         self.mAP = MeanAveragePrecision(box_format="xyxy", sync_on_compute=True)
+        self.mAP.warn_on_many_detections = False
+
         self.confusion = MulticlassConfusionMatrix(
             num_classes=self.num_classes, validate_args=False, sync_on_compute=True
         )
@@ -60,8 +62,6 @@ class Metrics:
                 ),
             ],
         )
-
-        self.prediction_metrics.warn_on_many_detections = False
 
         self.mAP.to(device)
         self.confusion.to(device)
