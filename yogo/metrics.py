@@ -61,6 +61,8 @@ class Metrics:
             ],
         )
 
+        self.prediction_metrics.warn_on_many_detections = False
+
         self.mAP.to(device)
         self.confusion.to(device)
         self.prediction_metrics.to(device)
