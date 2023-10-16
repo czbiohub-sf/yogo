@@ -110,8 +110,15 @@ def get_wandb_confusion(
 
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",
-        wandb.Table(columns=["Actual", "Predicted", "nPredictions"], data=L,),
-        {"Actual": "Actual", "Predicted": "Predicted", "nPredictions": "nPredictions",},
+        wandb.Table(
+            columns=["Actual", "Predicted", "nPredictions"],
+            data=L,
+        ),
+        {
+            "Actual": "Actual",
+            "Predicted": "Predicted",
+            "nPredictions": "nPredictions",
+        },
         {"title": title},
     )
 
@@ -137,7 +144,10 @@ def _format_tensor_for_rects(
     pred_dim, Sy, Sx = rects.shape
 
     formatted_preds = format_preds(
-        rects, obj_thresh=obj_thresh, iou_thresh=iou_thresh, box_format="xyxy",
+        rects,
+        obj_thresh=obj_thresh,
+        iou_thresh=iou_thresh,
+        box_format="xyxy",
     )
 
     N = formatted_preds.shape[0]

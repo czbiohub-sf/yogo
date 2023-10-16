@@ -37,7 +37,14 @@ class YOGO(nn.Module):
         num_classes: int,
         inference: bool = False,
         tuning: bool = False,
-        model_func: Optional[Callable[[int,], nn.Module,]] = None,
+        model_func: Optional[
+            Callable[
+                [
+                    int,
+                ],
+                nn.Module,
+            ]
+        ] = None,
         clip_value: float = 1.0,
         device: Union[torch.device, str] = "cpu",
     ):
@@ -137,7 +144,10 @@ class YOGO(nn.Module):
 
         model.load_state_dict(params)
 
-        return model, {"step": global_step, "normalize_images": normalize_images,}
+        return model, {
+            "step": global_step,
+            "normalize_images": normalize_images,
+        }
 
     def to(self, device, *args, **kwargs):
         self.device = device
@@ -158,7 +168,7 @@ class YOGO(nn.Module):
                 continue
             gradient_norm = p.grad.detach().data.norm(2)
             total_norm += gradient_norm.item() ** 2
-        total_norm = total_norm ** 0.5
+        total_norm = total_norm**0.5
         return total_norm
 
     def param_norm(self) -> float:
@@ -170,7 +180,7 @@ class YOGO(nn.Module):
         for p in parameters:
             parameter_norm = p.detach().data.norm(2)
             total_norm += parameter_norm.item() ** 2
-        total_norm = total_norm ** 0.5
+        total_norm = total_norm**0.5
         return total_norm
 
     def get_img_size(self) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -198,7 +208,10 @@ class YOGO(nn.Module):
             return inp if isinstance(inp, tuple) else (inp, inp)
 
         for mod in self.modules():
-            if isinstance(mod, nn.Conv2d,):
+            if isinstance(
+                mod,
+                nn.Conv2d,
+            ):
                 if isinstance(mod.padding, tuple):
                     p0, p1 = mod.padding
                 elif mod.padding is None or mod.padding == "none":
@@ -249,7 +262,9 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_2 = nn.Sequential(
-            nn.Conv2d(16, 32, 3, padding=1), nn.LeakyReLU(), nn.Dropout2d(p=0.2),
+            nn.Conv2d(16, 32, 3, padding=1),
+            nn.LeakyReLU(),
+            nn.Dropout2d(p=0.2),
         )
         conv_block_3 = nn.Sequential(
             nn.Conv2d(32, 64, 3, stride=2, padding=1),
@@ -257,7 +272,9 @@ class YOGO(nn.Module):
             nn.Dropout2d(p=0.2),
         )
         conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1), nn.LeakyReLU(), nn.Dropout2d(p=0.2),
+            nn.Conv2d(64, 128, 3, padding=1),
+            nn.LeakyReLU(),
+            nn.Dropout2d(p=0.2),
         )
         conv_block_5 = nn.Sequential(
             nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
@@ -269,7 +286,10 @@ class YOGO(nn.Module):
             nn.BatchNorm2d(128),
             nn.LeakyReLU(),
         )
-        conv_block_7 = nn.Sequential(nn.Conv2d(128, 128, 3, padding=1), nn.LeakyReLU(),)
+        conv_block_7 = nn.Sequential(
+            nn.Conv2d(128, 128, 3, padding=1),
+            nn.LeakyReLU(),
+        )
         conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
         return nn.Sequential(
             conv_block_1,

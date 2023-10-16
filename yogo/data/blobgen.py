@@ -170,7 +170,7 @@ class BlobDataset(Dataset):
 
     def gaussian_kernel(self, thumbnail, thumbnail_sigma):
         def gaussian(x, mu=0.0, sigma=1.0):
-            return torch.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) / (
+            return torch.exp(-((x - mu) ** 2) / (2 * sigma**2)) / (
                 sigma * math.sqrt(2 * math.pi)
             )
 
@@ -221,7 +221,8 @@ class BlobDataset(Dataset):
         )
 
         max_size = min(
-            self.background_img_shape[0] // 4, self.background_img_shape[1] // 4,
+            self.background_img_shape[0] // 4,
+            self.background_img_shape[1] // 4,
         )
         max_scale = max_size / min(min(t.shape[-2:]) for t in thumbnails)
 
