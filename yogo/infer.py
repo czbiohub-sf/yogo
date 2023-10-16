@@ -237,6 +237,10 @@ def predict(
                     ax.set_axis_off()
                     ax.imshow(bbox_img)
                     plt.show()
+
+                plt.clf()
+                plt.close()
+
         elif save_preds:
             assert (
                 output_dir is not None
