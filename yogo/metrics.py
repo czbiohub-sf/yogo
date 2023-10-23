@@ -23,15 +23,20 @@ class Metrics:
         num_classes: int,
         device: str = "cpu",
         classify: bool = True,
+        sync_on_compute: bool = False,
     ):
         self.num_classes = num_classes
         self.classify = classify
 
-        self.mAP = MeanAveragePrecision(box_format="xyxy", sync_on_compute=True)
+        self.mAP = MeanAveragePrecision(
+            box_format="xyxy", sync_on_compute=sync_on_compute
+        )
         self.mAP.warn_on_many_detections = False
 
         self.confusion = MulticlassConfusionMatrix(
-            num_classes=self.num_classes, validate_args=False, sync_on_compute=True
+            num_classes=self.num_classes,
+            validate_args=False,
+            sync_on_compute=sync_on_compute,
         )
         self.prediction_metrics = MetricCollection(
             [
@@ -39,28 +44,28 @@ class Metrics:
                     num_classes=self.num_classes,
                     average=None,
                     validate_args=False,
-                    sync_on_compute=True,
+                    sync_on_compute=sync_on_compute,
                 ),
                 MulticlassROC(
                     num_classes=self.num_classes,
                     validate_args=False,
-                    sync_on_compute=True,
+                    sync_on_compute=sync_on_compute,
                 ),
                 MulticlassPrecision(
                     num_classes=self.num_classes,
                     validate_args=False,
-                    sync_on_compute=True,
+                    sync_on_compute=sync_on_compute,
                 ),
                 MulticlassRecall(
                     num_classes=self.num_classes,
                     validate_args=False,
-                    sync_on_compute=True,
+                    sync_on_compute=sync_on_compute,
                 ),
                 MulticlassCalibrationError(
                     num_classes=self.num_classes,
                     n_bins=20,
                     validate_args=False,
-                    sync_on_compute=True,
+                    sync_on_compute=sync_on_compute,
                 ),
             ],
         )

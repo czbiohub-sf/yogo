@@ -425,7 +425,9 @@ class Trainer:
         net.to(device)
 
         test_loss = torch.zeros(1, device=device)
-        for imgs, labels in test_dataloader:
+        from tqdm import tqdm
+
+        for imgs, labels in tqdm(test_dataloader):
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
