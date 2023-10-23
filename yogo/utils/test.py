@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     loaded_pth = torch.load(args.pth_path, map_location="cpu")
 
-    y, cfg  = YOGO.from_pth(args.pth_path)
+    y, cfg = YOGO.from_pth(args.pth_path)
 
     dataloader = load_description_to_dataloader(
         args.dataset_descriptor_file, y.Sx, y.Sy, cfg["normalize_images"]
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
     # These are just some standard
     config = {
-        "class_names": range(y.num_classes),
+        "class_names": range(int(y.num_classes.item())),  # type: ignore
         "no_classify": False,
         "healthy_weight": df.HEALTHY_WEIGHT,
         "iou_weight": df.IOU_WEIGHT,
