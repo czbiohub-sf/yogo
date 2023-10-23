@@ -78,7 +78,7 @@ class Trainer:
     ) -> Trainer:
         """
         Due to mp spawn not giving a kwarg option, we have to give `rank` first. But, for
-        the sake of consistency, we want to give the config first. A bit messy.
+        the sake of consistency, we would like to give the config first instead. A bit messy.
         """
         trainer = cls(config, _rank=_rank, _world_size=_world_size)
         trainer.init()
