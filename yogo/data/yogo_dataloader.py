@@ -206,12 +206,12 @@ def get_dataloader(
             shuffle=False,
             drop_last=False,
             pin_memory=True,
-            sampler=sampler,
             batch_size=batch_size,
-            num_workers=num_workers,  # type: ignore
+            num_workers=num_workers,
             persistent_workers=num_workers > 0,
             generator=torch.Generator().manual_seed(111111),
             collate_fn=partial(collate_batch, transforms=transforms),
+            sampler=sampler if designation in ("train", "val") else None,
             multiprocessing_context="spawn" if num_workers > 0 else None,
         )
     return d
