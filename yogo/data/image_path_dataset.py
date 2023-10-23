@@ -27,7 +27,12 @@ class ImagePathDataset(ImageAndIdDataset):
         self,
         root: Union[str, Path],
         image_transforms: List[nn.Module] = [],
-        loader: Callable[[Union[str, Path],], torch.Tensor,] = read_grayscale,
+        loader: Callable[
+            [
+                Union[str, Path],
+            ],
+            torch.Tensor,
+        ] = read_grayscale,
         normalize_images: bool = False,
     ):
         self.root = Path(root)

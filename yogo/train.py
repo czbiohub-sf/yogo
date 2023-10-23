@@ -378,7 +378,10 @@ class Trainer:
         mean_val_loss = val_loss.item() / len(self.validate_dataloader)
 
         wandb.log(
-            {"validation bbs": annotated_img, "val loss": mean_val_loss,},
+            {
+                "validation bbs": annotated_img,
+                "val loss": mean_val_loss,
+            },
             step=self.global_step,
         )
 

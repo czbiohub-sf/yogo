@@ -19,13 +19,18 @@ from yogo.utils import format_preds_and_labels
 class Metrics:
     @torch.no_grad()
     def __init__(
-        self, class_names: List[str], device: str = "cpu", classify: bool = True,
+        self,
+        class_names: List[str],
+        device: str = "cpu",
+        classify: bool = True,
     ):
         self.class_names: List[str] = class_names
         self.num_classes = len(self.class_names)
         self.classify = classify
 
         self.mAP = MeanAveragePrecision(box_format="xyxy", sync_on_compute=True)
+        self.mAP.warn_on_many_detections = False
+
         self.confusion = MulticlassConfusionMatrix(
             num_classes=self.num_classes, validate_args=False, sync_on_compute=True
         )
@@ -133,7 +138,10 @@ class Metrics:
                 }
             )
             labels.append(
-                {"boxes": fl[:, 1:5], "labels": fl[:, 5].long(),}
+                {
+                    "boxes": fl[:, 1:5],
+                    "labels": fl[:, 5].long(),
+                }
             )
 
         return preds, labels
