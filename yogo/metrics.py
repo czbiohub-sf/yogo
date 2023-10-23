@@ -20,12 +20,11 @@ class Metrics:
     @torch.no_grad()
     def __init__(
         self,
-        class_names: List[str],
+        num_classes: int,
         device: str = "cpu",
         classify: bool = True,
     ):
-        self.class_names: List[str] = class_names
-        self.num_classes = len(self.class_names)
+        self.num_classes = num_classes
         self.classify = classify
 
         self.mAP = MeanAveragePrecision(box_format="xyxy", sync_on_compute=True)

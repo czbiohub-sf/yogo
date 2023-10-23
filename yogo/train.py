@@ -182,6 +182,7 @@ class Trainer:
         )
 
     def _init_training_tools(self) -> None:
+        # TODO generalize these class weights to n-classes (for other datasets)
         class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
 
         self.Y_loss = YOGOLoss(
@@ -404,7 +405,7 @@ class Trainer:
             return
 
         test_metrics = Metrics(
-            class_names=config["class_names"],
+            num_classes=len(config["class_names"]),
             classify=not config["no_classify"],
             device=str(device),
         )
