@@ -72,7 +72,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    y, cfg = YOGO.from_pth(args.pth_path)
+    loaded_pth = torch.load(args.pth_path, map_location="cpu")
+
+    y, cfg  = YOGO.from_pth(args.pth_path)
 
     dataloader = load_description_to_dataloader(
         args.dataset_descriptor_file, y.Sx, y.Sy, cfg["normalize_images"]
@@ -93,4 +95,4 @@ if __name__ == "__main__":
 
     print("warning! we gotta do smth w/this lol")
     with Timer("testing"):
-        Trainer._test(dataloader, device, config, args.pth_path)
+        Trainer._test(dataloader, device, config, y)

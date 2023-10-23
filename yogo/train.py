@@ -31,7 +31,6 @@ from yogo.utils import (
     get_wandb_confusion,
     get_wandb_roc,
     get_free_port,
-    Timer,
     choose_device,
 )
 
@@ -311,17 +310,18 @@ class Trainer:
             if epoch % 4 == 0:
                 self._validate()
 
-        if self._rank == 0:
-            with Timer("test"):
-                model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
-                pth_path = model_save_dir / "best.pth"
+        model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
+        model_checkpoint = torch.load(model_save_dir / "best.pth", map_location="cpu")
 
-                self._test(
-                    self.test_dataloader,
-                    self.device,
-                    self.config,
-                    pth_path,
-                )
+        self.net.module.load_state_dict(model_checkpoint["model_state_dict"])
+        self.net.eval()
+
+        self._test(
+            self.test_dataloader,
+            self.device,
+            self.config,
+            self.net,
+        )
 
         wandb.finish()
 
@@ -399,7 +399,7 @@ class Trainer:
         test_dataloader: Union[Collection, DataLoader],
         device: Union[str, torch.device],
         config: WandbConfig,
-        pth_path: Union[str, Path],
+        net: torch.nn.Module,
     ):
         if Trainer._dataset_size(test_dataloader) == 0:
             return
@@ -408,6 +408,7 @@ class Trainer:
             num_classes=len(config["class_names"]),
             classify=not config["no_classify"],
             device=str(device),
+            sync_on_compute=isinstance(net, DDP),
         )
 
         class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
@@ -419,15 +420,9 @@ class Trainer:
             classify=not config["no_classify"],
         ).to(device)
 
-        # inference False because we want to calculate loss
-        # w/ CrossEntropyLoss
-        net, cfg = YOGO.from_pth(pth_path, inference=False)
-        net.to(device)
-
         test_loss = torch.zeros(1, device=device)
-        from tqdm import tqdm
 
-        for imgs, labels in tqdm(test_dataloader):
+        for imgs, labels in test_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
