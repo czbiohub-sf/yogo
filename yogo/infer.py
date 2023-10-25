@@ -310,7 +310,9 @@ def predict(
         print("Parsing predictions...")
         for i in tqdm(range(len(image_dataset))):
             yogo_res = results[i, :, :, :]
-            pred_tensors[:, i] = parse_prediction_tensor(yogo_res)
+            pred_tensors[:, i] = parse_prediction_tensor(
+                i, yogo_res, vertical_crop_height_px, 1032
+            )
         np.save("doesitwork.npy", pred_tensors)
     if not (draw_boxes or save_preds):
         return results
