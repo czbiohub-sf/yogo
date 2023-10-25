@@ -290,8 +290,10 @@ def parse_prediction_tensor(
     npt.NDArray: pred_probs (NUM_CLASSES x N)
     """
 
-    mask = (prediction_tensor[:, 4:5, :] > 0.5).flatten()
-    filtered_pred = prediction_tensor[:, :, mask][0, :, :]
+    mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
+    n, sy, sx = prediction_tensor.shape
+    prediction_tensor = prediction_tensor.reshape((n, sy * sx))
+    filtered_pred = prediction_tensor[:, mask]
 
     img_ids = np.ones(filtered_pred.shape[1]).astype(DTYPE) * img_id
     xc = filtered_pred[0, :] * img_w
