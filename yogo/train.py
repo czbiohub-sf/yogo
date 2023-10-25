@@ -67,8 +67,6 @@ class Trainer:
         self.global_step = 0
         self.min_val_loss = float("inf")
 
-        self._dataset_init_function = dataset_init_function or self._init_dataset
-
         self._initialized = False
 
     @classmethod
@@ -87,7 +85,7 @@ class Trainer:
     def init(self) -> None:
         self._init_tcp_store()
         self._init_model()
-        self._dataset_init_function()
+        self._init_dataset()
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
