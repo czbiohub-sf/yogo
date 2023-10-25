@@ -6,6 +6,7 @@ from .utils import (
     get_wandb_confusion,
     draw_yogo_prediction,
     choose_device,
+    parse_prediction_tensor
 )
 
 from .prediction_formatting import (
