@@ -316,5 +316,5 @@ def parse_prediction_tensor(
     pred_probs = pred_probs.astype(DTYPE)
 
     return np.vstack(
-        img_ids, tlx, tly, brx, bry, objectness, pred_labels, pred_probs, all_confs
+        (img_ids, tlx, tly, brx, bry, objectness, pred_labels, pred_probs, all_confs)
     )
