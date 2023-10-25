@@ -119,8 +119,8 @@ class YOGO(nn.Module):
         pth_path = Path(pth_path)
         loaded_pth = torch.load(pth_path, map_location="cpu")
 
-        model_version = loaded_pth.get("model_version", None)
         global_step = loaded_pth.get("step", 0)
+        model_version = loaded_pth.get("model_version", None)
         normalize_images = loaded_pth.get("normalize_images", False)
 
         params = loaded_pth["model_state_dict"]

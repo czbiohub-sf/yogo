@@ -9,7 +9,6 @@ from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 from typing import List, Dict, Optional, Any, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
-from torch.utils.data.distributed import DistributedSampler
 from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.dataset_description_file import load_dataset_description
 from yogo.data.data_transforms import (
@@ -18,6 +17,7 @@ from yogo.data.data_transforms import (
     RandomVerticalFlipWithBBs,
     MultiArgSequential,
 )
+from torch.utils.data.distributed import DistributedSampler
 
 
 def choose_dataloader_num_workers(
@@ -206,12 +206,12 @@ def get_dataloader(
             shuffle=False,
             drop_last=False,
             pin_memory=True,
-            sampler=sampler,
             batch_size=batch_size,
-            num_workers=num_workers,  # type: ignore
+            num_workers=num_workers,
             persistent_workers=num_workers > 0,
             generator=torch.Generator().manual_seed(111111),
             collate_fn=partial(collate_batch, transforms=transforms),
+            sampler=sampler if designation in ("train", "val") else None,
             multiprocessing_context="spawn" if num_workers > 0 else None,
         )
     return d
@@ -226,7 +226,7 @@ def get_class_counts(d: DataLoader[ConcatDataset], num_classes: int) -> torch.Te
     it's sort of a weird tree-like structure. from `get_dataloader(path_to_auggd_data)['train']`, you
     get a Dataloader[ConcatDataset], and the ConcatDataset has [ConcatDataset, BlobGen], and the inner
     ConcatDataset is the concat of all ObjectDetectionDatasets. So just traverse the tree, adding the
-    datasets in ConcatDatasets, calculating the class counts in
+    datasets in ConcatDatasets, calculating the class counts in each.
     """
     class_counts = torch.zeros(num_classes, dtype=torch.long)
     dset_iters = [d.dataset.datasets]  # type:ignore
