@@ -19,7 +19,12 @@ from yogo.data import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import infer_parser
 from yogo.data.image_path_dataset import get_dataset, collate_fn
 from yogo.data.yogo_dataloader import choose_dataloader_num_workers
-from yogo.utils import draw_yogo_prediction, format_preds, choose_device
+from yogo.utils import (
+    draw_yogo_prediction,
+    format_preds,
+    choose_device,
+    parse_prediction_tensor,
+)
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff
@@ -132,6 +137,7 @@ def predict(
     output_dir: Optional[str] = None,
     save_preds: bool = False,
     draw_boxes: bool = False,
+    save_npy: bool = False,
     count_predictions: bool = False,
     batch_size: int = 64,
     obj_thresh: float = 0.5,
@@ -296,6 +302,16 @@ def predict(
             )
         )
 
+    if save_npy:
+        pred_tensors = np.zeros((len(YOGO_CLASS_ORDERING) + 5, 2_500_000)).astype(
+            np.float32
+        )
+
+        print("Parsing predictions...")
+        for i in tqdm(range(len(image_dataset))):
+            yogo_res = results[i, :, :, :]
+            pred_tensors[:, i] = parse_prediction_tensor(yogo_res)
+        np.save("doesitwork.npy", pred_tensors)
     if not (draw_boxes or save_preds):
         return results
 
@@ -309,6 +325,7 @@ def do_infer(args):
         path_to_zarr=args.path_to_zarr,
         output_dir=args.output_dir,
         save_preds=args.save_preds,
+        save_npy=args.save_npy,
         draw_boxes=args.draw_boxes,
         obj_thresh=args.obj_thresh,
         iou_thresh=args.iou_thresh,
