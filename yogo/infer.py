@@ -315,7 +315,11 @@ def predict(
             pred_tensors[:, start : start + parsed.shape[1]] = parsed
             start = start + parsed.shape[1]
         pred_tensors = pred_tensors[:, : start + parsed.shape[1]]  # truncate
-        np.save("doesitwork.npy", pred_tensors)
+        if path_to_images:
+            filename = Path(path_to_images).stem
+        elif path_to_zarr:
+            filename = Path(path_to_zarr).stem
+        np.save(f"{filename}.npy", pred_tensors)
     if not (draw_boxes or save_preds):
         return results
 
