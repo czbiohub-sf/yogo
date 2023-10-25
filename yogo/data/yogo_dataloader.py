@@ -22,7 +22,7 @@ from yogo.data.data_transforms import (
 
 def choose_dataloader_num_workers(
     dataset_size: int, requested_num_workers: Optional[int] = None
-):
+) -> int:
     if dataset_size < 1000:
         return 0
     elif requested_num_workers is not None:
