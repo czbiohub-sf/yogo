@@ -289,7 +289,7 @@ def parse_prediction_tensor(
     npt.NDArray: peak pred_probs (1 x N)
     npt.NDArray: pred_probs (NUM_CLASSES x N)
     """
-
+    prediction_tensor = prediction_tensor.detach().numpy()
     mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
     n, sy, sx = prediction_tensor.shape
     prediction_tensor = prediction_tensor.reshape((n, sy * sx))
