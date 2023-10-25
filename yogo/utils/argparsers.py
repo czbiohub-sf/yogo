@@ -278,6 +278,15 @@ def infer_parser(parser=None):
         default=False,
     )
     parser.add_argument(
+        "--save-npy",
+        help=(
+            "Parse and save predictions in the same format as on scope - requires `--output-dir` "
+            " to be set"
+        ),
+        action=boolean_action,
+        default=False,
+    )
+    parser.add_argument(
         "--count",
         action=boolean_action,
         default=False,
