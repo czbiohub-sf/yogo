@@ -303,16 +303,16 @@ def predict(
         )
 
     if save_npy:
-        pred_tensors = np.zeros((len(YOGO_CLASS_ORDERING) + 5, 2_500_000)).astype(
-            np.float32
-        )
+        pred_tensors = np.zeros((15, 2_500_000)).astype(np.float32)
 
         print("Parsing predictions...")
+        start = 0
         for i in tqdm(range(len(image_dataset))):
             yogo_res = results[i, :, :, :]
-            pred_tensors[:, i] = parse_prediction_tensor(
+            parsed = parse_prediction_tensor(
                 i, yogo_res, vertical_crop_height_px * 772, 1032
             )
+            pred_tensors[:, start + parsed.shape[1]] = parsed
         np.save("doesitwork.npy", pred_tensors)
     if not (draw_boxes or save_preds):
         return results
