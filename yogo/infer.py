@@ -312,7 +312,8 @@ def predict(
             parsed = parse_prediction_tensor(
                 i, yogo_res, vertical_crop_height_px * 772, 1032
             )
-            pred_tensors[:, start + parsed.shape[1]] = parsed
+            pred_tensors[:, start : start + parsed.shape[1]] = parsed
+            start = start + parsed.shape[1]
         np.save("doesitwork.npy", pred_tensors)
     if not (draw_boxes or save_preds):
         return results
