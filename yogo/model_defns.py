@@ -536,4 +536,4 @@ def convnext_small(num_classes: int) -> nn.Module:
 
     model_chopped.add_module("format time!", format_block)
 
-    return model
+    return model_chopped
