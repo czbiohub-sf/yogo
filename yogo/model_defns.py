@@ -525,13 +525,9 @@ def convnext_small(num_classes: int) -> nn.Module:
     # the last two children are an Identity block and the classification block
     model_chopped = nn.Sequential(*list(model.children())[:-2])
 
-    # the Linear line was hard-coded :(
-    # so this is fixed to (*,1,772,1032) input image shape
-    # oh well, good enough for prototyping
     format_block = nn.Sequential(
-        nn.Flatten(),
-        nn.Linear(589824, (5 + num_classes) * 97 * 129),
-        nn.Unflatten(-1, (5 + num_classes, 97, 129)),
+        nn.Conv2d(768, 5 + num_classes, 1),
+        nn.ConvTranspose2d(5 + num_classes, 5 + num_classes, kernel_size=4, stride=4),
     )
 
     model_chopped.add_module("format time!", format_block)
