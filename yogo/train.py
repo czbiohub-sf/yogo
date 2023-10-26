@@ -278,12 +278,13 @@ class Trainer:
             self.train_dataloader.sampler.set_epoch(epoch)  # type: ignore
 
             for imgs, labels in self.train_dataloader:
-                imgs = imgs.to(self.device, non_blocking=True)
-                labels = labels.to(self.device, non_blocking=True)
+                imgs = imgs.to(self.device, non_blocking=True, dtype=torch.float16)
+                labels = labels.to(self.device, non_blocking=True, dtype=torch.float16)
 
                 self.optimizer.zero_grad(set_to_none=True)
 
-                outputs = self.net(imgs)
+                with torch.cuda.amp.autocast():
+                    outputs = self.net(imgs)
 
                 loss, loss_components = self.Y_loss(outputs, labels)
                 loss.backward()
@@ -336,10 +337,11 @@ class Trainer:
         val_loss = torch.tensor(0.0, device=device)
         # TODO figure out correct type for dataloader
         for imgs, labels in self.validate_dataloader:  # type: ignore
-            imgs = imgs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
+            imgs = imgs.to(self.device, non_blocking=True, dtype=torch.float16)
+            labels = labels.to(self.device, non_blocking=True, dtype=torch.float16)
 
-            outputs = self.net(imgs)
+            with torch.cuda.amp.autocast():
+                outputs = self.net(imgs)
 
             loss, _ = self.Y_loss(outputs, labels)
             val_loss += loss
@@ -421,10 +423,12 @@ class Trainer:
         test_loss = torch.zeros(1, device=device)
 
         for imgs, labels in test_dataloader:
-            imgs = imgs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
+            imgs = imgs.to(device, non_blocking=True, dtype=torch.float16)
+            labels = labels.to(device, non_blocking=True, dtype=torch.float16)
 
-            outputs = net(imgs)
+            with torch.cuda.amp.autocast():
+                outputs = net(imgs)
+
             loss, _ = Y_loss(outputs, labels)
 
             test_loss += loss
