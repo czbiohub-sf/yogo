@@ -209,7 +209,7 @@ class YOGO(nn.Module):
                 return inp
             elif inp is None or inp == "none":
                 # TODO is this the right default?
-                return (0,0)
+                return (0, 0)
             return (inp, inp)
 
         for mod in self.modules():
