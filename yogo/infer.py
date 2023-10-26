@@ -319,7 +319,13 @@ def predict(
             filename = Path(path_to_images).stem
         elif path_to_zarr:
             filename = Path(path_to_zarr).stem
-        np.save(f"{filename}.npy", pred_tensors)
+
+        if output_dir is not None:
+            fp = Path(output_dir) / filename.with_suffix(".npy")
+            np.save(f"{fp}", pred_tensors)
+        else:
+            # Save it to the current location
+            np.save(f"{filename}.npy", pred_tensors)
     if not (draw_boxes or save_preds):
         return results
 
