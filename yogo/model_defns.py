@@ -1,10 +1,44 @@
 import torch
 
-from typing import Optional, Callable, Union, Dict
+from typing import Optional, Callable, Dict
 
 from torch import nn
 
 
+MODELS: Dict[
+    str,
+    Callable[
+        [
+            int,
+        ],
+        nn.Module,
+    ],
+] = {}
+
+
+def get_model_func(
+    model_name: str,
+) -> Optional[Callable[[int,], nn.Module]]:
+    return MODELS.get(model_name, None)
+
+
+def register_model(
+    model_defn: Callable[
+        [
+            int,
+        ],
+        nn.Module,
+    ]
+):
+    """
+    put model in MODELS. When adding a new model,
+    make sure to `@register_model`
+    """
+    MODELS[model_defn.__name__] = model_defn
+    return model_defn
+
+
+@register_model
 def base_model(num_classes) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 5, stride=2, padding=1, bias=False),
@@ -51,6 +85,7 @@ def base_model(num_classes) -> nn.Module:
     )
 
 
+@register_model
 def smaller_funkier(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
@@ -94,6 +129,7 @@ def smaller_funkier(num_classes: int) -> nn.Module:
     )
 
 
+@register_model
 def even_smaller_funkier(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
@@ -137,6 +173,7 @@ def even_smaller_funkier(num_classes: int) -> nn.Module:
     )
 
 
+@register_model
 def model_no_dropout(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 3, stride=2, padding=1),
@@ -183,6 +220,7 @@ def model_no_dropout(num_classes: int) -> nn.Module:
     )
 
 
+@register_model
 def model_smaller_SxSy(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
@@ -252,6 +290,7 @@ class Residual(nn.Module):
         return x + x1
 
 
+@register_model
 def model_big_simple(num_classes: int) -> nn.Module:
     return nn.Sequential(
         nn.Sequential(
@@ -306,6 +345,7 @@ def model_big_simple(num_classes: int) -> nn.Module:
     )
 
 
+@register_model
 def model_big_residual(num_classes: int) -> nn.Module:
     return nn.Sequential(
         nn.Sequential(
@@ -339,6 +379,7 @@ def model_big_residual(num_classes: int) -> nn.Module:
     )
 
 
+@register_model
 def model_big_normalized(num_classes: int) -> nn.Module:
     return nn.Sequential(
         nn.Sequential(
@@ -400,6 +441,7 @@ def model_big_normalized(num_classes: int) -> nn.Module:
     )
 
 
+@register_model
 def model_big_heavy_normalized(num_classes: int) -> nn.Module:
     return nn.Sequential(
         nn.Sequential(
@@ -465,28 +507,33 @@ def model_big_heavy_normalized(num_classes: int) -> nn.Module:
     )
 
 
-MODELS: Dict[
-    Union[str, None],
-    Callable[
-        [
-            int,
-        ],
-        nn.Module,
-    ],
-] = {
-    "base_model": base_model,
-    "model_no_dropout": model_no_dropout,
-    "model_smaller_SxSy": model_smaller_SxSy,
-    "model_big_simple": model_big_simple,
-    "model_big_residual": model_big_residual,
-    "model_big_normalized": model_big_normalized,
-    "model_big_heavy_normalized": model_big_heavy_normalized,
-    "smaller_funkier": smaller_funkier,
-    "even_smaller_funkier": even_smaller_funkier,
-}
+@register_model
+def convnext_small(num_classes: int) -> nn.Module:
+    try:
+        import timm
+    except ImportError:
+        raise ImportError("Please install timm to use convnext_small.")
 
+    # timm is amazing
+    # TODO is it better starting from pretrained? almost certianly yes
+    model = timm.create_model(
+        "convnext_small", pretrained=False, num_classes=0, in_chans=1
+    )
 
-def get_model_func(
-    model_name: Optional[str],
-) -> Optional[Callable[[int,], nn.Module]]:
-    return MODELS.get(model_name, None)
+    # we need to replace the last block of this model so the output
+    # tensor will match the YOGO format (5 + num_classes, grid_x, grid_y)
+    # the last two children are an Identity block and the classification block
+    model_chopped = nn.Sequential(*list(model.children())[:-2])
+
+    # the Linear line was hard-coded :(
+    # so this is fixed to (*,1,772,1032) input image shape
+    # oh well, good enough for prototyping
+    format_block = nn.Sequential(
+        nn.Flatten(),
+        nn.Linear(589824, (5 + num_classes) * 97 * 129),
+        nn.Unflatten(-1, (5 + num_classes, 97, 129)),
+    )
+
+    model_chopped.add_module("format time!", format_block)
+
+    return model
