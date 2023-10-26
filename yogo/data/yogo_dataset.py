@@ -19,14 +19,26 @@ LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 
 
 def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
+    """
+    converts a tensor of shape (N, 5) into a tensor of shape (LABEL_TENSOR_PRED_DIM, Sy, Sx)
+
+    The input tensor `labels` has elements (class_idx, x, y, x, y), where xs and ys are
+    normalized to the input image's shape.
+
+    The LABEL_TENSOR_PRED_DIM consists of (mask, x, y, x, y, class_idx).
+    The mask is 1 if there is a prediction, 0 otherwise.
+    """
     output = torch.zeros(LABEL_TENSOR_PRED_DIM_SIZE, Sy, Sx)
+
+    # find the center of each bbox in a grid of size (Sx,Sy)
     iis = (labels[:, 1] + labels[:, 3]) * Sx // 2
     jjs = (labels[:, 2] + labels[:, 4]) * Sy // 2
 
+    # Go through each of our labels and
     for i, j, label in zip(iis.int(), jjs.int(), labels):
         output[0, j, i] = 1  # mask that there is a prediction here
         output[1:5, j, i] = label[1:]  # xyxy
-        output[5, j, i] = label[0]  # prediction idx
+        output[5, j, i] = label[0]  # class prediction idx
 
     return output
 
