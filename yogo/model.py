@@ -205,22 +205,32 @@ class YOGO(nn.Module):
             h, w = self.get_img_size()
 
         def as_tuple(inp: Union[Any, Tuple[Any, Any]]) -> Tuple[Any, ...]:
-            return inp if isinstance(inp, tuple) else (inp, inp)
+            if isinstance(inp, tuple):
+                return inp
+            elif inp is None or inp == "none":
+                # TODO is this the right default?
+                return (0,0)
+            return (inp, inp)
 
         for mod in self.modules():
             if isinstance(
                 mod,
                 nn.Conv2d,
             ):
-                if isinstance(mod.padding, tuple):
-                    p0, p1 = mod.padding
-                elif mod.padding is None or mod.padding == "none":
-                    p0, p1 = 0, 0
+                p0, p1 = as_tuple(mod.padding)
                 d0, d1 = as_tuple(mod.dilation)
                 k0, k1 = as_tuple(mod.kernel_size)
                 s0, s1 = as_tuple(mod.stride)
                 h = torch.floor((h + 2 * p0 - d0 * (k0 - 1) - 1) / s0 + 1)
                 w = torch.floor((w + 2 * p1 - d1 * (k1 - 1) - 1) / s1 + 1)
+            elif isinstance(mod, nn.ConvTranspose2d):
+                p0, p1 = as_tuple(mod.padding)
+                d0, d1 = as_tuple(mod.dilation)
+                k0, k1 = as_tuple(mod.kernel_size)
+                s0, s1 = as_tuple(mod.stride)
+                p_o0, p_o1 = as_tuple(mod.output_padding)
+                h = torch.floor((h - 1) * s0 - 2 * p0 + d0 * (k0 - 1) + p_o0 + 1)
+                w = torch.floor((w - 1) * s1 - 2 * p1 + d1 * (k1 - 1) + p_o1 + 1)
 
         Sy = h.item()
         Sx = w.item()
