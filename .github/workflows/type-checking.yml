@@ -13,6 +13,8 @@ jobs:
       - name: install checking requirements
         run: |
           pip install --upgrade pip
-          pip install ruff==0.0.253
+          pip install ruff mypy
       - name: ruff
         run: ruff tests yogo --ignore E501 --ignore E722
+      - name: mypy
+        run: mypy --ignore-missing-imports yogo
