@@ -274,6 +274,31 @@ def predict(
                 iou_thresh=iou_thresh,
                 label=label,
             )
+        elif save_npy:
+            pred_tensors = np.zeros((15, 2_500_000)).astype(np.float32)
+
+            start = 0
+            img_h: int = (
+                vertical_crop_height_px if vertical_crop_height_px is not None else 772
+            )
+
+            for i in tqdm(range(len(image_dataset))):
+                yogo_res = results[i, :, :, :].detach().numpy()
+                parsed = parse_prediction_tensor(i, yogo_res, img_h, 1032)
+                pred_tensors[:, start : start + parsed.shape[1]] = parsed
+                start = start + parsed.shape[1]
+            pred_tensors = pred_tensors[:, : start + parsed.shape[1]]  # truncate
+            if path_to_images:
+                filename = Path(path_to_images).stem
+            elif path_to_zarr:
+                filename = Path(path_to_zarr).stem
+
+            if output_dir is not None:
+                fp = Path(output_dir) / Path(filename).with_suffix(".npy")
+                np.save(f"{fp}", pred_tensors)
+            else:
+                # Save it to the current location
+                np.save(f"{filename}.npy", pred_tensors)
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
@@ -302,31 +327,6 @@ def predict(
             )
         )
 
-    if save_npy:
-        pred_tensors = np.zeros((15, 2_500_000)).astype(np.float32)
-
-        start = 0
-        img_h: int = (
-            vertical_crop_height_px if vertical_crop_height_px is not None else 772
-        )
-
-        for i in tqdm(range(len(image_dataset))):
-            yogo_res = results[i, :, :, :].detach().numpy()
-            parsed = parse_prediction_tensor(i, yogo_res, img_h, 1032)
-            pred_tensors[:, start : start + parsed.shape[1]] = parsed
-            start = start + parsed.shape[1]
-        pred_tensors = pred_tensors[:, : start + parsed.shape[1]]  # truncate
-        if path_to_images:
-            filename = Path(path_to_images).stem
-        elif path_to_zarr:
-            filename = Path(path_to_zarr).stem
-
-        if output_dir is not None:
-            fp = Path(output_dir) / Path(filename).with_suffix(".npy")
-            np.save(f"{fp}", pred_tensors)
-        else:
-            # Save it to the current location
-            np.save(f"{filename}.npy", pred_tensors)
     if not (draw_boxes or save_preds):
         return results
 
