@@ -155,7 +155,7 @@ def predict(
         raise ValueError(
             "cannot save predictions in YOGO format and draw_boxes at the same time"
         )
-    elif output_dir is not None and not (save_preds or draw_boxes):
+    elif output_dir is not None and not (save_preds or draw_boxes or save_npy):
         warnings.warn(
             f"output dir is not None (is {output_dir}), but it will not be used "
             "since save_preds and draw_boxes are both false"
@@ -282,7 +282,7 @@ def predict(
             )
         elif save_npy:
             for j in range(res.shape[0]):
-                yogo_res = res[j, ...].detach().cpu().numpy()
+                yogo_res = res[j, ...].clone().detach().cpu().numpy()
 
                 index = (i * batch_size) + j
                 parsed = parse_prediction_tensor(index, yogo_res, img_h, 1032)
