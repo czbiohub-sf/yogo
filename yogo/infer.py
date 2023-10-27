@@ -217,6 +217,12 @@ def predict(
         results = torch.zeros(
             (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
         )
+    elif save_npy:
+        pred_tensors = np.zeros((15, 12_500_000)).astype(np.float32)
+        pred_tensor_counter = 0
+        img_h: int = (
+            vertical_crop_height_px if vertical_crop_height_px is not None else 772
+        )
 
     file_iterator = enumerate(image_dataloader)
     while True:
@@ -275,30 +281,15 @@ def predict(
                 label=label,
             )
         elif save_npy:
-            pred_tensors = np.zeros((15, 2_500_000)).astype(np.float32)
+            for j in range(batch_size):
+                yogo_res = res[j, ...].detach().numpy()
 
-            start = 0
-            img_h: int = (
-                vertical_crop_height_px if vertical_crop_height_px is not None else 772
-            )
-
-            for i in tqdm(range(len(image_dataset))):
-                yogo_res = results[i, :, :, :].detach().numpy()
-                parsed = parse_prediction_tensor(i, yogo_res, img_h, 1032)
-                pred_tensors[:, start : start + parsed.shape[1]] = parsed
-                start = start + parsed.shape[1]
-            pred_tensors = pred_tensors[:, : start + parsed.shape[1]]  # truncate
-            if path_to_images:
-                filename = Path(path_to_images).stem
-            elif path_to_zarr:
-                filename = Path(path_to_zarr).stem
-
-            if output_dir is not None:
-                fp = Path(output_dir) / Path(filename).with_suffix(".npy")
-                np.save(f"{fp}", pred_tensors)
-            else:
-                # Save it to the current location
-                np.save(f"{filename}.npy", pred_tensors)
+                index = (i * batch_size) + j
+                parsed = parse_prediction_tensor(index, yogo_res, img_h, 1032)
+                pred_tensors[
+                    :, pred_tensor_counter : pred_tensor_counter + parsed.shape[1]
+                ] = parsed
+                pred_tensor_counter = pred_tensor_counter + parsed.shape[1]
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
@@ -326,6 +317,23 @@ def predict(
                 )
             )
         )
+
+    # Save the numpy array
+    if save_npy:
+        pred_tensors = pred_tensors[
+            :, : pred_tensor_counter + parsed.shape[1]
+        ]  # truncate
+        if path_to_images:
+            filename = Path(path_to_images).stem
+        elif path_to_zarr:
+            filename = Path(path_to_zarr).stem
+
+        if output_dir is not None:
+            fp = Path(output_dir) / Path(filename).with_suffix(".npy")
+            np.save(f"{fp}", pred_tensors)
+        else:
+            # Save it to the current location
+            np.save(f"{filename}.npy", pred_tensors)
 
     if not (draw_boxes or save_preds):
         return results
