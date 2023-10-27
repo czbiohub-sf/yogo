@@ -191,6 +191,12 @@ def train_parser(parser=None):
         help="model version to use - do not use with --from-pretrained, as we use the pretrained model",
     )
     parser.add_argument(
+        "--half",
+        default=False,
+        action=boolean_action,
+        help="half precision (i.e. fp16) training (default: False)",
+    )
+    parser.add_argument(
         "--device",
         type=str,
         nargs="?",
