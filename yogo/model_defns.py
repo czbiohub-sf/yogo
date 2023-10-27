@@ -32,7 +32,7 @@ def register_model(
 ):
     """
     put model in MODELS. When adding a new model,
-    make sure to `@register_model`
+    so make sure to `@register_model`!
     """
     MODELS[model_defn.__name__] = model_defn
     return model_defn

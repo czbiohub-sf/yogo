@@ -272,20 +272,27 @@ class Trainer:
         if not self._initialized:
             raise RuntimeError("trainer not initialized")
 
+        device = self.device
+
         for epoch in range(self.config["epochs"]):
             self.epoch = epoch
             # mypy thinks that self.train_dataloader has type Iterable[Any]?
             self.train_dataloader.sampler.set_epoch(epoch)  # type: ignore
 
             for imgs, labels in self.train_dataloader:
-                imgs = imgs.to(self.device, non_blocking=True)
-                labels = labels.to(self.device, non_blocking=True)
+                imgs = imgs.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
 
                 self.optimizer.zero_grad(set_to_none=True)
 
-                outputs = self.net(imgs)
+                with torch.autocast(
+                    device_type=str(device),
+                    dtype=torch.float16,
+                    enabled=self.config["half"],
+                ):
+                    outputs = self.net(imgs)
+                    loss, loss_components = self.Y_loss(outputs, labels)
 
-                loss, loss_components = self.Y_loss(outputs, labels)
                 loss.backward()
 
                 self.optimizer.step()
@@ -339,9 +346,14 @@ class Trainer:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
-            outputs = self.net(imgs)
+            with torch.autocast(
+                device_type=str(device),
+                dtype=torch.float16,
+                enabled=self.config["half"],
+            ):
+                outputs = self.net(imgs)
+                loss, _ = self.Y_loss(outputs, labels)
 
-            loss, _ = self.Y_loss(outputs, labels)
             val_loss += loss
 
         # TODO mypy thinks that ReduceOp doesn't have AVG;
@@ -421,10 +433,16 @@ class Trainer:
         test_loss = torch.zeros(1, device=device)
 
         for imgs, labels in test_dataloader:
-            imgs = imgs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
+            imgs = imgs.to(device, non_blocking=True, dtype=torch.float16)
+            labels = labels.to(device, non_blocking=True, dtype=torch.float16)
 
-            outputs = net(imgs)
+            with torch.autocast(
+                device_type=str(device),
+                dtype=torch.float16,
+                enabled=config["half"],
+            ):
+                outputs = net(imgs)
+
             loss, _ = Y_loss(outputs, labels)
 
             test_loss += loss
@@ -520,6 +538,7 @@ def do_training(args) -> None:
         "anchor_w": anchor_w,
         "anchor_h": anchor_h,
         "model": args.model,
+        "half": args.half,
         "image_shape": args.image_shape,
         "class_names": YOGO_CLASS_ORDERING,
         "pretrained_path": args.from_pretrained,
