@@ -281,7 +281,7 @@ def predict(
                 label=label,
             )
         elif save_npy:
-            for j in range(batch_size):
+            for j in range(res.shape[0]):
                 yogo_res = res[j, ...].detach().cpu().numpy()
 
                 index = (i * batch_size) + j
