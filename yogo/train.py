@@ -283,7 +283,7 @@ class Trainer:
 
                 self.optimizer.zero_grad(set_to_none=True)
 
-                with torch.cuda.amp.autocast():
+                with torch.autocast():
                     outputs = self.net(imgs)
 
                 loss, loss_components = self.Y_loss(outputs, labels)
@@ -426,7 +426,7 @@ class Trainer:
             imgs = imgs.to(device, non_blocking=True, dtype=torch.float16)
             labels = labels.to(device, non_blocking=True, dtype=torch.float16)
 
-            with torch.cuda.amp.autocast():
+            with torch.autocast():
                 outputs = net(imgs)
 
             loss, _ = Y_loss(outputs, labels)
