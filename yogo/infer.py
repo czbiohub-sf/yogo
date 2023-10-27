@@ -192,6 +192,14 @@ def predict(
         normalize_images=cfg["normalize_images"],
     )
 
+    if path_to_zarr:
+        # Zipfile issues otherwise
+        num_workers = 0
+    else:
+        num_workers = choose_dataloader_num_workers(
+            len(image_dataset), requested_num_workers=num_workers
+        )
+
     image_dataloader = DataLoader(
         image_dataset,
         batch_size=batch_size,
@@ -199,9 +207,7 @@ def predict(
         drop_last=False,
         pin_memory=True,
         collate_fn=collate_fn,
-        num_workers=choose_dataloader_num_workers(
-            len(image_dataset), requested_num_workers=num_workers
-        ),
+        num_workers=num_workers,
     )
 
     pbar = tqdm(
