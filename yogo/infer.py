@@ -220,9 +220,6 @@ def predict(
     elif save_npy:
         pred_tensors = np.zeros((15, 12_500_000)).astype(np.float32)
         pred_tensor_counter = 0
-        img_h: int = (
-            vertical_crop_height_px if vertical_crop_height_px is not None else 772
-        )
 
     file_iterator = enumerate(image_dataloader)
     while True:
@@ -283,6 +280,11 @@ def predict(
         elif save_npy:
             for j in range(batch_size):
                 yogo_res = res[j, ...].detach().numpy()
+                img_h: int = (
+                    vertical_crop_height_px
+                    if vertical_crop_height_px is not None
+                    else 772
+                )
 
                 index = (i * batch_size) + j
                 parsed = parse_prediction_tensor(index, yogo_res, img_h, 1032)
