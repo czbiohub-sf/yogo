@@ -320,7 +320,7 @@ def predict(
             filename = Path(path_to_zarr).stem
 
         if output_dir is not None:
-            fp = Path(output_dir) / filename.with_suffix(".npy")
+            fp = Path(output_dir) / Path(filename).with_suffix(".npy")
             np.save(f"{fp}", pred_tensors)
         else:
             # Save it to the current location
