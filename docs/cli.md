@@ -79,62 +79,52 @@ There are a *lot* of options here. At the most basic level, `yogo train path/to/
 
 ```console
 $ yogo train --help
-usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED] [-bs BATCH_SIZE]
-                  [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR]
-                  [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY]
-                  [--epochs EPOCHS] [--no-obj-weight NO_OBJ_WEIGHT]
-                  [--iou-weight IOU_WEIGHT]
-                  [--classify-weight CLASSIFY_WEIGHT]
-                  [--model [{base_model,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized}]]
-                  [--note NOTE] [--name NAME] [--tag TAG] [--device [DEVICE]]
-                  [--no-classify | --no-no-classify]
-                  [--normalize-images | --no-normalize-images]
-                  [--crop-height CROP_HEIGHT]
+usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED] [-bs BATCH_SIZE] [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR] [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY] [--epochs EPOCHS] [--no-obj-weight NO_OBJ_WEIGHT]
+                  [--iou-weight IOU_WEIGHT] [--classify-weight CLASSIFY_WEIGHT] [--healthy-weight HEALTHY_WEIGHT] [--no-classify | --no-no-classify] [--normalize-images | --no-normalize-images] [--image-shape IMAGE_SHAPE IMAGE_SHAPE]
+                  [--model [{base_model,smaller_funkier,even_smaller_funkier,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized,convnext_small}]] [--half | --no-half]
+                  [--device [DEVICE]] [--note NOTE] [--name NAME] [--tag TAG]
                   dataset_descriptor_file
 
 positional arguments:
   dataset_descriptor_file
                         path to yml dataset descriptor file
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   --from-pretrained FROM_PRETRAINED
                         start training from the provided pth file
   -bs BATCH_SIZE, --batch-size BATCH_SIZE
-                        batch size for training (default 32)
+                        batch size for training (default: 64)
   -lr LEARNING_RATE, --learning-rate LEARNING_RATE, --lr LEARNING_RATE
-                        learning rate for training (default 0.0003)
+                        learning rate for training (default: 0.0003)
   --lr-decay-factor LR_DECAY_FACTOR
-                        factor by which to decay lr - e.g. '2' will give a
-                        final learning rate of `lr` / 2 (default 10)
+                        factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default: 10)
   --label-smoothing LABEL_SMOOTHING
-                        label smoothing - default 0.01 (default 0.01)
+                        label smoothing (default: 0.01)
   -wd WEIGHT_DECAY, --weight-decay WEIGHT_DECAY
-                        weight decay for training (default 0.05)
-  --epochs EPOCHS       number of epochs to train (default 64)
+                        weight decay for training (default: 0.05)
+  --epochs EPOCHS       number of epochs to train (default: 64)
   --no-obj-weight NO_OBJ_WEIGHT
-                        weight for the objectness loss when there isn't an
-                        object (default 0.5)
+                        weight for the objectness loss when there isn't an object (default: 0.5)
   --iou-weight IOU_WEIGHT
-                        weight for the iou loss (default 5.0)
+                        weight for the iou loss (default: 5.0)
   --classify-weight CLASSIFY_WEIGHT
-                        weight for the classification loss (default 1.0)
-  --model [{base_model,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized}]
-                        model version to use - do not use with --from-
-                        pretrained, as we use the pretrained model
+                        weight for the classification loss (default: 1.0)
+  --healthy-weight HEALTHY_WEIGHT
+                        weight for healthy class, between 0 and 1 (default: 1.0)
+  --no-classify, --no-no-classify
+                        turn off classification loss - good only for pretraining just a cell detector (default: False)
+  --normalize-images, --no-normalize-images
+                        normalize images into [0,1] (default: False)
+  --image-shape IMAGE_SHAPE IMAGE_SHAPE
+                        size of images for training (e.g. --image-shape 772 1032) (default: 772 1032)
+  --model [{base_model,smaller_funkier,even_smaller_funkier,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized,convnext_small}]
+                        model version to use - do not use with --from-pretrained, as we use the pretrained model
+  --half, --no-half     half precision (i.e. fp16) training (default: False) (default: False)
+  --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'
   --note NOTE           note for the run (e.g. 'run on a TI-82')
   --name NAME           name for the run (e.g. 'ti-82_run')
   --tag TAG             tag for the run (e.g. 'test')
-  --device [DEVICE]     set a device for the run - if not specified, we will
-                        try to use 'cuda', and fallback on 'cpu'
-  --no-classify, --no-no-classify
-                        turn off classification loss - good only for
-                        pretraining just a cell detector (default False)
-  --normalize-images, --no-normalize-images
-                        normalize images into [0,1] (default False)
-  --crop-height CROP_HEIGHT
-                        crop image verically - '-c 0.25' will crop images to
-                        (round(0.25 * height), width)
 ```
 
 There are a lot of options. Here are some recipes:
