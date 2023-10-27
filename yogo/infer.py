@@ -292,11 +292,10 @@ def predict(
                 label=label,
             )
         elif save_npy:
+            res = res.cpu().numpy()
             for j in range(res.shape[0]):
-                yogo_res = res[j, ...].clone().cpu().numpy()
-
-                index = (i * batch_size) + j
-                parsed = parse_prediction_tensor(index, yogo_res, img_h, 1032)
+                img_index = (i * batch_size) + j
+                parsed = parse_prediction_tensor(img_index, res[j, ...], img_h, 1032)
                 np_results.append(parsed)
         else:
             # sometimes we return a number of images less than the batch size,
