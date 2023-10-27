@@ -194,7 +194,7 @@ def train_parser(parser=None):
         "--half",
         default=False,
         action=boolean_action,
-        help="half precision (i.e. fp16) training (default: False)",
+        help="half precision (i.e. fp16) training. When true, try doubling your batch size to get best use of GPU. (default: False)",
     )
     parser.add_argument(
         "--device",
