@@ -305,13 +305,12 @@ def predict(
     if save_npy:
         pred_tensors = np.zeros((15, 2_500_000)).astype(np.float32)
 
-        print("Parsing predictions...")
         start = 0
+        img_h: int = vertical_crop_height_px if vertical_crop_height_px is None else 772
+
         for i in tqdm(range(len(image_dataset))):
-            yogo_res = results[i, :, :, :]
-            parsed = parse_prediction_tensor(
-                i, yogo_res, vertical_crop_height_px * 772, 1032
-            )
+            yogo_res = results[i, :, :, :].detach().numpy()
+            parsed = parse_prediction_tensor(i, yogo_res, img_h, 1032)
             pred_tensors[:, start : start + parsed.shape[1]] = parsed
             start = start + parsed.shape[1]
         pred_tensors = pred_tensors[:, : start + parsed.shape[1]]  # truncate

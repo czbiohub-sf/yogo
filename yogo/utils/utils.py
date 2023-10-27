@@ -248,27 +248,8 @@ def parse_prediction_tensor(
     img_h: int,
     img_w: int,
     DTYPE=np.float32,
-) -> Tuple[
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-    npt.NDArray,
-]:
+) -> npt.NDArray:
     """Function to parse a prediction tensor.
-
-    This function is called internally (the user only needs to call `parse_prediction_tensor`).
-
-    `parse_prediction_tensor` takes the outputs of this function (a bunch of numpy arrays, representing
-    rows of the final parsed predictions tensor), and stacks them using `np.vstack`.
-
-    The reason this function has been separated is because as of when I'm writing this,
-    numba does not support np.vstack with arguments of different shapes/types. All
-    the returned numpy arrays are single rows _except_ for `all_confs`, which has NUM_CLASSES rows.
 
     Parameters
     ----------
@@ -279,16 +260,21 @@ def parse_prediction_tensor(
 
     Returns
     -------
-    npt.NDArray: img_ids (1 x N)
-    npt.NDArray: tlx (1 x N)
-    npt.NDArray: tly (1 x N)
-    npt.NDArray: brx (1 x N)
-    npt.NDArray: bry (1 x N)
-    npt.NDArray: objectness (1 x N)
-    npt.NDArray: pred_labels (1 x N)
-    npt.NDArray: peak pred_probs (1 x N)
-    npt.NDArray: pred_probs (NUM_CLASSES x N)
+    npt.NDArray: (15 x N):
+        0 img_ids (1 x N)
+        1 top left x (1 x N)
+        2 top right y (1 x N)
+        3 bottom right x (1 x N)
+        4 bottom right y (1 x N)
+        5 objectness (1 x N)
+        6 peak pred_labels (1 x N)
+        7 peak pred_probs (1 x N)
+        8-14 pred_probs (NUM_CLASSES x N)
+
+    Where the width of the array (N) is the total number of objects detected
+    in the dataset (i.e all the RBCs + WBCs + misc).
     """
+
     prediction_tensor = prediction_tensor.detach().numpy()
     mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
     n, sy, sx = prediction_tensor.shape
