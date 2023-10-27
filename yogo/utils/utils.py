@@ -275,7 +275,6 @@ def parse_prediction_tensor(
     in the dataset (i.e all the RBCs + WBCs + misc).
     """
 
-    prediction_tensor = prediction_tensor.detach().numpy()
     mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
     n, sy, sx = prediction_tensor.shape
     prediction_tensor = prediction_tensor.reshape((n, sy * sx))
