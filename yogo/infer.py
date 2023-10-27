@@ -306,8 +306,8 @@ def predict(
         pred_tensors = np.zeros((15, 2_500_000)).astype(np.float32)
 
         start = 0
-        img_h: Optional[int] = (
-            vertical_crop_height_px if vertical_crop_height_px is None else 772
+        img_h: int = (
+            vertical_crop_height_px if vertical_crop_height_px is not None else 772
         )
 
         for i in tqdm(range(len(image_dataset))):
