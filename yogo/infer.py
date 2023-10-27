@@ -17,7 +17,7 @@ from torchvision.transforms import CenterCrop
 from yogo.model import YOGO
 from yogo.data import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import infer_parser
-from yogo.data.image_path_dataset import get_dataset, collate_fn
+from yogo.data.image_path_dataset import ZarrDataset, get_dataset, collate_fn
 from yogo.data.yogo_dataloader import choose_dataloader_num_workers
 from yogo.utils import (
     draw_yogo_prediction,
@@ -147,7 +147,7 @@ def predict(
     use_tqdm: bool = False,
     device: Optional[Union[str, torch.device]] = None,
     output_img_ftype: Literal[".png", ".tif", ".tiff"] = ".png",
-    num_workers: Optional[int] = None,
+    requested_num_workers: Optional[int] = None,
     min_class_confidence_threshold: float = 0.0,
     heatmap_mask_path: Optional[Path] = None,
 ) -> Optional[torch.Tensor]:
@@ -192,12 +192,18 @@ def predict(
         normalize_images=cfg["normalize_images"],
     )
 
-    if path_to_zarr:
-        # Zipfile issues otherwise
+    if isinstance(image_dataset, ZarrDataset):
+        warnings.warn(
+            "there is some bug with multiprocessed reading "
+            "of a zarr array that I haven't figured out yet. "
+            "We have to fix the number of dataloader workers "
+            "to 0, so this will probably be slow. It will be "
+            "much faster to use --path-to-images instead."
+        )
         num_workers = 0
     else:
         num_workers = choose_dataloader_num_workers(
-            len(image_dataset), requested_num_workers=num_workers
+            len(image_dataset), requested_num_workers=requested_num_workers
         )
 
     image_dataloader = DataLoader(

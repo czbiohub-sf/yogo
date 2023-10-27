@@ -7,7 +7,7 @@ from typing import Tuple
 """ Major TODO
 
 I wrote all of this before TorchVision's "Transforms V2"[0] was released.
-It is faster + can do all this natively. It's silly to rewrite all this!
+It is (probably) faster + can do all this natively. It's silly to rewrite all this!
 We should refactor this out.
 
 [0] https://pytorch.org/vision/stable/transforms.html#v2-api-reference-recommended

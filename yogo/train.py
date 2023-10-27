@@ -31,7 +31,6 @@ from yogo.utils import (
     get_wandb_confusion,
     get_wandb_roc,
     get_free_port,
-    Timer,
     choose_device,
 )
 
@@ -68,8 +67,6 @@ class Trainer:
         self.global_step = 0
         self.min_val_loss = float("inf")
 
-        self._dataset_init_function = dataset_init_function or self._init_dataset
-
         self._initialized = False
 
     @classmethod
@@ -88,7 +85,7 @@ class Trainer:
     def init(self) -> None:
         self._init_tcp_store()
         self._init_model()
-        self._dataset_init_function()
+        self._init_dataset()
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
@@ -172,7 +169,8 @@ class Trainer:
         self.validate_dataloader = validate_dataloader
         self.test_dataloader = test_dataloader
 
-    def _dataset_size(self, dataloader: Union[Collection, DataLoader]) -> int:
+    @staticmethod
+    def _dataset_size(dataloader: Union[Collection, DataLoader]) -> int:
         # type ignore for dataset-sized type error
         return (
             len(dataloader.dataset)  # type: ignore
@@ -181,6 +179,7 @@ class Trainer:
         )
 
     def _init_training_tools(self) -> None:
+        # TODO generalize these class weights to n-classes (for other datasets)
         class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
 
         self.Y_loss = YOGOLoss(
@@ -273,16 +272,14 @@ class Trainer:
         if not self._initialized:
             raise RuntimeError("trainer not initialized")
 
-        device = self.device
-
         for epoch in range(self.config["epochs"]):
             self.epoch = epoch
             # mypy thinks that self.train_dataloader has type Iterable[Any]?
             self.train_dataloader.sampler.set_epoch(epoch)  # type: ignore
 
             for imgs, labels in self.train_dataloader:
-                imgs = imgs.to(device, non_blocking=True)
-                labels = labels.to(device, non_blocking=True)
+                imgs = imgs.to(self.device, non_blocking=True)
+                labels = labels.to(self.device, non_blocking=True)
 
                 self.optimizer.zero_grad(set_to_none=True)
 
@@ -311,8 +308,18 @@ class Trainer:
             if epoch % 4 == 0:
                 self._validate()
 
-        with Timer("test"):
-            self._test()
+        model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
+        model_checkpoint = torch.load(model_save_dir / "best.pth", map_location="cpu")
+
+        self.net.module.load_state_dict(model_checkpoint["model_state_dict"])
+        self.net.eval()
+
+        self._test(
+            self.test_dataloader,
+            self.device,
+            self.config,
+            self.net,
+        )
 
         wandb.finish()
 
@@ -384,41 +391,44 @@ class Trainer:
                 model_version=self.config["model"],
             )
 
+    @staticmethod
     @torch.no_grad()
-    def _test(self) -> None:
-        """
-        TODO could make this static so we can evaluate YOGO
-        separately from training
-        """
-        if self._dataset_size(self.test_dataloader) == 0:
+    def _test(
+        test_dataloader: Union[Collection, DataLoader],
+        device: Union[str, torch.device],
+        config: WandbConfig,
+        net: torch.nn.Module,
+    ):
+        if Trainer._dataset_size(test_dataloader) == 0:
             return
 
-        device = self.device
-
         test_metrics = Metrics(
-            class_names=self.config["class_names"],
-            classify=not self.config["no_classify"],
-            device=device,
+            num_classes=len(config["class_names"]),
+            classify=not config["no_classify"],
+            device=str(device),
+            sync_on_compute=isinstance(net, DDP),
         )
 
-        self.model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
-        torch.load(self.model_save_dir / "best.pth", map_location=device)
-        self.net.module.to(device)
+        class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
+        Y_loss = YOGOLoss(
+            no_obj_weight=config["no_obj_weight"],
+            iou_weight=config["iou_weight"],
+            label_smoothing=config["label_smoothing"],
+            class_weights=torch.tensor(class_weights),
+            classify=not config["no_classify"],
+        ).to(device)
 
         test_loss = torch.zeros(1, device=device)
-        for imgs, labels in self.test_dataloader:
+
+        for imgs, labels in test_dataloader:
             imgs = imgs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
-            outputs = self.net(imgs)
-            loss, _ = self.Y_loss(outputs, labels)
+            outputs = net(imgs)
+            loss, _ = Y_loss(outputs, labels)
 
             test_loss += loss
             test_metrics.update(outputs.detach(), labels.detach())
-
-        # TODO mypy thinks that ReduceOp doesn't have AVG;
-        # maybe because AVG is only available for nccl backend? How to address?
-        torch.distributed.all_reduce(test_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
         (
             mAP,
@@ -430,9 +440,30 @@ class Trainer:
             calibration_error,
         ) = test_metrics.compute()
 
-        if self._rank != 0:
-            return
+        return (
+            mAP,
+            confusion_data,
+            accuracy,
+            roc_curves,
+            precision,
+            recall,
+            calibration_error,
+        )
 
+    def _log_test_metrics(
+        self,
+        mean_test_loss,
+        mAP,
+        confusion_data,
+        accuracy,
+        roc_curves,
+        precision,
+        recall,
+        calibration_error,
+    ):
+        """
+        kind-of a crummy, hacky method to log everything to W&B. Not pretty, but functional.
+        """
         accuracy_table = wandb.Table(
             data=[
                 [labl, acc] for labl, acc in zip(self.config["class_names"], accuracy)
@@ -442,7 +473,7 @@ class Trainer:
 
         fpr, tpr, thresholds = roc_curves
 
-        wandb.summary["test loss"] = test_loss / len(self.test_dataloader)
+        wandb.summary["test loss"] = mean_test_loss
         wandb.summary["test mAP"] = mAP["map"]
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
