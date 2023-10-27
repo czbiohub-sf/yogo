@@ -282,7 +282,7 @@ def predict(
             )
         elif save_npy:
             for j in range(batch_size):
-                yogo_res = res[j, ...].detach().numpy()
+                yogo_res = res[j, ...].detach().cpu().numpy()
 
                 index = (i * batch_size) + j
                 parsed = parse_prediction_tensor(index, yogo_res, img_h, 1032)
