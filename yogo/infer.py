@@ -230,8 +230,7 @@ def predict(
             (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
         )
     if save_npy:
-        pred_tensors = np.zeros((15, 12_500_000)).astype(np.float32)
-        pred_tensor_counter = 0
+        np_results = []
         img_h: int = (
             vertical_crop_height_px if vertical_crop_height_px is not None else 772
         )
@@ -293,15 +292,11 @@ def predict(
                 label=label,
             )
         elif save_npy:
+            res = res.cpu().numpy()
             for j in range(res.shape[0]):
-                yogo_res = res[j, ...].clone().detach().cpu().numpy()
-
-                index = (i * batch_size) + j
-                parsed = parse_prediction_tensor(index, yogo_res, img_h, 1032)
-                pred_tensors[
-                    :, pred_tensor_counter : pred_tensor_counter + parsed.shape[1]
-                ] = parsed
-                pred_tensor_counter = pred_tensor_counter + parsed.shape[1]
+                img_index = (i * batch_size) + j
+                parsed = parse_prediction_tensor(img_index, res[j, ...], img_h, 1032)
+                np_results.append(parsed)
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
@@ -332,9 +327,8 @@ def predict(
 
     # Save the numpy array
     if save_npy:
-        pred_tensors = pred_tensors[
-            :, : pred_tensor_counter + parsed.shape[1]
-        ]  # truncate
+        pred_tensors = np.hstack(np_results)
+
         if path_to_images:
             filename = Path(path_to_images).stem
         elif path_to_zarr:
