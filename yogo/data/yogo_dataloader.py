@@ -6,7 +6,7 @@ from functools import partial
 
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 
-from typing import List, Dict, Optional, Any, MutableMapping, Iterable
+from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.yogo_dataset import ObjectDetectionDataset
@@ -140,7 +140,10 @@ def split_dataset(
     )
 
 
-def collate_batch(batch, transforms):
+def collate_batch(
+    batch: Tuple[torch.Tensor, torch.Tensor],
+    transforms: MultiArgSequential = MultiArgSequential(),
+) -> Tuple[torch.Tensor, torch.Tensor]:
     inputs, labels = zip(*batch)
     batched_inputs = torch.stack(inputs)
     batched_labels = torch.stack(labels)
