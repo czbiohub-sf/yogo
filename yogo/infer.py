@@ -19,7 +19,12 @@ from yogo.data import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import infer_parser
 from yogo.data.image_path_dataset import ZarrDataset, get_dataset, collate_fn
 from yogo.data.yogo_dataloader import choose_dataloader_num_workers
-from yogo.utils import draw_yogo_prediction, format_preds, choose_device
+from yogo.utils import (
+    draw_yogo_prediction,
+    format_preds,
+    choose_device,
+    parse_prediction_tensor,
+)
 
 
 # lets us ctrl-c to exit while matplotlib is showing stuff
@@ -132,6 +137,7 @@ def predict(
     output_dir: Optional[str] = None,
     save_preds: bool = False,
     draw_boxes: bool = False,
+    save_npy: bool = False,
     count_predictions: bool = False,
     batch_size: int = 64,
     obj_thresh: float = 0.5,
@@ -149,7 +155,7 @@ def predict(
         raise ValueError(
             "cannot save predictions in YOGO format and draw_boxes at the same time"
         )
-    elif output_dir is not None and not (save_preds or draw_boxes):
+    elif output_dir is not None and not (save_preds or draw_boxes or save_npy):
         warnings.warn(
             f"output dir is not None (is {output_dir}), but it will not be used "
             "since save_preds and draw_boxes are both false"
@@ -223,6 +229,11 @@ def predict(
         results = torch.zeros(
             (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
         )
+    if save_npy:
+        np_results = []
+        img_h: int = (
+            vertical_crop_height_px if vertical_crop_height_px is not None else 772
+        )
 
     file_iterator = enumerate(image_dataloader)
     while True:
@@ -280,6 +291,12 @@ def predict(
                 iou_thresh=iou_thresh,
                 label=label,
             )
+        elif save_npy:
+            res = res.cpu().numpy()
+            for j in range(res.shape[0]):
+                img_index = (i * batch_size) + j
+                parsed = parse_prediction_tensor(img_index, res[j, ...], img_h, 1032)
+                np_results.append(parsed)
         else:
             # sometimes we return a number of images less than the batch size,
             # namely when len(image_dataset) % batch_size != 0
@@ -308,6 +325,22 @@ def predict(
             )
         )
 
+    # Save the numpy array
+    if save_npy:
+        pred_tensors = np.hstack(np_results)
+
+        if path_to_images:
+            filename = Path(path_to_images).stem
+        elif path_to_zarr:
+            filename = Path(path_to_zarr).stem
+
+        if output_dir is not None:
+            fp = Path(output_dir) / Path(filename).with_suffix(".npy")
+            np.save(f"{fp}", pred_tensors)
+        else:
+            # Save it to the current location
+            np.save(f"{filename}.npy", pred_tensors)
+
     if not (draw_boxes or save_preds):
         return results
 
@@ -321,6 +354,7 @@ def do_infer(args):
         path_to_zarr=args.path_to_zarr,
         output_dir=args.output_dir,
         save_preds=args.save_preds,
+        save_npy=args.save_npy,
         draw_boxes=args.draw_boxes,
         obj_thresh=args.obj_thresh,
         iou_thresh=args.iou_thresh,
