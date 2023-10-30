@@ -412,6 +412,22 @@ class Trainer:
         if Trainer._dataset_size(test_dataloader) == 0:
             return
 
+        required_test_keys = (
+            "class_names",
+            "no_classify",
+            "iou_weight",
+            "healthy_weight",
+            "no_obj_weight",
+            "label_smoothing",
+            "half",
+        )
+
+        for key in required_test_keys:
+            if key not in config:
+                raise ValueError(
+                    f"{key} is required in config (full list of keys: {required_test_keys})"
+                )
+
         test_metrics = Metrics(
             num_classes=len(config["class_names"]),
             classify=not config["no_classify"],
@@ -431,16 +447,15 @@ class Trainer:
         test_loss = torch.zeros(1, device=device)
 
         for imgs, labels in test_dataloader:
-            imgs = imgs.to(device, non_blocking=True, dtype=torch.float16)
-            labels = labels.to(device, non_blocking=True, dtype=torch.float16)
+            imgs = imgs.to(device, non_blocking=False)
+            labels = labels.to(device, non_blocking=False)
 
             with torch.cuda.amp.autocast(
                 dtype=torch.float16,
                 enabled=config["half"],
             ):
                 outputs = net(imgs)
-
-            loss, _ = Y_loss(outputs, labels)
+                loss, _ = Y_loss(outputs, labels)
 
             test_loss += loss
             test_metrics.update(outputs.detach(), labels.detach())
@@ -478,6 +493,7 @@ class Trainer:
     ):
         """
         kind-of a crummy, hacky method to log everything to W&B. Not pretty, but functional.
+        Functional as in "it works", not as in "pure function"
         """
         accuracy_table = wandb.Table(
             data=[
