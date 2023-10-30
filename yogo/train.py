@@ -424,7 +424,7 @@ class Trainer:
             no_obj_weight=config["no_obj_weight"],
             iou_weight=config["iou_weight"],
             label_smoothing=config["label_smoothing"],
-            class_weights=torch.tensor(class_weights),
+            class_weights=torch.tensor(class_weights, dtype=torch.float32),
             classify=not config["no_classify"],
         ).to(device)
 
