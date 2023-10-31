@@ -499,9 +499,7 @@ class Trainer:
         Functional as in "it works", not as in "pure function"
         """
         accuracy_table = wandb.Table(
-            data=[
-                [labl, acc] for labl, acc in zip(class_names, accuracy)
-            ],
+            data=[[labl, acc] for labl, acc in zip(class_names, accuracy)],
             columns=["label", "accuracy"],
         )
 
