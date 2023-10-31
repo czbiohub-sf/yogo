@@ -320,12 +320,13 @@ class Trainer:
         self.net.module.load_state_dict(model_checkpoint["model_state_dict"])
         self.net.eval()
 
-        self._test(
+        test_metrics = self._test(
             self.test_dataloader,
             self.device,
             self.config,
             self.net,
         )
+        self._log_test_metrics(*test_metrics)
 
         wandb.finish()
 
@@ -478,10 +479,11 @@ class Trainer:
             precision,
             recall,
             calibration_error,
+            config["class_names"],
         )
 
+    @staticmethod
     def _log_test_metrics(
-        self,
         mean_test_loss,
         mAP,
         confusion_data,
@@ -490,6 +492,7 @@ class Trainer:
         precision,
         recall,
         calibration_error,
+        class_names,
     ):
         """
         kind-of a crummy, hacky method to log everything to W&B. Not pretty, but functional.
@@ -497,7 +500,7 @@ class Trainer:
         """
         accuracy_table = wandb.Table(
             data=[
-                [labl, acc] for labl, acc in zip(self.config["class_names"], accuracy)
+                [labl, acc] for labl, acc in zip(class_names, accuracy)
             ],
             columns=["label", "accuracy"],
         )
@@ -513,7 +516,7 @@ class Trainer:
         wandb.log(
             {
                 "test confusion": get_wandb_confusion(
-                    confusion_data, self.config["class_names"], "test confusion matrix"
+                    confusion_data, class_names, "test confusion matrix"
                 ),
                 "test accuracy": wandb.plot.bar(
                     accuracy_table, "label", "accuracy", title="test accuracy"
@@ -522,7 +525,7 @@ class Trainer:
                     fpr=[t.tolist() for t in fpr],
                     tpr=[t.tolist() for t in tpr],
                     thresholds=[t.tolist() for t in thresholds],
-                    classes=self.config["class_names"],
+                    classes=class_names,
                 ),
             }
         )
