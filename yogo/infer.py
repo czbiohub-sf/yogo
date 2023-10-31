@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import json
 import torch
 import signal
 import warnings
@@ -129,6 +130,18 @@ def count_cells_for_formatted_preds(
     )
 
 
+def get_model_name_from_pth(path_to_pth: str | Path) -> Optional[str]:
+    return torch.load(Path(path_to_pth)).get("model_name", None)
+
+
+def write_metadata(metadata_path: Path, **kwargs):
+    """
+    very simply writes a json file with the kwargs
+    """
+    with open(metadata_path.with_suffix(".json"), "w") as f:
+        json.dump(kwargs, f)
+
+
 @torch.no_grad()
 def predict(
     path_to_pth: str,
@@ -222,10 +235,9 @@ def predict(
         total=len(image_dataset),
     )
 
-    Sx, Sy = model.get_grid_size()
-
     # this tensor can be really big, so only create it if we need it
     if not (draw_boxes or save_preds):
+        Sx, Sy = model.get_grid_size()
         results = torch.zeros(
             (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
         )
@@ -336,10 +348,21 @@ def predict(
 
         if output_dir is not None:
             fp = Path(output_dir) / Path(filename).with_suffix(".npy")
-            np.save(f"{fp}", pred_tensors)
         else:
-            # Save it to the current location
-            np.save(f"{filename}.npy", pred_tensors)
+            fp = Path.cwd() / Path(filename).with_suffix(".npy")
+
+        np.save(fp, pred_tensors)
+
+        write_metadata(
+            fp.with_suffix(".json"),
+            model_name=get_model_name_from_pth(path_to_pth),
+            obj_thresh=obj_thresh,
+            iou_thresh=iou_thresh,
+            min_class_confidence_threshold=min_class_confidence_threshold,
+            heatmap_mask_path=heatmap_mask_path,
+            vertical_crop_height_px=vertical_crop_height_px,
+        )
+
 
     if not (draw_boxes or save_preds):
         return results
