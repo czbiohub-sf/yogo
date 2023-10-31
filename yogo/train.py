@@ -472,6 +472,7 @@ class Trainer:
         ) = test_metrics.compute()
 
         return (
+            test_loss.item() / len(test_dataloader.dataset),  # type: ignore
             mAP,
             confusion_data,
             accuracy,
