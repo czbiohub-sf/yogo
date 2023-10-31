@@ -363,7 +363,6 @@ def predict(
             vertical_crop_height_px=vertical_crop_height_px,
         )
 
-
     if not (draw_boxes or save_preds):
         return results
 
