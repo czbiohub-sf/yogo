@@ -130,7 +130,7 @@ def count_cells_for_formatted_preds(
     )
 
 
-def get_model_name_from_pth(path_to_pth: str | Path) -> Optional[str]:
+def get_model_name_from_pth(path_to_pth: Union[str, Path]) -> Optional[str]:
     return torch.load(Path(path_to_pth)).get("model_name", None)
 
 
