@@ -326,7 +326,9 @@ class Trainer:
             self.config,
             self.net,
         )
-        self._log_test_metrics(*test_metrics)
+
+        if self._rank == 0:
+            self._log_test_metrics(*test_metrics)
 
         wandb.finish()
 
@@ -413,21 +415,7 @@ class Trainer:
         if Trainer._dataset_size(test_dataloader) == 0:
             return
 
-        required_test_keys = (
-            "class_names",
-            "no_classify",
-            "iou_weight",
-            "healthy_weight",
-            "no_obj_weight",
-            "label_smoothing",
-            "half",
-        )
-
-        for key in required_test_keys:
-            if key not in config:
-                raise ValueError(
-                    f"{key} is required in config (full list of keys: {required_test_keys})"
-                )
+        Trainer._check_keys(config)
 
         test_metrics = Metrics(
             num_classes=len(config["class_names"]),
@@ -471,8 +459,11 @@ class Trainer:
             calibration_error,
         ) = test_metrics.compute()
 
+        mean_loss = test_loss / len(test_dataloader.dataset)  # type: ignore
+        torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
+
         return (
-            test_loss.item() / len(test_dataloader.dataset),  # type: ignore
+            mean_loss.item(),  # type: ignore
             mAP,
             confusion_data,
             accuracy,
@@ -482,6 +473,24 @@ class Trainer:
             calibration_error,
             config["class_names"],
         )
+
+    @staticmethod
+    def _check_keys(config):
+        required_test_keys = (
+            "class_names",
+            "no_classify",
+            "iou_weight",
+            "healthy_weight",
+            "no_obj_weight",
+            "label_smoothing",
+            "half",
+        )
+
+        for key in required_test_keys:
+            if key not in config:
+                raise ValueError(
+                    f"{key} is required in config (full list of keys: {required_test_keys})"
+                )
 
     @staticmethod
     def _log_test_metrics(
