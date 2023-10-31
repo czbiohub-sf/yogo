@@ -49,7 +49,7 @@ out=$(
     --count
 )
 
-# if the prev command is successful, pipe output to "results/$R{UN_NAME}/${FILE_NAME}.txt"
+# if the prev command is successful, pipe output to "results/${RUN_NAME}/${FILE_NAME}.txt"
 if [ $? -eq 0 ]; then
   echo $FILE_PATH > "temp_output/results/${RUN_NAME}/${FILE_NAME}.txt"
   echo "$out" >> "temp_output/results/${RUN_NAME}/${FILE_NAME}.txt"
