@@ -2,7 +2,7 @@ from ruamel import yaml
 from pathlib import Path
 from dataclasses import dataclass
 
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional, Iterator
 
 from yogo.data import YOGO_CLASS_ORDERING
 
@@ -19,7 +19,12 @@ class DatasetDescription:
     test_dataset_paths: Optional[List[Dict[str, Path]]]
     thumbnail_augmentation: Optional[Dict[int, Path]]
 
-    def __iter__(self):
+    # yuck! Iterator over many different types.
+    # Used to easily split out vars from this
+    # dataclass, but it's probably better to
+    # explicitly index the DatasetDescription
+    # object
+    def __iter__(self) -> Iterator[Any]:
         return iter(
             (
                 self.classes,
@@ -31,7 +36,9 @@ class DatasetDescription:
         )
 
 
-def check_dataset_paths(dataset_paths: List[Dict[str, Path]], prune: bool = False):
+def check_dataset_paths(
+    dataset_paths: List[Dict[str, Path]], prune: bool = False
+) -> None:
     to_prune: List[int] = []
     for i in range(len(dataset_paths)):
         if not (

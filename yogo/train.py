@@ -9,7 +9,7 @@ import warnings
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Any, Optional, Collection, Callable, Dict, Union
+from typing import Any, Tuple, Optional, Collection, Callable, Dict, Union
 
 import torch.multiprocessing as mp
 
@@ -315,11 +315,18 @@ class Trainer:
                 self._validate()
 
         model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
-        model_checkpoint = torch.load(model_save_dir / "best.pth", map_location="cpu")
 
-        self.net.module.load_state_dict(model_checkpoint["model_state_dict"])
+        if (model_save_dir / "best.pth").exists():
+            model_checkpoint = torch.load(
+                model_save_dir / "best.pth", map_location="cpu"
+            )
+            self.net.module.load_state_dict(model_checkpoint["model_state_dict"])
+        else:
+            warnings.warn(
+                f"no best model found at {model_save_dir / 'best.pth'} for testing..."
+            )
+
         self.net.eval()
-
         test_metrics = self._test(
             self.test_dataloader,
             self.device,
@@ -327,8 +334,12 @@ class Trainer:
             self.net,
         )
 
-        if self._rank == 0:
+        if self._rank == 0 and test_metrics is not None:
             self._log_test_metrics(*test_metrics)
+        elif test_metrics is None:
+            warnings.warn(
+                "no test metrics found - most likely test_dataloader is empty"
+            )
 
         wandb.finish()
 
@@ -411,9 +422,9 @@ class Trainer:
         device: Union[str, torch.device],
         config: WandbConfig,
         net: torch.nn.Module,
-    ):
+    ) -> Optional[Tuple[Any, ...]]:
         if Trainer._dataset_size(test_dataloader) == 0:
-            return
+            return None
 
         Trainer._check_keys(config)
 
