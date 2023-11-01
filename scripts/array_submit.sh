@@ -21,21 +21,21 @@ PTH_FILE="$1"
 PARENT_PATH=$(dirname "$1")
 MODEL_NAME=$(basename "$PARENT_PATH")
 
-IMAGES_PARENT_DIR_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
+ZARR_PARENT_DIR_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
+IMAGES_PARENT_DIR_PATH=$(echo "$ZARR_PARENT_DIR_PATH" | sed -E 's/Uganda_full(_[23])?/&_images/g')
 RUN_NAME=$(basename "$IMAGES_PARENT_DIR_PATH")
 
 NPY_OUTPUT_DIR="${IMAGES_PARENT_DIR_PATH}/yogo_preds_npy/$MODEL_NAME"
-NPY_OUTPUT_DIR="/hpc/mydata/axel.jacobsen/yogo_preds_npy/$RUN_NAME"
 
 MASK_PATH="/hpc/projects/group.bioengineering/LFM_scope/Uganda_heatmaps/thresh_90/masks_npy"
 
-if [ ! -d "${IMAGES_PARENT_DIR_PATH}/images" ]; then
-   >&2 echo "${IMAGES_PARENT_DIR_PATH}/images doesn't exist"
+if [ ! -d "$IMAGES_PARENT_DIR_PATH/images" ]; then
+   >&2 echo "$IMAGES_PARENT_DIR_PATH/images doesn't exist"
   exit 1
 fi
 
-if [ ! -d "${IMAGES_PARENT_DIR_PATH//_images/}/sub_sample_imgs" ]; then
-   >&2 echo "${IMAGES_PARENT_DIR_PATH//_images/}/sub_sample_imgs doesn't exist"
+if [ ! -d "$ZARR_PARENT_DIR_PATH/sub_sample_imgs" ]; then
+   >&2 echo "$ZARR_PARENT_DIR_PATH/sub_sample_imgs doesn't exist"
   exit 1
 fi
 
