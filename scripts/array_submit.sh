@@ -6,23 +6,23 @@
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --array=1-360%16
+#SBATCH --array=1-2%16
 #SBATCH --cpus-per-task=32
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-node=1
 
 # check if there is an input
-if [ -z "$3" ]; then
-  echo "usage: $0 <path to yogo pth> <path-to-file> <run name>"
+if [ -z "$2" ]; then
+  echo "usage: $0 <path to yogo pth> <path-to-file>"
   exit 1
 fi
 
 PTH_FILE="$1"
+PARENT_PATH=$(dirname "$1")
+MODEL_NAME=$(basename "$PARENT_PATH")
 
 FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
 FILE_NAME=$(basename "$FILE_PATH")
-
-RUN_NAME="$3"
 
 MASK_PATH="/hpc/projects/group.bioengineering/LFM_scope/Uganda_heatmaps/thresh_90/masks_npy"
 
@@ -36,9 +36,7 @@ if [ ! -d "${FILE_PATH//_images/}/sub_sample_imgs" ]; then
   exit 1
 fi
 
-mkdir -p "temp_output/results/$RUN_NAME"
-
-echo "$MASK_PATH/$FILE_NAME.npy"
+mkdir -p "${FILE_PATH}/yogo_preds_np/$MODEL_NAME"
 
 out=$(
   conda run yogo infer \
@@ -46,11 +44,13 @@ out=$(
     --path-to-images "${FILE_PATH}/images" \
     --min-class-confidence-threshold 0.90 \
     --heatmap-mask-path "$MASK_PATH/$FILE_NAME.npy" \
-    --count
+    --save-npy
 )
 
-# if the prev command is successful, pipe output to "results/${RUN_NAME}/${FILE_NAME}.txt"
+# if the prev command is successful, update which output is the latest"
 if [ $? -eq 0 ]; then
-  echo $FILE_PATH > "temp_output/results/${RUN_NAME}/${FILE_NAME}.txt"
-  echo "$out" >> "temp_output/results/${RUN_NAME}/${FILE_NAME}.txt"
+  echo "$PTH_FILE" > "${FILE_PATH}/yogo_preds_np/latest.txt"
+else
+  echo "Error occurred during inference on $FILE_PATH" >&2
+  echo "$out" >&2
 fi
