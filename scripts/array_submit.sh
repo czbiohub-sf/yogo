@@ -46,6 +46,7 @@ out=$(
     --path-to-images "${IMAGES_PARENT_DIR_PATH}/images" \
     --min-class-confidence-threshold 0.90 \
     --heatmap-mask-path "$MASK_PATH/$RUN_NAME.npy" \
+    --output-dir "$NPY_OUTPUT_DIR" \
     --save-npy
 )
 
