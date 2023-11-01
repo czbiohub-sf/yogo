@@ -38,7 +38,7 @@ if [ ! -d "${IMAGES_PARENT_DIR_PATH//_images/}/sub_sample_imgs" ]; then
   exit 1
 fi
 
-mkdir -p NPY_OUTPUT_DIR
+mkdir -p "$NPY_OUTPUT_DIR"
 
 out=$(
   conda run yogo infer \
