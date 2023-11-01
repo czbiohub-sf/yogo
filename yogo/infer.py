@@ -24,7 +24,7 @@ from yogo.utils import (
     draw_yogo_prediction,
     format_preds,
     choose_device,
-    parse_prediction_tensor,
+    format_to_numpy,
 )
 
 
@@ -307,7 +307,7 @@ def predict(
             res = res.cpu().numpy()
             for j in range(res.shape[0]):
                 img_index = (i * batch_size) + j
-                parsed = parse_prediction_tensor(img_index, res[j, ...], img_h, 1032)
+                parsed = format_to_numpy(img_index, res[j, ...], img_h, 1032)
                 np_results.append(parsed)
         else:
             # sometimes we return a number of images less than the batch size,

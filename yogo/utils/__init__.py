@@ -6,12 +6,12 @@ from .utils import (
     get_wandb_confusion,
     draw_yogo_prediction,
     choose_device,
-    parse_prediction_tensor,
 )
 
 from .prediction_formatting import (
     format_preds,
     format_preds_and_labels,
+    format_to_numpy,
 )
 
 
