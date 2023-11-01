@@ -25,5 +25,5 @@ __all__ = (
     "format_preds",
     "format_preds_and_labels",
     "choose_device",
-    "parse_prediction_tensor",
+    "format_to_numpy",
 )
