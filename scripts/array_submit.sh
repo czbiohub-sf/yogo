@@ -21,36 +21,38 @@ PTH_FILE="$1"
 PARENT_PATH=$(dirname "$1")
 MODEL_NAME=$(basename "$PARENT_PATH")
 
-FILE_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
-FILE_NAME=$(basename "$FILE_PATH")
+IMAGES_PARENT_DIR_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
+RUN_NAME=$(basename "$IMAGES_PARENT_DIR_PATH")
+
+NPY_OUTPUT_DIR="${IMAGES_PARENT_DIR_PATH}/yogo_preds_npy/$MODEL_NAME"
 
 MASK_PATH="/hpc/projects/group.bioengineering/LFM_scope/Uganda_heatmaps/thresh_90/masks_npy"
 
-if [ ! -d "${FILE_PATH}/images" ]; then
-   >&2 echo "${FILE_PATH}/images doesn't exist"
+if [ ! -d "${IMAGES_PARENT_DIR_PATH}/images" ]; then
+   >&2 echo "${IMAGES_PARENT_DIR_PATH}/images doesn't exist"
   exit 1
 fi
 
-if [ ! -d "${FILE_PATH//_images/}/sub_sample_imgs" ]; then
-   >&2 echo "${FILE_PATH//_images/}/sub_sample_imgs doesn't exist"
+if [ ! -d "${IMAGES_PARENT_DIR_PATH//_images/}/sub_sample_imgs" ]; then
+   >&2 echo "${IMAGES_PARENT_DIR_PATH//_images/}/sub_sample_imgs doesn't exist"
   exit 1
 fi
 
-mkdir -p "${FILE_PATH}/yogo_preds_np/$MODEL_NAME"
+mkdir -p NPY_OUTPUT_DIR
 
 out=$(
   conda run yogo infer \
     "$PTH_FILE" \
-    --path-to-images "${FILE_PATH}/images" \
+    --path-to-images "${IMAGES_PARENT_DIR_PATH}/images" \
     --min-class-confidence-threshold 0.90 \
-    --heatmap-mask-path "$MASK_PATH/$FILE_NAME.npy" \
+    --heatmap-mask-path "$MASK_PATH/$RUN_NAME.npy" \
     --save-npy
 )
 
 # if the prev command is successful, update which output is the latest"
 if [ $? -eq 0 ]; then
-  echo "$PTH_FILE" > "${FILE_PATH}/yogo_preds_np/latest.txt"
+  echo "$PTH_FILE" > "${IMAGES_PARENT_DIR_PATH}/yogo_preds_np/latest.txt"
 else
-  echo "Error occurred during inference on $FILE_PATH" >&2
+  echo "Error occurred during inference on $IMAGES_PARENT_DIR_PATH" >&2
   echo "$out" >&2
 fi
