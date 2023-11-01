@@ -25,6 +25,7 @@ IMAGES_PARENT_DIR_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
 RUN_NAME=$(basename "$IMAGES_PARENT_DIR_PATH")
 
 NPY_OUTPUT_DIR="${IMAGES_PARENT_DIR_PATH}/yogo_preds_npy/$MODEL_NAME"
+NPY_OUTPUT_DIR="/hpc/mydata/axel.jacobsen/yogo_preds_npy/$RUN_NAME"
 
 MASK_PATH="/hpc/projects/group.bioengineering/LFM_scope/Uganda_heatmaps/thresh_90/masks_npy"
 
