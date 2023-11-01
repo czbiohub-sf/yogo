@@ -6,7 +6,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --array=1-2%16
+#SBATCH --array=1-463%32
 #SBATCH --cpus-per-task=64
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-node=1
