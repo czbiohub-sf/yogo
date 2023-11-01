@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH --job-name=yogoUgandaInfer
-#SBATCH --output=temp_output/logs/%A_%a.out
-#SBATCH --error=temp_output/logs/%A_%a.err
+#SBATCH --output=slurm-outputs/array/%A_%a.out
+#SBATCH --error=slurm-outputs/array/%A_%a.err
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --array=1-2%16
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
 #SBATCH --partition=gpu
 #SBATCH --gpus-per-node=1
 
