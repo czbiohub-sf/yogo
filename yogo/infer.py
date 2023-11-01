@@ -342,7 +342,7 @@ def predict(
         pred_tensors = np.hstack(np_results)
 
         if path_to_images:
-            filename = Path(path_to_images).stem
+            filename = Path(path_to_images).parent.stem
         elif path_to_zarr:
             filename = Path(path_to_zarr).stem
 
