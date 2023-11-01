@@ -359,7 +359,7 @@ def predict(
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
             min_class_confidence_threshold=min_class_confidence_threshold,
-            heatmap_mask_path=heatmap_mask_path,
+            heatmap_mask_path=str(heatmap_mask_path),
             vertical_crop_height_px=vertical_crop_height_px,
         )
 
