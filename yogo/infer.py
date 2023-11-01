@@ -3,6 +3,7 @@
 import json
 import torch
 import signal
+import datetime
 import warnings
 
 import numpy as np
@@ -361,6 +362,7 @@ def predict(
             min_class_confidence_threshold=min_class_confidence_threshold,
             heatmap_mask_path=str(heatmap_mask_path),
             vertical_crop_height_px=vertical_crop_height_px,
+            write_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
     if not (draw_boxes or save_preds):
