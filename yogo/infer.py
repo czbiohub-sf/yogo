@@ -3,6 +3,7 @@
 import json
 import torch
 import signal
+import datetime
 import warnings
 
 import numpy as np
@@ -342,7 +343,7 @@ def predict(
         pred_tensors = np.hstack(np_results)
 
         if path_to_images:
-            filename = Path(path_to_images).stem
+            filename = Path(path_to_images).parent.stem
         elif path_to_zarr:
             filename = Path(path_to_zarr).stem
 
@@ -359,8 +360,9 @@ def predict(
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
             min_class_confidence_threshold=min_class_confidence_threshold,
-            heatmap_mask_path=heatmap_mask_path,
+            heatmap_mask_path=str(heatmap_mask_path),
             vertical_crop_height_px=vertical_crop_height_px,
+            write_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
     if not (draw_boxes or save_preds):
