@@ -11,8 +11,6 @@ from typing import (
     get_args,
 )
 
-from yogo.utils.utils import apply_heatmap
-
 
 BoxFormat = Literal["xyxy", "cxcywh"]
 
@@ -115,6 +113,41 @@ def format_preds(
         preds = preds[keep_idxs]
 
     return preds
+
+
+def apply_heatmap(raw_preds: torch.Tensor, heatmap_mask: torch.Tensor):
+    """
+    Heatmap nuke the raw YOGO prediction tensor with the given heatmap_mask.
+
+
+    Parameters
+    ----------
+    raw_preds: torch.Tensor
+        Raw yogo output (unbatched)
+    heatmap_mask: torch.Tensor
+
+    Returns
+    -------
+    torch.Tensor
+
+    Background
+    ----------
+    Over the duration of a run, parasites should be detected roughly uniformly throughout
+    the image (in other words, if a lot of parasites are found at one specific location,
+    those are likely erroneous calls due to debris or a stuck cell).
+
+    Heatmap nuking involves setting those locations where parasites have been (erroneously)
+    preferentially found to zero.
+    """
+
+    # Only mask rings/trophs/schizonts/gametocytes
+    # We mask classes by position since some areas of a chip can preferentially
+    # predict certain classes incorrectly while predicting other classes correctly.
+    # Indices for the above in the heatmap are: 1, 2, 3, 4
+    idxs = [1, 2, 3, 4]
+    for idx in idxs:
+        raw_preds[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
+    return raw_preds
 
 
 def format_to_numpy(
