@@ -22,7 +22,7 @@ from typing import (
     Tuple,
 )
 
-from .prediction_formatting import format_preds
+from .prediction_formatting import format_preds, apply_heatmap
 
 
 T = TypeVar("T")
@@ -248,6 +248,7 @@ def parse_prediction_tensor(
     img_h: int,
     img_w: int,
     DTYPE=np.float32,
+    heatmap_mask: Optional[torch.Tensor] = None,
 ) -> npt.NDArray:
     """Function to parse a prediction tensor.
 
@@ -257,6 +258,8 @@ def parse_prediction_tensor(
         The direct output tensor from a call to the YOGO model (1 * (5+NUM_CLASSES) * (Sx*Sy))
     img_h: int
     img_w: int
+    DTYPE: np.dtype
+    heatmap_mask: Optional[torch.Tensor] = None
 
     Returns
     -------
@@ -276,6 +279,10 @@ def parse_prediction_tensor(
     """
 
     mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
+
+    if heatmap_mask is not None:
+        prediction_tensor = apply_heatmap(prediction_tensor, heatmap_mask)
+
     n, sy, sx = prediction_tensor.shape
     prediction_tensor = prediction_tensor.reshape((n, sy * sx))
     filtered_pred = prediction_tensor[:, mask]
