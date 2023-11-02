@@ -356,7 +356,7 @@ def predict(
 
         write_metadata(
             fp.with_suffix(".json"),
-            run_name=fp.name,
+            run_name=fp.with_suffix("").name,
             model_name=get_model_name_from_pth(path_to_pth),
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
