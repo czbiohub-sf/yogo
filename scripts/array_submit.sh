@@ -25,7 +25,8 @@ ZARR_PARENT_DIR_PATH=$(sed -n "$SLURM_ARRAY_TASK_ID"p "$2")
 IMAGES_PARENT_DIR_PATH=$(echo "$ZARR_PARENT_DIR_PATH" | sed -E 's/Uganda_full(_[23])?/&_images/g')
 RUN_NAME=$(basename "$IMAGES_PARENT_DIR_PATH")
 
-NPY_OUTPUT_DIR="${IMAGES_PARENT_DIR_PATH}/yogo_preds_npy/$MODEL_NAME"
+NPY_PARENT_DIR="$IMAGES_PARENT_DIR_PATH/yogo_preds_npy"
+NPY_OUTPUT_DIR="$NPY_PARENT_DIR/$MODEL_NAME"
 
 MASK_PATH="/hpc/projects/group.bioengineering/LFM_scope/Uganda_heatmaps/thresh_90/masks_npy"
 
@@ -53,7 +54,7 @@ out=$(
 
 # if the prev command is successful, update which output is the latest"
 if [ $? -eq 0 ]; then
-  echo "$PTH_FILE" > "${IMAGES_PARENT_DIR_PATH}/yogo_preds_np/latest.txt"
+  echo "$PTH_FILE" > "$NPY_PARENT_DIR/latest_npy_model.txt"
 else
   echo "Error occurred during inference on $IMAGES_PARENT_DIR_PATH" >&2
   echo "$out" >&2
