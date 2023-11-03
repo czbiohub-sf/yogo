@@ -8,8 +8,6 @@ import socket
 from contextlib import contextmanager
 
 import PIL
-import numpy as np
-import numpy.typing as npt
 import torchvision.transforms as transforms
 
 from typing import (
@@ -22,7 +20,7 @@ from typing import (
     Tuple,
 )
 
-from .prediction_formatting import format_preds, apply_heatmap
+from .prediction_formatting import format_preds
 
 
 T = TypeVar("T")
@@ -240,73 +238,3 @@ def choose_device():
         return torch.device("mps")
     else:
         return torch.device("cpu")
-
-
-def parse_prediction_tensor(
-    img_id: int,
-    prediction_tensor: np.ndarray,
-    img_h: int,
-    img_w: int,
-    DTYPE=np.float32,
-    heatmap_mask: Optional[torch.Tensor] = None,
-) -> npt.NDArray:
-    """Function to parse a prediction tensor.
-
-    Parameters
-    ----------
-    prediction_tensor: np.ndarray
-        The direct output tensor from a call to the YOGO model (1 * (5+NUM_CLASSES) * (Sx*Sy))
-    img_h: int
-    img_w: int
-    DTYPE: np.dtype
-    heatmap_mask: Optional[torch.Tensor] = None
-
-    Returns
-    -------
-    npt.NDArray: (15 x N):
-        0 img_ids (1 x N)
-        1 top left x (1 x N)
-        2 top right y (1 x N)
-        3 bottom right x (1 x N)
-        4 bottom right y (1 x N)
-        5 objectness (1 x N)
-        6 peak pred_labels (1 x N)
-        7 peak pred_probs (1 x N)
-        8-14 pred_probs (NUM_CLASSES x N)
-
-    Where the width of the array (N) is the total number of objects detected
-    in the dataset (i.e all the RBCs + WBCs + misc).
-    """
-
-    mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
-
-    if heatmap_mask is not None:
-        prediction_tensor = apply_heatmap(prediction_tensor, heatmap_mask)
-
-    n, sy, sx = prediction_tensor.shape
-    prediction_tensor = prediction_tensor.reshape((n, sy * sx))
-    filtered_pred = prediction_tensor[:, mask]
-
-    img_ids = np.ones(filtered_pred.shape[1]).astype(DTYPE) * img_id
-    xc = filtered_pred[0, :] * img_w
-    yc = filtered_pred[1, :] * img_h
-    pred_half_width = filtered_pred[2] / 2 * img_w
-    pred_half_height = filtered_pred[3] / 2 * img_h
-
-    tlx = np.clip(np.rint(xc - pred_half_width).astype(DTYPE), 0, img_w)
-    tly = np.clip(np.rint(yc - pred_half_height).astype(DTYPE), 0, img_h)
-    brx = np.clip(np.rint(xc + pred_half_width).astype(DTYPE), 0, img_w)
-    bry = np.clip(np.rint(yc + pred_half_height).astype(DTYPE), 0, img_h)
-
-    objectness = filtered_pred[4, :].astype(DTYPE)
-    all_confs = filtered_pred[5:, :].astype(DTYPE)
-
-    pred_labels = np.argmax(all_confs, axis=0).astype(np.uint8)
-    pred_probs = filtered_pred[5:,][pred_labels, np.arange(filtered_pred.shape[1])]
-
-    pred_labels = pred_labels.astype(DTYPE)
-    pred_probs = pred_probs.astype(DTYPE)
-
-    return np.vstack(
-        (img_ids, tlx, tly, brx, bry, objectness, pred_labels, pred_probs, all_confs)
-    )
