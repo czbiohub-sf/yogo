@@ -360,7 +360,6 @@ def predict(
             model_name=get_model_name_from_pth(path_to_pth),
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
-            min_class_confidence_threshold=min_class_confidence_threshold,
             heatmap_mask_path=str(heatmap_mask_path),
             vertical_crop_height_px=vertical_crop_height_px,
             write_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
