@@ -35,6 +35,7 @@ class YOGOWrap(YOGO):
           likes `torch.chunk` but doesn't like `torch.split`.
     So we wrap YOGO and use the version of forward that onnx likes.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.normalize_images = False
@@ -68,6 +69,7 @@ class YOGOWrap(YOGO):
             dim=1,
         )
 
+
 def do_export(args):
     pth_filename = args.input
     onnx_filename = Path(
@@ -86,9 +88,7 @@ def do_export(args):
         img_h = (args.crop_height * img_h).round()
         net.resize_model(img_h.item())
 
-    dummy_input = torch.randint(
-        0, 256, (1, 1, int(img_h.item()), int(img_w.item()))
-    )
+    dummy_input = torch.randint(0, 256, (1, 1, int(img_h.item()), int(img_w.item())))
 
     torch.onnx.export(
         net,
