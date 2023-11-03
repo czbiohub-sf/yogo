@@ -27,6 +27,47 @@ def to_numpy(tensor):
     )
 
 
+class YOGOWrap(YOGO):
+    """
+    two reasons to make this wrap:
+        - we can normalize images within YOGO here, so we don't have to do it in ulc-malaria-scope
+        - for some reason onnx likes `torch.split` but doesn't like `torch.chunk`, and torch.jit
+          likes `torch.chunk` but doesn't like `torch.split`.
+    So we wrap YOGO and use the version of forward that onnx likes.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.normalize_images = False
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # made this more terse than YOGO's forward
+        x = x.float()
+        if self.normalize_images:
+            x /= 255.0
+        x = self.model(x)
+
+        _, _, Sy, Sx = x.shape
+
+        classification = torch.softmax(x[:, 5:, :, :], dim=1)
+
+        clamped_whs = torch.clamp(x[:, 2:4, :, :], max=80)
+
+        return torch.cat(
+            (
+                (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
+                (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
+                self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
+                (
+                    self.anchor_h
+                    * torch.exp(clamped_whs[:, 1:2, :, :])
+                    * self.height_multiplier
+                ),
+                torch.sigmoid(x[:, 4:5, :, :]),
+                *torch.split(classification, 1, dim=1),
+            ),
+            dim=1,
+        )
+
 def do_export(args):
     pth_filename = args.input
     onnx_filename = Path(
@@ -35,7 +76,8 @@ def do_export(args):
         else pth_filename.replace("pth", "onnx")
     ).with_suffix(".onnx")
 
-    net, _ = YOGO.from_pth(pth_filename, inference=True)
+    net, cfg = YOGOWrap.from_pth(pth_filename, inference=True)
+    net.normalize_images = cfg["normalize_images"]
     net.eval()
 
     img_h, img_w = net.img_size
@@ -45,9 +87,8 @@ def do_export(args):
         net.resize_model(img_h.item())
 
     dummy_input = torch.randint(
-        0, 256, (1, 1, int(img_h.item()), int(img_w.item())), requires_grad=False
+        0, 256, (1, 1, int(img_h.item()), int(img_w.item()))
     )
-    torch_out = net(dummy_input)
 
     torch.onnx.export(
         net,
@@ -55,7 +96,7 @@ def do_export(args):
         str(onnx_filename),
         verbose=False,
         do_constant_folding=True,
-        opset_version=14,
+        opset_version=17,
     )
 
     # Load the ONNX model
@@ -77,6 +118,7 @@ def do_export(args):
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(dummy_input)}
     ort_outs = ort_session.run(None, ort_inputs)
 
+    torch_out = net(dummy_input)
     np.testing.assert_allclose(
         to_numpy(torch_out),
         ort_outs[0],
