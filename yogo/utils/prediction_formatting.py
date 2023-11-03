@@ -115,7 +115,7 @@ def format_preds(
     return preds
 
 
-def apply_heatmap(raw_preds: torch.Tensor, heatmap_mask: torch.Tensor):
+def apply_heatmap(raw_preds: npt.NDArray, heatmap_mask: torch.Tensor):
     """
     Heatmap nuke the raw YOGO prediction tensor with the given heatmap_mask.
 
