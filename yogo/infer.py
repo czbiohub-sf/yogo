@@ -140,7 +140,7 @@ def write_metadata(metadata_path: Path, **kwargs):
     very simply writes a json file with the kwargs
     """
     with open(metadata_path.with_suffix(".json"), "w") as f:
-        json.dump(kwargs, f)
+        json.dump(kwargs, f, indent=4)
 
 
 @torch.no_grad()
