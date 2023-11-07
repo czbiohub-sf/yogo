@@ -72,8 +72,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    loaded_pth = torch.load(args.pth_path, map_location="cpu")
-
     y, cfg = YOGO.from_pth(args.pth_path)
 
     dataloader = load_description_to_dataloader(
@@ -93,6 +91,5 @@ if __name__ == "__main__":
         "label_smoothing": df.LABEL_SMOOTHING,
     }
 
-    print("warning! we gotta do smth w/this lol")
     with Timer("testing"):
         Trainer._test(dataloader, device, config, y)
