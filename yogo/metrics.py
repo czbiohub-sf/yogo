@@ -48,6 +48,7 @@ class Metrics:
                 ),
                 MulticlassROC(
                     num_classes=self.num_classes,
+                    thresholds=500,
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
@@ -63,7 +64,7 @@ class Metrics:
                 ),
                 MulticlassCalibrationError(
                     num_classes=self.num_classes,
-                    n_bins=20,
+                    n_bins=30,
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
