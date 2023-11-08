@@ -24,9 +24,11 @@ class Metrics:
         device: str = "cpu",
         classify: bool = True,
         sync_on_compute: bool = False,
+        min_class_confidence_threshold: float = 0.0,
     ):
         self.num_classes = num_classes
         self.classify = classify
+        self.min_class_confidence_threshold = min_class_confidence_threshold
 
         self.mAP = MeanAveragePrecision(
             box_format="xyxy", sync_on_compute=sync_on_compute
@@ -81,7 +83,12 @@ class Metrics:
 
         formatted_preds, formatted_labels = zip(
             *[
-                format_preds_and_labels(pred, label, use_IoU=use_IoU)
+                format_preds_and_labels(
+                    pred,
+                    label,
+                    use_IoU=use_IoU,
+                    min_class_confidence_threshold=self.min_class_confidence_threshold,
+                )
                 for pred, label in zip(preds, labels)
             ]
         )
