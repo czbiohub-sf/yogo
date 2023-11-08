@@ -155,7 +155,7 @@ def format_to_numpy(
     prediction_tensor: np.ndarray,
     img_h: int,
     img_w: int,
-    DTYPE=np.float32,
+    np_dtype=np.float32,
     heatmap_mask: Optional[torch.Tensor] = None,
 ) -> npt.NDArray:
     """Function to parse a prediction tensor and save it in a numpy format
@@ -166,7 +166,7 @@ def format_to_numpy(
         The direct output tensor from a call to the YOGO model (1 * (5+NUM_CLASSES) * (Sx*Sy))
     img_h: int
     img_w: int
-    DTYPE: np.dtype
+    np_dtype: np.dtype
     heatmap_mask: Optional[torch.Tensor] = None
 
     Returns
@@ -195,25 +195,25 @@ def format_to_numpy(
     prediction_tensor = prediction_tensor.reshape((n, sy * sx))
     filtered_pred = prediction_tensor[:, mask]
 
-    img_ids = np.ones(filtered_pred.shape[1]).astype(DTYPE) * img_id
+    img_ids = np.ones(filtered_pred.shape[1]).astype(np_dtype) * img_id
     xc = filtered_pred[0, :] * img_w
     yc = filtered_pred[1, :] * img_h
     pred_half_width = filtered_pred[2] / 2 * img_w
     pred_half_height = filtered_pred[3] / 2 * img_h
 
-    tlx = np.clip(np.rint(xc - pred_half_width).astype(DTYPE), 0, img_w)
-    tly = np.clip(np.rint(yc - pred_half_height).astype(DTYPE), 0, img_h)
-    brx = np.clip(np.rint(xc + pred_half_width).astype(DTYPE), 0, img_w)
-    bry = np.clip(np.rint(yc + pred_half_height).astype(DTYPE), 0, img_h)
+    tlx = np.clip(np.rint(xc - pred_half_width).astype(np_dtype), 0, img_w)
+    tly = np.clip(np.rint(yc - pred_half_height).astype(np_dtype), 0, img_h)
+    brx = np.clip(np.rint(xc + pred_half_width).astype(np_dtype), 0, img_w)
+    bry = np.clip(np.rint(yc + pred_half_height).astype(np_dtype), 0, img_h)
 
-    objectness = filtered_pred[4, :].astype(DTYPE)
-    all_confs = filtered_pred[5:, :].astype(DTYPE)
+    objectness = filtered_pred[4, :].astype(np_dtype)
+    all_confs = filtered_pred[5:, :].astype(np_dtype)
 
     pred_labels = np.argmax(all_confs, axis=0).astype(np.uint8)
     pred_probs = filtered_pred[5:,][pred_labels, np.arange(filtered_pred.shape[1])]
 
-    pred_labels = pred_labels.astype(DTYPE)
-    pred_probs = pred_probs.astype(DTYPE)
+    pred_labels = pred_labels.astype(np_dtype)
+    pred_probs = pred_probs.astype(np_dtype)
 
     return np.vstack(
         (img_ids, tlx, tly, brx, bry, objectness, pred_labels, pred_probs, all_confs)

@@ -305,10 +305,15 @@ def predict(
                 label=label,
             )
         elif save_npy:
+            heatmap_mask = (
+                None if heatmap_mask_path is None else torch.load(heatmap_mask_path)
+            )
             res = res.cpu().numpy()
             for j in range(res.shape[0]):
                 img_index = (i * batch_size) + j
-                parsed = format_to_numpy(img_index, res[j, ...], img_h, 1032)
+                parsed = format_to_numpy(
+                    img_index, res[j, ...], img_h, 1032, heatmap_mask=heatmap_mask
+                )
                 np_results.append(parsed)
         else:
             # sometimes we return a number of images less than the batch size,
