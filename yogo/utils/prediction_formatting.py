@@ -225,6 +225,7 @@ def format_preds_and_labels(
     label: torch.Tensor,
     use_IoU: bool = True,
     objectness_thresh: float = 0.5,
+    min_class_confidence_threshold: float = 0.0,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """A very important utility function for filtering predictions on labels
 
@@ -271,9 +272,17 @@ def format_preds_and_labels(
     reformatted_labels = label.view(label_shape, Sx * Sy).T
 
     # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
-    labels_mask = reformatted_labels[:, 0].bool()
     objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
 
+    # calculate_the_confidence_mask
+    values, _ = torch.max(reformatted_preds[:, 5:], dim=0)
+    class_confidence_mask = (values > min_class_confidence_threshold).bool()
+
+    # the total prediction mask is where confidence + objectness are high
+    # by default, though, min_class_confidence is 0 so it's just objectness
+    class_confidence_mask & objectness_mask
+
+    labels_mask = reformatted_labels[:, 0].bool()
     img_masked_labels = reformatted_labels[labels_mask]
 
     if use_IoU and objectness_mask.sum() >= len(img_masked_labels):
