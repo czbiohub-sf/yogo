@@ -247,6 +247,7 @@ def predict(
         img_h: int = (
             vertical_crop_height_px if vertical_crop_height_px is not None else 772
         )
+        heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
 
     file_iterator = enumerate(image_dataloader)
     while True:
@@ -305,9 +306,6 @@ def predict(
                 label=label,
             )
         elif save_npy:
-            heatmap_mask = (
-                None if heatmap_mask_path is None else torch.load(heatmap_mask_path)
-            )
             res = res.cpu().numpy()
             for j in range(res.shape[0]):
                 img_index = (i * batch_size) + j
