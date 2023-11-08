@@ -472,7 +472,8 @@ class Trainer:
         ) = test_metrics.compute()
 
         mean_loss = test_loss / len(test_dataloader.dataset)  # type: ignore
-        torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
+        if isinstance(net, DDP):
+            torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
         return (
             mean_loss.item(),  # type: ignore
