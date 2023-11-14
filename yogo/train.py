@@ -283,7 +283,7 @@ class Trainer:
             "titration_data_20230621/2023-06-21-142453/2023-06-21-142543_"
             "/images/img_10283.png"
         )
-        const_img = read_grayscale(const_img_path)
+        const_img = read_grayscale(const_img_path).to(device)
 
         for epoch in range(self.config["epochs"]):
             self.epoch = epoch
@@ -327,7 +327,7 @@ class Trainer:
                         with torch.no_grad():
                             pil_bbox_img = draw_yogo_prediction(
                                 const_img,
-                                self.net(const_img).detach(),
+                                self.net.module(const_img).detach().cpu(),
                                 labels=self.config["class_names"],
                                 images_are_normalized=self.config["normalize_images"],
                             )
