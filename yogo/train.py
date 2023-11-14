@@ -11,6 +11,7 @@ from copy import deepcopy
 from typing_extensions import TypeAlias
 from typing import Any, Tuple, Optional, Collection, Callable, Dict, Union
 
+import numpy as np
 import torch.multiprocessing as mp
 
 from torch.optim import AdamW
@@ -275,6 +276,15 @@ class Trainer:
 
         device = self.device
 
+        from yogo.data.utils import read_grayscale
+
+        const_img_path = (
+            "/hpc/projects/group.bioengineering/LFM_scope/titrations/"
+            "titration_data_20230621/2023-06-21-142453/2023-06-21-142543_"
+            "/images/img_10283.png"
+        )
+        const_img = read_grayscale(const_img_path)
+
         for epoch in range(self.config["epochs"]):
             self.epoch = epoch
             # mypy thinks that self.train_dataloader has type Iterable[Any]?
@@ -298,8 +308,6 @@ class Trainer:
                 self.optimizer.step()
                 self.scheduler.step()
 
-                self.global_step += 1
-
                 if self._rank == 0:
                     wandb.log(
                         {
@@ -308,8 +316,51 @@ class Trainer:
                             "LR": self.scheduler.get_last_lr()[0],
                             **loss_components,
                         },
-                        commit=self.global_step % 100 == 0,
-                        step=self.global_step,
+                        commit=(self.global_step + 1) % 100 == 0,
+                        step=self.global_step + 1,
+                    )
+                    if self.global_step % 100 == 0 and os.environ.get(
+                        "YOGO_DRAW_BBOXES", False
+                    ):
+                        # draw boxes
+                        pil_bbox_img = draw_yogo_prediction(
+                            const_img,
+                            self.net(const_img).detach(),
+                            labels=self.config["class_names"],
+                            images_are_normalized=self.config["normalize_images"],
+                        )
+                        model_save_dir = Path(
+                            self._store.get("model_save_dir").decode("utf-8")
+                        )
+                        (model_save_dir / "bbox_imgs").mkdir(
+                            exist_ok=True, parents=True
+                        )
+                        pil_bbox_img.save(
+                            model_save_dir
+                            / "bbox_imgs"
+                            / f"epoch_{epoch}_{self.global_step}.png"
+                        )
+
+                self.global_step += 1
+
+            # test and write cm
+            if os.environ.get("YOGO_SAVE_CM", False):
+                test_metrics = self._test(
+                    self.test_dataloader,
+                    self.device,
+                    self.config,
+                    self.net,
+                )
+
+                if self._rank == 0:
+                    # save cm to disk
+                    model_save_dir = Path(
+                        self._store.get("model_save_dir").decode("utf-8")
+                    )
+                    (model_save_dir / "cm").mkdir(exist_ok=True, parents=True)
+                    np.save(
+                        model_save_dir / "cm" / f"epoch_{epoch}_{self.global_step}.npy",
+                        np.array(test_metrics[2]),  # type: ignore
                     )
 
             if epoch % 4 == 0:
