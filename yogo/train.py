@@ -319,52 +319,53 @@ class Trainer:
                         commit=(self.global_step + 1) % 100 == 0,
                         step=self.global_step + 1,
                     )
+
                     if self.global_step % 100 == 0 and os.environ.get(
                         "YOGO_DRAW_BBOXES", False
                     ):
                         # draw boxes
-                        pil_bbox_img = draw_yogo_prediction(
-                            const_img,
-                            self.net(const_img).detach(),
-                            labels=self.config["class_names"],
-                            images_are_normalized=self.config["normalize_images"],
-                        )
-                        model_save_dir = Path(
-                            self._store.get("model_save_dir").decode("utf-8")
-                        )
-                        (model_save_dir / "bbox_imgs").mkdir(
-                            exist_ok=True, parents=True
-                        )
-                        pil_bbox_img.save(
-                            model_save_dir
-                            / "bbox_imgs"
-                            / f"epoch_{epoch}_{self.global_step}.png"
-                        )
+                        with torch.no_grad():
+                            pil_bbox_img = draw_yogo_prediction(
+                                const_img,
+                                self.net(const_img).detach(),
+                                labels=self.config["class_names"],
+                                images_are_normalized=self.config["normalize_images"],
+                            )
+                            model_save_dir = Path(
+                                self._store.get("model_save_dir").decode("utf-8")
+                            )
+                            (model_save_dir / "bbox_imgs").mkdir(
+                                exist_ok=True, parents=True
+                            )
+                            pil_bbox_img.save(
+                                model_save_dir
+                                / "bbox_imgs"
+                                / f"epoch_{epoch}_{self.global_step}.png"
+                            )
 
                 self.global_step += 1
 
-            # test and write cm
-            if os.environ.get("YOGO_SAVE_CM", False):
-                test_metrics = self._test(
-                    self.test_dataloader,
-                    self.device,
-                    self.config,
-                    self.net,
-                )
-
-                if self._rank == 0:
-                    # save cm to disk
-                    model_save_dir = Path(
-                        self._store.get("model_save_dir").decode("utf-8")
-                    )
-                    (model_save_dir / "cm").mkdir(exist_ok=True, parents=True)
-                    np.save(
-                        model_save_dir / "cm" / f"epoch_{epoch}_{self.global_step}.npy",
-                        np.array(test_metrics[2]),  # type: ignore
-                    )
-
             if epoch % 4 == 0:
-                self._validate()
+                if os.environ.get("YOGO_SAVE_CM", False):
+                    self.net.eval()
+                    test_metrics = self._test(
+                        self.test_dataloader,
+                        self.device,
+                        self.config,
+                        self.net,
+                    )
+                    self.net.train()
+
+                    if self._rank == 0:
+                        # save cm to disk
+                        model_save_dir = Path(
+                            self._store.get("model_save_dir").decode("utf-8")
+                        )
+                        (model_save_dir / "cm").mkdir(exist_ok=True, parents=True)
+                        np.save(
+                            model_save_dir / "cm" / f"epoch_{epoch}_{self.global_step}.npy",
+                            np.array(test_metrics[2]),  # type: ignore
+                        )
 
         model_save_dir = Path(self._store.get("model_save_dir").decode("utf-8"))
 
@@ -634,6 +635,8 @@ def do_training(args) -> None:
         "normalize_images": args.normalize_images,
         "dataset_descriptor_file": args.dataset_descriptor_file,
         "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
+        "yogo-save-cm": os.getenv("YOGO_SAVE_CM", False),
+        "yogo-draw-bboxes": os.getenv("YOGO_DRAW_BOXES", False),
         "torch-version": torch.__version__,
         "python-version": sys.version,
         "name": args.name,
