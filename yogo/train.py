@@ -320,7 +320,7 @@ class Trainer:
                         step=self.global_step + 1,
                     )
 
-                    if self.global_step % 100 == 0 and os.environ.get(
+                    if self.global_step % 10 == 0 and os.environ.get(
                         "YOGO_DRAW_BBOXES", False
                     ):
                         # draw boxes
