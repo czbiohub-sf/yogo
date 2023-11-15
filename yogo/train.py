@@ -340,7 +340,7 @@ class Trainer:
                             pil_bbox_img.save(
                                 model_save_dir
                                 / "bbox_imgs"
-                                / f"epoch_{epoch}_{self.global_step}.png"
+                                / f"{self.global_step}.png"
                             )
 
                 self.global_step += 1
