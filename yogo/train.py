@@ -363,7 +363,7 @@ class Trainer:
                         )
                         (model_save_dir / "cm").mkdir(exist_ok=True, parents=True)
                         np.save(
-                            model_save_dir / "cm" / f"epoch_{epoch}_{self.global_step}.npy",
+                            model_save_dir / "cm" / f"{self.global_step}.npy",
                             np.array(test_metrics[2]),  # type: ignore
                         )
 
