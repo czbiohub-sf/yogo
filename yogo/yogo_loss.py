@@ -51,6 +51,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
              Sx,
              Sy
         )
+        We return both the total loss (which can be backpropped) and individual
+        loss components, which are useful for debugging.
         """
         batch_size, _, Sy, Sx = pred_batch.shape
 
