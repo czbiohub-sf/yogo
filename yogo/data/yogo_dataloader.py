@@ -1,5 +1,7 @@
+import os
+
 import torch
-import multiprocessing as mp
+import warnings
 
 from tqdm import tqdm
 from functools import partial
@@ -20,6 +22,42 @@ from yogo.data.data_transforms import (
 from torch.utils.data.distributed import DistributedSampler
 
 
+def guess_suggested_num_workers() -> Optional[int]:
+    """
+    It turns out that it is tricky to figure out the number of CPUs across different
+    computers. I kept on getting warnings that I was provisioning too many, even though
+    I was trying to provision mp.cpu_count() workers.
+
+    So, I just copied the code from Pytorch, figuring that they knew how to get it. It's
+    not as easy as I thought it'd be. Funky funky funky
+
+    https://github.com/pytorch/pytorch/blob/ \
+            1f845d589885311447e6021def9da2463c8a989e/ \
+            torch/utils/data/dataloader.py#L534-L548
+    """
+
+    # try to compute a suggested max number of worker based on system's resource
+    max_num_worker_suggest = None
+    if hasattr(os, "sched_getaffinity"):
+        try:
+            max_num_worker_suggest = len(os.sched_getaffinity(0))  # type: ignore
+        except Exception:
+            pass
+
+    if max_num_worker_suggest is None:
+        # os.cpu_count() could return Optional[int]
+        # get cpu count first and check None in order to satisfy mypy check
+        cpu_count = os.cpu_count()
+        if cpu_count is not None:
+            max_num_worker_suggest = cpu_count
+
+    if max_num_worker_suggest is None:
+        warnings.warn("could not figure out the number of cpus on this machine")
+        return None
+
+    return max_num_worker_suggest
+
+
 def choose_dataloader_num_workers(
     dataset_size: int, requested_num_workers: Optional[int] = None
 ) -> int:
@@ -28,7 +66,7 @@ def choose_dataloader_num_workers(
     elif requested_num_workers is not None:
         return requested_num_workers
     else:
-        return min(mp.cpu_count(), 64)
+        return min(guess_suggested_num_workers() or 32, 64)
 
 
 def get_datasets(
