@@ -275,7 +275,7 @@ def format_preds_and_labels(
     objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
 
     # calculate_the_confidence_mask
-    values, _ = torch.max(reformatted_preds[:, 5:], dim=0)
+    values, _ = torch.max(reformatted_preds[:, 5:], dim=1)
     class_confidence_mask = (values > min_class_confidence_threshold).bool()
 
     # the total prediction mask is where confidence + objectness are high
