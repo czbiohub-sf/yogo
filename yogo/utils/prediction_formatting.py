@@ -280,14 +280,14 @@ def format_preds_and_labels(
 
     # the total prediction mask is where confidence + objectness are high
     # by default, though, min_class_confidence is 0 so it's just objectness
-    class_confidence_mask & objectness_mask
+    total_mask = class_confidence_mask & objectness_mask
 
     labels_mask = reformatted_labels[:, 0].bool()
     img_masked_labels = reformatted_labels[labels_mask]
 
-    if use_IoU and objectness_mask.sum() >= len(img_masked_labels):
+    if use_IoU and total_mask.sum() >= len(img_masked_labels):
         # filter on objectness
-        preds_with_objects = reformatted_preds[objectness_mask]
+        preds_with_objects = reformatted_preds[total_mask]
 
         preds_with_objects[:, 0:4] = ops.box_convert(
             preds_with_objects[:, 0:4], "cxcywh", "xyxy"
