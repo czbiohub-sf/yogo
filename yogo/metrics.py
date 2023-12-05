@@ -31,7 +31,9 @@ class Metrics:
         self.min_class_confidence_threshold = min_class_confidence_threshold
 
         self.mAP = MeanAveragePrecision(
-            box_format="xyxy", sync_on_compute=sync_on_compute
+            box_format="xyxy",
+            backend="faster_coco_eval",
+            sync_on_compute=sync_on_compute,
         )
         self.mAP.warn_on_many_detections = False
 
