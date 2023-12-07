@@ -14,10 +14,10 @@ There are three components to running YOGO:
 >>> from yogo.model import YOGO
 
 # look in `yogo_models` for the newest best model; older models will be in `yogo_models/older-models`
->>> model_dir_path = "/hpc/projects/group.bioengineering/LFM_scope/yogo_models/honest-sweep-51/best.pth"
+>>> model_pth_path = "/hpc/projects/group.bioengineering/LFM_scope/yogo_models/honest-sweep-51/best.pth"
 
 >>> Y, cfg = YOGO.from_pth(
-...     model_dir_path,
+...     model_pth_path,
 ...     inference=True  # set inference to True to do inference, False to do training
 ... )
 
