@@ -29,11 +29,7 @@ def to_numpy(tensor):
 
 class YOGOWrap(YOGO):
     """
-    two reasons to make this wrap:
-        - we can normalize images within YOGO here, so we don't have to do it in ulc-malaria-scope
-        - for some reason onnx likes `torch.split` but doesn't like `torch.chunk`, and torch.jit
-          likes `torch.chunk` but doesn't like `torch.split`.
-    So we wrap YOGO and use the version of forward that onnx likes.
+    we can normalize images within YOGO here, so we don't have to do it in ulc-malaria-scope
     """
 
     def __init__(self, *args, **kwargs):
@@ -41,33 +37,15 @@ class YOGOWrap(YOGO):
         self.normalize_images = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # made this more terse than YOGO's forward
+        # we get either raw uint8 tensors or float tensors
+        if x.ndim == 3:
+            x.unsqueeze_(0)
+
         x = x.float()
         if self.normalize_images:
             x /= 255.0
-        x = self.model(x)
 
-        _, _, Sy, Sx = x.shape
-
-        classification = torch.softmax(x[:, 5:, :, :], dim=1)
-
-        clamped_whs = torch.clamp(x[:, 2:4, :, :], max=80)
-
-        return torch.cat(
-            (
-                (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
-                (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
-                self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
-                (
-                    self.anchor_h
-                    * torch.exp(clamped_whs[:, 1:2, :, :])
-                    * self.height_multiplier
-                ),
-                torch.sigmoid(x[:, 4:5, :, :]),
-                *torch.split(classification, 1, dim=1),
-            ),
-            dim=1,
-        )
+        return super().forward(x)
 
 
 def do_export(args):
@@ -78,20 +56,35 @@ def do_export(args):
         else pth_filename.replace("pth", "onnx")
     ).with_suffix(".onnx")
 
-    net, cfg = YOGOWrap.from_pth(pth_filename, inference=True)
+    # the original model
+    net, cfg = YOGO.from_pth(pth_filename, inference=True)
     net.normalize_images = cfg["normalize_images"]
     net.eval()
 
+    # the wrapped model, that we'll export
+    net_wrap = YOGOWrap(
+        net.img_size, net.anchor_w, net.anchor_h, net.num_classes, inference=True
+    )
+    net_wrap.load_state_dict(net.state_dict())
+    net_wrap.eval()
+
     img_h, img_w = net.img_size
+    dummy_input = torch.randint(0, 256, (1, 1, int(img_h.item()), int(img_w.item())))
+
+    # make sure we didn't mess up the wrap!
+    torch.allclose(
+        net(dummy_input.float() / 255.0 if net.normalize_images else dummy_input),
+        net_wrap(dummy_input),
+        rtol=1e-3,
+        atol=1e-5,
+    )
 
     if args.crop_height is not None:
         img_h = (args.crop_height * img_h).round()
-        net.resize_model(img_h.item())
-
-    dummy_input = torch.randint(0, 256, (1, 1, int(img_h.item()), int(img_w.item())))
+        net_wrap.resize_model(img_h.item())
 
     torch.onnx.export(
-        net,
+        net_wrap,
         dummy_input,
         str(onnx_filename),
         verbose=False,
@@ -118,9 +111,8 @@ def do_export(args):
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(dummy_input)}
     ort_outs = ort_session.run(None, ort_inputs)
 
-    torch_out = net(dummy_input)
     np.testing.assert_allclose(
-        to_numpy(torch_out),
+        to_numpy(net_wrap(dummy_input)),
         ort_outs[0],
         rtol=1e-3,
         atol=1e-5,
@@ -139,7 +131,8 @@ def do_export(args):
             onnx_filename.resolve().parents[0],
             "--compress_to_fp16",
             "True",
-        ]
+        ],
+        stdout=subprocess.DEVNULL,
     )
     success_msg += f", {str(onnx_filename.with_suffix('.xml'))}, {str(onnx_filename.with_suffix('.bin'))}"
 

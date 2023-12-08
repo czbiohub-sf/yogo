@@ -337,19 +337,18 @@ class YOGO(nn.Module):
         #  width of bounding box
         #  height of bounding box
         #  'objectness' score
-        outputs = [
-            (1 / Sx) * torch.sigmoid(x[:, 0:1, :, :]) + self._Cxs,
-            (1 / Sy) * torch.sigmoid(x[:, 1:2, :, :]) + self._Cys,
-            self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
+        return torch.cat(
             (
-                self.anchor_h
-                * torch.exp(clamped_whs[:, 1:2, :, :])
-                * self.height_multiplier
+                ((1 / Sx) * torch.sigmoid(x[:, 0, :, :]) + self._Cxs)[:, None, :, :],
+                ((1 / Sy) * torch.sigmoid(x[:, 1, :, :]) + self._Cys)[:, None, :, :],
+                self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
+                (
+                    self.anchor_h
+                    * torch.exp(clamped_whs[:, 1:2, :, :])
+                    * self.height_multiplier
+                ),
+                (torch.sigmoid(x[:, 4, :, :]))[:, None, :, :],
+                *torch.split(classification, 1, dim=1),
             ),
-            torch.sigmoid(x[:, 4:5, :, :]),
-        ]
-
-        # splitting the classification tensor like this allows torch.jit.script
-        outputs.extend(torch.chunk(classification, classification.size(1), dim=1))
-
-        return torch.cat(outputs, dim=1)
+            dim=1,
+        )

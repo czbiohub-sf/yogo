@@ -15,4 +15,4 @@ jobs:
           pip install --upgrade pip
           pip install -e .
       - name: unittests :)
-        run: python3 -m unittest discover tests
+        run: pytest tests/

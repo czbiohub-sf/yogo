@@ -189,8 +189,13 @@ def predict(
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.eval()
     model.to(device)
-    # mypy thinks that compile isn't in the torch package, but it is
-    model_jit = torch.compile(model)  # type: ignore
+
+    img_in_h, img_in_w = model.img_size
+
+    dummy_input = torch.randint(
+        0, 256, (1, 1, int(img_in_h.item()), int(img_in_w.item()))
+    )
+    model_jit = torch.jit.trace(model, dummy_input)
 
     transforms: List[torch.nn.Module] = []
 

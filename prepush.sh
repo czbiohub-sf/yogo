@@ -3,4 +3,4 @@
 mypy .
 ruff . --fix
 black .
-python3 -m unittest discover .
+pytest tests/
