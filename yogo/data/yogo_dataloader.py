@@ -245,6 +245,7 @@ def get_dataloader(
         d[designation] = DataLoader(
             dataset,
             shuffle=False,
+            sampler=sampler,
             drop_last=False,
             pin_memory=True,
             batch_size=batch_size,
@@ -252,7 +253,6 @@ def get_dataloader(
             persistent_workers=num_workers > 0,
             generator=torch.Generator().manual_seed(7271978),
             collate_fn=partial(collate_batch, transforms=transforms),
-            sampler=sampler if designation in ("train", "val") else None,
             multiprocessing_context="spawn" if num_workers > 0 else None,
         )
     return d
