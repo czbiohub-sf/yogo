@@ -327,7 +327,6 @@ class Trainer:
                 f"no best model found at {model_save_dir / 'best.pth'} for testing..."
             )
 
-        self.net.eval()
         test_metrics = self._test(
             self.test_dataloader,
             self.device,
@@ -427,6 +426,9 @@ class Trainer:
         if Trainer._dataset_size(test_dataloader) == 0:
             return None
 
+        net_state = net.training
+        net.eval()
+
         Trainer._check_keys(config)
 
         test_metrics = Metrics(
@@ -474,6 +476,8 @@ class Trainer:
         mean_loss = test_loss / len(test_dataloader.dataset)  # type: ignore
         if isinstance(net, DDP):
             torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
+
+        net.training = net_state
 
         return (
             mean_loss.item(),  # type: ignore
