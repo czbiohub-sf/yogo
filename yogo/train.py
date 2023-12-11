@@ -477,7 +477,7 @@ class Trainer:
         if isinstance(net, DDP):
             torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
-        net.training = net_state
+        net.train(net_state)
 
         return (
             mean_loss.item(),  # type: ignore
