@@ -190,7 +190,9 @@ def predict(
     model.eval()
     model.to(device)
 
-    img_in_h, img_in_w = model.img_size
+    assert model.img_size == torch.Size([2])
+    img_in_h = model.img_size[0]  # type: ignore
+    img_in_w = model.img_size[1]  # type: ignore
 
     dummy_input = torch.randint(
         0, 256, (1, 1, int(img_in_h.item()), int(img_in_w.item()))
