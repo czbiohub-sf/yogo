@@ -350,6 +350,7 @@ class Trainer:
         if self._dataset_size(self.validate_dataloader) == 0:
             return
 
+        net_state = self.net.training
         self.net.eval()
         device = self.device
 
@@ -371,6 +372,9 @@ class Trainer:
         # TODO mypy thinks that ReduceOp doesn't have AVG;
         # maybe because AVG is only available for nccl backend? How to address?
         torch.distributed.all_reduce(val_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
+
+        # back to training!
+        self.net.train(net_state)
 
         if self._rank != 0:
             return
