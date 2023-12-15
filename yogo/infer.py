@@ -190,13 +190,12 @@ def predict(
     model.eval()
     model.to(device)
 
-    assert model.img_size.numel() == 2, f"YOGO model must be 2D, is {model.img_size}"
-    img_in_h = model.img_size[0]  # type: ignore
-    img_in_w = model.img_size[1]  # type: ignore
+    # these three lines are correctly typed; dunno how to convince mypy
+    assert model.img_size.numel() == 2, f"YOGO model must be 2D, is {model.img_size}"  # type: ignore
+    img_in_h = int(model.img_size[0].item())  # type: ignore
+    img_in_w = int(model.img_size[1].item())  # type: ignore
 
-    dummy_input = torch.randint(
-        0, 256, (1, 1, int(img_in_h.item()), int(img_in_w.item())), device=device
-    )
+    dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
     model_jit = torch.jit.trace(model, dummy_input)
 
     transforms: List[torch.nn.Module] = []
