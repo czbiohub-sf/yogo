@@ -207,6 +207,7 @@ class Trainer:
             return
 
         wandb.init(
+            id=wandb.util.generate_id(),
             project="yogo",
             entity="bioengineering",
             config=self.config,
@@ -224,7 +225,6 @@ class Trainer:
                 "validation set size": f"{self._dataset_size(self.validate_dataloader)} images",  # type:ignore
                 "testing set size": f"{self._dataset_size(self.test_dataloader)} images",  # type:ignore
                 "normalize_images": self.config["normalize_images"],
-                "run_id": wandb.util.generate_id(),
             },
             allow_val_change=True,
         )
