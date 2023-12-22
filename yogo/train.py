@@ -328,7 +328,7 @@ class Trainer:
                 f"no best model found at {model_save_dir / 'best.pth'} for testing..."
             )
 
-        test_metrics = self._test(
+        test_metrics = self.test(
             self.test_dataloader,
             self.device,
             self.config,
@@ -422,7 +422,7 @@ class Trainer:
 
     @staticmethod
     @torch.no_grad()
-    def _test(
+    def test(
         test_dataloader: Union[Collection, DataLoader],
         device: Union[str, torch.device],
         config: WandbConfig,
