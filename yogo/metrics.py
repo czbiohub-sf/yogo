@@ -24,7 +24,7 @@ class Metrics:
         device: str = "cpu",
         classify: bool = True,
         sync_on_compute: bool = False,
-        min_class_confidence_threshold: float = 0.0,
+        min_class_confidence_threshold: float = 0.9,
     ):
         self.num_classes = num_classes
         self.classify = classify
