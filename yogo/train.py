@@ -427,6 +427,7 @@ class Trainer:
         device: Union[str, torch.device],
         config: WandbConfig,
         net: torch.nn.Module,
+        include_mAP: bool = True,
     ) -> Optional[Tuple[Any, ...]]:
         if Trainer._dataset_size(test_dataloader) == 0:
             return None
@@ -441,6 +442,7 @@ class Trainer:
             classify=not config["no_classify"],
             device=str(device),
             sync_on_compute=isinstance(net, DDP),
+            include_mAP=include_mAP,
         )
 
         class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]

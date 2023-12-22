@@ -25,23 +25,30 @@ class Metrics:
         classify: bool = True,
         sync_on_compute: bool = False,
         min_class_confidence_threshold: float = 0.9,
+        include_mAP: bool = True,
     ):
         self.num_classes = num_classes
         self.classify = classify
         self.min_class_confidence_threshold = min_class_confidence_threshold
+        self.include_mAP = include_mAP
 
-        self.mAP = MeanAveragePrecision(
-            box_format="xyxy",
-            backend="faster_coco_eval",
-            sync_on_compute=sync_on_compute,
-        )
-        self.mAP.warn_on_many_detections = False
+        # map can be very costly; so lets be able to turn it off if we
+        # don't need it
+        if include_mAP:
+            self.mAP = MeanAveragePrecision(
+                box_format="xyxy",
+                sync_on_compute=sync_on_compute,
+            )
+            self.mAP.warn_on_many_detections = False
+            self.mAP.to(device)
 
         self.confusion = MulticlassConfusionMatrix(
             num_classes=self.num_classes,
             validate_args=False,
             sync_on_compute=sync_on_compute,
         )
+        self.confusion.to(device)
+
         self.prediction_metrics = MetricCollection(
             [
                 MulticlassAccuracy(
@@ -74,9 +81,6 @@ class Metrics:
                 ),
             ],
         )
-
-        self.mAP.to(device)
-        self.confusion.to(device)
         self.prediction_metrics.to(device)
 
     def update(self, preds, labels, use_IoU: bool = True):
@@ -95,7 +99,8 @@ class Metrics:
             ]
         )
 
-        self.mAP.update(*self._format_for_mAP(formatted_preds, formatted_labels))
+        if self.include_mAP:
+            self.mAP.update(*self._format_for_mAP(formatted_preds, formatted_labels))
 
         fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
 
@@ -106,7 +111,12 @@ class Metrics:
     def compute(self):
         pr_metrics = self.prediction_metrics.compute()
 
-        mAP_metrics = self.mAP.compute()
+        if self.include_mAP:
+            mAP_metrics = self.mAP.compute()
+        else:
+            mAP_metrics = {
+                "map": torch.tensor(0.0),
+            }
 
         confusion_metrics = self.confusion.compute()
 
@@ -121,7 +131,8 @@ class Metrics:
         )
 
     def reset(self):
-        self.mAP.reset()
+        if self.include_mAP:
+            self.mAP.reset()
         self.confusion.reset()
         self.prediction_metrics.reset()
 
