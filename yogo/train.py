@@ -280,7 +280,7 @@ class Trainer:
             # mypy thinks that self.train_dataloader has type Iterable[Any]?
             self.train_dataloader.sampler.set_epoch(epoch)  # type: ignore
 
-            self.net.train()  # defensive test????
+            self.net.train()
             for imgs, labels in self.train_dataloader:
                 imgs = imgs.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
