@@ -38,6 +38,52 @@ Potential improvements:
     'if __main__' block, or maybe in the YOGO cli?)
     - moving split-fractions to YOGO: I'm somewhat undecided. This is a more minor fix
     compared to the above.
+
+------------------------------------------------------------------------------------------------------------------
+
+New Specification
+-----------------
+
+Required Fields
+-------------
+
+A dataset definition file is a YAML file with a `dataset_paths` key, with a list of dataset
+path specifications as values. Dataset specifications are another key-value pair, where
+the key is an arbitrary label for humans - it is not used by the parsing code. The value can
+be either (a) `defn_path` which points to another definition file to be loaded (a "Literal
+Specification"), or (b) an `image_path` and a `label_path` pair (a "Recursive Specification").
+Here's an example
+
+```yaml
+dataset_paths:
+    image_and_label_dirs:               # These three lines make up one Dataset Specification
+        image_path: /path/to/images     # This Dataset Specification is a "Literal Specification"
+        label_path: /path/to/labels     # since it defines the actual image and label paths
+    another dataset_defn:                                # These two lines make up another Dataset Specification.
+        defn_path: /path/to/another/dataset_defn.yml     # This Dataset Specification is a "Recursive Specification".
+
+# the composition of each of the Dataset Specifications above gives a full Dataset Definition.
+```
+
+Note: the ability to specify another dataset definition within a dataset definition has some
+restrictions. The dataset definition specifcation is a graph. For practical reasons, we can't
+accept arbitrary graph definitions. For example, if the specification has a cycle, we will have
+to reject it (only trees are allowed).
+
+Optional Fields
+---------------
+
+Optional fields include:
+    - classes: a list of class names to be used in the dataset. Conflicting class definitions
+    will be rejected.
+    - test_paths: similar to dataset_paths, but for the test set. Basically, it's just a way
+    to explicitly specify which data is isolated for testing.
+    - split_fractions: a dictionary specifying the split fractions for the dataset. Keys can be
+    `train`, `val`, and `test`. If `test_paths` is preset, `train` should be left out. The values
+    are floats between 0 and 1, and the sum of `split_fractions` should be 1. WILL BE DEPRICATED SOON.
+    - thumbnail_augmentation: a dictionary specifying a class name and pointing to a directory
+    of thumbnails. Somewhat niche. Ideally we'd have some sort of other "arbitrary metadata"
+    specification that could be used for this sort of thing.
 """
 
 
