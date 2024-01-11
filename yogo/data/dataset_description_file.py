@@ -1,3 +1,5 @@
+import warnings
+
 from ruamel import yaml
 from pathlib import Path
 from dataclasses import dataclass
@@ -79,6 +81,10 @@ def check_dataset_paths(
             and len(list(dataset_paths[i]["label_path"].iterdir())) > 0
         ):
             if prune:
+                warnings.warn(
+                    f"image_path or label_path do not lead to a directory, or there are no labels\n"
+                    f"image_path={dataset_paths[i]['image_path']}\nlabel_path={dataset_paths[i]['label_path']}"
+                )
                 to_prune.append(i)
             else:
                 raise FileNotFoundError(
