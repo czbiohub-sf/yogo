@@ -38,12 +38,11 @@ DEFNS_PATH = Path("/Users/axel.jacobsen/Desktop/fake/defns")
 
 
 def test_basic_load():
-    """ should successfully load each and have one path per
-    """
+    """should successfully load each and have one path per"""
     for basic_defn in ("literal_1.yml", "literal_2.yml", "literal_3.yml"):
         dataset_defn = DatasetDefinition.from_yaml(DEFNS_PATH / basic_defn)
         assert len(dataset_defn.dataset_paths) == 1
-        assert len(dataset_defn.test_dataset_paths ) == 0
+        assert len(dataset_defn.test_dataset_paths) == 0
 
     dataset_defn = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_123.yml")
     assert len(dataset_defn.dataset_paths) == 3

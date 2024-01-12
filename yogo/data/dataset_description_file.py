@@ -4,7 +4,7 @@ from ruamel.yaml import YAML
 from pathlib import Path
 from dataclasses import dataclass
 
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 """ I don't *love* the dataset definition that's been defined here anymore.
 
@@ -95,6 +95,16 @@ class InvalidDatasetDefinitionFile(Exception):
 
 @dataclass
 class LiteralSpecification:
+    """
+    This defines an (image dir path, label dir path) pair. In the
+    specification above, it's a "Literal Specification".
+
+    Mostly, it just gives us a lot of convenience. Defining __hash__
+    and __eq__ make it easy to check for duplicates in a list. from_dict
+    and to_dict make it easy to serialize and deserialize from the raw
+    yaml.
+    """
+
     image_path: Path
     label_path: Path
 
@@ -106,17 +116,26 @@ class LiteralSpecification:
             )
         elif "image_path" not in dct or "label_path" not in dct:
             defn_path_hint = (
-                " 'defn_path' found - this is a coding error, "
-                "and itshouldn't happen! blame axel"
-            ) if "defn_path" in dct else ""
+                (
+                    " 'defn_path' found - this is a coding error, "
+                    "please fill out a new issue here: "
+                    "https://github.com/czbiohub-sf/yogo/issues/new"
+                )
+                if "defn_path" in dct
+                else ""
+            )
 
             raise InvalidDatasetDefinitionFile(
-                "LiteralSpecification must have keys 'image_path' and 'label_path'" + defn_path_hint
+                "LiteralSpecification must have keys 'image_path' and 'label_path'"
+                + defn_path_hint
             )
         else:
             return LiteralSpecification(
                 Path(dct["image_path"]), Path(dct["label_path"])
             )
+
+    def to_dict(self) -> dict[str, str]:
+        return {"image_path": str(self.image_path), "label_path": str(self.image_path)}
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LiteralSpecification):
@@ -130,51 +149,43 @@ class LiteralSpecification:
     def __hash__(self) -> int:
         return hash((self.image_path, self.label_path))
 
-    def resolve(self) -> dict[str, str]:
-        return {"image_path": str(self.image_path), "label_path": str(self.image_path)}
-
-
-def _extract_single_value(vs: dict[Any, dict[Any, Any]]) -> dict[Any,Any]:
-    """ bespoke function to pull apart the yml spec that I've defined
-    """
-    print(f'{vs=}')
-    if len(vs) != 1:
-        raise RuntimeError("expected a single value")
-    return next(iter(vs.values()))
-
-
-def _extract_dataset_paths(path: Path) -> list[dict[str, str]]:
-    """
-    convert list[dict[str,dict[str,str]]] to list[dict[str,str]],
-    since the enclosing dict has only 1 kv pair and 1 value
-    """
-    with open(path, "r") as f:
-        yaml = YAML(typ="safe")
-        data = yaml.load(f)
-
-    if "dataset_paths" not in data:
-        raise InvalidDatasetDefinitionFile(
-            f"Missing dataset_paths for definition file at {path}"
-        )
-
-    return list(data["dataset_paths"].values())
-
 
 @dataclass
 class DatasetDefinition:
+    """The actual Dataset Definition!
+
+    Although it's representation on disc (via the yml files) is recursive,
+    this is not. When we load the yml files, we flatten the structure and
+    check for cycles / duplicates.
+
+    The main results are mostly the same as before:
+        - dataset_paths: a list of dicts, {image_path: str, label_path: str}
+        - test_dataset_paths: a list of dicts, {image_path: str, label_path: str}
+        - classes: a list of class names
+        - thumbnail_augmentation: a dict of {class_name: Path}
+    """
+
     _dataset_paths: list[LiteralSpecification]
     _test_dataset_paths: list[LiteralSpecification]
 
     classes: Optional[list[str]]
-    thumbnail_augmentation: Optional[Dict[int, Path]]
+    thumbnail_augmentation: Optional[Dict[str, Path]]
+
+    @property
+    def dataset_paths(self) -> list[dict[str, str]]:
+        return [dp.to_dict() for dp in self._dataset_paths]
+
+    @property
+    def test_dataset_paths(self) -> list[dict[str, str]]:
+        return [dp.to_dict() for dp in self._test_dataset_paths]
 
     @classmethod
     def from_yaml(cls, path: Path) -> "DatasetDefinition":
         """
         The general idea here is that `dataset_paths` has a list of
         dataset specifications, which can be literal or recursive. We'll
-        make a list of both, and then try to resolve the recursive specifications.
-        We resolve the recursive specifications later so we can
+        make a list of both, and then try to to_dict the recursive specifications.
+        We to_dict the recursive specifications later so we can
         """
         with open(path, "r") as f:
             yaml = YAML(typ="safe")
@@ -189,7 +200,9 @@ class DatasetDefinition:
 
         if "test_paths" in data:
             test_specs = cls._load_dataset_specifications(
-                data["test_paths"].values(), exclude_ymls=[path], exclude_specs=dataset_specs
+                data["test_paths"].values(),
+                exclude_ymls=[path],
+                exclude_specs=dataset_specs,
             )
         else:
             test_specs = []
@@ -209,7 +222,7 @@ class DatasetDefinition:
     ) -> list[LiteralSpecification]:
         """
         load the list of dataset specifications into a list
-        of LiteralSpecification. Essentially, we try to resolve
+        of LiteralSpecification. Essentially, we try to to_dict
         any recursive specifications into literal specifications.
 
         >>> extract_paths = _extract_dataset_paths(yml_path)
@@ -234,11 +247,8 @@ class DatasetDefinition:
                         f"cycle found: {spec['defn_path']} is duplicated"
                     )
 
-                extract_paths = _extract_dataset_paths(Path(new_yml_file))
-                print(extract_paths)
-
                 child_specs = DatasetDefinition._load_dataset_specifications(
-                    extract_paths,
+                    _extract_dataset_paths(Path(new_yml_file)),
                     exclude_ymls=[new_yml_file, *exclude_ymls],
                 )
 
@@ -253,44 +263,61 @@ class DatasetDefinition:
                 )
 
         # check that all of our paths are unique
-        if len(set(literal_defns + exclude_specs)) != len(literal_defns + exclude_specs):
+        if len(set(literal_defns + exclude_specs)) != len(
+            literal_defns + exclude_specs
+        ):
             # duplicate literal definitions, or one of the literal definitions that we found
             # is in the exclude set. Report them!
             # TODO report which ones are bad <|:^|
-            raise InvalidDatasetDefinitionFile("literal definition found in exclude paths!")
+            raise InvalidDatasetDefinitionFile(
+                "literal definition found in exclude paths!"
+            )
 
         return literal_defns
 
-    @property
-    def dataset_paths(self) -> list[dict[str,str]]:
-        return [dp.resolve() for dp in self._dataset_paths]
-
-    @property
-    def test_dataset_paths(self) -> list[dict[str,str]]:
-        return [dp.resolve() for dp in self._test_dataset_paths]
 
 def check_dataset_paths(
-    dataset_paths: list[Dict[str, Path]], prune: bool = False
+    dataset_paths: list[LiteralSpecification], prune: bool = False
 ) -> None:
     to_prune: list[int] = []
     for i in range(len(dataset_paths)):
         if not (
-            dataset_paths[i]["image_path"].is_dir()
-            and dataset_paths[i]["label_path"].is_dir()
-            and len(list(dataset_paths[i]["label_path"].iterdir())) > 0
+            dataset_paths[i].image_path.is_dir()
+            and dataset_paths[i].label_path.is_dir()
+            and len(list(dataset_paths[i].label_path.iterdir())) > 0
         ):
             if prune:
                 warnings.warn(
-                    f"image_path or label_path do not lead to a directory, or there are no labels\n"
-                    f"image_path={dataset_paths[i]['image_path']}\nlabel_path={dataset_paths[i]['label_path']}"
+                    f"image_path or label_path do not lead to a directory, or there are no labels.\n"
+                    f"image_path={dataset_paths[i].image_path}\n"
+                    f"label_path={dataset_paths[i].label_path}\n"
+                    f"will prune."
                 )
                 to_prune.append(i)
             else:
                 raise FileNotFoundError(
-                    f"image_path or label_path do not lead to a directory\n"
-                    f"image_path={dataset_paths[i]['image_path']}\nlabel_path={dataset_paths[i]['label_path']}"
+                    f"image_path or label_path do not lead to a directory, or there are no labels.\n"
+                    f"image_path={dataset_paths[i].image_path}\n"
+                    f"label_path={dataset_paths[i].label_path}"
                 )
 
     # reverse order so we don't move around the to-delete items in the list
     for i in to_prune[::-1]:
         del dataset_paths[i]
+
+
+def _extract_dataset_paths(path: Path) -> list[dict[str, str]]:
+    """
+    convert list[dict[str,dict[str,str]]] to list[dict[str,str]],
+    since the enclosing dict has only 1 kv pair and 1 value
+    """
+    with open(path, "r") as f:
+        yaml = YAML(typ="safe")
+        data = yaml.load(f)
+
+    if "dataset_paths" not in data:
+        raise InvalidDatasetDefinitionFile(
+            f"Missing dataset_paths for definition file at {path}"
+        )
+
+    return list(data["dataset_paths"].values())
