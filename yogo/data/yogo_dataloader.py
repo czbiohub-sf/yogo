@@ -4,6 +4,7 @@ import torch
 import warnings
 
 from tqdm import tqdm
+from pathlib import Path
 from functools import partial
 
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
@@ -12,7 +13,7 @@ from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.yogo_dataset import ObjectDetectionDataset
-from yogo.data.dataset_description_file import DatasetDefinition
+from yogo.data.dataset_description_file import DatasetDefinition, SplitFractions
 from yogo.data.data_transforms import (
     DualInputModule,
     RandomHorizontalFlipWithBBs,
@@ -75,7 +76,7 @@ def get_datasets(
     Sy: int,
     normalize_images: bool = False,
 ) -> MutableMapping[str, Dataset[Any]]:
-    dataset_description = DatasetDefinition.from_yaml(dataset_description_file)
+    dataset_description = DatasetDefinition.from_yaml(Path(dataset_description_file))
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dsp["image_path"],
@@ -129,40 +130,15 @@ def get_datasets(
 
 
 def split_dataset(
-    dataset: Dataset, split_fractions: Dict[str, float]
+    dataset: Dataset, split_fractions: SplitFractions
 ) -> MutableMapping[str, Dataset[Any]]:
     if not hasattr(dataset, "__len__"):
         raise ValueError(
             f"dataset {dataset} must have a length (specifically, `__len__` must be defined)"
         )
 
-    if len(split_fractions) == 0:
-        raise ValueError("must have at least one value for the split!")
-    elif len(split_fractions) == 1:
-        if not next(iter(split_fractions)) == 1:
-            raise ValueError(
-                "when split_fractions has length 1, it must have a value of 1"
-            )
-        keys = list(split_fractions)
-        return {keys.pop(): dataset}
-
-    keys = list(split_fractions)
-
-    # very annoying type hint here - `Dataset` doesn't necessarily have `__len__`,
-    # so we manually check it. But I am not sure that you can cast to Sized, so mypy complains
-    dataset_sizes = {
-        k: round(split_fractions[k] * len(dataset)) for k in keys[:-1]  # type: ignore
-    }
-    final_dataset_size = {keys[-1]: len(dataset) - sum(dataset_sizes.values())}  # type: ignore
-    split_sizes = {**dataset_sizes, **final_dataset_size}
-
-    all_sizes_are_gt_0 = all([sz >= 0 for sz in split_sizes.values()])
-    split_sizes_eq_dataset_size = sum(split_sizes.values()) == len(dataset)  # type: ignore
-    if not (all_sizes_are_gt_0 and split_sizes_eq_dataset_size):
-        raise ValueError(
-            f"could not create valid dataset split sizes: {split_sizes}, "
-            f"full dataset size is {len(dataset)}"  # type: ignore
-        )
+    keys = split_fractions.keys()
+    partition_sizes = split_fractions.partition_sizes(len(dataset))
 
     # YUCK! Want a map from the dataset designation to the set itself, but "random_split" takes a list
     # of lengths of dataset. So we do this verbose rigamarole.
@@ -171,7 +147,7 @@ def split_dataset(
             keys,
             random_split(
                 dataset,
-                [split_sizes[k] for k in keys],
+                [partition_sizes[k] for k in keys],
                 generator=torch.Generator().manual_seed(7271978),
             ),
         )

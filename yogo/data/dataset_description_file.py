@@ -4,7 +4,7 @@ from ruamel.yaml import YAML
 from pathlib import Path
 from dataclasses import dataclass
 
-from typing import Dict, Optional
+from typing import Any, Optional, Literal
 
 """ I don't *love* the dataset definition that's been defined here anymore.
 
@@ -43,7 +43,7 @@ New Specification
 -----------------
 
 Required Fields
--------------
+---------------
 
 A dataset definition file is a YAML file with a `dataset_paths` key, with a list of dataset
 path specifications as values. Dataset specifications are another key-value pair, where
@@ -72,21 +72,93 @@ choose to use unique paths - that is, for any Dataset Definition in our tree, th
 only one path to it. This'll make it easier keep track of folders. Stricter == Better. Essentially,
 we're defining a Tree ( https://en.wikipedia.org/wiki/Tree_(graph_theory) ).
 
+Further required fields for the "Top Level" definition file are:
+    - classes: a list of class names to be used in the dataset. Conflicting class definitions will be rejected.
+    - split_fractions: a dictionary specifying the split fractions for the dataset. Keys can be
+    `train`, `val`, and `test`. If `test_paths` is present, `train` should be left out. The values
+    are floats between 0 and 1, and the sum of `split_fractions` should be 1. May be depricated!
+
 Optional Fields
 ---------------
 
 Optional fields include:
-    - classes: a list of class names to be used in the dataset. Conflicting class definitions
-    will be rejected.
     - test_paths: similar to dataset_paths, but for the test set. Basically, it's just a way
     to explicitly specify which data is isolated for testing.
-    - split_fractions: a dictionary specifying the split fractions for the dataset. Keys can be
-    `train`, `val`, and `test`. If `test_paths` is preset, `train` should be left out. The values
-    are floats between 0 and 1, and the sum of `split_fractions` should be 1. WILL BE DEPRICATED SOON.
     - thumbnail_augmentation: a dictionary specifying a class name and pointing to a directory
     of thumbnails. Somewhat niche. Ideally we'd have some sort of other "arbitrary metadata"
     specification that could be used for this sort of thing.
 """
+
+
+class SplitFractions:
+    def __init__(
+        self, train: Optional[float], val: Optional[float], test: Optional[float]
+    ) -> None:
+        self.train = train or 0
+        self.val = val or 0
+        self.test = test or 0
+
+        if not (self.train + self.val + self.test - 1) < 1e-10:
+            raise ValueError(
+                f"train, val, and test must sum to 1; they sum to {self.train + self.val + self.test}"
+            )
+
+    @classmethod
+    def from_dict(
+        cls, dct: dict[str, float], test_paths_present: bool = True
+    ) -> "SplitFractions":
+        if test_paths_present and "train" in dct:
+            raise InvalidDatasetDefinitionFile(
+                "when `test_paths` is present in a dataset descriptor file, 'train' "
+                "is not a valid key for `dataset_split_fractions`, since we will use "
+                "all the data from `dataset_paths` for training"
+            )
+        if not any(v in dct for v in ("train", "val", "test")):
+            raise InvalidDatasetDefinitionFile(
+                f"dct must have keys `train`, `val`, and `test` - found keys {dct.keys()}"
+            )
+        if len(dct) > 3:
+            raise InvalidDatasetDefinitionFile(
+                f"dct must have keys `train`, `val`, and `test` only, but found {len(dct)} keys"
+            )
+        return cls(dct.get("train", None), dct.get("val", None), dct.get("test", None))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SplitFractions):
+            return False
+        return self.train == other.train and self.val == other.val and self.test == other.test
+
+    def to_dict(self) -> dict[str, Optional[float]]:
+        return {
+            **({"train": self.train} if self.train is not None else {}),
+            **({"val": self.val} if self.val is not None else {}),
+            **({"test": self.test} if self.test is not None else {}),
+        }
+
+    def keys(self) -> list[str]:
+        split_fractions = self.to_dict()
+        return list(split_fractions.keys())
+
+    def partition_sizes(self, total_size: int) -> dict[str, int]:
+        split_fractions = self.to_dict()
+        keys = split_fractions.keys()
+
+        dataset_sizes = {
+            k: round(split_fractions[k] * total_size) for k in keys[:-1]  # type: ignore
+        }
+        final_dataset_size = {keys[-1]: total_size - sum(dataset_sizes.values())}  # type: ignore
+        split_sizes = {**dataset_sizes, **final_dataset_size}
+
+        all_sizes_are_gt_0 = all([sz >= 0 for sz in split_sizes.values()])
+        split_sizes_eq_dataset_size = sum(split_sizes.values()) == total_size  # type: ignore
+
+        if not (all_sizes_are_gt_0 and split_sizes_eq_dataset_size):
+            raise ValueError(
+                f"could not create valid dataset split sizes: {split_sizes}, "
+                f"full dataset size is {total_size}"  # type: ignore
+            )
+
+        return split_sizes
 
 
 class InvalidDatasetDefinitionFile(Exception):
@@ -169,7 +241,8 @@ class DatasetDefinition:
     _test_dataset_paths: list[LiteralSpecification]
 
     classes: Optional[list[str]]
-    thumbnail_augmentation: Optional[Dict[str, Path]]
+    thumbnail_augmentation: Optional[dict[str, Path]]
+    split_fractions: SplitFractions
 
     @property
     def dataset_paths(self) -> list[dict[str, str]]:
@@ -203,15 +276,23 @@ class DatasetDefinition:
                 data["test_paths"].values(),
                 exclude_ymls=[path],
                 exclude_specs=dataset_specs,
+                dataset_paths_key="test_paths",
             )
+            test_paths_present = True
         else:
             test_specs = []
+            test_paths_present = False
+
+        classes = data.get("classes", None)
 
         return DatasetDefinition(
             _dataset_paths=dataset_specs,
             _test_dataset_paths=test_specs,
-            classes=data.get("classes", None),
-            thumbnail_augmentation=data.get("thumbnail_augmentation", None),
+            classes=classes,
+            thumbnail_augmentation=cls.load_thumbnails(classes, data),
+            split_fractions=SplitFractions.from_dict(
+                data["dataset_split_fractions"], test_paths_present=test_paths_present
+            ),
         )
 
     @staticmethod
@@ -219,6 +300,7 @@ class DatasetDefinition:
         specs: list[dict[str, str]],
         exclude_ymls: list[Path] = [],
         exclude_specs: list[LiteralSpecification] = [],
+        dataset_paths_key: Literal["test_paths", "dataset_paths"] = "dataset_paths",
     ) -> list[LiteralSpecification]:
         """
         load the list of dataset specifications into a list
@@ -250,6 +332,7 @@ class DatasetDefinition:
                 child_specs = DatasetDefinition._load_dataset_specifications(
                     _extract_dataset_paths(Path(new_yml_file)),
                     exclude_ymls=[new_yml_file, *exclude_ymls],
+                    dataset_paths_key=dataset_paths_key,
                 )
 
                 literal_defns.extend(child_specs)
@@ -274,6 +357,26 @@ class DatasetDefinition:
             )
 
         return literal_defns
+
+    @staticmethod
+    def load_thumbnails(
+        classes: list[str], yaml_data: dict[str, Any]
+    ) -> Optional[dict[str, Path]]:
+        if "thumbnail_agumentation" in yaml_data:
+            class_to_thumbnails = yaml_data["thumbnail_agumentation"]
+            if not isinstance(class_to_thumbnails, dict):
+                raise InvalidDatasetDefinitionFile(
+                    "thumbnail_agumentation must map class names to paths to thumbnail "
+                    "directories (e.g. `misc: /path/to/thumbnails/misc`)"
+                )
+
+            for k in class_to_thumbnails:
+                if k not in classes:
+                    raise InvalidDatasetDefinitionFile(
+                        f"thumbnail_agumentation class {k} is not a valid class name"
+                    )
+            return class_to_thumbnails
+        return None
 
 
 def check_dataset_paths(
