@@ -3,4 +3,4 @@
 mypy .
 ruff . --fix
 black .
-pytest tests/
+pytest -q tests/

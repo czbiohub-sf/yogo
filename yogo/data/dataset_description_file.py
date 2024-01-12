@@ -43,6 +43,7 @@ New Specification
 
 Here are many examples: https://github.com/czbiohub-sf/lfm-dataset-definitions/
 
+
 Required Fields
 ---------------
 
@@ -54,30 +55,24 @@ Specification"), or (b) an `image_path` and a `label_path` pair (a "Recursive Sp
 All paths are absolute. Here's an example
 
 ```yaml
+# < other required fields >
 dataset_paths:
     image_and_label_dirs:               # These three lines make up one Dataset Specification
         image_path: /path/to/images     # This Dataset Specification is a "Literal Specification"
         label_path: /path/to/labels     # since it defines the actual image and label paths
-    another dataset_defn:                                # These two lines make up another Dataset Specification.
+    another_dataset_defn:                                # These two lines make up another Dataset Specification.
         defn_path: /path/to/another/dataset_defn.yml     # This Dataset Specification is a "Recursive Specification".
 
 # the composition of each of the Dataset Specifications above gives a full Dataset Definition.
 ```
 
-Note: the ability to specify another dataset definition within a dataset definition has some
-restrictions. The dataset definition specifcation is a graph, where the nodes are Dataset
-Definitions. Edges are directed, and are from the Definition to the Definitions that it defines.
-For practical reasons, we can't accept arbitrary graph definitions. For example, if the
-specification has a cycle, we will have to reject it (only trees are allowed). We'll also
-choose to use unique paths - that is, for any Dataset Definition in our tree, there exists
-only one path to it. This'll make it easier keep track of folders. Stricter == Better. Essentially,
-we're defining a Tree ( https://en.wikipedia.org/wiki/Tree_(graph_theory) ).
+Other Required Fields:
 
-Further required fields for the "Top Level" definition file are:
     - classes: a list of class names to be used in the dataset. Conflicting class definitions will be rejected.
     - split_fractions: a dictionary specifying the split fractions for the dataset. Keys can be
     `train`, `val`, and `test`. If `test_paths` is present, `train` should be left out. The values
     are floats between 0 and 1, and the sum of `split_fractions` should be 1. May be depricated!
+
 
 Optional Fields
 ---------------
@@ -88,6 +83,44 @@ Optional fields include:
     - thumbnail_augmentation: a dictionary specifying a class name and pointing to a directory
     of thumbnails. Somewhat niche. Ideally we'd have some sort of other "arbitrary metadata"
     specification that could be used for this sort of thing.
+
+
+Recursive Specifications
+------------------------
+
+They can be either relative or absolute. If they are relative, they're relative to the
+parent directory of the definition file. So, if the definition file is in /path/to/defn_file.yml,
+and was
+
+```yaml
+# < other required fields >
+dataset_paths:
+    in_this_dir:
+        defn_path: dataset_defn.yml
+    in_another_dir:
+        defn_path: ../cool-data/dataset_defn.yml
+```
+
+then the folder structure would be
+
+```console
+$ tree /path
+.
+├── cool-data
+│   └── defn_file.yml
+└── to
+    └── defn_file.yml
+
+```
+
+Note: the ability to specify another dataset definition within a dataset definition has some
+restrictions. The dataset definition specifcation is a graph, where the nodes are Dataset
+Definitions. Edges are directed, and are from the Definition to the Definitions that it defines.
+For practical reasons, we can't accept arbitrary graph definitions. For example, if the
+specification has a cycle, we will have to reject it (only trees are allowed). We'll also
+choose to use unique paths - that is, for any Dataset Definition in our tree, there exists
+only one path to it. This'll make it easier keep track of folders. Stricter == Better. Essentially,
+we're defining a Tree ( https://en.wikipedia.org/wiki/Tree_(graph_theory) ).
 """
 
 
@@ -266,16 +299,11 @@ class DatasetDefinition:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        if "dataset_paths" not in data:
-            raise InvalidDatasetDefinitionFile(
-                f"Missing dataset_paths for definition file at {path}"
-            )
-
-        dataset_specs = cls._load_dataset_specifications(data["dataset_paths"].values())
+        dataset_specs = cls._load_dataset_specifications(path)
 
         if "test_paths" in data:
             test_specs = cls._load_dataset_specifications(
-                data["test_paths"].values(),
+                path,
                 exclude_ymls=[path],
                 exclude_specs=dataset_specs,
                 dataset_paths_key="test_paths",
@@ -325,7 +353,7 @@ class DatasetDefinition:
             _test_dataset_paths=_test_dataset_paths,
             classes=self.classes,
             thumbnail_augmentation=self.thumbnail_augmentation,
-            split_fractions=self.split_fractions
+            split_fractions=self.split_fractions,
         )
 
     def __eq__(self, other: object) -> bool:
@@ -340,8 +368,21 @@ class DatasetDefinition:
         )
 
     @staticmethod
+    def _extract_specs(yml_path: Path) -> List[Dict[str, str]]:
+        with open(yml_path, "r") as f:
+            yaml = YAML(typ="safe")
+            data = yaml.load(f)
+
+        if "dataset_paths" not in data:
+            raise InvalidDatasetDefinitionFile(
+                f"Missing dataset_paths for definition file at {yml_path}"
+            )
+
+        return data["dataset_paths"].values()
+
+    @staticmethod
     def _load_dataset_specifications(
-        specs: List[Dict[str, str]],
+        yml_path: Path,
         exclude_ymls: List[Path] = [],
         exclude_specs: Set[LiteralSpecification] = set(),
         dataset_paths_key: Literal["test_paths", "dataset_paths"] = "dataset_paths",
@@ -363,20 +404,27 @@ class DatasetDefinition:
         """
         literal_defns: Set[LiteralSpecification] = set()
 
+        specs = DatasetDefinition._extract_specs(yml_path)
+
         num_specs_added = 0
+
         for spec in specs:
             if "defn_path" in spec:
                 # extract the paths recursively!
-                new_yml_file = Path(spec["defn_path"])
 
-                if new_yml_file in exclude_ymls:
+                # resolve paths relative to the current yml path
+                new_yml_path = Path(spec["defn_path"])
+                if not new_yml_path.is_absolute():
+                    new_yml_path = yml_path.parent / new_yml_path
+
+                if new_yml_path in exclude_ymls:
                     raise InvalidDatasetDefinitionFile(
                         f"cycle found: {spec['defn_path']} is duplicated"
                     )
 
                 child_specs = DatasetDefinition._load_dataset_specifications(
-                    _extract_dataset_paths(Path(new_yml_file)),
-                    exclude_ymls=[new_yml_file, *exclude_ymls],
+                    new_yml_path,
+                    exclude_ymls=[new_yml_path, *exclude_ymls],
                     dataset_paths_key=dataset_paths_key,
                 )
 
@@ -463,7 +511,6 @@ def _extract_dataset_paths(path: Path) -> List[Dict[str, str]]:
     convert List[Dict[str,Dict[str,str]]] to List[Dict[str,str]],
     since the enclosing dict has only 1 kv pair and 1 value
     """
-
     with open(path, "r") as f:
         yaml = YAML(typ="safe")
         data = yaml.load(f)

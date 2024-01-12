@@ -1,0 +1,14 @@
+dataset_split_fractions:
+  train: 1
+  val: 0
+  test: 0
+dataset_paths:
+  cats1:
+    image_path: ~/Desktop/fake/data/images1
+    label_path: ~/Desktop/fake/data/labels1
+  cats2:
+    image_path: ~/Desktop/fake/data/images2
+    label_path: ~/Desktop/fake/data/labels2
+  cats3:
+    image_path: ~/Desktop/fake/data/images3
+    label_path: ~/Desktop/fake/data/labels3

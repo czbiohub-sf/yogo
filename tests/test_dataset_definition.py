@@ -4,7 +4,8 @@ from yogo.data.dataset_description_file import DatasetDefinition
 
 # TODO need to make the data automatically generated? Or somehow
 # otherwise deal with the absolute paths.
-DEFNS_PATH = Path("/Users/axel.jacobsen/Desktop/fake/defns")
+TEST_DIR = Path(__file__).parent
+DEFNS_PATH = TEST_DIR / "fake-data" / "defns"
 
 
 def test_basic_load():
@@ -36,8 +37,11 @@ def test_basic_recursive_load_1():
     literal_defn_1 = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_1.yml")
     literal_defn_2 = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_2.yml")
     literal_concat = literal_defn_1 + literal_defn_2
-    recursive_defn = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_1_literal_2.yml")
+    recursive_defn = DatasetDefinition.from_yaml(
+        DEFNS_PATH / "recursive_1_literal_2.yml"
+    )
     assert literal_concat == recursive_defn
+
 
 def test_basic_recursive_load_2():
     """
@@ -46,3 +50,13 @@ def test_basic_recursive_load_2():
     recursive_12 = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_1_literal_2.yml")
     recursive_21 = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_2_literal_1.yml")
     assert recursive_12 == recursive_21
+
+
+def test_basic_recursive_load_3():
+    """
+    should be able to recur more than once
+    """
+    print(DEFNS_PATH)
+    recursive_123 = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_rec_123.yml")
+    literal_123 = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_123.yml")
+    assert recursive_123 == literal_123

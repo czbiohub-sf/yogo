@@ -1,0 +1,9 @@
+dataset_split_fractions:
+  train: 1
+  val: 0
+  test: 0
+dataset_paths:
+  cats1:
+    defn_path: literal_1.yml
+  cats3:
+    defn_path: literal_3.yml
