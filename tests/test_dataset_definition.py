@@ -1,6 +1,11 @@
+import pytest
+
 from pathlib import Path
 
-from yogo.data.dataset_description_file import DatasetDefinition
+from yogo.data.dataset_description_file import (
+    DatasetDefinition,
+    InvalidDatasetDefinitionFile,
+)
 
 # TODO need to make the data automatically generated? Or somehow
 # otherwise deal with the absolute paths.
@@ -59,3 +64,35 @@ def test_basic_recursive_load_3():
     recursive_123 = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_rec_123.yml")
     literal_123 = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_123.yml")
     assert recursive_123 == literal_123
+
+
+def test_recursive_cycle_0():
+    """
+    should detect a cycle
+    """
+    with pytest.raises(InvalidDatasetDefinitionFile):
+        DatasetDefinition.from_yaml(DEFNS_PATH / "cycle_1.yml")
+
+    # redundant, but oh well
+    with pytest.raises(InvalidDatasetDefinitionFile):
+        DatasetDefinition.from_yaml(DEFNS_PATH / "cycle_2.yml")
+
+    # more redundant, but may as well!
+    with pytest.raises(InvalidDatasetDefinitionFile):
+        DatasetDefinition.from_yaml(DEFNS_PATH / "cycle_3.yml")
+
+
+def test_recursive_cycle_1():
+    """
+    should detect a cycle
+    """
+    with pytest.raises(InvalidDatasetDefinitionFile):
+        DatasetDefinition.from_yaml(DEFNS_PATH / "cycle_self.yml")
+
+
+def test_unique_paths():
+    """
+    should detect duplicate paths
+    """
+    with pytest.raises(InvalidDatasetDefinitionFile):
+        DatasetDefinition.from_yaml(DEFNS_PATH / "duplicate_paths.yml")

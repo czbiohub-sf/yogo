@@ -1,0 +1,7 @@
+dataset_split_fractions:
+  train: 1
+  val: 0
+  test: 0
+dataset_paths:
+  cats1:
+    defn_path: cycle_1.yml
