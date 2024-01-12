@@ -42,6 +42,8 @@ Potential improvements:
 New Specification
 -----------------
 
+Here are many examples: https://github.com/czbiohub-sf/lfm-dataset-definitions/
+
 Required Fields
 ---------------
 
