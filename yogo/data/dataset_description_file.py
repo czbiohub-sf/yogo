@@ -4,7 +4,7 @@ from ruamel.yaml import YAML
 from pathlib import Path
 from dataclasses import dataclass
 
-from typing import Any, Optional, Literal
+from typing import Any, List, Dict, Optional, Literal
 
 """ I don't *love* the dataset definition that's been defined here anymore.
 
@@ -105,7 +105,7 @@ class SplitFractions:
 
     @classmethod
     def from_dict(
-        cls, dct: dict[str, float], test_paths_present: bool = True
+        cls, dct: Dict[str, float], test_paths_present: bool = True
     ) -> "SplitFractions":
         if test_paths_present and "train" in dct:
             raise InvalidDatasetDefinitionFile(
@@ -132,18 +132,18 @@ class SplitFractions:
             and self.test == other.test
         )
 
-    def to_dict(self) -> dict[str, Optional[float]]:
+    def to_dict(self) -> Dict[str, Optional[float]]:
         return {
             **({"train": self.train} if self.train is not None else {}),
             **({"val": self.val} if self.val is not None else {}),
             **({"test": self.test} if self.test is not None else {}),
         }
 
-    def keys(self) -> list[str]:
+    def keys(self) -> List[str]:
         split_fractions = self.to_dict()
         return list(split_fractions.keys())
 
-    def partition_sizes(self, total_size: int) -> dict[str, int]:
+    def partition_sizes(self, total_size: int) -> Dict[str, int]:
         split_fractions = self.to_dict()
         keys = split_fractions.keys()
 
@@ -185,7 +185,7 @@ class LiteralSpecification:
     label_path: Path
 
     @classmethod
-    def from_dict(self, dct: dict[str, str]) -> "LiteralSpecification":
+    def from_dict(self, dct: Dict[str, str]) -> "LiteralSpecification":
         if len(dct) != 2:
             raise InvalidDatasetDefinitionFile(
                 f"LiteralSpecification must have two keys; found {len(dct)}"
@@ -210,7 +210,7 @@ class LiteralSpecification:
                 Path(dct["image_path"]), Path(dct["label_path"])
             )
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> Dict[str, str]:
         return {"image_path": str(self.image_path), "label_path": str(self.image_path)}
 
     def __eq__(self, other: object) -> bool:
@@ -241,19 +241,19 @@ class DatasetDefinition:
         - thumbnail_augmentation: a dict of {class_name: Path}
     """
 
-    _dataset_paths: list[LiteralSpecification]
-    _test_dataset_paths: list[LiteralSpecification]
+    _dataset_paths: List[LiteralSpecification]
+    _test_dataset_paths: List[LiteralSpecification]
 
-    classes: Optional[list[str]]
-    thumbnail_augmentation: Optional[dict[str, Path]]
+    classes: Optional[List[str]]
+    thumbnail_augmentation: Optional[Dict[str, Path]]
     split_fractions: SplitFractions
 
     @property
-    def dataset_paths(self) -> list[dict[str, str]]:
+    def dataset_paths(self) -> List[Dict[str, str]]:
         return [dp.to_dict() for dp in self._dataset_paths]
 
     @property
-    def test_dataset_paths(self) -> list[dict[str, str]]:
+    def test_dataset_paths(self) -> List[Dict[str, str]]:
         return [dp.to_dict() for dp in self._test_dataset_paths]
 
     @classmethod
@@ -301,11 +301,11 @@ class DatasetDefinition:
 
     @staticmethod
     def _load_dataset_specifications(
-        specs: list[dict[str, str]],
-        exclude_ymls: list[Path] = [],
-        exclude_specs: list[LiteralSpecification] = [],
+        specs: List[Dict[str, str]],
+        exclude_ymls: List[Path] = [],
+        exclude_specs: List[LiteralSpecification] = [],
         dataset_paths_key: Literal["test_paths", "dataset_paths"] = "dataset_paths",
-    ) -> list[LiteralSpecification]:
+    ) -> List[LiteralSpecification]:
         """
         load the list of dataset specifications into a list
         of LiteralSpecification. Essentially, we try to to_dict
@@ -321,7 +321,7 @@ class DatasetDefinition:
         if a literal specifcation is in the training set, you want
         to make sure you exclude it in the testing set.
         """
-        literal_defns: list[LiteralSpecification] = []
+        literal_defns: List[LiteralSpecification] = []
 
         for spec in specs:
             if "defn_path" in spec:
@@ -364,8 +364,8 @@ class DatasetDefinition:
 
     @staticmethod
     def load_thumbnails(
-        classes: list[str], yaml_data: dict[str, Any]
-    ) -> Optional[dict[str, Path]]:
+        classes: List[str], yaml_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Path]]:
         if "thumbnail_agumentation" in yaml_data:
             class_to_thumbnails = yaml_data["thumbnail_agumentation"]
             if not isinstance(class_to_thumbnails, dict):
@@ -384,9 +384,9 @@ class DatasetDefinition:
 
 
 def check_dataset_paths(
-    dataset_paths: list[LiteralSpecification], prune: bool = False
+    dataset_paths: List[LiteralSpecification], prune: bool = False
 ) -> None:
-    to_prune: list[int] = []
+    to_prune: List[int] = []
     for i in range(len(dataset_paths)):
         if not (
             dataset_paths[i].image_path.is_dir()
@@ -413,9 +413,9 @@ def check_dataset_paths(
         del dataset_paths[i]
 
 
-def _extract_dataset_paths(path: Path) -> list[dict[str, str]]:
+def _extract_dataset_paths(path: Path) -> List[Dict[str, str]]:
     """
-    convert list[dict[str,dict[str,str]]] to list[dict[str,str]],
+    convert List[Dict[str,Dict[str,str]]] to List[Dict[str,str]],
     since the enclosing dict has only 1 kv pair and 1 value
     """
     with open(path, "r") as f:
