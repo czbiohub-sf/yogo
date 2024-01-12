@@ -7,8 +7,6 @@ from yogo.data.dataset_description_file import (
     InvalidDatasetDefinitionFile,
 )
 
-# TODO need to make the data automatically generated? Or somehow
-# otherwise deal with the absolute paths.
 TEST_DIR = Path(__file__).parent
 DEFNS_PATH = TEST_DIR / "fake-data" / "defns"
 
