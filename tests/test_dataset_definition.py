@@ -56,7 +56,6 @@ def test_basic_recursive_load_3():
     """
     should be able to recur more than once
     """
-    print(DEFNS_PATH)
     recursive_123 = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_rec_123.yml")
     literal_123 = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_123.yml")
     assert recursive_123 == literal_123
