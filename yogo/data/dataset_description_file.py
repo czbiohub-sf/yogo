@@ -1,10 +1,9 @@
 import warnings
 
-from ruamel.yaml import YAML
 from pathlib import Path
+from ruamel.yaml import YAML
 from dataclasses import dataclass
-
-from typing import Any, List, Dict, Optional, Literal
+from typing import Any, Set, List, Dict, Optional, Literal
 
 """ I don't *love* the dataset definition that's been defined here anymore.
 
@@ -240,8 +239,8 @@ class DatasetDefinition:
         - thumbnail_augmentation: a dict of {class_name: Path}
     """
 
-    _dataset_paths: List[LiteralSpecification]
-    _test_dataset_paths: List[LiteralSpecification]
+    _dataset_paths: Set[LiteralSpecification]
+    _test_dataset_paths: Set[LiteralSpecification]
 
     classes: Optional[List[str]]
     thumbnail_augmentation: Optional[Dict[str, Path]]
@@ -283,28 +282,70 @@ class DatasetDefinition:
             )
             test_paths_present = True
         else:
-            test_specs = []
+            test_specs = set()
             test_paths_present = False
 
         classes = data.get("classes", None)
 
-        return DatasetDefinition(
+        return cls(
             _dataset_paths=dataset_specs,
             _test_dataset_paths=test_specs,
             classes=classes,
-            thumbnail_augmentation=cls.load_thumbnails(classes, data),
+            thumbnail_augmentation=_load_thumbnails(classes, data),
             split_fractions=SplitFractions.from_dict(
                 data["dataset_split_fractions"], test_paths_present=test_paths_present
             ),
+        )
+
+    def __add__(self, other: "DatasetDefinition") -> "DatasetDefinition":
+        """
+        return a new dataset definition that's the concatenation of this definition
+        and another. The classes, thumbnail augmentation, and split fractions must
+        match.
+        """
+        if self.classes != other.classes:
+            raise ValueError(
+                "cannot concatenate two dataset definitions with different classes"
+            )
+        elif self.thumbnail_augmentation != other.thumbnail_augmentation:
+            # TODO I'm not sure how equating dicts works here
+            raise ValueError(
+                "cannot concatenate two dataset definitions with different thumbnail augmentation"
+            )
+        elif self.split_fractions != other.split_fractions:
+            raise ValueError(
+                "cannot concatenate two dataset definitions with different split fractions"
+            )
+
+        _dataset_paths = self._dataset_paths | other._dataset_paths
+        _test_dataset_paths = self._test_dataset_paths | other._test_dataset_paths
+
+        return DatasetDefinition(
+            _dataset_paths=_dataset_paths,
+            _test_dataset_paths=_test_dataset_paths,
+            classes=self.classes,
+            thumbnail_augmentation=self.thumbnail_augmentation,
+            split_fractions=self.split_fractions
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, DatasetDefinition):
+            return False
+        return (
+            self._dataset_paths == other._dataset_paths
+            and self._test_dataset_paths == other._test_dataset_paths
+            and self.classes == other.classes
+            and self.thumbnail_augmentation == other.thumbnail_augmentation
+            and self.split_fractions == other.split_fractions
         )
 
     @staticmethod
     def _load_dataset_specifications(
         specs: List[Dict[str, str]],
         exclude_ymls: List[Path] = [],
-        exclude_specs: List[LiteralSpecification] = [],
+        exclude_specs: Set[LiteralSpecification] = set(),
         dataset_paths_key: Literal["test_paths", "dataset_paths"] = "dataset_paths",
-    ) -> List[LiteralSpecification]:
+    ) -> Set[LiteralSpecification]:
         """
         load the list of dataset specifications into a list
         of LiteralSpecification. Essentially, we try to to_dict
@@ -320,8 +361,9 @@ class DatasetDefinition:
         if a literal specifcation is in the training set, you want
         to make sure you exclude it in the testing set.
         """
-        literal_defns: List[LiteralSpecification] = []
+        literal_defns: Set[LiteralSpecification] = set()
 
+        num_specs_added = 0
         for spec in specs:
             if "defn_path" in spec:
                 # extract the paths recursively!
@@ -338,10 +380,12 @@ class DatasetDefinition:
                     dataset_paths_key=dataset_paths_key,
                 )
 
-                literal_defns.extend(child_specs)
+                num_specs_added += len(child_specs)
+                literal_defns.update(child_specs)
             elif "image_path" in spec and "label_path" in spec:
                 # ez case
-                literal_defns.append(LiteralSpecification.from_dict(spec))
+                num_specs_added += 1
+                literal_defns.add(LiteralSpecification.from_dict(spec))
             else:
                 # even easier case
                 raise InvalidDatasetDefinitionFile(
@@ -349,40 +393,42 @@ class DatasetDefinition:
                 )
 
         # check that all of our paths are unique
-        if len(set(literal_defns + exclude_specs)) != len(
-            literal_defns + exclude_specs
-        ):
+        if len(literal_defns) != num_specs_added:
             # duplicate literal definitions, or one of the literal definitions that we found
             # is in the exclude set. Report them!
             # TODO report which ones are bad <|:^|
             raise InvalidDatasetDefinitionFile(
                 "literal definition found in exclude paths!"
             )
+        elif literal_defns & exclude_specs:
+            raise InvalidDatasetDefinitionFile(
+                "duplicate literal definition found in exclude paths!"
+            )
 
         return literal_defns
 
-    @staticmethod
-    def load_thumbnails(
-        classes: List[str], yaml_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Path]]:
-        if "thumbnail_agumentation" in yaml_data:
-            class_to_thumbnails = yaml_data["thumbnail_agumentation"]
-            if not isinstance(class_to_thumbnails, dict):
+
+def _load_thumbnails(
+    classes: List[str], yaml_data: Dict[str, Any]
+) -> Optional[Dict[str, Path]]:
+    if "thumbnail_agumentation" in yaml_data:
+        class_to_thumbnails = yaml_data["thumbnail_agumentation"]
+        if not isinstance(class_to_thumbnails, dict):
+            raise InvalidDatasetDefinitionFile(
+                "thumbnail_agumentation must map class names to paths to thumbnail "
+                "directories (e.g. `misc: /path/to/thumbnails/misc`)"
+            )
+
+        for k in class_to_thumbnails:
+            if k not in classes:
                 raise InvalidDatasetDefinitionFile(
-                    "thumbnail_agumentation must map class names to paths to thumbnail "
-                    "directories (e.g. `misc: /path/to/thumbnails/misc`)"
+                    f"thumbnail_agumentation class {k} is not a valid class name"
                 )
-
-            for k in class_to_thumbnails:
-                if k not in classes:
-                    raise InvalidDatasetDefinitionFile(
-                        f"thumbnail_agumentation class {k} is not a valid class name"
-                    )
-            return class_to_thumbnails
-        return None
+        return class_to_thumbnails
+    return None
 
 
-def check_dataset_paths(
+def _check_dataset_paths(
     dataset_paths: List[LiteralSpecification], prune: bool = False
 ) -> None:
     to_prune: List[int] = []
@@ -417,6 +463,7 @@ def _extract_dataset_paths(path: Path) -> List[Dict[str, str]]:
     convert List[Dict[str,Dict[str,str]]] to List[Dict[str,str]],
     since the enclosing dict has only 1 kv pair and 1 value
     """
+
     with open(path, "r") as f:
         yaml = YAML(typ="safe")
         data = yaml.load(f)
