@@ -132,7 +132,7 @@ class SplitFractions:
             and self.test == other.test
         )
 
-    def to_dict(self) -> Dict[str, Optional[float]]:
+    def to_dict(self) -> Dict[str, float]:
         return {
             **({"train": self.train} if self.train is not None else {}),
             **({"val": self.val} if self.val is not None else {}),
@@ -140,26 +140,23 @@ class SplitFractions:
         }
 
     def keys(self) -> List[str]:
-        split_fractions = self.to_dict()
-        return list(split_fractions.keys())
+        return list(self.to_dict().keys())
 
     def partition_sizes(self, total_size: int) -> Dict[str, int]:
         split_fractions = self.to_dict()
-        keys = split_fractions.keys()
+        keys = self.keys()
 
-        dataset_sizes = {
-            k: round(split_fractions[k] * total_size) for k in keys[:-1]  # type: ignore
-        }
-        final_dataset_size = {keys[-1]: total_size - sum(dataset_sizes.values())}  # type: ignore
+        dataset_sizes = {k: round(split_fractions[k] * total_size) for k in keys[:-1]}
+        final_dataset_size = {keys[-1]: total_size - sum(dataset_sizes.values())}
         split_sizes = {**dataset_sizes, **final_dataset_size}
 
         all_sizes_are_gt_0 = all([sz >= 0 for sz in split_sizes.values()])
-        split_sizes_eq_dataset_size = sum(split_sizes.values()) == total_size  # type: ignore
+        split_sizes_eq_dataset_size = sum(split_sizes.values()) == total_size
 
         if not (all_sizes_are_gt_0 and split_sizes_eq_dataset_size):
             raise ValueError(
                 f"could not create valid dataset split sizes: {split_sizes}, "
-                f"full dataset size is {total_size}"  # type: ignore
+                f"full dataset size is {total_size}"
             )
 
         return split_sizes
