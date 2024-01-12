@@ -295,6 +295,8 @@ class DatasetDefinition:
         make a list of both, and then try to to_dict the recursive specifications.
         We to_dict the recursive specifications later so we can
         """
+        path = Path(path)  # defensive, in-case we're handed a string
+
         with open(path, "r") as f:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
