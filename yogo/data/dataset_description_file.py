@@ -410,18 +410,20 @@ class DatasetDefinition:
 
         for spec in specs:
             if "defn_path" in spec:
-                # extract the paths recursively!
+                # here we extract the paths recursively!
 
                 # resolve paths relative to the current yml path
                 new_yml_path = Path(spec["defn_path"])
                 if not new_yml_path.is_absolute():
                     new_yml_path = yml_path.parent / new_yml_path
 
+                # check for cycles
                 if new_yml_path in exclude_ymls:
                     raise InvalidDatasetDefinitionFile(
                         f"cycle found: {spec['defn_path']} is duplicated"
                     )
 
+                # recur!
                 child_specs = DatasetDefinition._load_dataset_specifications(
                     new_yml_path,
                     exclude_ymls=[new_yml_path, *exclude_ymls],
