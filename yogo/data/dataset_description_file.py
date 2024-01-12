@@ -126,7 +126,11 @@ class SplitFractions:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SplitFractions):
             return False
-        return self.train == other.train and self.val == other.val and self.test == other.test
+        return (
+            self.train == other.train
+            and self.val == other.val
+            and self.test == other.test
+        )
 
     def to_dict(self) -> dict[str, Optional[float]]:
         return {
