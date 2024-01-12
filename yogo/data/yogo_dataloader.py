@@ -12,7 +12,7 @@ from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.yogo_dataset import ObjectDetectionDataset
-from yogo.data.dataset_description_file import load_dataset_description
+from yogo.data.dataset_description_file import DatasetDefinition
 from yogo.data.data_transforms import (
     DualInputModule,
     RandomHorizontalFlipWithBBs,
@@ -75,7 +75,7 @@ def get_datasets(
     Sy: int,
     normalize_images: bool = False,
 ) -> MutableMapping[str, Dataset[Any]]:
-    dataset_description = load_dataset_description(dataset_description_file)
+    dataset_description = DatasetDefinition.from_yaml(dataset_description_file)
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dsp["image_path"],
