@@ -452,6 +452,7 @@ class DatasetDefinition:
                     f"Invalid spec in dataset_paths: {spec}"
                 )
 
+        # walrus operator :=
         if literal_defns & exclude_specs:
             duplicates = literal_defns & exclude_specs
             raise InvalidDatasetDefinitionFile(
