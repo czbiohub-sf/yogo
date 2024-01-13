@@ -7,6 +7,11 @@ from yogo.data.dataset_description_file import (
     InvalidDatasetDefinitionFile,
 )
 
+"""
+TODO test test_dataset_paths v. dataset_paths, make sure they play well together
+"""
+
+
 TEST_DIR = Path(__file__).parent
 DEFNS_PATH = TEST_DIR / "fake-data" / "defns"
 

@@ -408,8 +408,6 @@ class DatasetDefinition:
 
         specs = DatasetDefinition._extract_specs(yml_path)
 
-        num_specs_added = 0
-
         for spec in specs:
             if "defn_path" in spec:
                 # here we extract the paths recursively!
@@ -432,32 +430,47 @@ class DatasetDefinition:
                     dataset_paths_key=dataset_paths_key,
                 )
 
-                num_specs_added += len(child_specs)
+                DatasetDefinition._check_for_non_disjoint_sets(
+                    literal_defns, child_specs
+                )
+
                 literal_defns.update(child_specs)
+
             elif "image_path" in spec and "label_path" in spec:
                 # ez case
-                num_specs_added += 1
+                literal_spec = LiteralSpecification.from_dict(spec)
+
+                DatasetDefinition._check_for_non_disjoint_sets(
+                    literal_defns, {literal_spec}
+                )
+
                 literal_defns.add(LiteralSpecification.from_dict(spec))
+
             else:
                 # even easier case
                 raise InvalidDatasetDefinitionFile(
                     f"Invalid spec in dataset_paths: {spec}"
                 )
 
-        # check that all of our paths are unique
-        if len(literal_defns) != num_specs_added:
-            # duplicate literal definitions, or one of the literal definitions that we found
-            # is in the exclude set. Report them!
-            # TODO report which ones are bad <|:^|
+        if literal_defns & exclude_specs:
+            duplicates = literal_defns & exclude_specs
             raise InvalidDatasetDefinitionFile(
-                "literal definition found in exclude paths!"
-            )
-        elif literal_defns & exclude_specs:
-            raise InvalidDatasetDefinitionFile(
-                "duplicate literal definition found in exclude paths!"
+                "duplicate literal definition found in exclude paths!\n"
+                f"duplicates are: {duplicates}"
             )
 
         return literal_defns
+
+    @staticmethod
+    def _check_for_non_disjoint_sets(s1: Set, s2: Set):
+        if not s1.isdisjoint(s2):
+            # duplicate literal definitions, or one of the literal definitions that we found
+            # is in the exclude set. Report them!
+            union = s1 | s2
+            raise InvalidDatasetDefinitionFile(
+                "duplicates found when trying to add s1 to s2\n"
+                f"duplicates are: {union}"
+            )
 
 
 def _load_thumbnails(
