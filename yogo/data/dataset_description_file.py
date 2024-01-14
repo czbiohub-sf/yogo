@@ -1,9 +1,10 @@
 import warnings
 
+from enum import Enum
 from pathlib import Path
 from ruamel.yaml import YAML
 from dataclasses import dataclass
-from typing import Any, Set, List, Dict, Optional, Literal
+from typing import Any, Set, List, Dict, Optional
 
 """ I don't *love* the dataset definition that's been defined here anymore.
 
@@ -257,6 +258,11 @@ class LiteralSpecification:
         return hash((self.image_path, self.label_path))
 
 
+class SpecificationsKey(Enum):
+    DATASET_PATHS = "dataset_paths"
+    TEST_DATASET_PATHS = "test_paths"
+
+
 @dataclass
 class DatasetDefinition:
     """The actual Dataset Definition!
@@ -308,7 +314,7 @@ class DatasetDefinition:
                 path,
                 exclude_ymls=[path],
                 exclude_specs=dataset_specs,
-                dataset_paths_key="test_paths",
+                dataset_paths_key=SpecificationsKey.TEST_DATASET_PATHS,
             )
             test_paths_present = True
         else:
@@ -370,24 +376,26 @@ class DatasetDefinition:
         )
 
     @staticmethod
-    def _extract_specs(yml_path: Path) -> List[Dict[str, str]]:
+    def _extract_specs(
+        yml_path: Path, dataset_paths_key: SpecificationsKey
+    ) -> List[Dict[str, str]]:
         with open(yml_path, "r") as f:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        if "dataset_paths" not in data:
+        if dataset_paths_key.value not in data:
             raise InvalidDatasetDefinitionFile(
                 f"Missing dataset_paths for definition file at {yml_path}"
             )
 
-        return data["dataset_paths"].values()
+        return data[dataset_paths_key.value].values()
 
     @staticmethod
     def _load_dataset_specifications(
         yml_path: Path,
         exclude_ymls: List[Path] = [],
         exclude_specs: Set[LiteralSpecification] = set(),
-        dataset_paths_key: Literal["test_paths", "dataset_paths"] = "dataset_paths",
+        dataset_paths_key: SpecificationsKey = SpecificationsKey.DATASET_PATHS,
     ) -> Set[LiteralSpecification]:
         """
         load the list of dataset specifications into a list
@@ -406,7 +414,7 @@ class DatasetDefinition:
         """
         literal_defns: Set[LiteralSpecification] = set()
 
-        specs = DatasetDefinition._extract_specs(yml_path)
+        specs = DatasetDefinition._extract_specs(yml_path, dataset_paths_key)
 
         for spec in specs:
             if "defn_path" in spec:
@@ -464,13 +472,13 @@ class DatasetDefinition:
 
     @staticmethod
     def _check_for_non_disjoint_sets(s1: Set, s2: Set):
-        if not s1.isdisjoint(s2):
+        if s1 & s2:
             # duplicate literal definitions, or one of the literal definitions that we found
             # is in the exclude set. Report them!
-            union = s1 | s2
+            intersection = s1 & s2
             raise InvalidDatasetDefinitionFile(
                 "duplicates found when trying to add s1 to s2\n"
-                f"duplicates are: {union}"
+                f"duplicates are: {intersection}"
             )
 
 
