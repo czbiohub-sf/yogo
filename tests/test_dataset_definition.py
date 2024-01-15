@@ -2,7 +2,7 @@ import pytest
 
 from pathlib import Path
 
-from yogo.data.dataset_description_file import (
+from yogo.data.dataset_definition_file import (
     DatasetDefinition,
     InvalidDatasetDefinitionFile,
 )
