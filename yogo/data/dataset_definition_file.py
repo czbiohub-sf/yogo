@@ -221,6 +221,9 @@ class DatasetDefinition:
 
         classes = data.get("classes", None)
 
+        _dataset_paths = DatasetDefinition._check_dataset_paths(dataset_specs)
+        _test_dataset_paths = DatasetDefinition._check_dataset_paths(test_specs)
+
         return cls(
             _dataset_paths=dataset_specs,
             _test_dataset_paths=test_specs,
@@ -229,14 +232,6 @@ class DatasetDefinition:
             split_fractions=SplitFractions.from_dict(
                 data["dataset_split_fractions"], test_paths_present=test_paths_present
             ),
-        )
-
-    def _check(self) -> None:
-        self._dataset_paths = DatasetDefinition._check_dataset_paths(
-            self._dataset_paths
-        )
-        self._test_dataset_paths = DatasetDefinition._check_dataset_paths(
-            self._test_dataset_paths
         )
 
     def __add__(self, other: "DatasetDefinition") -> "DatasetDefinition":

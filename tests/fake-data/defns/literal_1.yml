@@ -4,5 +4,5 @@ dataset_split_fractions:
   test: 0
 dataset_paths:
   cats1:
-    image_path: ~/Desktop/fake/data/images1
-    label_path: ~/Desktop/fake/data/labels1
+    image_path: tests/fake-data/data/images1
+    label_path: tests/fake-data/data/labels1
