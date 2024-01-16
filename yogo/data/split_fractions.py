@@ -9,13 +9,13 @@ class SplitFractions:
     def __init__(
         self, train: Optional[float], val: Optional[float], test: Optional[float]
     ) -> None:
-        self.train = train or 0
-        self.val = val or 0
-        self.test = test or 0
+        self.train: Optional[float] = train
+        self.val: float = val or 0
+        self.test: float = test or 0
 
-        if not (self.train + self.val + self.test - 1) < 1e-10:
+        if not ((self.train or 0) + self.val + self.test - 1) < 1e-10:
             raise ValueError(
-                f"train, val, and test must sum to 1; they sum to {self.train + self.val + self.test}"
+                f"train, val, and test must sum to 1; they sum to {(self.train or 0) + self.val + self.test}"
             )
 
     @classmethod
@@ -49,9 +49,9 @@ class SplitFractions:
 
     def to_dict(self) -> Dict[str, float]:
         return {
-            **({"train": self.train} if self.train is not None else {}),
-            **({"val": self.val} if self.val is not None else {}),
-            **({"test": self.test} if self.test is not None else {}),
+            **({"train": self.train} if self.train is not None else dict()),
+            **({"val": self.val} if self.val is not None else dict()),
+            **({"test": self.test} if self.test is not None else dict()),
         }
 
     def keys(self) -> List[str]:
