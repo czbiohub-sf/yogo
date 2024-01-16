@@ -216,12 +216,12 @@ class DatasetDefinition:
     split_fractions: SplitFractions
 
     @property
-    def dataset_paths(self) -> List[Dict[str, str]]:
-        return [dp.to_dict() for dp in self._dataset_paths]
+    def dataset_paths(self) -> List[LiteralSpecification]:
+        return list(self._dataset_paths)
 
     @property
-    def test_dataset_paths(self) -> List[Dict[str, str]]:
-        return [dp.to_dict() for dp in self._test_dataset_paths]
+    def test_dataset_paths(self) -> List[LiteralSpecification]:
+        return list(self._test_dataset_paths)
 
     @classmethod
     def from_yaml(cls, path: Path) -> "DatasetDefinition":
