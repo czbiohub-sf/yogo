@@ -401,7 +401,7 @@ class DatasetDefinition:
         return literal_defns
 
     @staticmethod
-    def _check_for_non_disjoint_sets(s1: Set, s2: Set):
+    def _check_for_non_disjoint_sets(s1: Set, s2: Set) -> None:
         if s1 & s2:
             # duplicate literal definitions, or one of the literal definitions that we found
             # is in the exclude set. Report them!
