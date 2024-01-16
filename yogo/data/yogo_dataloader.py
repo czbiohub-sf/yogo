@@ -12,8 +12,9 @@ from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
 from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
+from yogo.data.split_fractions import SplitFractions
 from yogo.data.yogo_dataset import ObjectDetectionDataset
-from yogo.data.dataset_definition_file import DatasetDefinition, SplitFractions
+from yogo.data.dataset_definition_file import DatasetDefinition
 from yogo.data.data_transforms import (
     DualInputModule,
     RandomHorizontalFlipWithBBs,
@@ -71,51 +72,49 @@ def choose_dataloader_num_workers(
 
 
 def get_datasets(
-    dataset_description_file: str,
+    dataset_definition_file: str,
     Sx: int,
     Sy: int,
     normalize_images: bool = False,
 ) -> MutableMapping[str, Dataset[Any]]:
-    dataset_description = DatasetDefinition.from_yaml(Path(dataset_description_file))
+    dataset_definition = DatasetDefinition.from_yaml(Path(dataset_definition_file))
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
-            dsp["image_path"],
-            dsp["label_path"],
+            dsp.image_path,
+            dsp.label_path,
             Sx,
             Sy,
             normalize_images=normalize_images,
         )
-        for dsp in tqdm(dataset_description.dataset_paths, desc="loading dataset")
+        for dsp in tqdm(dataset_definition.dataset_paths, desc="loading dataset")
     )
 
-    if dataset_description.test_dataset_paths is not None:
+    if dataset_definition.test_dataset_paths is not None:
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
             ObjectDetectionDataset(
-                dsp["image_path"],
-                dsp["label_path"],
+                dsp.image_path,
+                dsp.label_path,
                 Sx,
                 Sy,
                 normalize_images=normalize_images,
             )
             for dsp in tqdm(
-                dataset_description.test_dataset_paths, desc="loading test dataset"
+                dataset_definition.test_dataset_paths, desc="loading test dataset"
             )
         )
         split_datasets: MutableMapping[str, Dataset[Any]] = {
             "train": full_dataset,
-            **split_dataset(test_dataset, dataset_description.split_fractions),
+            **split_dataset(test_dataset, dataset_definition.split_fractions),
         }
     else:
-        split_datasets = split_dataset(
-            full_dataset, dataset_description.split_fractions
-        )
+        split_datasets = split_dataset(full_dataset, dataset_definition.split_fractions)
 
     # hardcode the blob agumentation for now
     # this should be moved into the dataset description file
-    if dataset_description.thumbnail_augmentation is not None:
+    if dataset_definition.thumbnail_augmentation is not None:
         # some issue w/ Dict v Mapping TODO come back to this
         bd = BlobDataset(
-            dataset_description.thumbnail_augmentation,  # type: ignore
+            dataset_definition.thumbnail_augmentation,  # type: ignore
             Sx=Sx,
             Sy=Sy,
             n=8,
