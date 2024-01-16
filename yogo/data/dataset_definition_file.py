@@ -8,40 +8,8 @@ from typing import Any, Set, List, Dict, Optional
 
 from yogo.data.split_fractions import SplitFractions
 
-""" I don't *love* the dataset definition that's been defined here anymore.
-
-Here are the issues:
-    - 'split fractions' are a part of the definition file, meaning that if we
-    want to change the split, we need to change the definition file. This is
-    occuring more than expected, so I think it should be separated
-    - it's hard to keep track of all the combinations of dataset paths. Looking
-    into it this morning, I've found some discrepancies (specifically some
-    dataset paths that are missing from a given definition file) that should be
-    fixed
-    - it's hard to find these discrepancies, since it's just a list of paths. When
-    you have > 10, it's difficult for the human brain to find duplicates.
-    - `load_dataset_description` is a horrendously long and difficult-to-read
-    function. This should be easy to parse!
-
-Things that are good:
-    - the 'definition file' method of collecting data is great for modularity and
-    organization. I've found myself using this file a lot outside of YOGO, which
-    lends credability to it's usefulness.
-
-Potential improvements:
-    - recursive definitions: I should be able to list some specific paths in a file
-    and reference that file in another. E.g. a "uganda-healthy" dataset definition
-    could be imported into a "uganda" dataset definition and another file. This would
-    simplify the composition of these files tremendously.
-    - test tools: should be able to have a tool to check the validity of dataset
-    definitions, such as looking for duplicate paths (perhaps in this file, in an
-    'if __main__' block, or maybe in the YOGO cli?)
-    - moving split-fractions to YOGO: I'm somewhat undecided. This is a more minor fix
-    compared to the above.
-
-------------------------------------------------------------------------------------------------------------------
-
-New Specification
+"""
+Specification
 -----------------
 
 Here are many examples: https://github.com/czbiohub-sf/lfm-dataset-definitions/
