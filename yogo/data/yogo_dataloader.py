@@ -13,7 +13,7 @@ from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.yogo_dataset import ObjectDetectionDataset
-from yogo.data.dataset_description_file import DatasetDefinition, SplitFractions
+from yogo.data.dataset_definition_file import DatasetDefinition, SplitFractions
 from yogo.data.data_transforms import (
     DualInputModule,
     RandomHorizontalFlipWithBBs,
