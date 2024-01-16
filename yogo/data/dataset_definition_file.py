@@ -225,10 +225,18 @@ class DatasetDefinition:
             _dataset_paths=dataset_specs,
             _test_dataset_paths=test_specs,
             classes=classes,
-            thumbnail_augmentation=_load_thumbnails(classes, data),
+            thumbnail_augmentation=DatasetDefinition._load_thumbnails(classes, data),
             split_fractions=SplitFractions.from_dict(
                 data["dataset_split_fractions"], test_paths_present=test_paths_present
             ),
+        )
+
+    def _check(self) -> None:
+        self._dataset_paths = DatasetDefinition._check_dataset_paths(
+            self._dataset_paths
+        )
+        self._test_dataset_paths = DatasetDefinition._check_dataset_paths(
+            self._test_dataset_paths
         )
 
     def __add__(self, other: "DatasetDefinition") -> "DatasetDefinition":
@@ -370,78 +378,76 @@ class DatasetDefinition:
 
     @staticmethod
     def _check_for_non_disjoint_sets(s1: Set, s2: Set) -> None:
-        if s1 & s2:
+        # walrus :=
+        intersection = s1 & s2
+        if intersection:
             # duplicate literal definitions, or one of the literal definitions that we found
             # is in the exclude set. Report them!
-            intersection = s1 & s2
             raise InvalidDatasetDefinitionFile(
                 "duplicates found when trying to add s1 to s2\n"
                 f"duplicates are: {intersection}"
             )
 
+    @staticmethod
+    def _load_thumbnails(
+        classes: List[str], yaml_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Path]]:
+        if "thumbnail_agumentation" in yaml_data:
+            class_to_thumbnails = yaml_data["thumbnail_agumentation"]
+            if not isinstance(class_to_thumbnails, dict):
+                raise InvalidDatasetDefinitionFile(
+                    "thumbnail_agumentation must map class names to paths to thumbnail "
+                    "directories (e.g. `misc: /path/to/thumbnails/misc`)"
+                )
 
-def _load_thumbnails(
-    classes: List[str], yaml_data: Dict[str, Any]
-) -> Optional[Dict[str, Path]]:
-    if "thumbnail_agumentation" in yaml_data:
-        class_to_thumbnails = yaml_data["thumbnail_agumentation"]
-        if not isinstance(class_to_thumbnails, dict):
+            for k in class_to_thumbnails:
+                if k not in classes:
+                    raise InvalidDatasetDefinitionFile(
+                        f"thumbnail_agumentation class {k} is not a valid class name"
+                    )
+            return class_to_thumbnails
+        return None
+
+    @staticmethod
+    def _check_dataset_paths(
+        dataset_paths: Set[LiteralSpecification], prune: bool = False
+    ) -> Set[LiteralSpecification]:
+        to_prune: Set[LiteralSpecification] = set()
+        for spec in dataset_paths:
+            if not (
+                spec.image_path.is_dir()
+                and spec.label_path.is_dir()
+                and len(list(spec.label_path.iterdir())) > 0
+            ):
+                if prune:
+                    warnings.warn(
+                        f"image_path or label_path do not lead to a directory, or there are no labels.\n"
+                        f"image_path={spec.image_path}\n"
+                        f"label_path={spec.label_path}\n"
+                        f"will prune."
+                    )
+                    to_prune.add(spec)
+                else:
+                    raise FileNotFoundError(
+                        f"image_path or label_path do not lead to a directory, or there are no labels.\n"
+                        f"image_path={spec.image_path}\n"
+                        f"label_path={spec.label_path}\n"
+                    )
+        return dataset_paths - to_prune
+
+    @staticmethod
+    def _extract_dataset_paths(path: Path) -> List[Dict[str, str]]:
+        """
+        convert List[Dict[str,Dict[str,str]]] to List[Dict[str,str]],
+        since the enclosing dict has only 1 kv pair and 1 value
+        """
+        with open(path, "r") as f:
+            yaml = YAML(typ="safe")
+            data = yaml.load(f)
+
+        if "dataset_paths" not in data:
             raise InvalidDatasetDefinitionFile(
-                "thumbnail_agumentation must map class names to paths to thumbnail "
-                "directories (e.g. `misc: /path/to/thumbnails/misc`)"
+                f"Missing dataset_paths for definition file at {path}"
             )
 
-        for k in class_to_thumbnails:
-            if k not in classes:
-                raise InvalidDatasetDefinitionFile(
-                    f"thumbnail_agumentation class {k} is not a valid class name"
-                )
-        return class_to_thumbnails
-    return None
-
-
-def _check_dataset_paths(
-    dataset_paths: List[LiteralSpecification], prune: bool = False
-) -> None:
-    to_prune: List[int] = []
-    for i in range(len(dataset_paths)):
-        if not (
-            dataset_paths[i].image_path.is_dir()
-            and dataset_paths[i].label_path.is_dir()
-            and len(list(dataset_paths[i].label_path.iterdir())) > 0
-        ):
-            if prune:
-                warnings.warn(
-                    f"image_path or label_path do not lead to a directory, or there are no labels.\n"
-                    f"image_path={dataset_paths[i].image_path}\n"
-                    f"label_path={dataset_paths[i].label_path}\n"
-                    f"will prune."
-                )
-                to_prune.append(i)
-            else:
-                raise FileNotFoundError(
-                    f"image_path or label_path do not lead to a directory, or there are no labels.\n"
-                    f"image_path={dataset_paths[i].image_path}\n"
-                    f"label_path={dataset_paths[i].label_path}"
-                )
-
-    # reverse order so we don't move around the to-delete items in the list
-    for i in to_prune[::-1]:
-        del dataset_paths[i]
-
-
-def _extract_dataset_paths(path: Path) -> List[Dict[str, str]]:
-    """
-    convert List[Dict[str,Dict[str,str]]] to List[Dict[str,str]],
-    since the enclosing dict has only 1 kv pair and 1 value
-    """
-    with open(path, "r") as f:
-        yaml = YAML(typ="safe")
-        data = yaml.load(f)
-
-    if "dataset_paths" not in data:
-        raise InvalidDatasetDefinitionFile(
-            f"Missing dataset_paths for definition file at {path}"
-        )
-
-    return list(data["dataset_paths"].values())
+        return list(data["dataset_paths"].values())
