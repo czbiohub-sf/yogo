@@ -30,37 +30,44 @@ This is what you need most of the time. It lets you run YOGO on a dataset from t
 
 ```console
 $ yogo infer --help
-usage: yogo infer [-h] [--output-dir OUTPUT_DIR] [--draw-boxes | --no-draw-boxes]
-                  [--save-preds | --no-save-preds] [--count | --no-count] [--batch-size BATCH_SIZE]
-                  [--crop-height CROP_HEIGHT] [--output-img-filetype {.png,.tif,.tiff}]
-                  [--obj-thresh OBJ_THRESH] [--iou-thresh IOU_THRESH]
-                  (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO_ZARR)
+usage: yogo infer [-h] [--output-dir OUTPUT_DIR] [--draw-boxes | --no-draw-boxes] [--save-preds | --no-save-preds]
+                  [--save-npy | --no-save-npy] [--count | --no-count] [--batch-size BATCH_SIZE] [--device [DEVICE]]
+                  [--crop-height CROP_HEIGHT] [--output-img-filetype {.png,.tif,.tiff}] [--obj-thresh OBJ_THRESH]
+                  [--iou-thresh IOU_THRESH] [--min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD]
+                  [--heatmap-mask-path HEATMAP_MASK_PATH] (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO_ZARR)
                   pth_path
 
 positional arguments:
   pth_path              path to .pth file defining the model
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --output-dir OUTPUT_DIR
                         path to directory for results, either --draw-boxes or --save-preds
   --draw-boxes, --no-draw-boxes
                         plot and either save (if --output-dir is set) or show each image (default: False)
   --save-preds, --no-save-preds
-                        save predictions in YOGO label format - requires `--output-dir` to be set
-                        (default: False)
+                        save predictions in YOGO label format - requires `--output-dir` to be set (default: False)
+  --save-npy, --no-save-npy
+                        Parse and save predictions in the same format as on scope - requires `--output-dir` to be set (default:
+                        False)
   --count, --no-count   display the final predicted counts per-class (default: False)
   --batch-size BATCH_SIZE
-                        batch size for inference (default 16)
+                        batch size for inference (default: 64)
+  --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'
   --crop-height CROP_HEIGHT
-                        crop image verically - '-c 0.25' will crop images to (round(0.25 * height),
-                        width)
+                        crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)
   --output-img-filetype {.png,.tif,.tiff}
-                        filetype for output images (default .png)
+                        filetype for output images (default: .png)
   --obj-thresh OBJ_THRESH
-                        objectness threshold for predictions (default 0.5)
+                        objectness threshold for predictions (default: 0.5)
   --iou-thresh IOU_THRESH
-                        intersection over union threshold for predictions (default 0.5)
+                        intersection over union threshold for predictions (default: 0.5)
+  --min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD
+                        minimum confidence for a class to be considered - i.e. the max confidence must be greater than this value
+                        (default: 0.0)
+  --heatmap-mask-path HEATMAP_MASK_PATH
+                        path to heatmap mask for the run (default: None)
   --path-to-images PATH_TO_IMAGES
                         path to image or images
   --path-to-zarr PATH_TO_ZARR
@@ -79,17 +86,20 @@ There are a *lot* of options here. At the most basic level, `yogo train path/to/
 
 ```console
 $ yogo train --help
-usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED] [-bs BATCH_SIZE] [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR] [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY] [--epochs EPOCHS] [--no-obj-weight NO_OBJ_WEIGHT]
-                  [--iou-weight IOU_WEIGHT] [--classify-weight CLASSIFY_WEIGHT] [--healthy-weight HEALTHY_WEIGHT] [--no-classify | --no-no-classify] [--normalize-images | --no-normalize-images] [--image-shape IMAGE_SHAPE IMAGE_SHAPE]
-                  [--model [{base_model,smaller_funkier,even_smaller_funkier,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized,convnext_small}]] [--half | --no-half]
-                  [--device [DEVICE]] [--note NOTE] [--name NAME] [--tag TAG]
+usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED] [-bs BATCH_SIZE] [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR]
+                  [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY] [--epochs EPOCHS] [--no-obj-weight NO_OBJ_WEIGHT]
+                  [--iou-weight IOU_WEIGHT] [--classify-weight CLASSIFY_WEIGHT] [--healthy-weight HEALTHY_WEIGHT]
+                  [--no-classify | --no-no-classify] [--normalize-images | --no-normalize-images]
+                  [--image-shape IMAGE_SHAPE IMAGE_SHAPE]
+                  [--model [{base_model,smaller_funkier,even_smaller_funkier,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized,convnext_small}]]
+                  [--half | --no-half] [--device [DEVICE]] [--note NOTE] [--name NAME] [--tag TAG]
                   dataset_descriptor_file
 
 positional arguments:
   dataset_descriptor_file
                         path to yml dataset descriptor file
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --from-pretrained FROM_PRETRAINED
                         start training from the provided pth file
@@ -120,7 +130,8 @@ optional arguments:
                         size of images for training (e.g. --image-shape 772 1032) (default: 772 1032)
   --model [{base_model,smaller_funkier,even_smaller_funkier,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized,convnext_small}]
                         model version to use - do not use with --from-pretrained, as we use the pretrained model
-  --half, --no-half     half precision (i.e. fp16) training (default: False) (default: False)
+  --half, --no-half     half precision (i.e. fp16) training. When true, try doubling your batch size to get best use of GPU.
+                        (default: False) (default: False)
   --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'
   --note NOTE           note for the run (e.g. 'run on a TI-82')
   --name NAME           name for the run (e.g. 'ti-82_run')
@@ -162,9 +173,7 @@ This tool is for exporting a `.pth` file to `.onnx` and OpenVino's [IR](https://
 
 ```console
 $ yogo export --help
-usage: yogo export [-h] [--crop-height CROP_HEIGHT] [--output-filename OUTPUT_FILENAME]
-                   [--simplify | --no-simplify]
-                   input
+usage: yogo export [-h] [--crop-height CROP_HEIGHT] [--output-filename OUTPUT_FILENAME] [--simplify | --no-simplify] input
 
 positional arguments:
   input                 path to input pth file
@@ -176,5 +185,5 @@ options:
   --output-filename OUTPUT_FILENAME
                         output filename
   --simplify, --no-simplify
-                        attempt to simplify the onnx model
+                        attempt to simplify the onnx model (default: True)
 ```
