@@ -78,7 +78,7 @@ then the folder structure would be
 $ tree /path
 .
 ├── cool-data
-│   └── defn_file.yml
+│   └── defn_file.yml
 └── to
     └── defn_file.yml
 
