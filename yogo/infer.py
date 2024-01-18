@@ -356,6 +356,8 @@ def predict(
         else:
             fp = Path.cwd() / Path(filename).with_suffix(".npy")
 
+        indices = pred_tensors[0, :].argsort()
+        pred_tensors = pred_tensors[:, indices]
         np.save(fp, pred_tensors)
 
         write_metadata(
