@@ -5,6 +5,7 @@ from pathlib import Path
 from ruamel.yaml import YAML
 from dataclasses import dataclass
 from typing import Any, Set, List, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor, wait
 
 from yogo.data.split_fractions import SplitFractions
 
@@ -205,12 +206,14 @@ class DatasetDefinition:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        dataset_specs = cls._load_dataset_specifications(path)
+        tpe = ThreadPoolExecutor()
+
+        dataset_specs = cls._load_dataset_specifications(tpe, path)
 
         if "test_paths" in data:
             test_specs = cls._load_dataset_specifications(
+                tpe,
                 path,
-                exclude_ymls=[path],
                 exclude_specs=dataset_specs,
                 dataset_paths_key=SpecificationsKey.TEST_DATASET_PATHS,
             )
@@ -293,6 +296,7 @@ class DatasetDefinition:
 
     @staticmethod
     def _load_dataset_specifications(
+        tpe: ThreadPoolExecutor,
         yml_path: Path,
         exclude_ymls: List[Path] = [],
         exclude_specs: Set[LiteralSpecification] = set(),
@@ -317,6 +321,11 @@ class DatasetDefinition:
 
         specs = DatasetDefinition._extract_specs(yml_path, dataset_paths_key)
 
+        if yml_path not in exclude_ymls:
+            exclude_ymls.append(yml_path)
+
+        futs = []
+
         for spec in specs:
             if "defn_path" in spec:
                 # here we extract the paths recursively!
@@ -333,17 +342,15 @@ class DatasetDefinition:
                     )
 
                 # recur!
-                child_specs = DatasetDefinition._load_dataset_specifications(
-                    new_yml_path,
-                    exclude_ymls=[new_yml_path, *exclude_ymls],
-                    dataset_paths_key=dataset_paths_key,
+                futs.append(
+                    tpe.submit(
+                        DatasetDefinition._load_dataset_specifications,
+                        tpe,
+                        new_yml_path,
+                        exclude_ymls=[new_yml_path, *exclude_ymls],
+                        dataset_paths_key=dataset_paths_key,
+                    )
                 )
-
-                DatasetDefinition._check_for_non_disjoint_sets(
-                    literal_defns, child_specs
-                )
-
-                literal_defns.update(child_specs)
 
             elif "image_path" in spec and "label_path" in spec:
                 # ez case
@@ -360,6 +367,15 @@ class DatasetDefinition:
                 raise InvalidDatasetDefinitionFile(
                     f"Invalid spec in dataset_paths: {spec}"
                 )
+
+        wait(futs)
+
+        for fut in futs:
+            child_specs = fut.result()
+
+            DatasetDefinition._check_for_non_disjoint_sets(literal_defns, child_specs)
+
+            literal_defns.update(child_specs)
 
         # walrus operator :=
         if literal_defns & exclude_specs:
