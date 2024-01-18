@@ -308,8 +308,8 @@ def predict(
         elif save_npy:
             res = res.cpu().numpy()
 
-            for i, j in enumerate(range(res.shape[0])):
-                img_index = int(Path(fnames[i]).stem.split("_")[1])
+            for j in range(res.shape[0]):
+                img_index = (i * batch_size) + j
                 parsed = format_to_numpy(
                     img_index, res[j, ...], img_h, 1032, heatmap_mask=heatmap_mask
                 )

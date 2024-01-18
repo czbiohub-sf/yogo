@@ -162,15 +162,10 @@ def format_to_numpy(
     )
 
     img_ids = np.ones(filtered_pred.shape[1]).astype(np_dtype) * img_id
-    xc = filtered_pred[0, :] * img_w
-    yc = filtered_pred[1, :] * img_h
-    pred_half_width = filtered_pred[2] / 2 * img_w
-    pred_half_height = filtered_pred[3] / 2 * img_h
-
-    tlx = np.clip(np.rint(xc - pred_half_width).astype(np_dtype), 0, img_w)
-    tly = np.clip(np.rint(yc - pred_half_height).astype(np_dtype), 0, img_h)
-    brx = np.clip(np.rint(xc + pred_half_width).astype(np_dtype), 0, img_w)
-    bry = np.clip(np.rint(yc + pred_half_height).astype(np_dtype), 0, img_h)
+    tlx = filtered_pred[0, :] * img_w
+    tly = filtered_pred[1, :] * img_h
+    brx = filtered_pred[2, :] * img_w
+    bry = filtered_pred[3, :] * img_h
 
     objectness = filtered_pred[4, :].astype(np_dtype)
     all_confs = filtered_pred[5:, :].astype(np_dtype)
