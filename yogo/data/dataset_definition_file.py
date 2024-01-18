@@ -221,8 +221,8 @@ class DatasetDefinition:
 
         classes = data.get("classes", None)
 
-        _dataset_paths = DatasetDefinition._check_dataset_paths(dataset_specs)
-        _test_dataset_paths = DatasetDefinition._check_dataset_paths(test_specs)
+        dataset_specs = DatasetDefinition._check_dataset_paths(dataset_specs)
+        test_specs = DatasetDefinition._check_dataset_paths(test_specs)
 
         return cls(
             _dataset_paths=dataset_specs,
