@@ -49,9 +49,9 @@ class ImagePathDataset(ImageAndIdDataset):
         if path_to_data.is_file() and path_to_data.suffix == ".png":
             img_paths = [path_to_data]
         else:
-            img_paths = [
-                p for p in path_to_data.glob("*.png") if not p.name.startswith(".")
-            ]
+            img_paths = sorted(
+                [p for p in path_to_data.glob("*.png") if not p.name.startswith(".")]
+            )
         if len(img_paths) == 0:
             raise FileNotFoundError(f"{str(path_to_data)} does not contain any images")
         return np.array(img_paths).astype(np.string_)

@@ -115,41 +115,6 @@ def format_preds(
     return preds
 
 
-def apply_heatmap(raw_preds: npt.NDArray, heatmap_mask: torch.Tensor):
-    """
-    Heatmap nuke the raw YOGO prediction tensor with the given heatmap_mask.
-
-
-    Parameters
-    ----------
-    raw_preds: torch.Tensor
-        Raw yogo output (unbatched)
-    heatmap_mask: torch.Tensor
-
-    Returns
-    -------
-    torch.Tensor
-
-    Background
-    ----------
-    Over the duration of a run, parasites should be detected roughly uniformly throughout
-    the image (in other words, if a lot of parasites are found at one specific location,
-    those are likely erroneous calls due to debris or a stuck cell).
-
-    Heatmap nuking involves setting those locations where parasites have been (erroneously)
-    preferentially found to zero.
-    """
-
-    # Only mask rings/trophs/schizonts/gametocytes
-    # We mask classes by position since some areas of a chip can preferentially
-    # predict certain classes incorrectly while predicting other classes correctly.
-    # Indices for the above in the heatmap are: 1, 2, 3, 4
-    idxs = [1, 2, 3, 4]
-    for idx in idxs:
-        raw_preds[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
-    return raw_preds
-
-
 def format_to_numpy(
     img_id: int,
     prediction_tensor: np.ndarray,
@@ -186,25 +151,21 @@ def format_to_numpy(
     in the dataset (i.e all the RBCs + WBCs + misc).
     """
 
-    mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
-
-    if heatmap_mask is not None:
-        prediction_tensor = apply_heatmap(prediction_tensor, heatmap_mask)
-
-    n, sy, sx = prediction_tensor.shape
-    prediction_tensor = prediction_tensor.reshape((n, sy * sx))
-    filtered_pred = prediction_tensor[:, mask]
+    filtered_pred = (
+        format_preds(
+            torch.from_numpy(prediction_tensor),
+            box_format="xyxy",
+            heatmap_mask=heatmap_mask,
+        )
+        .numpy()
+        .T
+    )
 
     img_ids = np.ones(filtered_pred.shape[1]).astype(np_dtype) * img_id
-    xc = filtered_pred[0, :] * img_w
-    yc = filtered_pred[1, :] * img_h
-    pred_half_width = filtered_pred[2] / 2 * img_w
-    pred_half_height = filtered_pred[3] / 2 * img_h
-
-    tlx = np.clip(np.rint(xc - pred_half_width).astype(np_dtype), 0, img_w)
-    tly = np.clip(np.rint(yc - pred_half_height).astype(np_dtype), 0, img_h)
-    brx = np.clip(np.rint(xc + pred_half_width).astype(np_dtype), 0, img_w)
-    bry = np.clip(np.rint(yc + pred_half_height).astype(np_dtype), 0, img_h)
+    tlx = filtered_pred[0, :] * img_w
+    tly = filtered_pred[1, :] * img_h
+    brx = filtered_pred[2, :] * img_w
+    bry = filtered_pred[3, :] * img_h
 
     objectness = filtered_pred[4, :].astype(np_dtype)
     all_confs = filtered_pred[5:, :].astype(np_dtype)
