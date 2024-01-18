@@ -186,14 +186,19 @@ def format_to_numpy(
     in the dataset (i.e all the RBCs + WBCs + misc).
     """
 
-    mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
+    # mask = (prediction_tensor[4:5, :, :] > 0.5).flatten()
 
-    if heatmap_mask is not None:
-        prediction_tensor = apply_heatmap(prediction_tensor, heatmap_mask)
+    # if heatmap_mask is not None:
+    #     prediction_tensor = apply_heatmap(prediction_tensor, heatmap_mask)
 
-    n, sy, sx = prediction_tensor.shape
-    prediction_tensor = prediction_tensor.reshape((n, sy * sx))
-    filtered_pred = prediction_tensor[:, mask]
+    # n, sy, sx = prediction_tensor.shape
+    # prediction_tensor = prediction_tensor.reshape((n, sy * sx))
+    # filtered_pred = prediction_tensor[:, mask]
+    filtered_pred = format_preds(
+        torch.from_numpy(prediction_tensor),
+        box_format="xyxy",
+        heatmap_mask=heatmap_mask,
+    )
 
     img_ids = np.ones(filtered_pred.shape[1]).astype(np_dtype) * img_id
     xc = filtered_pred[0, :] * img_w
