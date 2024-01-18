@@ -198,7 +198,7 @@ def format_to_numpy(
         torch.from_numpy(prediction_tensor),
         box_format="xyxy",
         heatmap_mask=heatmap_mask,
-    )
+    ).numpy()
 
     img_ids = np.ones(filtered_pred.shape[1]).astype(np_dtype) * img_id
     xc = filtered_pred[0, :] * img_w
