@@ -245,6 +245,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
             image = image / 255
         return image, labels
 
+    def __len__(self) -> int:
+        return len(self._image_paths)
+
     def calc_class_counts(self) -> torch.Tensor:
         """
         returns a tensor of shape (num_classes,) where each index is the number of
@@ -256,6 +259,3 @@ class ObjectDetectionDataset(datasets.VisionDataset):
             for label in labels:
                 class_counts[int(label[0])] += 1
         return class_counts
-
-    def __len__(self) -> int:
-        return len(self._image_paths)

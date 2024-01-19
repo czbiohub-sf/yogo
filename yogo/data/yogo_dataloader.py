@@ -7,9 +7,10 @@ from tqdm import tqdm
 from pathlib import Path
 from functools import partial
 
-from torch.utils.data import Dataset, ConcatDataset, DataLoader, random_split
+from torch.utils.data.distributed import DistributedSampler
+from torch.utils.data import Dataset, ConcatDataset, DataLoader, Subset, random_split
 
-from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable
+from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable, Union
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.split_fractions import SplitFractions
@@ -21,7 +22,6 @@ from yogo.data.data_transforms import (
     RandomVerticalFlipWithBBs,
     MultiArgSequential,
 )
-from torch.utils.data.distributed import DistributedSampler
 
 
 def guess_suggested_num_workers() -> Optional[int]:
@@ -233,7 +233,21 @@ def get_dataloader(
     return d
 
 
-def get_class_counts(d: DataLoader[ConcatDataset], num_classes: int) -> torch.Tensor:
+DATALOADER_TYPES = Union[
+    DataLoader[ConcatDataset[ObjectDetectionDataset]],
+    DataLoader[Subset[ConcatDataset[ObjectDetectionDataset]]],
+]
+
+
+DATASET_TYPES = Union[
+    ObjectDetectionDataset,
+    Subset[ConcatDataset[ObjectDetectionDataset]],
+]
+
+
+def get_class_counts(
+    d: DATALOADER_TYPES, num_classes: int, verbose: bool = True
+) -> torch.Tensor:
     """
     d is a Dataloader of one ConcatDataset of ObjectDetectionDatasets and BlobGen datasets.
     This function should iterate through the datasets of d, ignore BlobDataset datasets,
@@ -245,18 +259,30 @@ def get_class_counts(d: DataLoader[ConcatDataset], num_classes: int) -> torch.Te
     datasets in ConcatDatasets, calculating the class counts in each.
     """
     class_counts = torch.zeros(num_classes, dtype=torch.long)
-    dset_iters = [d.dataset.datasets]  # type:ignore
-    for dset_iter in dset_iters:
-        for dataset in tqdm(dset_iter, desc="calculating class weights"):
-            if isinstance(dataset, ConcatDataset):
-                dset_iters.append(dataset.datasets)
-            elif isinstance(dataset, ObjectDetectionDataset):
-                class_counts += dataset.calc_class_counts()
 
-    if class_counts is None:
-        raise ValueError("could not find any ObjectDetectionDatasets in ConcatDataset")
+    pbar = tqdm(
+        total=len(d) * (d.batch_size or 1), desc="counting...", disable=not verbose
+    )
+    for _, labels in d:  #:
+        bs, pd, Sy, Sx = labels.shape
+        labels = labels.permute(1, 0, 2, 3)
+        labels = labels.reshape(pd, bs * Sy * Sx)
+        labels = labels[:, labels[0, :] == 1].long()
+        class_counts += torch.bincount(labels[5, :], minlength=num_classes)
+        pbar.update(bs)
 
     return class_counts
+
+
+def get_image_count(d: DATALOADER_TYPES) -> int:
+    s = 0
+    if isinstance(d.dataset, ConcatDataset):
+        s += d.dataset.cumulative_sizes[-1]
+    elif isinstance(d.dataset, Subset):
+        s += len(d.dataset)
+    else:
+        raise TypeError(f"unknown type {type(d.dataset)}")
+    return s
 
 
 def normalized_inverse_frequencies(d: List[int]) -> torch.Tensor:
