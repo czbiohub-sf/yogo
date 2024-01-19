@@ -313,6 +313,7 @@ def predict(
             )
         elif save_npy:
             res = res.cpu().numpy()
+
             for j in range(res.shape[0]):
                 img_index = (i * batch_size) + j
                 parsed = format_to_numpy(

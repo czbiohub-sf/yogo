@@ -1,0 +1,8 @@
+dataset_split_fractions:
+  train: 1
+  val: 0
+  test: 0
+dataset_paths:
+  cats1:
+    image_path: tests/fake-data/data/images1
+    label_path: tests/fake-data/data/labels1

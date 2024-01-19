@@ -1,0 +1,8 @@
+dataset_split_fractions:
+  train: 1
+  val: 0
+  test: 0
+dataset_paths:
+  cats1:
+    image_path: tests/fake-data/data/who-has-the-pipe
+    label_path: tests/fake-data/data/where-is-the-pipe
