@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import time
-import wandb
 import torch
 import socket
 
@@ -82,6 +81,9 @@ def get_wandb_roc(
         for x, y, thr in zip(xx, yy, thrs)
     ]
 
+    # wandb import is slow so only import when needed
+    import wandb
+
     return wandb.Table(data=data, columns=["fpr", "tpr", "threshold", "class"])
 
 
@@ -107,6 +109,9 @@ def get_wandb_confusion(
                     confusion_data[i, j],
                 )
             )
+
+    # wandb import is slow so only import when needed
+    import wandb
 
     return wandb.plot_table(
         "wandb/confusion_matrix/v1",

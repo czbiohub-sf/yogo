@@ -1,0 +1,10 @@
+dataset_split_fractions:
+  train: 1
+  val: 0
+  test: 0
+
+dataset_paths:
+  cats1:
+    defn_path: recursive_1.yml
+  cats23:
+    defn_path: recursive_23.yml
