@@ -76,6 +76,7 @@ def get_datasets(
     Sx: int,
     Sy: int,
     normalize_images: bool = False,
+    split_fraction_override: Optional[SplitFractions] = None,
 ) -> MutableMapping[str, Dataset[Any]]:
     dataset_definition = DatasetDefinition.from_yaml(Path(dataset_definition_file))
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
@@ -92,6 +93,7 @@ def get_datasets(
     if (
         dataset_definition.test_dataset_paths is not None
         and len(dataset_definition.test_dataset_paths) > 0
+        and split_fraction_override is None
     ):
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
             ObjectDetectionDataset(
@@ -110,7 +112,9 @@ def get_datasets(
             **split_dataset(test_dataset, dataset_definition.split_fractions),
         }
     else:
-        split_datasets = split_dataset(full_dataset, dataset_definition.split_fractions)
+        split_datasets = split_dataset(
+            full_dataset, split_fraction_override or dataset_definition.split_fractions
+        )
 
     # hardcode the blob agumentation for now
     # this should be moved into the dataset description file
@@ -173,12 +177,14 @@ def get_dataloader(
     Sy: int,
     training: bool = True,
     normalize_images: bool = False,
+    split_fraction_override: Optional[SplitFractions] = None,
 ) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
         dataset_descriptor_file,
         Sx,
         Sy,
         normalize_images=normalize_images,
+        split_fraction_override=split_fraction_override,
     )
 
     augmentations: List[DualInputModule] = (
@@ -303,11 +309,3 @@ def get_image_count(d: DATALOADER_TYPES) -> int:
     else:
         raise TypeError(f"unknown type {type(d.dataset)}")
     return s
-
-
-def normalized_inverse_frequencies(d: List[int]) -> torch.Tensor:
-    t = torch.tensor(d)
-    class_freq = t / t.sum()
-    class_weights = 1.0 / class_freq
-    class_weights = class_weights / class_weights.sum()
-    return class_weights

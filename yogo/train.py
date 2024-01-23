@@ -148,6 +148,7 @@ class Trainer:
             Sx=self.Sx,
             Sy=self.Sy,
             normalize_images=self.config["normalize_images"],
+            split_fraction_override=self.config["dataset_split_override"],
         )
 
         train_dataloader = dataloaders["train"]

@@ -19,6 +19,19 @@ class SplitFractions:
             )
 
     @classmethod
+    def from_list(
+        cls, lst: List[float], test_paths_present: bool = True
+    ) -> "SplitFractions":
+        if len(lst) != 3:
+            raise InvalidSplitFraction(
+                f"SplitFractions.from_list's list must have length 3, but found length {len(lst)}"
+            )
+        return cls.from_dict(
+            dict(zip(["train", "val", "test"], lst)),
+            test_paths_present=test_paths_present,
+        )
+
+    @classmethod
     def from_dict(
         cls, dct: Dict[str, float], test_paths_present: bool = True
     ) -> "SplitFractions":
