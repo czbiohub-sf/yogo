@@ -89,7 +89,10 @@ def get_datasets(
         for dsp in tqdm(dataset_definition.dataset_paths, desc="loading dataset")
     )
 
-    if dataset_definition.test_dataset_paths is not None:
+    if (
+        dataset_definition.test_dataset_paths is not None
+        and len(dataset_definition.test_dataset_paths) > 0
+    ):
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
             ObjectDetectionDataset(
                 dsp.image_path,
@@ -203,34 +206,51 @@ def get_dataloader(
         if dataset_len == 0:
             continue
 
-        transforms = MultiArgSequential(
-            *augmentations if designation == "train" else [],
-        )
+        augs = augmentations if designation == "train" else []
 
-        sampler: Iterable = DistributedSampler(
+        d[designation] = _get_dataloader(
             dataset,
-            rank=rank,
-            num_replicas=world_size,
-        )
-
-        # TODO this division by world_size is hacky. Starting up the dataloaders
-        # are in*sane*ly slow. This helps reduce the problem, but tbh not by much
-        num_workers = max(1, choose_dataloader_num_workers(dataset_len) // world_size)
-
-        d[designation] = DataLoader(
-            dataset,
-            shuffle=False,
-            sampler=sampler,
-            drop_last=False,
-            pin_memory=True,
             batch_size=batch_size,
-            num_workers=num_workers,
-            persistent_workers=num_workers > 0,
-            generator=torch.Generator().manual_seed(7271978),
-            collate_fn=partial(collate_batch, transforms=transforms),
-            multiprocessing_context="spawn" if num_workers > 0 else None,
+            augmentations=augs,
+            rank=rank,
+            world_size=world_size,
         )
     return d
+
+
+def _get_dataloader(
+    dataset: Dataset,
+    batch_size: int,
+    augmentations: List[DualInputModule],
+    rank: int,
+    world_size: int,
+) -> DataLoader:
+    transforms = MultiArgSequential(*augmentations)
+
+    sampler: Iterable = DistributedSampler(
+        dataset,
+        rank=rank,
+        num_replicas=world_size,
+    )
+
+    # TODO this division by world_size is hacky. Starting up the dataloaders
+    # are in*sane*ly slow. This helps reduce the problem, but tbh not by much
+    dataset_len = len(dataset)  # type: ignore
+    num_workers = max(1, choose_dataloader_num_workers(dataset_len) // world_size)
+
+    return DataLoader(
+        dataset,
+        shuffle=False,
+        sampler=sampler,
+        drop_last=False,
+        pin_memory=True,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        persistent_workers=num_workers > 0,
+        generator=torch.Generator().manual_seed(7271978),
+        collate_fn=partial(collate_batch, transforms=transforms),
+        multiprocessing_context="spawn" if num_workers > 0 else None,
+    )
 
 
 DATALOADER_TYPES = Union[
