@@ -116,10 +116,10 @@ def train_parser(parser=None):
         action=SplitFractionsAction,
         nargs=3,
         help=(
-            "override dataset split fractions, in `train val test` order - e.g. '0.7 0.2 0.1' will "
-            "set 70% of all data to training, 20% to validation, and 10% to test. All of the data, "
-            "including paths specified in `test_paths`, will be randomly assigned to training, "
-            "validation, and test."
+            "override dataset split fractions, in 'train val test' order - e.g. '0.7 0.2 0.1' will "
+            "set 70 percent of all data to training, 20 percent to validation, and 10 percent to "
+            "test. All of the data, including paths specified in 'test_paths', will be randomly "
+            "assigned to training, validation, and test."
         ),
     )
     parser.add_argument(
