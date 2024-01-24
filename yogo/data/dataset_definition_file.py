@@ -6,6 +6,7 @@ from ruamel.yaml import YAML
 from dataclasses import dataclass
 from typing import Any, Set, List, Dict, Optional
 
+from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.split_fractions import SplitFractions
 
 """
@@ -219,7 +220,7 @@ class DatasetDefinition:
             test_specs = set()
             test_paths_present = False
 
-        classes = data.get("classes", None)
+        classes = data.get("classes", YOGO_CLASS_ORDERING)
 
         dataset_specs = DatasetDefinition._check_dataset_paths(dataset_specs)
         test_specs = DatasetDefinition._check_dataset_paths(test_specs)
@@ -389,6 +390,7 @@ class DatasetDefinition:
     ) -> Optional[Dict[str, Path]]:
         if "thumbnail_agumentation" in yaml_data:
             class_to_thumbnails = yaml_data["thumbnail_agumentation"]
+
             if not isinstance(class_to_thumbnails, dict):
                 raise InvalidDatasetDefinitionFile(
                     "thumbnail_agumentation must map class names to paths to thumbnail "
@@ -400,7 +402,9 @@ class DatasetDefinition:
                     raise InvalidDatasetDefinitionFile(
                         f"thumbnail_agumentation class {k} is not a valid class name"
                     )
+
             return class_to_thumbnails
+
         return None
 
     @staticmethod

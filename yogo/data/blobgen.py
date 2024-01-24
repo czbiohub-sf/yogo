@@ -112,9 +112,18 @@ class BlobDataset(Dataset):
     def get_thumbnail_paths(
         self, dir_paths: Dict[int, Path]
     ) -> Tuple[np.ndarray, np.ndarray]:
+        for ddir in dir_paths.values():
+            if not ddir.exists():
+                raise FileNotFoundError(f"{str(ddir)} does not exist")
+
+            is_empty = not any(ddir.iterdir())
+            if is_empty:
+                raise FileNotFoundError(f"{str(ddir)} is empty")
+
         cls_path_pairs = [
             (cls, fp) for cls, dp in dir_paths.items() for fp in dp.rglob("*.png")
         ]
+
         classes, paths = zip(*cls_path_pairs)
         return np.array(classes), np.array(paths).astype(np.string_)
 
