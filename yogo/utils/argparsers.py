@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 
 from yogo.model_defns import MODELS
+from yogo.data.split_fractions import SplitFractions
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
 
 
@@ -61,6 +62,17 @@ def unitary_float(val: float):
     return v
 
 
+class SplitFractionsAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            split_fractions = SplitFractions.from_list(
+                list(map(float, values)), test_paths_present=False
+            )
+            setattr(namespace, self.dest, split_fractions)
+        except Exception as e:
+            parser.error(str(e))
+
+
 def global_parser():
     parser = argparse.ArgumentParser(
         description="what can yogo do for you today?", allow_abbrev=False
@@ -98,6 +110,17 @@ def train_parser(parser=None):
         type=Path,
         help="start training from the provided pth file",
         default=None,
+    )
+    parser.add_argument(
+        "--dataset-split-override",
+        action=SplitFractionsAction,
+        nargs=3,
+        help=(
+            "override dataset split fractions, in 'train val test' order - e.g. '0.7 0.2 0.1' will "
+            "set 70 percent of all data to training, 20 percent to validation, and 10 percent to "
+            "test. All of the data, including paths specified in 'test_paths', will be randomly "
+            "assigned to training, validation, and test."
+        ),
     )
     parser.add_argument(
         "-bs",

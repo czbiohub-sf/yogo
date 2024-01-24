@@ -148,6 +148,7 @@ class Trainer:
             Sx=self.Sx,
             Sy=self.Sy,
             normalize_images=self.config["normalize_images"],
+            split_fraction_override=self.config["dataset_split_override"],
         )
 
         train_dataloader = dataloaders["train"]
@@ -592,6 +593,7 @@ def do_training(args) -> None:
         "pretrained_path": args.from_pretrained,
         "no_classify": args.no_classify,
         "normalize_images": args.normalize_images,
+        "dataset_split_override": args.dataset_split_override,
         "dataset_descriptor_file": args.dataset_descriptor_file,
         "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
         "torch-version": torch.__version__,
