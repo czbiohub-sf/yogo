@@ -22,8 +22,8 @@ Required Fields
 A dataset definition file is a YAML file with a `dataset_paths` key, with a list of dataset
 path specifications as values. Dataset specifications are another key-value pair, where
 the key is an arbitrary label for humans - it is not used by the parsing code. The value can
-be either (a) `defn_path` which points to another definition file to be loaded (a "Literal
-Specification"), or (b) an `image_path` and a `label_path` pair (a "Recursive Specification").
+be either (a) `defn_path` which points to another definition file to be loaded (a "Recursive
+Specification"), or (b) an `image_path` and a `label_path` pair (a "Literal Specification").
 All paths are absolute. Here's an example
 
 ```yaml
@@ -142,7 +142,7 @@ class LiteralSpecification:
             )
 
     def to_dict(self) -> Dict[str, str]:
-        return {"image_path": str(self.image_path), "label_path": str(self.image_path)}
+        return {"image_path": str(self.image_path), "label_path": str(self.label_path)}
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LiteralSpecification):

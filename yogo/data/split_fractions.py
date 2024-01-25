@@ -13,7 +13,15 @@ class SplitFractions:
         self.val: float = val or 0
         self.test: float = test or 0
 
-        if not ((self.train or 0) + self.val + self.test - 1) < 1e-10:
+        train_in_range = 0 <= (self.train or 0) <= 1
+        val_in_range = 0 <= self.val <= 1
+        test_in_range = 0 <= self.test <= 1
+
+        if not (train_in_range and val_in_range and test_in_range):
+            raise ValueError(
+                f"train, val, and test must be in range [0,1]; they are {self.train}, {self.val}, and {self.test}"
+            )
+        elif not abs((self.train or 0) + self.val + self.test - 1) < 1e-10:
             raise ValueError(
                 f"train, val, and test must sum to 1; they sum to {(self.train or 0) + self.val + self.test}"
             )
