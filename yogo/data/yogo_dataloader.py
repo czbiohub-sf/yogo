@@ -78,7 +78,13 @@ def get_datasets(
     normalize_images: bool = False,
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> MutableMapping[str, Dataset[Any]]:
+    """
+    The job of this function is to convert the dataset_definition_file to actual pytorch datasets.
+
+    See the spec in `dataset_definition_file.py`
+    """
     dataset_definition = DatasetDefinition.from_yaml(Path(dataset_definition_file))
+
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dsp.image_path,
@@ -93,7 +99,6 @@ def get_datasets(
     if (
         dataset_definition.test_dataset_paths is not None
         and len(dataset_definition.test_dataset_paths) > 0
-        and split_fraction_override is None
     ):
         test_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
             ObjectDetectionDataset(
@@ -107,14 +112,23 @@ def get_datasets(
                 dataset_definition.test_dataset_paths, desc="loading test dataset"
             )
         )
-        split_datasets: MutableMapping[str, Dataset[Any]] = {
-            "train": full_dataset,
-            **split_dataset(test_dataset, dataset_definition.split_fractions),
-        }
+        if split_fraction_override is not None:
+            split_datasets = split_dataset(
+                ConcatDataset([full_dataset, test_dataset]), split_fraction_override
+            )
+        else:
+            assert "test" not in dataset_definition.split_fractions
+            split_datasets = {
+                **split_dataset(full_dataset, dataset_definition.split_fractions),
+                "test": test_dataset,
+            }
     else:
-        split_datasets = split_dataset(
-            full_dataset, split_fraction_override or dataset_definition.split_fractions
-        )
+        if split_fraction_override is not None:
+            split_datasets = split_dataset(full_dataset, split_fraction_override)
+        else:
+            split_datasets = split_dataset(
+                full_dataset, dataset_definition.split_fractions
+            )
 
     # hardcode the blob agumentation for now
     # this should be moved into the dataset description file
