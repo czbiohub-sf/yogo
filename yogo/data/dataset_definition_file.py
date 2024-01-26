@@ -160,6 +160,7 @@ class LiteralSpecification:
 class SpecificationsKey(Enum):
     DATASET_PATHS = "dataset_paths"
     TEST_DATASET_PATHS = "test_paths"
+    ALL_DATASET_PATHS = "all_paths"
 
 
 @dataclass
@@ -195,10 +196,7 @@ class DatasetDefinition:
     @classmethod
     def from_yaml(cls, path: Path) -> "DatasetDefinition":
         """
-        The general idea here is that `dataset_paths` has a list of
-        dataset specifications, which can be literal or recursive. We'll
-        make a list of both, and then try to to_dict the recursive specifications.
-        We to_dict the recursive specifications later so we can
+        Load ddf file from the yaml file definition.
         """
         path = Path(path)  # defensive, in-case we're handed a string
 
@@ -206,7 +204,14 @@ class DatasetDefinition:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        dataset_specs = cls._load_dataset_specifications(path)
+        if "test_paths" not in data:
+            dataset_paths_key = SpecificationsKey.ALL_DATASET_PATHS
+        else:
+            dataset_paths_key = SpecificationsKey.DATASET_PATHS
+
+        dataset_specs = cls._load_dataset_specifications(
+            path, dataset_paths_key=dataset_paths_key
+        )
 
         if "test_paths" in data:
             test_specs = cls._load_dataset_specifications(
@@ -285,12 +290,19 @@ class DatasetDefinition:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        if dataset_paths_key.value not in data:
-            raise InvalidDatasetDefinitionFile(
-                f"Missing dataset_paths for definition file at {yml_path}"
+        if dataset_paths_key == SpecificationsKey.ALL_DATASET_PATHS:
+            dataset_paths = list(
+                data.get(SpecificationsKey.DATASET_PATHS.value, dict()).values()
             )
-
-        return data[dataset_paths_key.value].values()
+            test_paths = list(
+                data.get(SpecificationsKey.TEST_DATASET_PATHS.value, dict()).values()
+            )
+            return dataset_paths + test_paths
+        elif dataset_paths_key.value not in data:
+            # catch case where there are no test_paths but dataset_paths_key is TEST_DATASET_PATHS
+            return []
+        else:
+            return data[dataset_paths_key.value].values()
 
     @staticmethod
     def _load_dataset_specifications(
