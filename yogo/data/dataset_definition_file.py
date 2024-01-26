@@ -375,8 +375,8 @@ class DatasetDefinition:
                 )
 
         # walrus operator :=
-        if literal_defns & exclude_specs:
-            duplicates = literal_defns & exclude_specs
+        duplicates = literal_defns & exclude_specs
+        if duplicates:
             raise InvalidDatasetDefinitionFile(
                 "duplicate literal definition found in exclude paths!\n"
                 f"duplicates are: {duplicates}"
