@@ -190,6 +190,12 @@ def predict(
     model.eval()
     model.to(device)
 
+    transforms: List[torch.nn.Module] = []
+    if vertical_crop_height_px:
+        crop = CenterCrop((vertical_crop_height_px, 1032))
+        transforms.append(crop)
+        model.resize_model(vertical_crop_height_px)
+
     # these three lines are correctly typed; dunno how to convince mypy
     assert model.img_size.numel() == 2, f"YOGO model must be 2D, is {model.img_size}"  # type: ignore
     img_in_h = int(model.img_size[0].item())  # type: ignore
@@ -197,13 +203,6 @@ def predict(
 
     dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
     model_jit = torch.jit.trace(model, dummy_input)
-
-    transforms: List[torch.nn.Module] = []
-
-    if vertical_crop_height_px:
-        crop = CenterCrop((vertical_crop_height_px, 1032))
-        transforms.append(crop)
-        model.resize_model(vertical_crop_height_px)
 
     image_dataset = get_dataset(
         path_to_images=path_to_images,
