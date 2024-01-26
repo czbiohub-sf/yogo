@@ -6,17 +6,26 @@ class InvalidSplitFraction(Exception):
 
 
 class SplitFractions:
-    def __init__(
-        self, train: Optional[float], val: Optional[float], test: Optional[float]
-    ) -> None:
-        self.train: Optional[float] = train
-        self.val: float = val or 0
-        self.test: float = test or 0
+    def __init__(self, train: float, val: float, test: Optional[float]) -> None:
+        self.train: float = train
+        self.val: float = val
+        self.test: Optional[float] = test
 
-        if not ((self.train or 0) + self.val + self.test - 1) < 1e-10:
+        train_in_range = 0 <= self.train <= 1
+        val_in_range = 0 <= self.val <= 1
+        test_in_range = 0 <= (self.test or 0) <= 1
+
+        if not (train_in_range and val_in_range and test_in_range):
             raise ValueError(
-                f"train, val, and test must sum to 1; they sum to {(self.train or 0) + self.val + self.test}"
+                f"train, val, and test must be in range [0,1]; they are {self.train}, {self.val}, and {self.test}"
             )
+        elif not abs(self.train + self.val + (self.test or 0) - 1) < 1e-10:
+            raise ValueError(
+                f"train, val, and test must sum to 1; they sum to {self.train + self.val + (self.test or 0)}"
+            )
+
+    def __contains__(self, item: object) -> bool:
+        return item in self.to_dict()
 
     @classmethod
     def from_list(
@@ -35,11 +44,11 @@ class SplitFractions:
     def from_dict(
         cls, dct: Dict[str, float], test_paths_present: bool = True
     ) -> "SplitFractions":
-        if test_paths_present and "train" in dct:
+        if test_paths_present and "test" in dct:
             raise InvalidSplitFraction(
-                "when `test_paths` is present in a dataset descriptor file, 'train' "
+                "when `test_paths` is present in a dataset descriptor file, 'test' "
                 "is not a valid key for `dataset_split_fractions`, since we will use "
-                "all the data from `dataset_paths` for training"
+                "all the data from `test_paths` for testing"
             )
         if not any(v in dct for v in ("train", "val", "test")):
             raise InvalidSplitFraction(
@@ -49,7 +58,7 @@ class SplitFractions:
             raise InvalidSplitFraction(
                 f"dct must have keys `train`, `val`, and `test` only, but found {len(dct)} keys"
             )
-        return cls(dct.get("train", None), dct.get("val", None), dct.get("test", None))
+        return cls(dct["train"], dct["val"], dct.get("test", None))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SplitFractions):

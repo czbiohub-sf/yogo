@@ -22,8 +22,8 @@ Required Fields
 A dataset definition file is a YAML file with a `dataset_paths` key, with a list of dataset
 path specifications as values. Dataset specifications are another key-value pair, where
 the key is an arbitrary label for humans - it is not used by the parsing code. The value can
-be either (a) `defn_path` which points to another definition file to be loaded (a "Literal
-Specification"), or (b) an `image_path` and a `label_path` pair (a "Recursive Specification").
+be either (a) `defn_path` which points to another definition file to be loaded (a "Recursive
+Specification"), or (b) an `image_path` and a `label_path` pair (a "Literal Specification").
 All paths are absolute. Here's an example
 
 ```yaml
@@ -141,7 +141,7 @@ class LiteralSpecification:
             )
 
     def to_dict(self) -> Dict[str, str]:
-        return {"image_path": str(self.image_path), "label_path": str(self.image_path)}
+        return {"image_path": str(self.image_path), "label_path": str(self.label_path)}
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LiteralSpecification):
@@ -159,6 +159,7 @@ class LiteralSpecification:
 class SpecificationsKey(Enum):
     DATASET_PATHS = "dataset_paths"
     TEST_DATASET_PATHS = "test_paths"
+    ALL_DATASET_PATHS = "all_paths"
 
 
 @dataclass
@@ -194,10 +195,7 @@ class DatasetDefinition:
     @classmethod
     def from_yaml(cls, path: Path) -> "DatasetDefinition":
         """
-        The general idea here is that `dataset_paths` has a list of
-        dataset specifications, which can be literal or recursive. We'll
-        make a list of both, and then try to to_dict the recursive specifications.
-        We to_dict the recursive specifications later so we can
+        Load ddf file from the yaml file definition.
         """
         path = Path(path)  # defensive, in-case we're handed a string
 
@@ -205,19 +203,23 @@ class DatasetDefinition:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        dataset_specs = cls._load_dataset_specifications(path)
+        test_paths_present = "test_paths" in data
 
-        if "test_paths" in data:
+        if test_paths_present:
+            dataset_specs = cls._load_dataset_specifications(
+                path, dataset_paths_key=SpecificationsKey.DATASET_PATHS
+            )
             test_specs = cls._load_dataset_specifications(
                 path,
                 exclude_ymls=[path],
                 exclude_specs=dataset_specs,
                 dataset_paths_key=SpecificationsKey.TEST_DATASET_PATHS,
             )
-            test_paths_present = True
         else:
+            dataset_specs = cls._load_dataset_specifications(
+                path, dataset_paths_key=SpecificationsKey.ALL_DATASET_PATHS
+            )
             test_specs = set()
-            test_paths_present = False
 
         classes = data.get("classes", YOGO_CLASS_ORDERING)
 
@@ -284,12 +286,19 @@ class DatasetDefinition:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        if dataset_paths_key.value not in data:
-            raise InvalidDatasetDefinitionFile(
-                f"Missing dataset_paths for definition file at {yml_path}"
+        if dataset_paths_key == SpecificationsKey.ALL_DATASET_PATHS:
+            dataset_paths = list(
+                data.get(SpecificationsKey.DATASET_PATHS.value, dict()).values()
             )
-
-        return data[dataset_paths_key.value].values()
+            test_paths = list(
+                data.get(SpecificationsKey.TEST_DATASET_PATHS.value, dict()).values()
+            )
+            return dataset_paths + test_paths
+        elif dataset_paths_key.value not in data:
+            # catch case where there are no test_paths but dataset_paths_key is TEST_DATASET_PATHS
+            return []
+        else:
+            return data[dataset_paths_key.value].values()
 
     @staticmethod
     def _load_dataset_specifications(
@@ -362,8 +371,8 @@ class DatasetDefinition:
                 )
 
         # walrus operator :=
-        if literal_defns & exclude_specs:
-            duplicates = literal_defns & exclude_specs
+        duplicates = literal_defns & exclude_specs
+        if duplicates:
             raise InvalidDatasetDefinitionFile(
                 "duplicate literal definition found in exclude paths!\n"
                 f"duplicates are: {duplicates}"
