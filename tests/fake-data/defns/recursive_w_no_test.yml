@@ -1,0 +1,8 @@
+dataset_split_fractions:
+  train: 1
+  val: 0
+  test: 0
+
+dataset_paths:
+  lit_dsets:
+    defn_path: literal_tests_123.yml

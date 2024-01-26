@@ -107,3 +107,33 @@ def test_path_check() -> None:
     """
     with pytest.raises(FileNotFoundError):
         DatasetDefinition.from_yaml(DEFNS_PATH / "literal-non-existant.yml")
+
+
+def test_test_parsing() -> None:
+    """
+    test_paths are separated from dataset_paths
+    """
+    lit_w_tests = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_tests_123.yml")
+    lit_12 = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_12.yml")
+    lit_3 = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_3.yml")
+    assert lit_w_tests._dataset_paths == lit_12._dataset_paths
+    assert lit_w_tests._test_dataset_paths == lit_3._dataset_paths
+
+
+def test_recursive_test_parsing() -> None:
+    lit_w_tests = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_tests_123.yml")
+    rec_w_tests = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_w_test.yml")
+    assert lit_w_tests._dataset_paths == rec_w_tests._dataset_paths
+    assert lit_w_tests._test_dataset_paths == rec_w_tests._test_dataset_paths
+
+
+def test_get_all_paths_when_override() -> None:
+    """
+    when we've a recursive defn whose child definitions have test_paths, but the main
+    defn doesn't have test paths, we must grab those test paths
+    """
+    rec_w_tests = DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_w_no_test.yml")
+    lit_w_tests = DatasetDefinition.from_yaml(DEFNS_PATH / "literal_tests_123.yml")
+    assert rec_w_tests._dataset_paths == (
+        lit_w_tests._dataset_paths | lit_w_tests._test_dataset_paths
+    )

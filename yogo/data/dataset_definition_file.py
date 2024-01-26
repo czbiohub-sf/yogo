@@ -204,26 +204,23 @@ class DatasetDefinition:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
 
-        if "test_paths" not in data:
-            dataset_paths_key = SpecificationsKey.ALL_DATASET_PATHS
-        else:
-            dataset_paths_key = SpecificationsKey.DATASET_PATHS
+        test_paths_present = "test_paths" in data
 
-        dataset_specs = cls._load_dataset_specifications(
-            path, dataset_paths_key=dataset_paths_key
-        )
-
-        if "test_paths" in data:
+        if test_paths_present:
+            dataset_specs = cls._load_dataset_specifications(
+                path, dataset_paths_key=SpecificationsKey.DATASET_PATHS
+            )
             test_specs = cls._load_dataset_specifications(
                 path,
                 exclude_ymls=[path],
                 exclude_specs=dataset_specs,
                 dataset_paths_key=SpecificationsKey.TEST_DATASET_PATHS,
             )
-            test_paths_present = True
         else:
+            dataset_specs = cls._load_dataset_specifications(
+                path, dataset_paths_key=SpecificationsKey.ALL_DATASET_PATHS
+            )
             test_specs = set()
-            test_paths_present = False
 
         classes = data.get("classes", YOGO_CLASS_ORDERING)
 
