@@ -15,8 +15,7 @@ We should refactor this out.
 
 
 class DualInputModule(torch.nn.Module):
-    def forward(self, inpt_a, inpt_b):
-        ...
+    def forward(self, inpt_a, inpt_b): ...
 
 
 class DualInputId(DualInputModule):

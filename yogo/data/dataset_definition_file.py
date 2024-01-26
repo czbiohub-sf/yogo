@@ -96,8 +96,7 @@ we're defining a Tree ( https://en.wikipedia.org/wiki/Tree_(graph_theory) ).
 """
 
 
-class InvalidDatasetDefinitionFile(Exception):
-    ...
+class InvalidDatasetDefinitionFile(Exception): ...
 
 
 @dataclass

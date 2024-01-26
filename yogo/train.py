@@ -407,17 +407,17 @@ class Trainer:
             wandb.log({"best_val_loss": mean_val_loss}, step=self.global_step)
             self.checkpoint(
                 self.model_save_dir / "best.pth",
-                model_name=wandb.run.name
-                if wandb.run is not None
-                else "recent_run_best",
+                model_name=(
+                    wandb.run.name if wandb.run is not None else "recent_run_best"
+                ),
                 model_version=self.config["model"],
             )
         else:
             self.checkpoint(
                 self.model_save_dir / "latest.pth",
-                model_name=wandb.run.name
-                if wandb.run is not None
-                else "recent_run_latest",
+                model_name=(
+                    wandb.run.name if wandb.run is not None else "recent_run_latest"
+                ),
                 model_version=self.config["model"],
             )
 

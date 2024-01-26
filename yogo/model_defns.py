@@ -18,7 +18,14 @@ MODELS: Dict[
 
 def get_model_func(
     model_name: str,
-) -> Optional[Callable[[int,], nn.Module]]:
+) -> Optional[
+    Callable[
+        [
+            int,
+        ],
+        nn.Module,
+    ]
+]:
     return MODELS.get(model_name, None)
 
 
