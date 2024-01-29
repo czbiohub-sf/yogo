@@ -24,6 +24,9 @@ class SplitFractions:
                 f"train, val, and test must sum to 1; they sum to {self.train + self.val + (self.test or 0)}"
             )
 
+    def __repr__(self) -> str:
+        return f"SplitFractions(train={self.train}, val={self.val}, test={self.test})"
+
     def __contains__(self, item: object) -> bool:
         return item in self.to_dict()
 
