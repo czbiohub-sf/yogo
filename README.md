@@ -11,7 +11,7 @@ python3 -m pip install -e .
 > [!NOTE]
 > Openvino and M1s do not play together very well. If exporting to Openvino's format, I suggest using a VM or Docker.
 
-## YOGO Docs
+## Docs
 
 Documentation for YOGO. If you want documentation in a specific area, [let me know](https://github.com/czbiohub-sf/yogo/issues/new)!
 
