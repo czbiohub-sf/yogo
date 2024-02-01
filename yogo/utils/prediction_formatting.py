@@ -229,8 +229,8 @@ def format_preds_and_labels(
         Sx,
     ) = label.shape  # label_shape is mask x y x y class
 
-    reformatted_preds = pred.view(pred_shape, Sx * Sy).T
-    reformatted_labels = label.view(label_shape, Sx * Sy).T
+    reformatted_preds = pred.view(pred_shape, Sx * Sy).T  # [N, pred_shape]
+    reformatted_labels = label.view(label_shape, Sx * Sy).T  # [N, label_shape]
 
     # reformatted_labels[:, 0] = 1 if there is a label for that cell, else 0
     objectness_mask = (reformatted_preds[:, 4] > objectness_thresh).bool()
@@ -241,14 +241,14 @@ def format_preds_and_labels(
 
     # the total prediction mask is where confidence + objectness are high
     # by default, though, min_class_confidence is 0 so it's just objectness
-    total_mask = class_confidence_mask & objectness_mask
+    pred_mask = class_confidence_mask & objectness_mask
 
     labels_mask = reformatted_labels[:, 0].bool()
-    img_masked_labels = reformatted_labels[labels_mask]
+    labels_with_objects = reformatted_labels[labels_mask]
 
-    if use_IoU and total_mask.sum() >= len(img_masked_labels):
+    if use_IoU and pred_mask.sum() >= len(labels_with_objects):
         # filter on objectness
-        preds_with_objects = reformatted_preds[total_mask]
+        preds_with_objects = reformatted_preds[pred_mask]
 
         preds_with_objects[:, 0:4] = ops.box_convert(
             preds_with_objects[:, 0:4], "cxcywh", "xyxy"
@@ -256,7 +256,7 @@ def format_preds_and_labels(
 
         # choose predictions from argmaxed IoU along label dim to get best prediction per label
         prediction_matrix = ops.box_iou(
-            img_masked_labels[:, 1:5], preds_with_objects[:, 0:4]
+            labels_with_objects[:, 1:5], preds_with_objects[:, 0:4]
         )
         n, m = prediction_matrix.shape
         if m > 0:
@@ -267,7 +267,7 @@ def format_preds_and_labels(
         final_preds = preds_with_objects[prediction_indices]
     else:
         # filter on label tensor idx
-        final_preds = reformatted_preds[reformatted_labels[:, 0].bool()]
+        final_preds = reformatted_preds[labels_mask]
         final_preds[:, 0:4] = ops.box_convert(final_preds[:, 0:4], "cxcywh", "xyxy")
 
-    return final_preds, img_masked_labels
+    return final_preds, labels_with_objects
