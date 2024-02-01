@@ -234,8 +234,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         return image_paths, label_paths
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        image_path = str(self._image_paths[index], encoding="utf-8")
-        label_path = str(self._label_paths[index], encoding="utf-8")
+        image_path = self._image_paths[index]
+        label_path = self._label_paths[index]
         image = self.loader(image_path)
         labels = label_file_to_tensor(
             Path(label_path), self.Sx, self.Sy, self.notes_data

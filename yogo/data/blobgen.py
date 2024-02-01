@@ -130,7 +130,7 @@ class BlobDataset(Dataset):
     def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
         choices = np.random.randint(0, len(self.thumbnail_paths), size=n)
         class_thumbnail_pairs = [
-            (class_, self.loader(str(fp_encoded, encoding="utf-8")))
+            (class_, self.loader(fp_encoded))
             for class_, fp_encoded in zip(
                 self.classes[choices], self.thumbnail_paths[choices]
             )

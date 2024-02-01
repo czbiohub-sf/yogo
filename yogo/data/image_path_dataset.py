@@ -60,7 +60,7 @@ class ImagePathDataset(ImageAndIdDataset):
         return len(self.image_paths)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
-        image_path = str(self.image_paths[idx], encoding="utf-8")
+        image_path = self.image_paths[idx]
         image = self.loader(image_path).to(torch.float16)
         image = self.transform(image)
         if self.normalize_images:
