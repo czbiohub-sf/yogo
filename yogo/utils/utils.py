@@ -145,6 +145,7 @@ def _format_tensor_for_rects(
     img_w: int,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
+    min_class_confidence_threshold: float = 0.0,
 ) -> torch.Tensor:
     pred_dim, Sy, Sx = rects.shape
 
@@ -153,6 +154,7 @@ def _format_tensor_for_rects(
         obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
         box_format="xyxy",
+        min_class_confidence_threshold=min_confidence_threshold,
     )
 
     N = formatted_preds.shape[0]
@@ -179,6 +181,7 @@ def draw_yogo_prediction(
     prediction: torch.Tensor,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
+    min_class_confidence_threshold: float = 0.0,
     labels: Optional[List[str]] = None,
     images_are_normalized: bool = False,
 ) -> PIL.Image.Image:
@@ -219,6 +222,7 @@ def draw_yogo_prediction(
         img_w=img_w,
         obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
+        min_class_confidence_threshold=min_class_confidence_threshold,
     )
 
     pil_img = transforms.ToPILImage()(img[None, ...])

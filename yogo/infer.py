@@ -275,6 +275,7 @@ def predict(
                     prediction=res[img_idx, ...],
                     obj_thresh=obj_thresh,
                     iou_thresh=iou_thresh,
+                    min_class_confidence_threshold=min_class_confidence_threshold,
                     labels=YOGO_CLASS_ORDERING,
                     images_are_normalized=cfg["normalize_images"],
                 )
