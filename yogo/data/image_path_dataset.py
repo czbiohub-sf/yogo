@@ -54,7 +54,7 @@ class ImagePathDataset(ImageAndIdDataset):
             )
         if len(img_paths) == 0:
             raise FileNotFoundError(f"{str(path_to_data)} does not contain any images")
-        return np.array(img_paths).astype(np.string_)
+        return np.array(img_paths).astype(np.unicode_)
 
     def __len__(self) -> int:
         return len(self.image_paths)

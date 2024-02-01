@@ -161,8 +161,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.Sx = Sx
         self.Sy = Sy
 
-        self._image_paths = np.array(image_paths).astype(np.string_)
-        self._label_paths = np.array(label_paths).astype(np.string_)
+        self._image_paths = np.array(image_paths).astype(np.unicode_)
+        self._label_paths = np.array(label_paths).astype(np.unicode_)
 
     def make_dataset(
         self,

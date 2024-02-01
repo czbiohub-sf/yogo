@@ -125,7 +125,7 @@ class BlobDataset(Dataset):
         ]
 
         classes, paths = zip(*cls_path_pairs)
-        return np.array(classes), np.array(paths).astype(np.string_)
+        return np.array(classes), np.array(paths).astype(np.unicode_)
 
     def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
         choices = np.random.randint(0, len(self.thumbnail_paths), size=n)
