@@ -144,6 +144,9 @@ class YOGO(nn.Module):
 
         model.load_state_dict(params)
 
+        if inference:
+            model.eval()
+
         return model, {
             "step": global_step,
             "normalize_images": normalize_images,
