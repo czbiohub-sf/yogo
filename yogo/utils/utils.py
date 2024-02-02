@@ -154,7 +154,7 @@ def _format_tensor_for_rects(
         obj_thresh=obj_thresh,
         iou_thresh=iou_thresh,
         box_format="xyxy",
-        min_class_confidence_threshold=min_confidence_threshold,
+        min_class_confidence_threshold=min_class_confidence_threshold,
     )
 
     N = formatted_preds.shape[0]
