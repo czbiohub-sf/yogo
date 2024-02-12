@@ -17,6 +17,9 @@ from yogo.data.utils import read_grayscale
 
 LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 
+# Guess: 200 sq px is probably about OK
+AREA_FILTER_THRESHOLD = 200 / (772 * 1032)
+
 
 def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
     """
@@ -92,10 +95,15 @@ def load_labels(
                 len(row) == 5
             ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
+            xc, yc, w, h = map(float, row[1:])
+
+            if w * h < AREA_FILTER_THRESHOLD:
+                continue
+
             label_idx = correct_label_idx(row[0], notes_data)
 
             # float for everything so we can make tensors of labels
-            labels.append([float(label_idx)] + [float(v) for v in row[1:]])
+            labels.append([float(label_idx), xc, yc, w, h])
 
     return labels
 
