@@ -353,14 +353,14 @@ def predict(
         pred_tensors = np.hstack(np_results)
 
         if path_to_images:
-            filename = Path(path_to_images).parent.stem
+            filename = Path(path_to_images).resolve().parent.stem
         elif path_to_zarr:
-            filename = Path(path_to_zarr).stem
+            filename = Path(path_to_zarr).resolve().stem
 
         if output_dir is not None:
-            fp = Path(output_dir) / Path(filename).with_suffix(".npy")
+            fp = Path(output_dir).resolve() / Path(filename).with_suffix(".npy")
         else:
-            fp = Path.cwd() / Path(filename).with_suffix(".npy")
+            fp = Path.cwd().resolve() / Path(filename).with_suffix(".npy")
 
         np.save(fp, pred_tensors)
 
