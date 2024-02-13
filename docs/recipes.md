@@ -95,6 +95,8 @@ Taking the dataset from `image_path_dataset.py`, create your dataset and dataloa
 ...     images, fnames = zip(*batch)
 ...     return torch.stack(images), cast(Tuple[str], fnames)
 
+# note that having num_workers > 0 will start a number of python multiprocesses, so
+# you need to throw your code into an `if __name__ == "__main__"` block
 >>> dataloader = DataLoader(
 ...     dataset,
 ...     batch_size=16  # how big of a batch do you want? Typically you want this as big

@@ -14,7 +14,7 @@ from typing import List, Union, Optional, Callable, Tuple, cast
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose
 
-from yogo.data.yogo_dataset import read_grayscale
+from yogo.data.utils import read_grayscale
 
 
 class ImageAndIdDataset(Dataset, Sized):
@@ -54,13 +54,13 @@ class ImagePathDataset(ImageAndIdDataset):
             )
         if len(img_paths) == 0:
             raise FileNotFoundError(f"{str(path_to_data)} does not contain any images")
-        return np.array(img_paths).astype(np.string_)
+        return np.array(img_paths).astype(np.unicode_)
 
     def __len__(self) -> int:
         return len(self.image_paths)
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
-        image_path = str(self.image_paths[idx], encoding="utf-8")
+        image_path = self.image_paths[idx]
         image = self.loader(image_path).to(torch.float16)
         image = self.transform(image)
         if self.normalize_images:

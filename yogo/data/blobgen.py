@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from typing import Union, Callable, Tuple, List, Optional, Dict, Mapping
+from typing import Union, Tuple, List, Optional, Dict, Mapping
 
 from torch.utils.data import Dataset
 
@@ -15,7 +15,8 @@ from torchvision.ops import box_iou
 from torchvision.transforms import functional as F
 
 from yogo.data import YOGO_CLASS_ORDERING
-from yogo.data.yogo_dataset import read_grayscale, format_labels_tensor
+from yogo.data.utils import read_grayscale_robust
+from yogo.data.yogo_dataset import format_labels_tensor
 
 
 class RandomRescale(torch.nn.Module):
@@ -60,7 +61,6 @@ class BlobDataset(Dataset):
         n: int = 4,
         length: int = 1000,
         background_img_shape: Tuple[int, int] = (772, 1032),
-        loader: Callable[[str], torch.Tensor] = read_grayscale,
         blend_thumbnails: bool = False,
         thumbnail_sigma: float = 1.0,
         normalize_images: bool = False,
@@ -78,8 +78,8 @@ class BlobDataset(Dataset):
         self.Sx = Sx
         self.Sy = Sy
         self.n = n
-        self.loader = loader
         self.length = length
+        self.loader = read_grayscale_robust
         self.blend_thumbnails = blend_thumbnails
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
@@ -125,17 +125,19 @@ class BlobDataset(Dataset):
         ]
 
         classes, paths = zip(*cls_path_pairs)
-        return np.array(classes), np.array(paths).astype(np.string_)
+        return np.array(classes), np.array(paths).astype(np.unicode_)
 
     def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
         choices = np.random.randint(0, len(self.thumbnail_paths), size=n)
         class_thumbnail_pairs = [
-            (class_, self.loader(str(fp_encoded, encoding="utf-8")))
+            (class_, self.loader(fp_encoded))
             for class_, fp_encoded in zip(
                 self.classes[choices], self.thumbnail_paths[choices]
             )
         ]
-        return class_thumbnail_pairs
+        return [
+            (class_, img) for (class_, img) in class_thumbnail_pairs if img is not None
+        ]
 
     def get_background_shade(
         self, thumbnail: torch.Tensor, brightness_threshold: int = 210
