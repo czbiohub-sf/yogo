@@ -13,6 +13,7 @@ command:
   - --batch-size
   - 128
   - --dataset-split-override 0.9 0.1 0.1
+  - --half
 method: random
 metric:
   goal: maximize

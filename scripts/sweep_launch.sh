@@ -1,13 +1,14 @@
 #! /bin/bash
 
-#SBATCH --job-name=ULCMalariaYOGOTraining
+#SBATCH --job-name=YOGOSweep
 #SBATCH --time=3:00:00
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
-#SBATCH --partition=gpu
-#SBATCH --gpus-per-node=a100:1
-#SBATCH --cpus-per-task=64
-#SBATCH --output=./slurm-outputs/%j.out
+#SBATCH --partition=preempted
+#SBATCH --array 1-256
+#SBATCH --gpus-per-node=a100:2
+#SBATCH --cpus-per-task=32
+#SBATCH --output=./%j.out
 
 echo
 echo "You Only Glance Once (YOGO) Sweep"
