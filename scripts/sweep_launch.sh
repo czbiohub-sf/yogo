@@ -5,10 +5,12 @@
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --partition=preempted
-#SBATCH --array 1-256
-#SBATCH --gpus-per-node=a100:2
+#SBATCH --array 1-512
+#SBATCH --output=slurm-outputs/array/%A_%a.out
+#SBATCH --error=slurm-outputs/array/%A_%a.err
+#SBATCH --gpus-per-node=2
 #SBATCH --cpus-per-task=32
-#SBATCH --output=./%j.out
+#SBATCH --output=./slurm-outputs/%j.out
 
 echo
 echo "You Only Glance Once (YOGO) Sweep"

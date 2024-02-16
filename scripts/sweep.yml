@@ -7,13 +7,11 @@ command:
   - --note
   - "Sweeping! :broom:"
   - --from-pretrained
-  - /home/axel.jacobsen/celldiagnosis/yogo/trained_models/twilight-aardvark-1094/best.pth
+  - /hpc/projects/group.bioengineering/LFM_scope/yogo_models/all-models/compassionate-etchings-3713/best.pth
   - --epochs
   - 16
   - --batch-size
-  - 128
-  - --dataset-split-override 0.9 0.1 0.1
-  - --half
+  - 64
 method: random
 metric:
   goal: maximize
