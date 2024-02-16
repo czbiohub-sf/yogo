@@ -62,13 +62,17 @@ def do_export(args):
     net.eval()
 
     # the wrapped model, that we'll export
-    net_wrap = YOGOWrap(
-        net.img_size, net.anchor_w, net.anchor_h, net.num_classes, inference=True
-    )
-    net_wrap.load_state_dict(net.state_dict())
+    net_wrap, cfg = YOGOWrap.from_pth(pth_filename, inference=True)
+    net_wrap.normalize_images = cfg["normalize_images"]
     net_wrap.eval()
 
     img_h, img_w = net.img_size
+
+    if args.crop_height is not None:
+        img_h = (args.crop_height * img_h).round()
+        net.resize_model(img_h.item())
+        net_wrap.resize_model(img_h.item())
+
     dummy_input = torch.randint(0, 256, (1, 1, int(img_h.item()), int(img_w.item())))
 
     # make sure we didn't mess up the wrap!
@@ -78,10 +82,6 @@ def do_export(args):
         rtol=1e-3,
         atol=1e-5,
     )
-
-    if args.crop_height is not None:
-        img_h = (args.crop_height * img_h).round()
-        net_wrap.resize_model(img_h.item())
 
     torch.onnx.export(
         net_wrap,
