@@ -2,18 +2,14 @@ import os
 import torch
 import warnings
 
-from typing import Union
 from pathlib import Path
 from typing import Union, Optional, Tuple, List
 from ruamel.yaml import YAML
 
 from torchvision.io import read_image, ImageReadMode
 
-from yogo.data.data_transforms import (
-    MultiArgSequential,
-)
-from typing import Union
 from yogo.data import YOGO_CLASS_ORDERING
+from yogo.data.data_transforms import MultiArgSequential
 from yogo.data.dataset_definition_file import DatasetDefinition
 
 
