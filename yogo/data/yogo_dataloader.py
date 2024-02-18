@@ -10,9 +10,10 @@ from functools import partial
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, Subset, random_split
 
-from typing import Any, List, Dict, Tuple, Optional, MutableMapping, Iterable, Union
+from typing import Any, List, Dict, Optional, MutableMapping, Iterable, Union
 
 from yogo.data.blobgen import BlobDataset
+from yogo.data.utils import collate_batch_robust
 from yogo.data.split_fractions import SplitFractions
 from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.dataset_definition_file import DatasetDefinition
@@ -174,16 +175,6 @@ def split_dataset(
     )
 
 
-def collate_batch(
-    batch: Tuple[torch.Tensor, torch.Tensor],
-    transforms: MultiArgSequential = MultiArgSequential(),
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    inputs, labels = zip(*batch)
-    batched_inputs = torch.stack(inputs)
-    batched_labels = torch.stack(labels)
-    return transforms(batched_inputs, batched_labels)
-
-
 def get_dataloader(
     dataset_descriptor_file: str,
     batch_size: int,
@@ -268,7 +259,7 @@ def _get_dataloader(
         num_workers=num_workers,
         persistent_workers=num_workers > 0,
         generator=torch.Generator().manual_seed(7271978),
-        collate_fn=partial(collate_batch, transforms=transforms),
+        collate_fn=partial(collate_batch_robust, transforms=transforms),
         multiprocessing_context="spawn" if num_workers > 0 else None,
     )
 

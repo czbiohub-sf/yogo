@@ -3,19 +3,21 @@ import json
 import torch
 import numpy as np
 
-from pathlib import Path
-
-import torchvision.ops as ops
-
+from torchvision import ops
 from torchvision import datasets
 
+from pathlib import Path
+from functools import partial
 from typing import List, Dict, Union, Tuple, Optional, Callable, Any, cast
 
 from yogo.data import YOGO_CLASS_ORDERING
-from yogo.data.utils import read_grayscale
+from yogo.data.utils import read_grayscale_robust
 
 
 LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
+
+# Guess: 200 sq px is probably about OK
+AREA_FILTER_THRESHOLD = 200 / (772 * 1032)
 
 
 def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor:
@@ -92,10 +94,15 @@ def load_labels(
                 len(row) == 5
             ), f"should have [class,xc,yc,w,h] - got length {len(row)} {row}"
 
+            xc, yc, w, h = map(float, row[1:])
+
+            if w * h < AREA_FILTER_THRESHOLD:
+                continue
+
             label_idx = correct_label_idx(row[0], notes_data)
 
             # float for everything so we can make tensors of labels
-            labels.append([float(label_idx)] + [float(v) for v in row[1:]])
+            labels.append([float(label_idx), xc, yc, w, h])
 
     return labels
 
@@ -130,7 +137,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Sx,
         Sy,
         normalize_images: bool = False,
-        loader: Callable = read_grayscale,
+        loader=partial(read_grayscale_robust, retries=3, min_duration=0.1),
         extensions: Optional[Tuple[str]] = ("png",),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,
@@ -233,16 +240,24 @@ class ObjectDetectionDataset(datasets.VisionDataset):
 
         return image_paths, label_paths
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> Optional[Tuple[torch.Tensor, torch.Tensor]]:
         image_path = self._image_paths[index]
         label_path = self._label_paths[index]
-        image = self.loader(image_path)
+
+        maybe_image = self.loader(image_path)
+        if maybe_image is None:
+            return None
+
+        image = maybe_image
+
         labels = label_file_to_tensor(
             Path(label_path), self.Sx, self.Sy, self.notes_data
         )
+
         if self.normalize_images:
             # turns our torch.uint8 tensor 'sample' into a torch.FloatTensor
             image = image / 255
+
         return image, labels
 
     def __len__(self) -> int:
