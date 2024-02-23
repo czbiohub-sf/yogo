@@ -198,7 +198,7 @@ def half_filters(num_classes: int) -> nn.Module:
     )
     conv_block_5 = nn.Sequential(
         nn.Conv2d(64, 64, 3, stride=2, padding=1, bias=False),
-        nn.BatchNorm2d(128),
+        nn.BatchNorm2d(64),
         nn.LeakyReLU(),
     )
     conv_block_6 = nn.Sequential(
@@ -252,7 +252,7 @@ def quarter_filters(num_classes: int) -> nn.Module:
     )
     conv_block_6 = nn.Sequential(
         nn.Conv2d(32, 32, 3, padding=1, bias=True),
-        nn.BatchNorm2d(64),
+        nn.BatchNorm2d(32),
         nn.LeakyReLU(),
     )
     conv_block_7 = nn.Sequential(
