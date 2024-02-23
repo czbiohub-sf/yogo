@@ -1,6 +1,6 @@
 import torch
 
-from typing import Optional, Callable, Dict
+from typing import Callable, Optional, Dict
 
 from torch import nn
 
@@ -10,8 +10,14 @@ ModelDefn = Callable[[int], nn.Module]
 MODELS: Dict[str, ModelDefn] = {}
 
 
-def get_model_func(model_name: str) -> Optional[ModelDefn]:
-    return MODELS.get(model_name, None)
+def get_model_func(model_name: Optional[str]) -> ModelDefn:
+    if model_name is None:
+        return base_model
+
+    try:
+        return MODELS[model_name]
+    except KeyError:
+        return base_model
 
 
 def register_model(model_defn: ModelDefn) -> ModelDefn:
@@ -26,25 +32,27 @@ def register_model(model_defn: ModelDefn) -> ModelDefn:
 @register_model
 def base_model(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 5, stride=2, padding=1, bias=False),
+        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
         nn.LeakyReLU(),
     )
     conv_block_2 = nn.Sequential(
         nn.Conv2d(16, 32, 3, padding=1),
         nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
     )
     conv_block_3 = nn.Sequential(
-        nn.Conv2d(32, 64, 5, stride=2, padding=1),
-        nn.BatchNorm2d(64),
+        nn.Conv2d(32, 64, 3, stride=2, padding=1),
         nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
     )
     conv_block_4 = nn.Sequential(
         nn.Conv2d(64, 128, 3, padding=1),
         nn.LeakyReLU(),
+        nn.Dropout2d(p=0.15),
     )
     conv_block_5 = nn.Sequential(
-        nn.Conv2d(128, 128, 5, stride=2, padding=1, bias=False),
+        nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(128),
         nn.LeakyReLU(),
     )
