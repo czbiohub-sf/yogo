@@ -149,7 +149,7 @@ def triple_filters(num_classes: int) -> nn.Module:
     )
     conv_block_5 = nn.Sequential(
         nn.Conv2d(384, 384, 3, stride=2, padding=1, bias=False),
-        nn.BatchNorm2d(128),
+        nn.BatchNorm2d(384),
         nn.LeakyReLU(),
     )
     conv_block_6 = nn.Sequential(
