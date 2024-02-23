@@ -5,38 +5,16 @@ from typing import Optional, Callable, Dict
 from torch import nn
 
 
-MODELS: Dict[
-    str,
-    Callable[
-        [
-            int,
-        ],
-        nn.Module,
-    ],
-] = {}
+ModelDefn = Callable[[int], nn.Module]
+
+MODELS: Dict[str, ModelDefn] = {}
 
 
-def get_model_func(
-    model_name: str,
-) -> Optional[
-    Callable[
-        [
-            int,
-        ],
-        nn.Module,
-    ]
-]:
+def get_model_func(model_name: str) -> Optional[ModelDefn]:
     return MODELS.get(model_name, None)
 
 
-def register_model(
-    model_defn: Callable[
-        [
-            int,
-        ],
-        nn.Module,
-    ]
-):
+def register_model(model_defn: ModelDefn) -> ModelDefn:
     """
     put model in MODELS. When adding a new model,
     so make sure to `@register_model`!
@@ -46,7 +24,7 @@ def register_model(
 
 
 @register_model
-def base_model(num_classes) -> nn.Module:
+def base_model(num_classes: int) -> nn.Module:
     conv_block_1 = nn.Sequential(
         nn.Conv2d(1, 16, 5, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
