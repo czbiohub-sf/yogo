@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
+sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
    --from-pretrained ../trained_models/vibrant-rooster-557/best.pth \
    --lr 5e-5 \
@@ -15,7 +15,7 @@ sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
    --tag scaling-law \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
+sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
    --from-pretrained BLAAAANK \
    --lr 5e-5 \
@@ -30,7 +30,7 @@ sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
    --tag scaling-law \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
+sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
    --from-pretrained ../trained_models/fortuitous-orchid-553/best.pth \
    --lr 5e-5 \
@@ -45,7 +45,7 @@ sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
    --tag scaling-law \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
+sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
    --from-pretrained ../trained_models/sparkling-paper-555/best.pth \
    --lr 5e-5 \
@@ -60,7 +60,7 @@ sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
    --tag scaling-law \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
+sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
    --from-pretrained ../trained_models/crimson-mandu-556/best.pth \
    --lr 5e-5 \
