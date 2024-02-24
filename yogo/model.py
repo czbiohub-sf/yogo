@@ -2,9 +2,9 @@ import torch
 from torch import nn
 
 from pathlib import Path
-from typing import Tuple, Optional, Callable, Union, Any, Dict
+from typing import Tuple, Optional, Union, Any, Dict
 
-from yogo.model_defns import get_model_func
+from yogo.model_defns import ModelDefn, base_model, get_model_func
 
 
 # TODO find better location for this
@@ -37,25 +37,14 @@ class YOGO(nn.Module):
         num_classes: int,
         inference: bool = False,
         tuning: bool = False,
-        model_func: Optional[
-            Callable[
-                [
-                    int,
-                ],
-                nn.Module,
-            ]
-        ] = None,
+        model_func: ModelDefn = base_model,
         clip_value: float = 1.0,
         device: Union[torch.device, str] = "cpu",
     ):
         super().__init__()
         self.device = device
 
-        self.model = (
-            self.gen_model(num_classes=num_classes)
-            if model_func is None
-            else model_func(num_classes)
-        )
+        self.model = model_func(num_classes)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
@@ -266,53 +255,6 @@ class YOGO(nn.Module):
         self.register_buffer("img_size", torch.tensor(crop_size))
         self.register_buffer("_Cxs", _Cxs.clone())
         self.register_buffer("_Cys", _Cys.clone())
-
-    def gen_model(self, num_classes) -> nn.Module:
-        conv_block_1 = nn.Sequential(
-            nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(16),
-            nn.LeakyReLU(),
-        )
-        conv_block_2 = nn.Sequential(
-            nn.Conv2d(16, 32, 3, padding=1),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.05),
-        )
-        conv_block_3 = nn.Sequential(
-            nn.Conv2d(32, 64, 3, stride=2, padding=1),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.1),
-        )
-        conv_block_4 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1),
-            nn.LeakyReLU(),
-            nn.Dropout2d(p=0.15),
-        )
-        conv_block_5 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-        )
-        conv_block_6 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1, bias=True),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-        )
-        conv_block_7 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.LeakyReLU(),
-        )
-        conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
-        return nn.Sequential(
-            conv_block_1,
-            conv_block_2,
-            conv_block_3,
-            conv_block_4,
-            conv_block_5,
-            conv_block_6,
-            conv_block_7,
-            conv_block_8,
-        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # we get either raw uint8 tensors or float tensors
