@@ -15,9 +15,10 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    --tag scaling-law \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
+sbatch --dependency=afterok:12223653 \
+   scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
-   --from-pretrained BLAAAANK \
+   --from-pretrained vermilion-noodles-558/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
@@ -45,7 +46,8 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    --tag scaling-law \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
+sbatch --dependency=afterok:12223232 \
+   scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
    --from-pretrained ../trained_models/sparkling-paper-555/best.pth \
    --lr 5e-5 \
@@ -60,7 +62,8 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    --tag scaling-law \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
+sbatch --dependency=afterok:12223605 \
+   scripts/submit_cmd_multi_gpu.sh yogo train \
    ../../dataset_defs/human-labels/all-dataset-subsets.yml \
    --from-pretrained ../trained_models/crimson-mandu-556/best.pth \
    --lr 5e-5 \
@@ -69,7 +72,7 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    --label-smoothing 5e-3 \
    --weight-decay 5e-3 \
    --no-obj-weight 1 \
-   --note "triple_filters" \3
+   --note "triple_filters" \
    --lr-decay-factor 16 \
    --model triple_filters \
    --tag scaling-law \
