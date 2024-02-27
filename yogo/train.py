@@ -214,7 +214,7 @@ class Trainer:
             config=self.config,
             name=self.config["name"],
             notes=self.config["note"],
-            tags=(self.config["tag"],) if self.config["tag"] is not None else None,
+            tags=self.config["tags"],
         )
 
         wandb.watch(self.net)
@@ -600,7 +600,7 @@ def do_training(args) -> None:
         "python-version": sys.version,
         "name": args.name,
         "note": args.note,
-        "tag": args.tag,
+        "tag": args.tags,
     }
 
     world_size = torch.cuda.device_count()

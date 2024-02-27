@@ -238,9 +238,10 @@ def train_parser(parser=None):
         default=None,
     )
     parser.add_argument(
-        "--tag",
+        "--tags",
         type=str,
-        help="tag for the run (e.g. 'test')",
+        nargs="*",
+        help="tags for the run (e.g. '--tags test fine-tune')",
         default=None,
     )
     return parser
