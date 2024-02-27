@@ -2,7 +2,7 @@
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained ../trained_models/vibrant-rooster-557/best.pth \
+   --from-pretrained trained_models/vibrant-rooster-557/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
@@ -32,7 +32,7 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained ../trained_models/fortuitous-orchid-553/best.pth \
+   --from-pretrained trained_models/fortuitous-orchid-553/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
@@ -47,7 +47,7 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained ../trained_models/sparkling-paper-555/best.pth \
+   --from-pretrained trained_models/sparkling-paper-555/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
@@ -62,7 +62,7 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained ../trained_models/crimson-mandu-556/best.pth \
+   --from-pretrained trained_models/crimson-mandu-556/best.pth \
    --lr 5e-5 \
    --batch-size 32 \
    --epochs 128 \
