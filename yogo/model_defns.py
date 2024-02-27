@@ -273,6 +273,204 @@ def quarter_filters(num_classes: int) -> nn.Module:
 
 
 @register_model
+def depth_ver_0(num_classes: int) -> nn.Module:
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(1, 32, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(32),
+        nn.LeakyReLU(),
+    )
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(32, 128, 3, stride=2, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
+    )
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_4 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        conv_block_2,
+        conv_block_3,
+        conv_block_4,
+    )
+
+
+@register_model
+def depth_ver_1(num_classes: int) -> nn.Module:
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(16),
+        nn.LeakyReLU(),
+    )
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(16, 64, 3, stride=2, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
+    )
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(64, 128, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.15),
+    )
+    conv_block_4 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_5 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_6 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        conv_block_2,
+        conv_block_3,
+        conv_block_4,
+        conv_block_5,
+        conv_block_6,
+    )
+
+
+@register_model
+def depth_ver_2(num_classes: int) -> nn.Module:
+    return base_model(num_classes)
+
+
+@register_model
+def depth_ver_3(num_classes: int) -> nn.Module:
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(16),
+        nn.LeakyReLU(),
+    )
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(16, 32, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
+    )
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(32, 32, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
+    )
+    conv_block_4 = nn.Sequential(
+        nn.Conv2d(32, 64, 3, stride=2, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
+    )
+    conv_block_5 = nn.Sequential(
+        nn.Conv2d(64, 128, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.15),
+    )
+    conv_block_6 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_7 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
+        nn.LeakyReLU(),
+    )
+    conv_block_8 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_9 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_10 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        conv_block_2,
+        conv_block_3,
+        conv_block_4,
+        conv_block_5,
+        conv_block_6,
+        conv_block_7,
+        conv_block_8,
+        conv_block_9,
+        conv_block_10,
+    )
+
+
+@register_model
+def depth_ver_4(num_classes: int) -> nn.Module:
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(16),
+        nn.LeakyReLU(),
+    )
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(16, 16, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(16, 32, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
+    )
+    conv_block_4 = nn.Sequential(
+        nn.Conv2d(32, 32, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
+    )
+    conv_block_5 = nn.Sequential(
+        nn.Conv2d(32, 64, 3, stride=2, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
+    )
+    conv_block_6 = nn.Sequential(
+        nn.Conv2d(64, 64, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_7 = nn.Sequential(
+        nn.Conv2d(64, 128, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.15),
+    )
+    conv_block_8 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_9 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, stride=2, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_10 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_11 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_12 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        conv_block_2,
+        conv_block_3,
+        conv_block_4,
+        conv_block_5,
+        conv_block_6,
+        conv_block_7,
+        conv_block_8,
+        conv_block_9,
+        conv_block_10,
+        conv_block_11,
+        conv_block_12,
+    )
+
+
+@register_model
 def convnext_small(num_classes: int) -> nn.Module:
     try:
         import timm
