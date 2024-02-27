@@ -17,7 +17,7 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained vermilion-noodles-558/best.pth \
+   --from-pretrained trained_models/vermilion-noodles-558/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
