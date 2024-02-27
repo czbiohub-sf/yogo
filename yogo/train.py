@@ -600,7 +600,7 @@ def do_training(args) -> None:
         "python-version": sys.version,
         "name": args.name,
         "note": args.note,
-        "tag": args.tags,
+        "tags": args.tags,
     }
 
     world_size = torch.cuda.device_count()
