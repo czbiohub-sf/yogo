@@ -2,75 +2,75 @@
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained trained_models/vibrant-rooster-557/best.pth \
+   --from-pretrained trained_models/rural-dragon-580/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
    --label-smoothing 5e-3 \
    --weight-decay 5e-3 \
    --no-obj-weight 1 \
-   --note "quarter_filters" \
+   --note "depth_ver_0" \
    --lr-decay-factor 16 \
-   --model quarter_filters \
-   --tags scaling-law no-aug \
+   --model depth_ver_0 \
+   --tags scaling-law depthwise fine-tune \
    --normalize-images
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained trained_models/vermilion-noodles-558/best.pth \
+   --from-pretrained trained_models/sweet-tree-579/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
    --label-smoothing 5e-3 \
    --weight-decay 5e-3 \
    --no-obj-weight 1 \
-   --note "half_filters" \
+   --note "depth_ver_1" \
    --lr-decay-factor 16 \
-   --model half_filters \
-   --tags scaling-law no-aug \
+   --model depth_ver_1 \
+   --tags scaling-law depthwise fine-tune \
    --normalize-images
 
 sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained trained_models/fortuitous-orchid-553/best.pth \
+   --from-pretrained trained_models/woven-night-577/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
    --label-smoothing 5e-3 \
    --weight-decay 5e-3 \
    --no-obj-weight 1 \
-   --note "base" \
+   --note "depth_ver_2" \
    --lr-decay-factor 16 \
-   --model base_model \
-   --tags scaling-law no-aug \
+   --model depth_ver_2 \
+   --tags scaling-law depthwise fine-tune \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
+sbatch --dependency=afterok:12365763 scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained trained_models/sparkling-paper-555/best.pth \
+   --from-pretrained trained_models/helpful-frog-583/best.pth \
    --lr 5e-5 \
    --batch-size 64 \
    --epochs 128 \
    --label-smoothing 5e-3 \
    --weight-decay 5e-3 \
    --no-obj-weight 1 \
-   --note "double_filters" \
+   --note "depth_ver_3" \
    --lr-decay-factor 16 \
-   --model double_filters \
-   --tags scaling-law no-aug \
+   --model depth_ver_3 \
+   --tags scaling-law depthwise fine-tune \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
+sbatch --dependency=afterok:12365764 scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/human-labels/all-dataset-subsets-no-aug.yml \
-   --from-pretrained trained_models/crimson-mandu-556/best.pth \
+   --from-pretrained trained_models/expert-cloud-582/best.pth \
    --lr 5e-5 \
    --batch-size 32 \
    --epochs 128 \
    --label-smoothing 5e-3 \
    --weight-decay 5e-3 \
    --no-obj-weight 1 \
-   --note "triple_filters" \
+   --note "depth_ver_4" \
    --lr-decay-factor 16 \
-   --model triple_filters \
-   --tags scaling-law no-aug \
+   --model depth_ver_4 \
+   --tags scaling-law depthwise fine-tune \
    --normalize-images
