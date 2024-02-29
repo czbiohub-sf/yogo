@@ -42,7 +42,7 @@ sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
    --tags scaling-law depthwise \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
+sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/pre-training/yogo_parasite_data_with_tests.yml \
    --lr 5e-4 \
    --batch-size 64 \
@@ -56,7 +56,7 @@ sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
    --tags scaling-law depthwise \
    --normalize-images
 
-sbatch scripts/submit_cmd_multi_gpu_light.sh yogo train \
+sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    ../dataset_defs/pre-training/yogo_parasite_data_with_tests.yml \
    --lr 5e-4 \
    --batch-size 64 \
