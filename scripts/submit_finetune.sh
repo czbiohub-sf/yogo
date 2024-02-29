@@ -72,5 +72,5 @@ sbatch scripts/submit_cmd_multi_gpu.sh yogo train \
    --note "triple_filters" \
    --lr-decay-factor 16 \
    --model triple_filters \
-   --tags scaling-law no-aug no-aug \
+   --tags scaling-law no-aug \
    --normalize-images
