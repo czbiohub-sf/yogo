@@ -34,10 +34,12 @@ def read_grayscale_robust(
         try:
             return read_image(str(img_path), ImageReadMode.GRAY)
         except RuntimeError as e:
+            warnings.warn(f"file {img_path} threw: {e}")
             if i == retries - 1:
-                warnings.warn(f"file {img_path} threw: {e}")
-                return None
-            sleep(min_duration * (2 ** retries))
+                warnings.warn(f"all attempts to read {img_path} failed")
+                break
+            sleep(min_duration * (2**retries))
+    return None
 
 
 def collate_batch_robust(
