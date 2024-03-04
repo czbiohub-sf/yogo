@@ -2,6 +2,7 @@ import os
 import torch
 import warnings
 
+from time import sleep
 from pathlib import Path
 from typing import Union, Optional, Tuple, List
 from ruamel.yaml import YAML
@@ -35,7 +36,8 @@ def read_grayscale_robust(
         except RuntimeError as e:
             if i == retries - 1:
                 warnings.warn(f"file {img_path} threw: {e}")
-    return None
+                return None
+            sleep(min_duration * (2 ** retries)
 
 
 def collate_batch_robust(
