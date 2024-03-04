@@ -37,7 +37,7 @@ def read_grayscale_robust(
             if i == retries - 1:
                 warnings.warn(f"file {img_path} threw: {e}")
                 return None
-            sleep(min_duration * (2 ** retries)
+            sleep(min_duration * (2 ** retries))
 
 
 def collate_batch_robust(
