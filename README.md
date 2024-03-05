@@ -2,6 +2,13 @@
 
 A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for speed on slow hardware and simple object detection problems.
 
+```console
+$ yogo train path/to/dataset-definition-file.yml  # train your model!
+$ yogo infer path/to/model.pth  # use your model!
+$ yogo export path/to/model.pth  # use your model somewhere else!
+$ yogo --help  # all the other details are here :)
+```
+
 ## Install
 
 ```console
