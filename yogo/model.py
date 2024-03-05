@@ -261,7 +261,10 @@ class YOGO(nn.Module):
         if x.ndim == 3:
             x.unsqueeze_(0)
 
-        x = self.model(x.float())
+        if not x.is_floating_point():
+            x = x.float()
+
+        x = self.model(x)
 
         _, _, Sy, Sx = x.shape
 
