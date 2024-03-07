@@ -124,8 +124,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
                 0, dtype=torch.float32, device=self.device
             )
 
-        # you can do some simple math on the YOGO loss function to reduce
-        # it to this form, which I think is the minimum computation required
+        # You can do some simple math on the YOGO loss function to reduce
+        # it to this form, which I think is the minimum computation required.
+        # See "Appendix A" in the YOGO paper.
         objectness_loss = (
             self.mse(pred_batch[:, 4, :, :], label_batch[:, 0, :, :])
             * (
