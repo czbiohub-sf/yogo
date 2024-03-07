@@ -6,7 +6,6 @@ from ruamel.yaml import YAML
 from dataclasses import dataclass
 from typing import Any, Set, List, Dict, Optional
 
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.split_fractions import SplitFractions
 
 """
@@ -180,7 +179,7 @@ class DatasetDefinition:
     _dataset_paths: Set[LiteralSpecification]
     _test_dataset_paths: Set[LiteralSpecification]
 
-    classes: Optional[List[str]]
+    classes: List[str]
     thumbnail_augmentation: Optional[Dict[str, Path]]
     split_fractions: SplitFractions
 
@@ -221,10 +220,10 @@ class DatasetDefinition:
             )
             test_specs = set()
 
-        classes = data.get("classes", YOGO_CLASS_ORDERING)
-
         dataset_specs = DatasetDefinition._check_dataset_paths(dataset_specs)
         test_specs = DatasetDefinition._check_dataset_paths(test_specs)
+
+        classes = data['classes']
 
         return cls(
             _dataset_paths=dataset_specs,

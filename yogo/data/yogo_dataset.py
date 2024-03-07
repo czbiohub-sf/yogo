@@ -136,6 +136,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         label_folder_path: Path,
         Sx,
         Sy,
+        classes: List[str],
         normalize_images: bool = False,
         loader=partial(read_grayscale_robust, retries=3, min_duration=0.1),
         extensions: Optional[Tuple[str]] = ("png",),
@@ -147,7 +148,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # the image_path is just for repr
         super().__init__(str(image_folder_path), *args, **kwargs)
 
-        self.classes = YOGO_CLASS_ORDERING
+        self.classes = classes
         self.image_folder_path = image_folder_path
         self.label_folder_path = label_folder_path
         self.loader = loader

@@ -20,8 +20,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from yogo.model import YOGO
 from yogo.metrics import Metrics
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.yogo_dataloader import get_dataloader
+from yogo.data.dataset_definition_file import DatasetDefinition
 from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
@@ -84,8 +84,8 @@ class Trainer:
 
     def init(self) -> None:
         self._init_tcp_store()
-        self._init_model()
         self._init_dataset()
+        self._init_model()
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
@@ -142,8 +142,11 @@ class Trainer:
         if self.Sx is None or self.Sy is None:
             raise RuntimeError("model not initialized")
 
+        dataset_definition = DatasetDefinition.from_yaml(
+            Path(self.config["dataset_descriptor_file"])
+        )
         dataloaders = get_dataloader(
-            self.config["dataset_descriptor_file"],
+            dataset_definition,
             self.config["batch_size"],
             Sx=self.Sx,
             Sy=self.Sy,
@@ -589,7 +592,6 @@ def do_training(args) -> None:
         "model": args.model,
         "half": args.half,
         "image_shape": args.image_shape,
-        "class_names": YOGO_CLASS_ORDERING,
         "pretrained_path": args.from_pretrained,
         "no_classify": args.no_classify,
         "normalize_images": args.normalize_images,
