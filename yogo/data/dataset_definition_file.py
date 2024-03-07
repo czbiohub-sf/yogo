@@ -223,7 +223,7 @@ class DatasetDefinition:
         dataset_specs = DatasetDefinition._check_dataset_paths(dataset_specs)
         test_specs = DatasetDefinition._check_dataset_paths(test_specs)
 
-        classes = data['classes']
+        classes = data["classes"]
 
         return cls(
             _dataset_paths=dataset_specs,

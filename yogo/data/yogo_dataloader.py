@@ -105,6 +105,7 @@ def get_datasets(
                 dsp.label_path,
                 Sx,
                 Sy,
+                classes=dataset_definition.classes,
                 normalize_images=normalize_images,
             )
             for dsp in tqdm(
