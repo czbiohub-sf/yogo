@@ -129,11 +129,8 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         # See "Appendix A" in the YOGO paper.
         objectness_loss = (
             self.mse(pred_batch[:, 4, :, :], label_batch[:, 0, :, :])
-            * (
-                label_batch[:, 0, :, :] * (1 - self.no_obj_weight) + self.no_obj_weight
-            ).sum()
-            / batch_size
-        )
+            * (label_batch[:, 0, :, :] * (1 - self.no_obj_weight) + self.no_obj_weight)
+        ).sum() / batch_size
 
         loss = objectness_loss + iou_loss + classification_loss
 
