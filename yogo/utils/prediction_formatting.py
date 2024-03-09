@@ -184,6 +184,12 @@ def format_to_numpy(
     )
 
 
+def one_hot(idx, num_classes):
+    return torch.nn.functional.one_hot(
+        torch.tensor(idx, dtype=torch.long), num_classes=num_classes
+    )
+
+
 @dataclass
 class PredictionLabelMatch:
     """
@@ -195,10 +201,72 @@ class PredictionLabelMatch:
     we want to represent these nicely. This is a little dataclass to represent
     these cases, specifically for format_preds_and_labels_v2.
     """
+
     preds: torch.Tensor
     labels: torch.Tensor
     missed_labels: Optional[torch.Tensor]
     extra_predictions: Optional[torch.Tensor]
+
+    @staticmethod
+    def concat(
+        preds_and_labels: list["PredictionLabelMatch"],
+    ) -> "PredictionLabelMatch":
+        return PredictionLabelMatch(
+            preds=torch.cat([p.preds for p in preds_and_labels]),
+            labels=torch.cat([p.labels for p in preds_and_labels]),
+            missed_labels=(
+                torch.cat(
+                    [p.missed_labels for p in preds_and_labels if p.missed_labels],
+                    dim=0,
+                )
+            ),
+            extra_predictions=(
+                torch.cat(
+                    [
+                        p.extra_predictions
+                        for p in preds_and_labels
+                        if p.extra_predictions
+                    ],
+                    dim=0,
+                )
+            ),
+        )
+
+    def convert_background_errors(self, num_classes: int) -> "PredictionLabelMatch":
+        """Assumes that the ``background'' class is the last class"""
+        new_preds, new_labels = [], []
+
+        for missed_label in self.missed_labels or []:
+            assert (
+                missed_label.ndims == 1
+            ), f"{missed_label.squeeze().ndims=}, should be 1"
+            new_preds.append(
+                torch.tensor(
+                    [
+                        *missed_label[1:5],
+                        1,
+                        *torch.onehot(num_classes - 1, num_classes).float(),
+                    ]
+                )
+            )
+            new_labels.append(missed_label)
+
+        for extra_prediction in self.extra_predictions or []:
+            assert (
+                extra_prediction.ndims == 1
+            ), f"{extra_prediction.squeeze().ndims=}, should be 1"
+            new_preds.append(extra_prediction)
+            new_labels.append(torch.tensor([1, *extra_prediction[:4], num_classes - 1]))
+
+        new_preds_ten = torch.stack(new_preds)
+        new_labels_ten = torch.stack(new_labels)
+
+        return PredictionLabelMatch(
+            preds=torch.cat([self.preds, new_preds_ten]),
+            labels=torch.cat([self.labels, new_labels_ten]),
+            missed_labels=None,
+            extra_predictions=None,
+        )
 
 
 def format_preds_and_labels_v2(

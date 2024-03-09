@@ -13,7 +13,10 @@ from torchmetrics.classification import (
     MulticlassCalibrationError,
 )
 
-from yogo.utils import format_preds_and_labels
+from yogo.utils.prediction_formatting import (
+    PredictionLabelMatch,
+    format_preds_and_labels_v2,
+)
 
 
 class Metrics:
@@ -22,13 +25,11 @@ class Metrics:
         self,
         num_classes: int,
         device: str = "cpu",
-        classify: bool = True,
         sync_on_compute: bool = False,
         min_class_confidence_threshold: float = 0.9,
         include_mAP: bool = True,
     ):
-        self.num_classes = num_classes
-        self.classify = classify
+        self.num_classes = num_classes + 1  # add 1 for background
         self.min_class_confidence_threshold = min_class_confidence_threshold
         self.include_mAP = include_mAP
 
@@ -87,9 +88,9 @@ class Metrics:
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
 
-        formatted_preds, formatted_labels = zip(
-            *[
-                format_preds_and_labels(
+        pred_label_matches: PredictionLabelMatch = PredictionLabelMatch.concat(
+            [
+                format_preds_and_labels_v2(
                     pred,
                     label,
                     use_IoU=use_IoU,
@@ -98,14 +99,20 @@ class Metrics:
                 for pred, label in zip(preds, labels)
             ]
         )
+        pred_label_matches = pred_label_matches.convert_background_errors(
+            self.num_classes
+        )
 
         if self.include_mAP:
-            self.mAP.update(*self._format_for_mAP(formatted_preds, formatted_labels))
+            self.mAP.update(
+                *self._format_for_mAP(
+                    pred_label_matches.preds, pred_label_matches.labels
+                )
+            )
 
-        fps, fls = torch.cat(formatted_preds), torch.cat(formatted_labels)
+        fps, fls = pred_label_matches.preds, pred_label_matches.labels
 
         self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
-
         self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
 
     def compute(self):
@@ -143,7 +150,7 @@ class Metrics:
         return res
 
     def _format_for_mAP(
-        self, formatted_preds, formatted_labels
+        self, preds: torch.Tensor, labels: torch.Tensor
     ) -> Tuple[List[Dict[str, torch.Tensor]], List[Dict[str, torch.Tensor]]]:
         """
         formatted_preds
@@ -151,22 +158,21 @@ class Metrics:
         formatted_labels
            tensor of labels shape=[N, mask x y x y class])
         """
-        preds, labels = [], []
-        for fp, fl in zip(formatted_preds, formatted_labels):
-            preds.append(
+        formatted_preds, formatted_labels = [], []
+
+        for fp, fl in zip(preds, labels):
+            formatted_preds.append(
                 {
-                    "boxes": fp[:, :4],
-                    "scores": fp[:, 4],
-                    "labels": (
-                        fp[:, 5:].argmax(dim=1) if self.classify else fl[:, 5].long()
-                    ),
+                    "boxes": fp[:4],
+                    "scores": fp[4],
+                    "labels": fp[5:].argmax(dim=1),
                 }
             )
-            labels.append(
+            formatted_labels.append(
                 {
-                    "boxes": fl[:, 1:5],
-                    "labels": fl[:, 5].long(),
+                    "boxes": fl[1:5],
+                    "labels": fl[5].long(),
                 }
             )
 
-        return preds, labels
+        return formatted_preds, formatted_labels
