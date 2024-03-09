@@ -195,7 +195,6 @@ class PredictionLabelMatch:
     we want to represent these nicely. This is a little dataclass to represent
     these cases, specifically for format_preds_and_labels_v2.
     """
-
     preds: torch.Tensor
     labels: torch.Tensor
     missed_labels: Optional[torch.Tensor]
