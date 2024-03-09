@@ -181,6 +181,70 @@ def format_to_numpy(
     )
 
 
+def format_preds_and_labels_v2(
+    pred: torch.Tensor,
+    label: torch.Tensor,
+    use_IoU: bool = True,
+    objectness_thresh: float = 0.5,
+    min_class_confidence_threshold: float = 0.0,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """A very important utility function for filtering predictions on labels
+
+    Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
+    We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
+
+    preds and labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
+    use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
+    objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
+        only be used with use_IoU == True
+
+    returns
+        tuple(
+            tensor of predictions shape=[N, x y x y objectness *classes],
+            tensor of labels shape=[N, mask x y x y class]
+        )
+    """
+    pred.squeeze_()
+    label.squeeze_()
+
+    if len(pred.shape) != 3:
+        raise ValueError(
+            "argument to format_pred should be unbatched result - "
+            f"shape should be (pred_shape, Sy, Sx), got {pred.shape}"
+        )
+
+    (
+        label_shape,
+        Sy,
+        Sx,
+    ) = label.shape  # label_shape is mask x y x y class
+
+    # [M, pred_shape]
+    formatted_preds = format_preds(
+        pred,
+        obj_thresh=objectness_thresh,
+        iou_thresh = 0.5,
+        area_thresh = 200 / (772 * 1032),
+        min_class_confidence_threshold = min_class_confidence_threshold,
+    )
+
+    labels = label.view(label_shape, Sx * Sy).T
+    # [N, label_shape]
+    formatted_labels = labels[labels[:, 0].bool()]
+
+    # at this point, we have three cases
+    # 1: N == M - the number of predictions is equal to the number of labels.
+    #    In this case, just need to sort the predictions so they match with
+    #    the labels. Do this via IoU? (xc, yc)?
+    # 2: N < M - the number of predictions is greater than the number of labels.
+    #    Do IoU to pick the right predictions and discard the rest. Hopefully this
+    #    # happens mostly in early iterations.
+    # 3: N > M - the number of predictions is less than the number of labels.
+    #    I think we'd need to add "background" as a YOGO prediction, and also return
+    #    a different datatype that explicitly matches label to prediction instead of
+    #    implicitly via array ordering.
+
+
 def format_preds_and_labels(
     pred: torch.Tensor,
     label: torch.Tensor,
