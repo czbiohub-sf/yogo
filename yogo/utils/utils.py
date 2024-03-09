@@ -93,6 +93,7 @@ def get_wandb_confusion(
     title: str = "confusion matrix",
 ):
     nc1, nc2 = confusion_data.shape
+    class_names.append("background")
     assert (
         nc1 == nc2 == len(class_names)
     ), f"nc1 != nc2 != len(class_names)! (nc1 = {nc1}, nc2 = {nc2}, class_names = {class_names})"

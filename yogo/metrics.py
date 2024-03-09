@@ -163,15 +163,15 @@ class Metrics:
         for fp, fl in zip(preds, labels):
             formatted_preds.append(
                 {
-                    "boxes": fp[:4],
-                    "scores": fp[4],
-                    "labels": fp[5:].argmax(dim=1),
+                    "boxes": fp[:4].reshape(1, 4),
+                    "scores": fp[4].reshape(1),
+                    "labels": fp[5:].argmax().reshape(1),
                 }
             )
             formatted_labels.append(
                 {
-                    "boxes": fl[1:5],
-                    "labels": fl[5].long(),
+                    "boxes": fl[1:5].reshape(1, 4),
+                    "labels": fl[5].reshape(1).long(),
                 }
             )
 

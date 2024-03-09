@@ -211,55 +211,65 @@ class PredictionLabelMatch:
     def concat(
         preds_and_labels: list["PredictionLabelMatch"],
     ) -> "PredictionLabelMatch":
+
+        missed_labels_ = [
+            p.missed_labels for p in preds_and_labels if p.missed_labels is not None
+        ]
+        extra_predictions_ = [
+            p.extra_predictions
+            for p in preds_and_labels
+            if p.extra_predictions is not None
+        ]
         return PredictionLabelMatch(
             preds=torch.cat([p.preds for p in preds_and_labels]),
             labels=torch.cat([p.labels for p in preds_and_labels]),
             missed_labels=(
-                torch.cat(
-                    [p.missed_labels for p in preds_and_labels if p.missed_labels],
-                    dim=0,
-                )
+                torch.cat(missed_labels_, dim=0) if missed_labels_ else None
             ),
             extra_predictions=(
-                torch.cat(
-                    [
-                        p.extra_predictions
-                        for p in preds_and_labels
-                        if p.extra_predictions
-                    ],
-                    dim=0,
-                )
+                torch.cat(extra_predictions_, dim=0) if extra_predictions_ else None
             ),
         )
 
     def convert_background_errors(self, num_classes: int) -> "PredictionLabelMatch":
-        """Assumes that the ``background'' class is the last class"""
+        """
+        Assumes that the ``background'' class is the last class
+        TODO right now we convert to list and back for mypy, but that's a bad tradeoff
+        and really we just need to figure out how to properly type this with torch
+        """
         new_preds, new_labels = [], []
 
-        for missed_label in self.missed_labels or []:
-            assert (
-                missed_label.ndims == 1
-            ), f"{missed_label.squeeze().ndims=}, should be 1"
+        missed_labels = (
+            [] if self.missed_labels is None else self.missed_labels.tolist()
+        )
+        extra_predictions = (
+            [] if self.extra_predictions is None else self.extra_predictions.tolist()
+        )
+
+        for missed_label in missed_labels:
             new_preds.append(
                 torch.tensor(
                     [
                         *missed_label[1:5],
                         1,
-                        *torch.onehot(num_classes - 1, num_classes).float(),
+                        *one_hot(num_classes - 1, num_classes).float(),
                     ]
                 )
             )
-            new_labels.append(missed_label)
+            new_labels.append(torch.tensor(missed_label))
 
-        for extra_prediction in self.extra_predictions or []:
-            assert (
-                extra_prediction.ndims == 1
-            ), f"{extra_prediction.squeeze().ndims=}, should be 1"
-            new_preds.append(extra_prediction)
+        for extra_prediction in extra_predictions:
+            new_preds.append(torch.tensor([*extra_prediction, 0]))  # add background
             new_labels.append(torch.tensor([1, *extra_prediction[:4], num_classes - 1]))
 
-        new_preds_ten = torch.stack(new_preds)
-        new_labels_ten = torch.stack(new_labels)
+        new_preds_ten = torch.stack(new_preds).to(self.preds.device)
+        new_labels_ten = torch.stack(new_labels).to(self.labels.device)
+
+        # add background class to end of self.preds too
+        self.preds = torch.cat(
+            [self.preds, torch.zeros(self.preds.shape[0], 1, device=self.preds.device)],
+            dim=1,
+        )
 
         return PredictionLabelMatch(
             preds=torch.cat([self.preds, new_preds_ten]),
@@ -346,7 +356,9 @@ def format_preds_and_labels_v2(
     elif N < M:
         all_pred_indices = torch.arange(M, dtype=torch.long)
         unmatched_pred_indices = torch.tensor(
-            [i for i in all_pred_indices if i not in col_idxs], dtype=torch.long
+            [i for i in all_pred_indices if i not in col_idxs],
+            dtype=torch.long,
+            device=formatted_preds.device,
         )
         extra_preds = formatted_preds[unmatched_pred_indices]
         return PredictionLabelMatch(
@@ -358,7 +370,9 @@ def format_preds_and_labels_v2(
     else:
         all_label_indices = torch.arange(N, dtype=torch.long)
         unmatched_label_indices = torch.tensor(
-            [i for i in all_label_indices if i not in row_idxs], dtype=torch.long
+            [i for i in all_label_indices if i not in row_idxs],
+            dtype=torch.long,
+            device=formatted_labels.device,
         )
         missed_labels = formatted_labels[unmatched_label_indices]
         return PredictionLabelMatch(
