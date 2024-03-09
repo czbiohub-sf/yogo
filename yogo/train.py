@@ -188,7 +188,6 @@ class Trainer:
             iou_weight=self.config["iou_weight"],
             label_smoothing=self.config["label_smoothing"],
             class_weights=torch.tensor(class_weights),
-            classify=not self.config["no_classify"],
         ).to(self.device)
 
         self.optimizer = AdamW(
@@ -440,7 +439,6 @@ class Trainer:
 
         test_metrics = Metrics(
             num_classes=len(config["class_names"]),
-            classify=not config["no_classify"],
             device=str(device),
             sync_on_compute=isinstance(net, DDP),
             include_mAP=include_mAP,
@@ -452,7 +450,6 @@ class Trainer:
             iou_weight=config["iou_weight"],
             label_smoothing=config["label_smoothing"],
             class_weights=torch.tensor(class_weights, dtype=torch.float32),
-            classify=not config["no_classify"],
         ).to(device)
 
         test_loss = torch.zeros(1, device=device)
@@ -503,7 +500,6 @@ class Trainer:
     def _check_keys(config):
         required_test_keys = (
             "class_names",
-            "no_classify",
             "iou_weight",
             "healthy_weight",
             "no_obj_weight",
@@ -591,7 +587,6 @@ def do_training(args) -> None:
         "image_shape": args.image_shape,
         "class_names": YOGO_CLASS_ORDERING,
         "pretrained_path": args.from_pretrained,
-        "no_classify": args.no_classify,
         "normalize_images": args.normalize_images,
         "dataset_split_override": args.dataset_split_override,
         "dataset_descriptor_file": args.dataset_descriptor_file,

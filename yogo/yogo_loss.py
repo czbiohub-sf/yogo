@@ -17,7 +17,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         classify_weight: float = 1.0,
         label_smoothing: float = 0.01,
         class_weights: Optional[torch.Tensor] = None,
-        classify: bool = True,
     ) -> None:
         super().__init__()
 
@@ -26,12 +25,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.classify_weight = classify_weight
 
         self.mse = torch.nn.MSELoss(reduction="none")
-        self._classify = classify
-
-        if self._classify:
-            self.cel = torch.nn.CrossEntropyLoss(
-                weight=class_weights, reduction="none", label_smoothing=label_smoothing
-            )
+        self.cel = torch.nn.CrossEntropyLoss(
+            weight=class_weights, reduction="none", label_smoothing=label_smoothing
+        )
 
         self.device = "cpu"
 
@@ -109,20 +105,14 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             / batch_size
         )
 
-        # classification loss
-        if self._classify:
-            classification_loss = (
-                self.classify_weight
-                * (
-                    label_batch[:, 0, :, :]
-                    * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
-                ).sum()
-                / batch_size
-            )
-        else:
-            classification_loss = torch.tensor(
-                0, dtype=torch.float32, device=self.device
-            )
+        classification_loss = (
+            self.classify_weight
+            * (
+                label_batch[:, 0, :, :]
+                * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
+            ).sum()
+            / batch_size
+        )
 
         # You can do some simple math on the YOGO loss function to reduce
         # it to this form, which I think is the minimum computation required.
