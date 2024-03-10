@@ -3,6 +3,7 @@ import torch
 
 from yogo.infer import do_infer
 from yogo.train import do_training
+from yogo.utils.test_model import do_model_test
 from yogo.utils.argparsers import global_parser
 
 no_onnx = False
@@ -20,6 +21,8 @@ def main():
 
     if args.task == "train":
         do_training(args)
+    elif args.task == "test":
+        do_model_test(args)
     elif args.task == "export":
         if no_onnx:
             print("onnx is not installed; install yogo with `pip3 install .[onnx]`")
