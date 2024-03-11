@@ -6,6 +6,7 @@ A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com
 $ yogo train path/to/dataset-definition-file.yml  # train your model!
 $ yogo infer path/to/model.pth  # use your model!
 $ yogo export path/to/model.pth  # use your model somewhere else!
+$ yogo test path/to/model.pth path/to/dataset-definition-file. # test your model!
 $ yogo --help  # all the other details are here :)
 ```
 
