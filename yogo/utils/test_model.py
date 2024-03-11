@@ -80,7 +80,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
             entity="bioengineering",
             config=config,
             id=args.wandb_resume_id,
-            resume="must",
+            resume="allow",
         )
         assert wandb.run is not None
         wandb.run.tags += type(wandb.run.tags)(["resumed for test"])
