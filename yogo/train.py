@@ -206,8 +206,9 @@ class Trainer:
         if self._rank != 0:
             return
 
+        run_id = wandb.util.generate_id()
         wandb.init(
-            id=wandb.util.generate_id(),
+            id=run_id,
             project="yogo",
             entity="bioengineering",
             config=self.config,
@@ -216,7 +217,6 @@ class Trainer:
             tags=self.config["tags"],
         )
 
-        wandb.watch(self.net)
         wandb.config.update(
             {
                 "Sx": self.Sx,
@@ -225,6 +225,7 @@ class Trainer:
                 "validation set size": f"{self._dataset_size(self.validate_dataloader)} images",  # type:ignore
                 "testing set size": f"{self._dataset_size(self.test_dataloader)} images",  # type:ignore
                 "normalize_images": self.config["normalize_images"],
+                "wandb_run_id": run_id,
             },
             allow_val_change=True,
         )

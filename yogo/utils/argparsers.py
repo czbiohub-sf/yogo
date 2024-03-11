@@ -81,6 +81,9 @@ def global_parser():
     train_parser(
         parser=subparsers.add_parser("train", help="train a model", allow_abbrev=False)
     )
+    test_parser(
+        parser=subparsers.add_parser("test", help="test a model", allow_abbrev=False)
+    )
     export_parser(
         parser=subparsers.add_parser(
             "export", help="export a model", allow_abbrev=False
@@ -243,6 +246,41 @@ def train_parser(parser=None):
         nargs="*",
         help="tags for the run (e.g. '--tags test fine-tune')",
         default=None,
+    )
+    return parser
+
+
+def test_parser(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(
+            description="test on image data", allow_abbrev=False
+        )
+
+    parser.add_argument("pth_path", type=Path)
+    parser.add_argument("dataset_defn_path", type=Path)
+    parser.add_argument(
+        "--wandb",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "log to wandb - this will create a new run. If neither this nor "
+            "--wandb-resume-id are provided, the run will be saved to a new folder"
+        ),
+    )
+    parser.add_argument(
+        "--wandb-resume-id",
+        type=str,
+        default=None,
+        help=(
+            "wandb run id - this will essentially append the results to an "
+            "existing run, given by this run id"
+        ),
+    )
+    parser.add_argument(
+        "--dump-to-disk",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=("dump results to disk as a pkl file"),
     )
     return parser
 
