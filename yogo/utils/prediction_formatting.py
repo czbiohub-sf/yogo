@@ -6,6 +6,7 @@ import torchvision.ops as ops
 
 from dataclasses import dataclass
 from typing import (
+    List,
     Tuple,
     Optional,
     Literal,
@@ -209,7 +210,7 @@ class PredictionLabelMatch:
 
     @staticmethod
     def concat(
-        preds_and_labels: list["PredictionLabelMatch"],
+        preds_and_labels: List["PredictionLabelMatch"],
     ) -> "PredictionLabelMatch":
 
         missed_labels_ = [
