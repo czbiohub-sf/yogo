@@ -6,10 +6,12 @@ import torchvision.ops as ops
 
 from dataclasses import dataclass
 from typing import (
+    Any,
     List,
     Tuple,
-    Optional,
     Literal,
+    Callable,
+    Optional,
     get_args,
 )
 
@@ -117,6 +119,152 @@ def format_preds(
         preds = preds[keep_idxs]
 
     return preds
+
+
+def format_preds_opt_A(
+    pred: torch.Tensor,
+    obj_thresh: float = 0.5,
+    iou_thresh: float = 0.5,
+    area_thresh: Optional[float] = None,
+    box_format: BoxFormat = "cxcywh",
+    heatmap_mask: Optional[torch.Tensor] = None,
+    min_class_confidence_threshold: float = 0.0,
+) -> torch.Tensor:
+    if len(pred.shape) != 3:
+        raise ValueError(
+            "argument to format_pred should be unbatched result - "
+            f"shape should be (pred_shape, Sy, Sx), got {pred.shape}"
+        )
+    elif box_format not in get_args(BoxFormat):
+        raise ValueError(
+            f"invalid box format {box_format}; valid box formats are {get_args(BoxFormat)}"
+        )
+
+    pred_shape, Sy, Sx = pred.shape
+
+    if heatmap_mask is not None:
+        # Only mask rings/trophs/schizonts/gametocytes
+        # We mask classes by position since some areas of a chip can preferentially
+        # predict certain classes incorrectly while predicting other classes correctly.
+        # Indices for the above in the heatmap are: 1, 2, 3, 4
+        idxs = [1, 2, 3, 4]
+        for idx in idxs:
+            pred[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
+
+    reformatted_preds = pred.view(pred_shape, Sx * Sy).T
+
+    # Filter for objectness first
+    objectness_mask = (reformatted_preds[:, 4] > obj_thresh).bool()
+    preds = reformatted_preds[objectness_mask]
+
+    if area_thresh is not None:
+        # filter on area (discard small bboxes)
+        areas = (Sx / Sy) * preds[:, 2] * preds[:, 3]
+        areas_mask = area_thresh <= areas
+
+        preds = preds[areas_mask]
+
+    # if we have to convert box format to xyxy, do it to the tensor
+    # and give nms a view of the original. Otherwise, just give nms
+    # the a converted clone of the boxes.
+    if box_format == "xyxy":
+        preds[:, :4] = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
+        nms_boxes = preds[:, :4]
+    elif box_format == "cxcywh":
+        nms_boxes = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
+
+    # Non-maximal supression to remove duplicate boxes
+    if iou_thresh > 0:
+        keep_idxs = ops.nms(
+            nms_boxes,
+            torch.max(preds[:, 5:], dim=1).values,
+            iou_threshold=iou_thresh,
+        )
+        preds = preds[keep_idxs]
+
+    # Filter out predictions with low class confidence
+    if min_class_confidence_threshold > 0:
+        keep_idxs = preds[:, 5:].max(dim=1).values > min_class_confidence_threshold
+        preds = preds[keep_idxs]
+
+    return preds
+
+
+def format_preds_opt_B(
+    pred: torch.Tensor,
+    obj_thresh: float = 0.5,
+    iou_thresh: float = 0.5,
+    area_thresh: Optional[float] = None,
+    box_format: BoxFormat = "cxcywh",
+    heatmap_mask: Optional[torch.Tensor] = None,
+    min_class_confidence_threshold: float = 0.0,
+) -> torch.Tensor:
+    if len(pred.shape) != 3:
+        raise ValueError(
+            "argument to format_pred should be unbatched result - "
+            f"shape should be (pred_shape, Sy, Sx), got {pred.shape}"
+        )
+    elif box_format not in get_args(BoxFormat):
+        raise ValueError(
+            f"invalid box format {box_format}; valid box formats are {get_args(BoxFormat)}"
+        )
+
+    pred_shape, Sy, Sx = pred.shape
+
+    if heatmap_mask is not None:
+        # Only mask rings/trophs/schizonts/gametocytes
+        # We mask classes by position since some areas of a chip can preferentially
+        # predict certain classes incorrectly while predicting other classes correctly.
+        # Indices for the above in the heatmap are: 1, 2, 3, 4
+        idxs = [1, 2, 3, 4]
+        for idx in idxs:
+            pred[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
+
+    reformatted_preds = pred.view(pred_shape, Sx * Sy).T
+
+    # Filter for objectness first
+    objectness_mask = (reformatted_preds[:, 4] > obj_thresh).bool()
+    preds = reformatted_preds[objectness_mask]
+
+    if area_thresh is not None:
+        # filter on area (discard small bboxes)
+        areas = (Sx / Sy) * preds[:, 2] * preds[:, 3]
+        areas_mask = area_thresh <= areas
+
+        preds = preds[areas_mask]
+
+    # if we have to convert box format to xyxy, do it to the tensor
+    # and give nms a view of the original. Otherwise, just give nms
+    # the a converted clone of the boxes.
+    if box_format == "xyxy":
+        preds[:, :4] = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
+        nms_boxes = preds[:, :4]
+    elif box_format == "cxcywh":
+        nms_boxes = ops.box_convert(preds[:, :4], "cxcywh", "xyxy")
+
+    # Non-maximal supression to remove duplicate boxes
+    if iou_thresh > 0:
+        keep_idxs = ops.nms(
+            nms_boxes,
+            torch.max(preds[:, 5:], dim=1).values * preds[:, 4],
+            iou_threshold=iou_thresh,
+        )
+        preds = preds[keep_idxs]
+
+    # Filter out predictions with low class confidence
+    if min_class_confidence_threshold > 0:
+        keep_idxs = preds[:, 5:].max(dim=1).values > min_class_confidence_threshold
+        preds = preds[keep_idxs]
+
+    return preds
+
+PREDICTION_FORMATTERS = {
+    "default": format_preds,
+    "opt_A": format_preds_opt_A,
+    "opt_B": format_preds_opt_B,
+}
+
+
 
 
 def format_to_numpy(
@@ -286,6 +434,7 @@ def format_preds_and_labels_v2(
     use_IoU: bool = True,
     objectness_thresh: float = 0.5,
     min_class_confidence_threshold: float = 0.0,
+    prediction_formatter: Callable[[Any,], PredictionLabelMatch] = format_preds,  # type: ignore
 ) -> PredictionLabelMatch:
     """A very important utility function for filtering predictions on labels
 
