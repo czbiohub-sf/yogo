@@ -5,7 +5,7 @@ import torch
 import wandb
 import pickle
 import argparse
-
+import warnings
 
 import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
@@ -81,7 +81,16 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
             config=config,
             id=args.wandb_resume_id,
             resume="allow",
+            tags=args.tags,
+            notes=args.note,
         )
+
+        if (wandb.run is not None) and wandb.run.offline:
+            warnings.warn(
+                "wandb run is offline - will not be logged "
+                "to wandb.ai but to the local disc"
+            )
+
         assert wandb.run is not None
         wandb.run.tags += type(wandb.run.tags)(["resumed for test"])
 
@@ -90,7 +99,8 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         "cuda",
         config,
         y,
-        include_mAP=False,
+        include_mAP=args.include_mAP,
+        include_background=args.include_background,
     )
 
     if args.wandb or args.wandb_resume_id and rank == 0:

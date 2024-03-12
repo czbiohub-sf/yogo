@@ -4,6 +4,7 @@ import unittest
 from yogo.utils import format_preds
 
 
+# TODO convert unittest to pytest
 class TestFormatPreds(unittest.TestCase):
     def setUp(self):
         """
