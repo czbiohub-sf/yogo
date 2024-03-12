@@ -102,15 +102,10 @@ class Metrics:
         pred_label_matches = pred_label_matches.convert_background_errors(
             self.num_classes
         )
+        fps, fls = pred_label_matches.preds, pred_label_matches.labels
 
         if self.include_mAP:
-            self.mAP.update(
-                *self._format_for_mAP(
-                    pred_label_matches.preds, pred_label_matches.labels
-                )
-            )
-
-        fps, fls = pred_label_matches.preds, pred_label_matches.labels
+            self.mAP.update(*self._format_for_mAP(fps, fls))
 
         self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
         self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
