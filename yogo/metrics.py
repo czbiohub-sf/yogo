@@ -13,6 +13,7 @@ from torchmetrics.classification import (
     MulticlassCalibrationError,
 )
 
+from yogo.utils import get_wandb_confusion
 from yogo.utils.prediction_formatting import (
     PredictionLabelMatch,
     format_preds_and_labels_v2,
@@ -23,15 +24,18 @@ class Metrics:
     @torch.no_grad()
     def __init__(
         self,
-        num_classes: int,
+        classes: List[str],
         device: str = "cpu",
         sync_on_compute: bool = False,
         min_class_confidence_threshold: float = 0.9,
         include_mAP: bool = True,
+        include_background: bool = True,
     ):
-        self.num_classes = num_classes + 1  # add 1 for background
+        self.classes = classes + (["background"] if include_background else [])
+        self.num_classes = len(classes)
         self.min_class_confidence_threshold = min_class_confidence_threshold
         self.include_mAP = include_mAP
+        self.include_background = include_background
 
         # map can be very costly; so lets be able to turn it off if we
         # don't need it
@@ -99,9 +103,12 @@ class Metrics:
                 for pred, label in zip(preds, labels)
             ]
         )
-        pred_label_matches = pred_label_matches.convert_background_errors(
-            self.num_classes
-        )
+
+        if self.include_background:
+            pred_label_matches = pred_label_matches.convert_background_errors(
+                self.num_classes
+            )
+
         fps, fls = pred_label_matches.preds, pred_label_matches.labels
 
         if self.include_mAP:
@@ -121,10 +128,13 @@ class Metrics:
             }
 
         confusion_metrics = self.confusion.compute()
+        confusion_matrix = get_wandb_confusion(
+            confusion_metrics, self.classes, "test confusion matrix"
+        )
 
         return (
             mAP_metrics,
-            confusion_metrics,
+            confusion_matrix,
             pr_metrics["MulticlassAccuracy"],
             pr_metrics["MulticlassROC"],
             pr_metrics["MulticlassPrecision"],

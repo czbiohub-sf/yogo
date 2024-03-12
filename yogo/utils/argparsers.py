@@ -282,6 +282,18 @@ def test_parser(parser=None):
         default=False,
         help=("dump results to disk as a pkl file"),
     )
+    parser.add_argument(
+        "--include-mAP",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=("calculate mAP as well - just a bit slower (default: False)"),
+    )
+    parser.add_argument(
+        "--include-background",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=("include 'backround' in confusion matrix (default: False)"),
+    )
     return parser
 
 
