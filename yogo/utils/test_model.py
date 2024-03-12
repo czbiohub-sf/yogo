@@ -81,6 +81,8 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
             config=config,
             id=args.wandb_resume_id,
             resume="allow",
+            tags=args.tags,
+            notes=args.note,
         )
 
         if (wandb.run is not None) and wandb.run.offline:

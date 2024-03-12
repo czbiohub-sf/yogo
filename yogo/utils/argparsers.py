@@ -294,6 +294,19 @@ def test_parser(parser=None):
         default=False,
         help=("include 'backround' in confusion matrix (default: False)"),
     )
+    parser.add_argument(
+        "--note",
+        type=str,
+        help="note for the run (e.g. 'run on a TI-82')",
+        default=None,
+    )
+    parser.add_argument(
+        "--tags",
+        type=str,
+        nargs="*",
+        help="tags for the run (e.g. '--tags test fine-tune')",
+        default=None,
+    )
     return parser
 
 
