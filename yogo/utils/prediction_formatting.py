@@ -258,13 +258,12 @@ def format_preds_opt_B(
 
     return preds
 
+
 PREDICTION_FORMATTERS = {
     "default": format_preds,
     "opt_A": format_preds_opt_A,
     "opt_B": format_preds_opt_B,
 }
-
-
 
 
 def format_to_numpy(
@@ -434,7 +433,12 @@ def format_preds_and_labels_v2(
     use_IoU: bool = True,
     objectness_thresh: float = 0.5,
     min_class_confidence_threshold: float = 0.0,
-    prediction_formatter: Callable[[Any,], PredictionLabelMatch] = format_preds,  # type: ignore
+    prediction_formatter: Callable[
+        [
+            Any,
+        ],
+        PredictionLabelMatch,
+    ] = format_preds,  # type: ignore
 ) -> PredictionLabelMatch:
     """A very important utility function for filtering predictions on labels
 
