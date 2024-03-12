@@ -24,6 +24,10 @@ from yogo.utils import get_free_port
 
 
 def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
+    torch.distributed.init_process_group(
+        backend="nccl", rank=rank, world_size=world_size
+    )
+
     y, cfg = YOGO.from_pth(args.pth_path, inference=False)
     y.to("cuda")
 
@@ -33,10 +37,6 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         y.get_grid_size()[0],
         y.get_grid_size()[1],
         normalize_images=cfg["normalize_images"],
-    )
-
-    torch.distributed.init_process_group(
-        backend="nccl", rank=rank, world_size=world_size
     )
 
     test_dataset: Dataset[ObjectDetectionDataset] = dataloaders["test"].dataset
