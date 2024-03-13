@@ -101,7 +101,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         y,
         include_mAP=args.include_mAP,
         include_background=args.include_background,
-        formatter=args.formatter,
+        formatter=args.prediction_formatter,
     )
 
     if args.wandb or args.wandb_resume_id and rank == 0:
