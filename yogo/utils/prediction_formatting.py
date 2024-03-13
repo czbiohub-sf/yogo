@@ -468,7 +468,7 @@ def format_preds_and_labels_v2(
             f"shape should be (pred_shape, Sy, Sx), got {pred.shape}"
         )
 
-    formatted_preds = format_preds(
+    formatted_preds = prediction_formatter(
         pred,
         obj_thresh=objectness_thresh,
         iou_thresh=0.5,
