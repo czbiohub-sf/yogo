@@ -30,12 +30,14 @@ class Metrics:
         min_class_confidence_threshold: float = 0.9,
         include_mAP: bool = True,
         include_background: bool = True,
+        formatter= format_preds_and_labels_v2,
     ):
         self.classes = classes + (["background"] if include_background else [])
         self.num_classes = len(classes)
         self.min_class_confidence_threshold = min_class_confidence_threshold
         self.include_mAP = include_mAP
         self.include_background = include_background
+        self.formatter = formatter
 
         # map can be very costly; so lets be able to turn it off if we
         # don't need it
@@ -94,7 +96,7 @@ class Metrics:
 
         pred_label_matches: PredictionLabelMatch = PredictionLabelMatch.concat(
             [
-                format_preds_and_labels_v2(
+                self.formatter(
                     pred,
                     label,
                     use_IoU=use_IoU,
