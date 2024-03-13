@@ -311,8 +311,8 @@ def test_parser(parser=None):
     parser.add_argument(
         "--prediction-formatter",
         choices=list(PREDICTION_FORMATTERS.keys()),
-        default="default",
-        help="prediction formatter to use - TESTING ONLY TESTING ONLY TESTING ONLY (default: default)",
+        default=None,
+        help="prediction formatter to use - TESTING ONLY TESTING ONLY TESTING ONLY (default: None)",
     )
     return parser
 
