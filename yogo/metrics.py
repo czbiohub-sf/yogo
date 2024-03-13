@@ -96,11 +96,12 @@ class Metrics:
 
         pred_label_matches: PredictionLabelMatch = PredictionLabelMatch.concat(
             [
-                self.formatter(
+                format_preds_and_labels_v2(
                     pred,
                     label,
                     use_IoU=use_IoU,
                     min_class_confidence_threshold=self.min_class_confidence_threshold,
+                    formatter=self.formatter
                 )
                 for pred, label in zip(preds, labels)
             ]
