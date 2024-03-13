@@ -101,7 +101,7 @@ class Metrics:
                     label,
                     use_IoU=use_IoU,
                     min_class_confidence_threshold=self.min_class_confidence_threshold,
-                    formatter=self.formatter
+                    prediction_formatter=self.formatter
                 )
                 for pred, label in zip(preds, labels)
             ]
