@@ -429,7 +429,7 @@ class Trainer:
         net: torch.nn.Module,
         include_mAP: bool = True,
         include_background: bool = False,
-        formatter: Callable = lambda x: x
+        formatter: Callable = lambda x: x,
     ) -> Optional[Tuple[Any, ...]]:
         if Trainer._dataset_size(test_dataloader) == 0:
             return None

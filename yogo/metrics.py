@@ -30,7 +30,7 @@ class Metrics:
         min_class_confidence_threshold: float = 0.9,
         include_mAP: bool = True,
         include_background: bool = True,
-        formatter= format_preds_and_labels_v2,
+        formatter=format_preds_and_labels_v2,
     ):
         self.classes = classes + (["background"] if include_background else [])
         self.num_classes = len(classes)
@@ -101,7 +101,7 @@ class Metrics:
                     label,
                     use_IoU=use_IoU,
                     min_class_confidence_threshold=self.min_class_confidence_threshold,
-                    prediction_formatter=self.formatter
+                    prediction_formatter=self.formatter,
                 )
                 for pred, label in zip(preds, labels)
             ]
