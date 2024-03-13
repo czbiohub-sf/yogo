@@ -30,7 +30,6 @@ def format_preds(
     heatmap_mask: Optional[torch.Tensor] = None,
     min_class_confidence_threshold: float = 0.0,
 ) -> torch.Tensor:
-    print("format_preds")
     """
     formats pred, prediction tensor straight from YOGO, into [N,pred_shape], after applying NMS,
     and, thresholding objectness, and filtering thin boxes. box_format specifies the returned box format.
@@ -131,7 +130,6 @@ def format_preds_opt_A(
     heatmap_mask: Optional[torch.Tensor] = None,
     min_class_confidence_threshold: float = 0.0,
 ) -> torch.Tensor:
-    print("format_preds_opt_A")
     if len(pred.shape) != 3:
         raise ValueError(
             "argument to format_pred should be unbatched result - "
@@ -201,7 +199,6 @@ def format_preds_opt_B(
     heatmap_mask: Optional[torch.Tensor] = None,
     min_class_confidence_threshold: float = 0.0,
 ) -> torch.Tensor:
-    print("format_preds_opt_B")
     if len(pred.shape) != 3:
         raise ValueError(
             "argument to format_pred should be unbatched result - "
