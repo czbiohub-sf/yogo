@@ -429,7 +429,6 @@ class Trainer:
         net: torch.nn.Module,
         include_mAP: bool = True,
         include_background: bool = False,
-        formatter: Callable = lambda x: x,
     ) -> Optional[Tuple[Any, ...]]:
         if Trainer._dataset_size(test_dataloader) == 0:
             return None
@@ -445,7 +444,6 @@ class Trainer:
             sync_on_compute=isinstance(net, DDP),
             include_mAP=include_mAP,
             include_background=include_background,
-            formatter=formatter,
         )
 
         class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]

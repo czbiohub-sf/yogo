@@ -5,7 +5,6 @@ from pathlib import Path
 from yogo.model_defns import MODELS
 from yogo.data.split_fractions import SplitFractions
 from yogo.utils.default_hyperparams import DefaultHyperparams as df
-from yogo.utils.prediction_formatting import PREDICTION_FORMATTERS
 
 
 try:
@@ -307,12 +306,6 @@ def test_parser(parser=None):
         nargs="*",
         help="tags for the run (e.g. '--tags test fine-tune')",
         default=None,
-    )
-    parser.add_argument(
-        "--prediction-formatter",
-        choices=list(PREDICTION_FORMATTERS.keys()),
-        default=None,
-        help="prediction formatter to use - TESTING ONLY TESTING ONLY TESTING ONLY (default: None)",
     )
     return parser
 
