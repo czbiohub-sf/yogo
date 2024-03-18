@@ -11,6 +11,4 @@ dataset_paths:
   cats1:
     defn_path: literal_1.yml
   cats2:
-    defn_path: literal_2.yml
-  cats3:
-    defn_path: literal_3.yml
+    defn_path: literal_funky_classes.yml
