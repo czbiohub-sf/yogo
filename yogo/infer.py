@@ -42,16 +42,7 @@ def save_predictions(
     batch_preds,
     obj_thresh=0.5,
     iou_thresh=0.5,
-    label: Optional[str] = None,
 ):
-    bs, pred_shape, Sy, Sx = batch_preds.shape
-
-    if label is not None:
-        label_idx = YOGO_CLASS_ORDERING.index(label)
-    else:
-        # var is not used
-        label_idx = None
-
     for fname, pred_slice in zip(fnames, batch_preds):
         preds = format_preds(
             pred_slice,
@@ -60,7 +51,7 @@ def save_predictions(
         )
 
         pred_string = "\n".join(
-            f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
+            f"{argmax(pred[5:])} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
             for pred in preds
         )
         with open(fname, "w") as f:
@@ -77,8 +68,11 @@ def get_prediction_class_counts(
     """
     Count the number of predictions of each class, by argmaxing the class predictions
     """
-    tot_class_sum = torch.zeros(len(YOGO_CLASS_ORDERING), dtype=torch.long)
+    bs, pred_dim, Sy, Sx = batch_preds.shape
+    num_classes = pred_dim - 5
+    tot_class_sum = torch.zeros(num_classes, dtype=torch.long)
     heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
+
     for pred_slice in batch_preds:
         preds = format_preds(
             pred_slice,
@@ -87,10 +81,13 @@ def get_prediction_class_counts(
             min_class_confidence_threshold=min_class_confidence_threshold,
             heatmap_mask=heatmap_mask,
         )
+
         if preds.numel() == 0:
             continue  # ignore no predictions
+
         classes = preds[:, 5:]
         tot_class_sum += count_cells_for_formatted_preds(classes)
+
     return tot_class_sum
 
 
@@ -156,7 +153,6 @@ def predict(
     batch_size: int = 64,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    label: Optional[str] = None,
     vertical_crop_height_px: Optional[int] = None,
     use_tqdm: bool = False,
     device: Optional[Union[str, torch.device]] = None,
@@ -202,7 +198,8 @@ def predict(
     img_in_w = int(model.img_size[1].item())  # type: ignore
 
     dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
-    model_jit = torch.jit.trace(model, dummy_input)
+    model_jit = torch.compile(model)
+    output_shape = model_jit(dummy_input)
 
     image_dataset = get_dataset(
         path_to_images=path_to_images,
@@ -243,9 +240,8 @@ def predict(
 
     # this tensor can be really big, so only create it if we need it
     if not (draw_boxes or save_preds):
-        Sx, Sy = model.get_grid_size()
         results = torch.zeros(
-            (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
+            (len(image_dataset), output_shape[1], output_shape[2], output_shape[3]),
         )
     if save_npy:
         np_results = []
@@ -309,7 +305,6 @@ def predict(
                 res,
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
-                label=label,
             )
         elif save_npy:
             res = res.cpu().numpy()
