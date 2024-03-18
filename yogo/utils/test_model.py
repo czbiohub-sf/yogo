@@ -13,7 +13,6 @@ from torch.utils.data import Dataset, DataLoader
 
 from yogo.model import YOGO
 from yogo.train import Trainer
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.utils import collate_batch_robust
 from yogo.data.dataset_definition_file import DatasetDefinition
