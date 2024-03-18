@@ -387,6 +387,13 @@ def infer_parser(parser=None):
         default=False,
     )
     parser.add_argument(
+        "--class-names",
+        help="list of class names - will default to integers if not provided",
+        type=str,
+        nargs="*",
+        default=None,
+    )
+    parser.add_argument(
         "--count",
         action=boolean_action,
         default=False,

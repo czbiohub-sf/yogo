@@ -17,7 +17,6 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import CenterCrop
 
 from yogo.model import YOGO
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import infer_parser
 from yogo.data.image_path_dataset import ZarrDataset, get_dataset, collate_fn
 from yogo.data.yogo_dataloader import choose_dataloader_num_workers
@@ -143,12 +142,14 @@ def write_metadata(metadata_path: Path, **kwargs):
 @torch.no_grad()
 def predict(
     path_to_pth: str,
+    *,
     path_to_images: Optional[Path] = None,
     path_to_zarr: Optional[Path] = None,
     output_dir: Optional[str] = None,
-    save_preds: bool = False,
     draw_boxes: bool = False,
+    save_preds: bool = False,
     save_npy: bool = False,
+    class_names: Optional[List[str]] = None,
     count_predictions: bool = False,
     batch_size: int = 64,
     obj_thresh: float = 0.5,
@@ -199,7 +200,17 @@ def predict(
 
     dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
     model_jit = torch.compile(model)
-    output_shape = model_jit(dummy_input)
+
+    output_shape = model_jit(dummy_input).shape
+    num_classes = output_shape[1] - 5
+
+    if class_names is None:
+        class_names = [f"class {i}" for i in range(num_classes)]
+    else:
+        if len(class_names) != num_classes:
+            raise ValueError(
+                f"expected {num_classes} class names, got {len(class_names)}"
+            )
 
     image_dataset = get_dataset(
         path_to_images=path_to_images,
@@ -272,7 +283,7 @@ def predict(
                     obj_thresh=obj_thresh,
                     iou_thresh=iou_thresh,
                     min_class_confidence_threshold=min_class_confidence_threshold,
-                    labels=YOGO_CLASS_ORDERING,
+                    labels=class_names,
                     images_are_normalized=cfg["normalize_images"],
                 )
                 if output_dir is not None:
@@ -336,7 +347,7 @@ def predict(
         print(
             list(
                 zip(
-                    YOGO_CLASS_ORDERING,
+                    class_names,
                     counts,
                     [0 if tot_cells == 0 else round(c / tot_cells, 4) for c in counts],
                 )
@@ -384,9 +395,10 @@ def do_infer(args):
         path_to_images=args.path_to_images,
         path_to_zarr=args.path_to_zarr,
         output_dir=args.output_dir,
+        draw_boxes=args.draw_boxes,
         save_preds=args.save_preds,
         save_npy=args.save_npy,
-        draw_boxes=args.draw_boxes,
+        class_names=args.class_names,
         obj_thresh=args.obj_thresh,
         iou_thresh=args.iou_thresh,
         batch_size=args.batch_size,

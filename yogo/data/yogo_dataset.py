@@ -10,7 +10,6 @@ from pathlib import Path
 from functools import partial
 from typing import List, Dict, Union, Tuple, Optional, Callable, Any, cast
 
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.utils import read_grayscale_robust
 
 
@@ -47,6 +46,7 @@ def format_labels_tensor(labels: torch.Tensor, Sx: int, Sy: int) -> torch.Tensor
 
 def correct_label_idx(
     label: str,
+    classes: List[str],
     notes_data: Optional[Dict[str, Any]] = None,
 ) -> int:
     if notes_data is None:
@@ -62,13 +62,14 @@ def correct_label_idx(
         if label_name is None:
             raise ValueError(f"label index {label} not found in notes.json file")
 
-        return YOGO_CLASS_ORDERING.index(label_name)
+        return classes.index(label_name)
     else:
-        return YOGO_CLASS_ORDERING.index(label)
+        return classes.index(label)
 
 
 def load_labels(
     label_path: Path,
+    classes: List[str],
     notes_data: Optional[Dict[str, Any]] = None,
 ) -> List[List[float]]:
     "loads labels from label file, given by image path"
@@ -99,7 +100,7 @@ def load_labels(
             if w * h < AREA_FILTER_THRESHOLD:
                 continue
 
-            label_idx = correct_label_idx(row[0], notes_data)
+            label_idx = correct_label_idx(row[0], classes, notes_data)
 
             # float for everything so we can make tensors of labels
             labels.append([float(label_idx), xc, yc, w, h])
@@ -111,12 +112,13 @@ def label_file_to_tensor(
     label_path: Path,
     Sx: int,
     Sy: int,
+    classes: List[str],
     notes_data: Optional[Dict[str, Any]] = None,
 ) -> torch.Tensor:
     "loads labels from label file into a tensor suitible for back prop, given by image path"
 
     try:
-        labels = load_labels(label_path, notes_data=notes_data)
+        labels = load_labels(label_path, classes=classes, notes_data=notes_data)
     except Exception as e:
         raise RuntimeError(f"exception from {label_path}") from e
 
@@ -252,7 +254,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         image = maybe_image
 
         labels = label_file_to_tensor(
-            Path(label_path), self.Sx, self.Sy, self.notes_data
+            Path(label_path), self.Sx, self.Sy, self.classes, self.notes_data
         )
 
         if self.normalize_images:
@@ -271,7 +273,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         """
         class_counts = torch.zeros(len(self.classes), dtype=torch.long)
         for label_path in self._label_paths:
-            labels = load_labels(label_path, notes_data=self.notes_data)
+            labels = load_labels(
+                label_path, classes=self.classes, notes_data=self.notes_data
+            )
             for label in labels:
                 class_counts[int(label[0])] += 1
         return class_counts
