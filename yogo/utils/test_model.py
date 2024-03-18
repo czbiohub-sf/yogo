@@ -16,6 +16,7 @@ from yogo.train import Trainer
 from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.yogo_dataset import ObjectDetectionDataset
 from yogo.data.utils import collate_batch_robust
+from yogo.data.dataset_definition_file import DatasetDefinition
 from yogo.data.yogo_dataloader import (
     get_dataloader,
     choose_dataloader_num_workers,
@@ -26,6 +27,8 @@ from yogo.utils import get_free_port
 def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
     y, cfg = YOGO.from_pth(args.pth_path, inference=False)
     y.to("cuda")
+
+    data_defn = DatasetDefinition.from_yaml(args.dataset_defn_path)
 
     dataloaders = get_dataloader(
         args.dataset_defn_path,
@@ -62,7 +65,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
     )
 
     config = {
-        "class_names": YOGO_CLASS_ORDERING,
+        "class_names": data_defn.classes,
         "no_classify": False,
         "iou_weight": 1,
         "healthy_weight": 1,
