@@ -4,6 +4,7 @@ import torch
 import warnings
 
 from tqdm import tqdm
+from pathlib import Path
 from functools import partial
 
 from torch.utils.data.distributed import DistributedSampler
@@ -72,7 +73,7 @@ def choose_dataloader_num_workers(
 
 
 def get_datasets(
-    dataset_definition: DatasetDefinition,
+    dataset_definition_file: str,
     Sx: int,
     Sy: int,
     normalize_images: bool = False,
@@ -83,13 +84,14 @@ def get_datasets(
 
     See the spec in `dataset_definition_file.py`
     """
+    dataset_definition = DatasetDefinition.from_yaml(Path(dataset_definition_file))
+
     full_dataset: ConcatDataset[ObjectDetectionDataset] = ConcatDataset(
         ObjectDetectionDataset(
             dsp.image_path,
             dsp.label_path,
             Sx,
             Sy,
-            classes=dataset_definition.classes,
             normalize_images=normalize_images,
         )
         for dsp in tqdm(dataset_definition.dataset_paths, desc="loading dataset")
@@ -105,7 +107,6 @@ def get_datasets(
                 dsp.label_path,
                 Sx,
                 Sy,
-                classes=dataset_definition.classes,
                 normalize_images=normalize_images,
             )
             for dsp in tqdm(
@@ -175,7 +176,7 @@ def split_dataset(
 
 
 def get_dataloader(
-    dataset_definition: DatasetDefinition,
+    dataset_descriptor_file: str,
     batch_size: int,
     Sx: int,
     Sy: int,
@@ -184,7 +185,7 @@ def get_dataloader(
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> Dict[str, DataLoader]:
     split_datasets = get_datasets(
-        dataset_definition,
+        dataset_descriptor_file,
         Sx,
         Sy,
         normalize_images=normalize_images,

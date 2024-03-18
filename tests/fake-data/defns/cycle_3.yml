@@ -1,8 +1,3 @@
-classes:
-  - you
-  - only
-  - glance
-  - once
 dataset_split_fractions:
   train: 1
   val: 0
