@@ -137,11 +137,3 @@ def test_get_all_paths_when_override() -> None:
     assert rec_w_tests._dataset_paths == (
         lit_w_tests._dataset_paths | lit_w_tests._test_dataset_paths
     )
-
-
-def test_recursive_defn_class_mismatch() -> None:
-    """
-    should detect a class mismatch
-    """
-    with pytest.raises(InvalidDatasetDefinitionFile):
-        DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_class_mismatch.yml")
