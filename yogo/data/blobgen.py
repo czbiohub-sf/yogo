@@ -14,7 +14,6 @@ from torchvision import transforms as T
 from torchvision.ops import box_iou
 from torchvision.transforms import functional as F
 
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.utils import read_grayscale_robust
 from yogo.data.yogo_dataset import format_labels_tensor
 
@@ -58,6 +57,7 @@ class BlobDataset(Dataset):
         thumbnail_dir_paths: Mapping[Union[str, int], PathLike],
         Sx: int,
         Sy: int,
+        classes: List[str],
         n: int = 4,
         length: int = 1000,
         background_img_shape: Tuple[int, int] = (772, 1032),
@@ -84,6 +84,7 @@ class BlobDataset(Dataset):
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
         self.normalize_images = normalize_images
+        self.dataset_classes = classes
         self.classes, self.thumbnail_paths = self.get_thumbnail_paths(
             self.thumbnail_dir_paths
         )
@@ -95,14 +96,14 @@ class BlobDataset(Dataset):
 
     def _convert_label(self, label: Union[str, int]) -> int:
         if isinstance(label, int):
-            if not (0 <= label < len(YOGO_CLASS_ORDERING)):
+            if not (0 <= label < len(self.dataset_classes)):
                 raise ValueError(
-                    f"label {label} is out of range [0, {len(YOGO_CLASS_ORDERING)})"
+                    f"label {label} is out of range [0, {len(self.dataset_classes)})"
                 )
             return label
 
         try:
-            return YOGO_CLASS_ORDERING.index(label)
+            return self.dataset_classes.index(label)
         except IndexError as e:
             raise ValueError(f"label {label} is not a valid YOGO class") from e
 

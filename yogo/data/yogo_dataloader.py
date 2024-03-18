@@ -138,6 +138,7 @@ def get_datasets(
             dataset_definition.thumbnail_augmentation,  # type: ignore
             Sx=Sx,
             Sy=Sy,
+            classes=dataset_definition.classes,
             n=12,
             length=len(split_datasets["train"]) // 2,  # type: ignore
             blend_thumbnails=True,
