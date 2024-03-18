@@ -349,6 +349,13 @@ def infer_parser(parser=None):
     parser.add_argument(
         "pth_path", type=Path, help="path to .pth file defining the model"
     )
+    data_source = parser.add_mutually_exclusive_group(required=True)
+    data_source.add_argument(
+        "--path-to-images", type=Path, default=None, help="path to image or images"
+    )
+    data_source.add_argument(
+        "--path-to-zarr", type=Path, default=None, help="path to zarr file"
+    )
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -435,12 +442,5 @@ def infer_parser(parser=None):
         type=Path,
         default=None,
         help="path to heatmap mask for the run (default: None)",
-    )
-    data_source = parser.add_mutually_exclusive_group(required=True)
-    data_source.add_argument(
-        "--path-to-images", type=Path, default=None, help="path to image or images"
-    )
-    data_source.add_argument(
-        "--path-to-zarr", type=Path, default=None, help="path to zarr file"
     )
     return parser
