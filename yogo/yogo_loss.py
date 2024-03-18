@@ -17,7 +17,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         classify_weight: float = 1.0,
         label_smoothing: float = 0.01,
         class_weights: Optional[torch.Tensor] = None,
-        classify: bool = True,
     ) -> None:
         super().__init__()
 
@@ -26,12 +25,9 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         self.classify_weight = classify_weight
 
         self.mse = torch.nn.MSELoss(reduction="none")
-        self._classify = classify
-
-        if self._classify:
-            self.cel = torch.nn.CrossEntropyLoss(
-                weight=class_weights, reduction="none", label_smoothing=label_smoothing
-            )
+        self.cel = torch.nn.CrossEntropyLoss(
+            weight=class_weights, reduction="none", label_smoothing=label_smoothing
+        )
 
         self.device = "cpu"
 
@@ -57,27 +53,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         batch_size, _, Sy, Sx = pred_batch.shape
 
         loss = torch.tensor(0, dtype=torch.float32, device=self.device)
-
-        # objectness loss when there is no obj
-        objectnes_loss_no_obj = (
-            self.no_obj_weight
-            * (
-                (1 - label_batch[:, 0, :, :])
-                * self.mse(
-                    pred_batch[:, 4, :, :],
-                    torch.zeros_like(pred_batch[:, 4, :, :]),
-                )
-            ).sum()
-        ) / batch_size
-
-        # objectness loss when there is an obj
-        objectnes_loss_obj = (
-            label_batch[:, 0, :, :]
-            * self.mse(
-                pred_batch[:, 4, :, :],
-                torch.ones_like(pred_batch[:, 4, :, :]),
-            )
-        ).sum() / batch_size
 
         # bounding box loss
         # there is a lot of work to get it into the right format for loss
@@ -130,29 +105,28 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
             / batch_size
         )
 
-        # classification loss
-        if self._classify:
-            classification_loss = (
-                self.classify_weight
-                * (
-                    label_batch[:, 0, :, :]
-                    * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
-                ).sum()
-                / batch_size
-            )
-        else:
-            classification_loss = torch.tensor(
-                0, dtype=torch.float32, device=self.device
-            )
-
-        loss = (
-            objectnes_loss_no_obj + objectnes_loss_obj + iou_loss + classification_loss
+        classification_loss = (
+            self.classify_weight
+            * (
+                label_batch[:, 0, :, :]
+                * self.cel(pred_batch[:, 5:, :, :], label_batch[:, 5, :, :].long())
+            ).sum()
+            / batch_size
         )
+
+        # You can do some simple math on the YOGO loss function to reduce
+        # it to this form, which I think is the minimum computation required.
+        # See "Appendix A" in the YOGO paper.
+        objectness_loss = (
+            self.mse(pred_batch[:, 4, :, :], label_batch[:, 0, :, :])
+            * (label_batch[:, 0, :, :] * (1 - self.no_obj_weight) + self.no_obj_weight)
+        ).sum() / batch_size
+
+        loss = objectness_loss + iou_loss + classification_loss
 
         loss_components = {
             "iou_loss": iou_loss.item(),
-            "objectnes_loss_no_obj": objectnes_loss_no_obj.item(),
-            "objectnes_loss_obj": objectnes_loss_obj.item(),
+            "objectness_loss": objectness_loss.item(),
             "classification_loss": classification_loss.item(),
         }
 

@@ -4,12 +4,16 @@ import numpy.typing as npt
 
 import torchvision.ops as ops
 
+from dataclasses import dataclass
 from typing import (
+    List,
     Tuple,
     Optional,
     Literal,
     get_args,
 )
+
+from scipy.optimize import linear_sum_assignment
 
 
 BoxFormat = Literal["xyxy", "cxcywh"]
@@ -179,6 +183,205 @@ def format_to_numpy(
     return np.vstack(
         (img_ids, tlx, tly, brx, bry, objectness, pred_labels, pred_probs, all_confs)
     )
+
+
+def one_hot(idx, num_classes):
+    return torch.nn.functional.one_hot(
+        torch.tensor(idx, dtype=torch.long), num_classes=num_classes
+    )
+
+
+@dataclass
+class PredictionLabelMatch:
+    """
+    When matching object detection predictions to labels, we have three
+    cases to consider:
+        1 there is a one-to-one match between predictions and labels
+        2 there are more predictions than labels (some predictions are actually of background)
+        3 there are more labels than predictions (some labels are missed)
+    we want to represent these nicely. This is a little dataclass to represent
+    these cases, specifically for format_preds_and_labels_v2.
+    """
+
+    preds: torch.Tensor
+    labels: torch.Tensor
+    missed_labels: Optional[torch.Tensor]
+    extra_predictions: Optional[torch.Tensor]
+
+    @staticmethod
+    def concat(
+        preds_and_labels: List["PredictionLabelMatch"],
+    ) -> "PredictionLabelMatch":
+
+        missed_labels_ = [
+            p.missed_labels for p in preds_and_labels if p.missed_labels is not None
+        ]
+        extra_predictions_ = [
+            p.extra_predictions
+            for p in preds_and_labels
+            if p.extra_predictions is not None
+        ]
+        return PredictionLabelMatch(
+            preds=torch.cat([p.preds for p in preds_and_labels]),
+            labels=torch.cat([p.labels for p in preds_and_labels]),
+            missed_labels=(
+                torch.cat(missed_labels_, dim=0) if missed_labels_ else None
+            ),
+            extra_predictions=(
+                torch.cat(extra_predictions_, dim=0) if extra_predictions_ else None
+            ),
+        )
+
+    def convert_background_errors(self, num_classes: int) -> "PredictionLabelMatch":
+        """
+        Assumes that the ``background'' class is the last class
+        TODO right now we convert to list and back for mypy, but that's a bad tradeoff
+        and really we just need to figure out how to properly type this with torch
+        """
+        new_preds, new_labels = [], []
+
+        missed_labels = (
+            [] if self.missed_labels is None else self.missed_labels.tolist()
+        )
+        extra_predictions = (
+            [] if self.extra_predictions is None else self.extra_predictions.tolist()
+        )
+
+        for missed_label in missed_labels:
+            new_preds.append(
+                torch.tensor(
+                    [
+                        *missed_label[1:5],
+                        1,
+                        *one_hot(num_classes - 1, num_classes).float(),
+                    ]
+                )
+            )
+            new_labels.append(torch.tensor(missed_label))
+
+        for extra_prediction in extra_predictions:
+            new_preds.append(torch.tensor([*extra_prediction, 0]))  # add background
+            new_labels.append(torch.tensor([1, *extra_prediction[:4], num_classes - 1]))
+
+        new_preds_ten = torch.stack(new_preds).to(self.preds.device)
+        new_labels_ten = torch.stack(new_labels).to(self.labels.device)
+
+        # add background class to end of self.preds too
+        self.preds = torch.cat(
+            [self.preds, torch.zeros(self.preds.shape[0], 1, device=self.preds.device)],
+            dim=1,
+        )
+
+        return PredictionLabelMatch(
+            preds=torch.cat([self.preds, new_preds_ten]),
+            labels=torch.cat([self.labels, new_labels_ten]),
+            missed_labels=None,
+            extra_predictions=None,
+        )
+
+
+def format_preds_and_labels_v2(
+    pred: torch.Tensor,
+    label: torch.Tensor,
+    use_IoU: bool = True,
+    objectness_thresh: float = 0.5,
+    min_class_confidence_threshold: float = 0.0,
+) -> PredictionLabelMatch:
+    """A very important utility function for filtering predictions on labels
+
+    Often, we need to calculate conditional probabilites - e.g. #(correct predictions | objectness > thresh)
+    We want to select our predicted bbs and class predictions on IOU, and sometimes on ojbectness, e.t.c
+
+    preds and labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
+    use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
+    objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
+        only be used with use_IoU == True
+
+    returns
+        tuple(
+            tensor of predictions shape=[N, x y x y objectness *classes],
+            tensor of labels shape=[N, mask x y x y class]
+        )
+    """
+    pred.squeeze_()
+    label.squeeze_()
+
+    if len(pred.shape) != 3:
+        raise ValueError(
+            "argument to format_pred should be unbatched result - "
+            f"shape should be (pred_shape, Sy, Sx), got {pred.shape}"
+        )
+
+    formatted_preds = format_preds(
+        pred,
+        obj_thresh=objectness_thresh,
+        iou_thresh=0.5,
+        area_thresh=200 / (772 * 1032),
+        box_format="xyxy",
+        min_class_confidence_threshold=min_class_confidence_threshold,
+    )
+
+    (
+        label_shape,
+        Sy,
+        Sx,
+    ) = label.shape  # label_shape is mask x y x y class
+    labels = label.view(label_shape, Sx * Sy).T
+    formatted_labels = labels[labels[:, 0].bool()]
+
+    M, _ = formatted_preds.shape
+    N, _ = formatted_labels.shape
+    pairwise_iou = ops.box_iou(formatted_labels[:, 1:5], formatted_preds[:, :4])
+
+    cost_matrix = 1 - pairwise_iou.cpu().numpy()
+    row_idxs, col_idxs = linear_sum_assignment(cost_matrix)
+
+    row_idxs = torch.tensor(row_idxs, dtype=torch.long)
+    col_idxs = torch.tensor(col_idxs, dtype=torch.long)
+
+    # Matched predictions and labels
+    matched_preds = formatted_preds[col_idxs]
+    matched_labels = formatted_labels[row_idxs]
+
+    # at this point, we have three cases
+    # 1: N == M - the number of predictions is equal to the number of labels.
+    # 2: N < M - the number of predictions is greater than the number of labels.
+    # 3: N > M - the number of predictions is less than the number of labels.
+    if N == M:
+        return PredictionLabelMatch(
+            preds=matched_preds,
+            labels=matched_labels,
+            missed_labels=None,
+            extra_predictions=None,
+        )
+    elif N < M:
+        all_pred_indices = torch.arange(M, dtype=torch.long)
+        unmatched_pred_indices = torch.tensor(
+            [i for i in all_pred_indices if i not in col_idxs],
+            dtype=torch.long,
+            device=formatted_preds.device,
+        )
+        extra_preds = formatted_preds[unmatched_pred_indices]
+        return PredictionLabelMatch(
+            preds=matched_preds,
+            labels=matched_labels,
+            missed_labels=None,
+            extra_predictions=extra_preds,
+        )
+    else:
+        all_label_indices = torch.arange(N, dtype=torch.long)
+        unmatched_label_indices = torch.tensor(
+            [i for i in all_label_indices if i not in row_idxs],
+            dtype=torch.long,
+            device=formatted_labels.device,
+        )
+        missed_labels = formatted_labels[unmatched_label_indices]
+        return PredictionLabelMatch(
+            preds=matched_preds,
+            labels=matched_labels,
+            missed_labels=missed_labels,
+            extra_predictions=None,
+        )
 
 
 def format_preds_and_labels(
