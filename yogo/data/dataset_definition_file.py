@@ -204,26 +204,32 @@ class DatasetDefinition:
 
         test_paths_present = "test_paths" in data
 
+        try:
+            classes = data["classes"]
+        except KeyError as e:
+            raise InvalidDatasetDefinitionFile(
+                "`classes` is a required key in the dataset definition file"
+            ) from e
+
         if test_paths_present:
             dataset_specs = cls._load_dataset_specifications(
-                path, dataset_paths_key=SpecificationsKey.DATASET_PATHS
+                path, classes, dataset_paths_key=SpecificationsKey.DATASET_PATHS
             )
             test_specs = cls._load_dataset_specifications(
                 path,
+                classes,
                 exclude_ymls=[path],
                 exclude_specs=dataset_specs,
                 dataset_paths_key=SpecificationsKey.TEST_DATASET_PATHS,
             )
         else:
             dataset_specs = cls._load_dataset_specifications(
-                path, dataset_paths_key=SpecificationsKey.ALL_DATASET_PATHS
+                path, classes, dataset_paths_key=SpecificationsKey.ALL_DATASET_PATHS
             )
             test_specs = set()
 
         dataset_specs = DatasetDefinition._check_dataset_paths(dataset_specs)
         test_specs = DatasetDefinition._check_dataset_paths(test_specs)
-
-        classes = data["classes"]
 
         return cls(
             _dataset_paths=dataset_specs,
@@ -302,6 +308,7 @@ class DatasetDefinition:
     @staticmethod
     def _load_dataset_specifications(
         yml_path: Path,
+        classes: List[str],
         exclude_ymls: List[Path] = [],
         exclude_specs: Set[LiteralSpecification] = set(),
         dataset_paths_key: SpecificationsKey = SpecificationsKey.DATASET_PATHS,
@@ -343,9 +350,16 @@ class DatasetDefinition:
                 # recur!
                 child_specs = DatasetDefinition._load_dataset_specifications(
                     new_yml_path,
+                    classes,
                     exclude_ymls=[new_yml_path, *exclude_ymls],
                     dataset_paths_key=dataset_paths_key,
                 )
+
+                if "classes" in spec:
+                    if spec["classes"] != classes:
+                        raise InvalidDatasetDefinitionFile(
+                            f"classes mismatch in {spec['defn_path']}"
+                        )
 
                 DatasetDefinition._check_for_non_disjoint_sets(
                     literal_defns, child_specs
@@ -356,6 +370,12 @@ class DatasetDefinition:
             elif "image_path" in spec and "label_path" in spec:
                 # ez case
                 literal_spec = LiteralSpecification.from_dict(spec)
+
+                if "classes" in spec:
+                    if spec["classes"] != classes:
+                        raise InvalidDatasetDefinitionFile(
+                            f"classes mismatch in {spec['defn_path']}"
+                        )
 
                 DatasetDefinition._check_for_non_disjoint_sets(
                     literal_defns, {literal_spec}
