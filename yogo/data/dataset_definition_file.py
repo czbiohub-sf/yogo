@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from ruamel.yaml import YAML
 from dataclasses import dataclass
-from typing import Any, Set, List, Dict, Optional
+from typing import Any, Set, List, Dict, Union, Optional
 
 from yogo.data.split_fractions import SplitFractions
 
@@ -112,12 +112,15 @@ class LiteralSpecification:
 
     image_path: Path
     label_path: Path
+    classes: List[str]
 
     @classmethod
-    def from_dict(self, dct: Dict[str, str]) -> "LiteralSpecification":
-        if len(dct) != 2:
+    def from_dict(
+        self, dct: Dict[str, Union[List[str], str]]
+    ) -> "LiteralSpecification":
+        if len(dct) != 3:
             raise InvalidDatasetDefinitionFile(
-                f"LiteralSpecification must have two keys; found {len(dct)}"
+                f"LiteralSpecification must have three keys; found {len(dct)}"
             )
         elif "image_path" not in dct or "label_path" not in dct:
             defn_path_hint = (
@@ -136,11 +139,15 @@ class LiteralSpecification:
             )
         else:
             return LiteralSpecification(
-                Path(dct["image_path"]), Path(dct["label_path"])
+                Path(dct["image_path"]), Path(dct["label_path"]), dct["classes"]
             )
 
-    def to_dict(self) -> Dict[str, str]:
-        return {"image_path": str(self.image_path), "label_path": str(self.label_path)}
+    def to_dict(self) -> Dict[str, Union[List[str], str]]:
+        return {
+            "image_path": str(self.image_path),
+            "label_path": str(self.label_path),
+            "classes": self.classes,
+        }
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LiteralSpecification):
@@ -149,10 +156,11 @@ class LiteralSpecification:
             return (
                 self.image_path == other.image_path
                 and self.label_path == other.label_path
+                and self.classes == other.classes
             )
 
     def __hash__(self) -> int:
-        return hash((self.image_path, self.label_path))
+        return hash((self.image_path, self.label_path, "".join(sorted(self.classes))))
 
 
 class SpecificationsKey(Enum):
@@ -205,10 +213,10 @@ class DatasetDefinition:
         test_paths_present = "test_paths" in data
 
         try:
-            classes = data["classes"]
+            classes = data["class_names"]
         except KeyError as e:
             raise InvalidDatasetDefinitionFile(
-                "`classes` is a required key in the dataset definition file"
+                f"`class_names` is a required key in the dataset definition file {path}"
             ) from e
 
         if test_paths_present:
@@ -355,8 +363,8 @@ class DatasetDefinition:
                     dataset_paths_key=dataset_paths_key,
                 )
 
-                if "classes" in spec:
-                    if spec["classes"] != classes:
+                for child_spec in child_specs:
+                    if child_specs.classes != classes:
                         raise InvalidDatasetDefinitionFile(
                             f"classes mismatch in {spec['defn_path']}"
                         )
@@ -371,11 +379,10 @@ class DatasetDefinition:
                 # ez case
                 literal_spec = LiteralSpecification.from_dict(spec)
 
-                if "classes" in spec:
-                    if spec["classes"] != classes:
-                        raise InvalidDatasetDefinitionFile(
-                            f"classes mismatch in {spec['defn_path']}"
-                        )
+                if child_specs.classes != classes:
+                    raise InvalidDatasetDefinitionFile(
+                        f"classes mismatch in {spec['defn_path']}"
+                    )
 
                 DatasetDefinition._check_for_non_disjoint_sets(
                     literal_defns, {literal_spec}
