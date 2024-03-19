@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from ruamel.yaml import YAML
 from dataclasses import dataclass
-from typing import Any, Set, List, Dict, Optional
+from typing import Any, Set, List, Dict, Tuple, Optional
 
 from yogo.data.split_fractions import SplitFractions
 
@@ -205,7 +205,7 @@ class DatasetDefinition:
         test_paths_present = "test_paths" in data
 
         try:
-            classes = data["classes"]
+            classes = data["class_names"]
         except KeyError as e:
             raise InvalidDatasetDefinitionFile(
                 "`classes` is a required key in the dataset definition file"
@@ -286,10 +286,17 @@ class DatasetDefinition:
     @staticmethod
     def _extract_specs(
         yml_path: Path, dataset_paths_key: SpecificationsKey
-    ) -> List[Dict[str, str]]:
+    ) -> Tuple[List[str], List[Dict[str, str]]]:
         with open(yml_path, "r") as f:
             yaml = YAML(typ="safe")
             data = yaml.load(f)
+
+        try:
+            classes = data["class_names"]
+        except KeyError:
+            raise InvalidDatasetDefinitionFile(
+                "`classes` is a required key in the dataset definition file"
+            )
 
         if dataset_paths_key == SpecificationsKey.ALL_DATASET_PATHS:
             dataset_paths = list(
@@ -298,12 +305,14 @@ class DatasetDefinition:
             test_paths = list(
                 data.get(SpecificationsKey.TEST_DATASET_PATHS.value, dict()).values()
             )
-            return dataset_paths + test_paths
+            specs = dataset_paths + test_paths
         elif dataset_paths_key.value not in data:
             # catch case where there are no test_paths but dataset_paths_key is TEST_DATASET_PATHS
-            return []
+            specs = []
         else:
-            return data[dataset_paths_key.value].values()
+            specs = data[dataset_paths_key.value].values()
+
+        return classes, specs
 
     @staticmethod
     def _load_dataset_specifications(
@@ -330,7 +339,12 @@ class DatasetDefinition:
         """
         literal_defns: Set[LiteralSpecification] = set()
 
-        specs = DatasetDefinition._extract_specs(yml_path, dataset_paths_key)
+        spec_classes, specs = DatasetDefinition._extract_specs(
+            yml_path, dataset_paths_key
+        )
+
+        if spec_classes != classes:
+            raise InvalidDatasetDefinitionFile(f"classes mismatch in {yml_path}")
 
         for spec in specs:
             if "defn_path" in spec:
@@ -370,12 +384,6 @@ class DatasetDefinition:
             elif "image_path" in spec and "label_path" in spec:
                 # ez case
                 literal_spec = LiteralSpecification.from_dict(spec)
-
-                if "classes" in spec:
-                    if spec["classes"] != classes:
-                        raise InvalidDatasetDefinitionFile(
-                            f"classes mismatch in {spec['defn_path']}"
-                        )
 
                 DatasetDefinition._check_for_non_disjoint_sets(
                     literal_defns, {literal_spec}
