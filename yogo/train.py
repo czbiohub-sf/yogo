@@ -61,6 +61,7 @@ class Trainer:
         self.Sx: Optional[int] = None
         self.Sy: Optional[int] = None
         self.model_save_dir: Optional[Path] = None
+        self.dataset_definition: Optional[DatasetDefinition] = None
 
         self.epoch = 0
         self.global_step = 0
@@ -83,8 +84,9 @@ class Trainer:
 
     def init(self) -> None:
         self._init_tcp_store()
-        self._init_dataset()
+        self._init_dataset_definition()
         self._init_model()
+        self._init_dataset()
         self._init_training_tools()
         self._init_wandb()
         self._initialized = True
@@ -100,7 +102,22 @@ class Trainer:
             self._rank == 0,  # only rank 0 should be the server, others are clients
         )
 
+    def _init_dataset_definition(self) -> None:
+        """
+        we need to initialize this separately because we need
+        the number of classes for the dataset definition for model
+        initialization, but also need Sx, Sy for dataset initialization.
+        So we pull this out and execute it first.
+        """
+        self.dataset_definition = DatasetDefinition.from_yaml(
+            Path(self.config["dataset_descriptor_file"])
+        )
+        self.config["class_names"] = self.dataset_definition.classes
+
     def _init_model(self) -> None:
+        if self.dataset_definition is None:
+            raise RuntimeError("dataset definition not initialized")
+
         if (
             self.config["pretrained_path"] is None
             or self.config["pretrained_path"] == "none"
@@ -140,12 +157,11 @@ class Trainer:
     def _init_dataset(self) -> None:
         if self.Sx is None or self.Sy is None:
             raise RuntimeError("model not initialized")
+        elif self.dataset_definition is None:
+            raise RuntimeError("dataset definition not initialized")
 
-        dataset_definition = DatasetDefinition.from_yaml(
-            Path(self.config["dataset_descriptor_file"])
-        )
         dataloaders = get_dataloader(
-            dataset_definition,
+            self.dataset_definition,
             self.config["batch_size"],
             Sx=self.Sx,
             Sy=self.Sy,
