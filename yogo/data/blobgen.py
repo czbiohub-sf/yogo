@@ -68,7 +68,8 @@ class BlobDataset(Dataset):
         super().__init__()
 
         self.thumbnail_dir_paths: Dict[int, Path] = {
-            self._convert_label(k): Path(v) for k, v in thumbnail_dir_paths.items()
+            self._convert_label(k, classes): Path(v)
+            for k, v in thumbnail_dir_paths.items()
         }
 
         for thp in self.thumbnail_dir_paths.values():
@@ -84,7 +85,6 @@ class BlobDataset(Dataset):
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
         self.normalize_images = normalize_images
-        self.dataset_classes = classes
         self.classes, self.thumbnail_paths = self.get_thumbnail_paths(
             self.thumbnail_dir_paths
         )
@@ -94,16 +94,14 @@ class BlobDataset(Dataset):
                 f"no thumbnails found in any of {(str(tdp) for tdp in self.thumbnail_dir_paths)}"
             )
 
-    def _convert_label(self, label: Union[str, int]) -> int:
+    def _convert_label(self, label: Union[str, int], classes: List[str]) -> int:
         if isinstance(label, int):
-            if not (0 <= label < len(self.dataset_classes)):
-                raise ValueError(
-                    f"label {label} is out of range [0, {len(self.dataset_classes)})"
-                )
+            if not (0 <= label < len(classes)):
+                raise ValueError(f"label {label} is out of range [0, {len(classes)})")
             return label
 
         try:
-            return self.dataset_classes.index(label)
+            return classes.index(label)
         except IndexError as e:
             raise ValueError(f"label {label} is not a valid YOGO class") from e
 
