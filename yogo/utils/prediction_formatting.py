@@ -197,8 +197,8 @@ class PredictionLabelMatch:
     When matching object detection predictions to labels, we have three
     cases to consider:
         1 there is a one-to-one match between predictions and labels
-        2 there are more predictions than labels (some predictions are actually of background)
-        3 there are more labels than predictions (some labels are missed)
+        2 some predictions are actually background
+        3 some labels are missed
     we want to represent these nicely. This is a little dataclass to represent
     these cases, specifically for format_preds_and_labels_v2.
     """

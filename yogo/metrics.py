@@ -96,7 +96,7 @@ class Metrics:
         self.num_obj_extra_by_class: torch.Tensor = torch.zeros(
             self.num_classes, dtype=torch.long
         )
-
+        self.total_num_true_objects = 0
 
     def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape
@@ -114,7 +114,19 @@ class Metrics:
             ]
         )
 
-        self.num_obj_missed_by_class += pred_label_matches.num_obj_missed_by_class
+        def count_classes_in_tensor(tensor: torch.Tensor) -> torch.Tensor:
+            values, unique_counts = tensor.argmax(dim=0).unique(return_counts=True)
+            final_counts = torch.zeros(self.num_classes)
+            final_counts[values] = unique_counts
+            return final_counts
+
+        self.num_obj_missed_by_class += count_classes_in_tensor(
+            pred_label_matches.missed_labels or torch.emtpy(0, 5 + self.num_classes)
+        )
+        self.num_obj_extra_by_class += count_classes_in_tensor(
+            pred_label_matches.extra_predictions or torch.emtpy(0, 5 + self.num_classes)
+        )
+        self.total_num_true_objects += pred_label_matches.labels.shape[0]
 
         if self.include_background:
             pred_label_matches = pred_label_matches.convert_background_errors(
@@ -152,6 +164,9 @@ class Metrics:
             pr_metrics["MulticlassPrecision"],
             pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassCalibrationError"].item(),
+            self.num_obj_missed_by_class,
+            self.num_obj_extra_by_class,
+            self.total_num_true_objects,
         )
 
     def reset(self):
