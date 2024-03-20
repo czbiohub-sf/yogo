@@ -32,7 +32,7 @@ def read_grayscale_robust(
     for i in range(retries):
         try:
             return read_image(str(img_path), ImageReadMode.GRAY)
-        except RuntimeError as e:
+        except Exception as e:
             warnings.warn(f"file {img_path} threw: {e}")
             if i == retries - 1:
                 warnings.warn(f"all attempts to read {img_path} failed")
