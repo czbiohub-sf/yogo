@@ -30,7 +30,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
     data_defn = DatasetDefinition.from_yaml(args.dataset_defn_path)
 
     dataloaders = get_dataloader(
-        args.dataset_defn_path,
+        data_defn,
         64,
         y.get_grid_size()[0],
         y.get_grid_size()[1],
