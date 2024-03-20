@@ -170,7 +170,7 @@ class Trainer:
         )
 
         train_dataloader = dataloaders["train"]
-        # sneaky hack to replace non-existant datasets with emtpy list
+        # sneaky hack to replace non-existant datasets with empty list
         validate_dataloader: Union[DataLoader[Any], Collection] = dataloaders.get(
             "val", []
         )
@@ -497,6 +497,9 @@ class Trainer:
             precision,
             recall,
             calibration_error,
+            num_obj_missed_by_class,
+            num_obj_extra_by_class,
+            total_num_true_objects,
         ) = test_metrics.compute()
 
         mean_loss = test_loss / len(test_dataloader)  # type: ignore
@@ -514,6 +517,9 @@ class Trainer:
             precision,
             recall,
             calibration_error,
+            num_obj_missed_by_class,
+            num_obj_extra_by_class,
+            total_num_true_objects,
             config["class_names"],
         )
 
@@ -544,6 +550,9 @@ class Trainer:
         precision,
         recall,
         calibration_error,
+        num_obj_missed_by_class,
+        num_obj_extra_by_class,
+        total_num_true_objects,
         class_names,
     ):
         """
@@ -562,6 +571,9 @@ class Trainer:
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
         wandb.summary["calibration error"] = calibration_error
+        wandb.summary["num obj missed by class"] = num_obj_missed_by_class
+        wandb.summary["num obj extra by class"] = num_obj_extra_by_class
+        wandb.summary["total num true objects"] = total_num_true_objects
 
         wandb.log(
             {
