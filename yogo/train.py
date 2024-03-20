@@ -170,7 +170,7 @@ class Trainer:
         )
 
         train_dataloader = dataloaders["train"]
-        # sneaky hack to replace non-existant datasets with emtpy list
+        # sneaky hack to replace non-existant datasets with empty list
         validate_dataloader: Union[DataLoader[Any], Collection] = dataloaders.get(
             "val", []
         )

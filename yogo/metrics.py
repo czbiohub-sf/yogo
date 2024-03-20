@@ -90,11 +90,11 @@ class Metrics:
 
         # where YOGO misses an object
         self.num_obj_missed_by_class: torch.Tensor = torch.zeros(
-            self.num_classes, dtype=torch.long
+            self.num_classes, dtype=torch.long, device=device
         )
         # where YOGO predicts an object that isn't there
         self.num_obj_extra_by_class: torch.Tensor = torch.zeros(
-            self.num_classes, dtype=torch.long
+            self.num_classes, dtype=torch.long, device=device
         )
         self.total_num_true_objects = 0
 
@@ -116,19 +116,19 @@ class Metrics:
 
         def count_classes_in_tensor(tensor: torch.Tensor) -> torch.Tensor:
             values, unique_counts = tensor.argmax(dim=0).unique(return_counts=True)
-            final_counts = torch.zeros(self.num_classes)
+            final_counts = torch.zeros(self.num_classes, dtype=torch.long, device=tensor.device)
             final_counts[values] = unique_counts
             return final_counts
 
         self.num_obj_missed_by_class += count_classes_in_tensor(
             pred_label_matches.missed_labels
             if pred_label_matches.missed_labels is not None
-            else torch.emtpy(0, 5 + self.num_classes)
+            else torch.empty(0, 5 + self.num_classes, device=preds.device)
         )
         self.num_obj_extra_by_class += count_classes_in_tensor(
             pred_label_matches.extra_predictions
             if pred_label_matches.extra_predictions is not None
-            else torch.emtpy(0, 5 + self.num_classes)
+            else torch.empty(0, 5 + self.num_classes, device=preds.device)
         )
         self.total_num_true_objects += pred_label_matches.labels.shape[0]
 

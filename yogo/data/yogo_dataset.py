@@ -84,7 +84,7 @@ def load_labels(
             has_header = csv.Sniffer().has_header(file_chunk)
             reader = csv.reader(f, dialect)
         except csv.Error:
-            # emtpy file, no labels, just keep moving
+            # empty file, no labels, just keep moving
             return []
 
         if has_header:
