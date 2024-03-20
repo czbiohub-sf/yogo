@@ -121,10 +121,14 @@ class Metrics:
             return final_counts
 
         self.num_obj_missed_by_class += count_classes_in_tensor(
-            pred_label_matches.missed_labels or torch.emtpy(0, 5 + self.num_classes)
+            pred_label_matches.missed_labels
+            if pred_label_matches.missed_labels is not None
+            else torch.emtpy(0, 5 + self.num_classes)
         )
         self.num_obj_extra_by_class += count_classes_in_tensor(
-            pred_label_matches.extra_predictions or torch.emtpy(0, 5 + self.num_classes)
+            pred_label_matches.extra_predictions
+            if pred_label_matches.extra_predictions is not None
+            else torch.emtpy(0, 5 + self.num_classes)
         )
         self.total_num_true_objects += pred_label_matches.labels.shape[0]
 
