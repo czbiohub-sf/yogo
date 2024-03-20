@@ -412,6 +412,12 @@ def infer_parser(parser=None):
         help="set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'",
     )
     parser.add_argument(
+        "--half",
+        default=False,
+        action=boolean_action,
+        help="half precision (i.e. fp16) inference (TODO compare prediction performance) (default: fp32)",
+    )
+    parser.add_argument(
         "--crop-height",
         type=unitary_float,
         help="crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)",

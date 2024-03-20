@@ -161,6 +161,7 @@ def predict(
     requested_num_workers: Optional[int] = None,
     min_class_confidence_threshold: float = 0.0,
     heatmap_mask_path: Optional[Path] = None,
+    half: bool = False,
 ) -> Optional[torch.Tensor]:
     if save_preds and draw_boxes:
         raise ValueError(
@@ -273,7 +274,12 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
-        res = model_jit(img_batch.to(device))
+        with torch.amp.autocast(
+            enabled=half and str(device) != "cpu",
+            device_type=str(device),
+            dtype=torch.bfloat16,
+        ):
+            res = model_jit(img_batch.to(device))
 
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
@@ -411,6 +417,7 @@ def do_infer(args):
         output_img_ftype=args.output_img_filetype,
         min_class_confidence_threshold=args.min_class_confidence_threshold,
         heatmap_mask_path=args.heatmap_mask_path,
+        half=args.half,
     )
 
 
