@@ -88,6 +88,16 @@ class Metrics:
         )
         self.prediction_metrics.to(device)
 
+        # where YOGO misses an object
+        self.num_obj_missed_by_class: torch.Tensor = torch.zeros(
+            self.num_classes, dtype=torch.long
+        )
+        # where YOGO predicts an object that isn't there
+        self.num_obj_extra_by_class: torch.Tensor = torch.zeros(
+            self.num_classes, dtype=torch.long
+        )
+
+
     def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
@@ -103,6 +113,8 @@ class Metrics:
                 for pred, label in zip(preds, labels)
             ]
         )
+
+        self.num_obj_missed_by_class += pred_label_matches.num_obj_missed_by_class
 
         if self.include_background:
             pred_label_matches = pred_label_matches.convert_background_errors(
