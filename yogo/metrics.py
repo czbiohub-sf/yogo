@@ -88,6 +88,22 @@ class Metrics:
         )
         self.prediction_metrics.to(device)
 
+        # We get some strange 'device-side assert error' when
+        # calling unique() on a cuda tensor. So, I've explicitly
+        # sent the relevant tensors to cpu. I've left the copy to
+        # cpu explicit so we can easily come back later once we've
+        # figured out the bug.
+
+        # where YOGO misses an object
+        self.num_obj_missed_by_class: torch.Tensor = torch.zeros(
+            self.num_classes, dtype=torch.long, device="cpu"
+        )
+        # where YOGO predicts an object that isn't there
+        self.num_obj_extra_by_class: torch.Tensor = torch.zeros(
+            self.num_classes, dtype=torch.long, device="cpu"
+        )
+        self.total_num_true_objects = 0
+
     def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
@@ -103,6 +119,24 @@ class Metrics:
                 for pred, label in zip(preds, labels)
             ]
         )
+
+        def count_classes_in_tensor(class_predictions: torch.Tensor) -> torch.Tensor:
+            values, unique_counts = class_predictions.unique(return_counts=True)
+            final_counts = torch.zeros(self.num_classes, dtype=torch.long, device="cpu")
+            final_counts[values.long()] = unique_counts
+            return final_counts
+
+        if pred_label_matches.missed_labels is not None:
+            self.num_obj_missed_by_class += count_classes_in_tensor(
+                pred_label_matches.missed_labels[:, 5].cpu()
+            )
+
+        if pred_label_matches.extra_predictions is not None:
+            self.num_obj_extra_by_class += count_classes_in_tensor(
+                pred_label_matches.extra_predictions[:, 5:].argmax(dim=1).cpu()
+            )
+
+        self.total_num_true_objects += pred_label_matches.labels.shape[0]
 
         if self.include_background:
             pred_label_matches = pred_label_matches.convert_background_errors(
@@ -140,6 +174,9 @@ class Metrics:
             pr_metrics["MulticlassPrecision"],
             pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassCalibrationError"].item(),
+            self.num_obj_missed_by_class,
+            self.num_obj_extra_by_class,
+            self.total_num_true_objects,
         )
 
     def reset(self):

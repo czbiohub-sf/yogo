@@ -20,8 +20,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from yogo.model import YOGO
 from yogo.metrics import Metrics
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.yogo_dataloader import get_dataloader
+from yogo.data.dataset_definition_file import DatasetDefinition
 from yogo.yogo_loss import YOGOLoss
 from yogo.model_defns import get_model_func
 from yogo.utils.argparsers import train_parser
@@ -61,6 +61,7 @@ class Trainer:
         self.Sx: Optional[int] = None
         self.Sy: Optional[int] = None
         self.model_save_dir: Optional[Path] = None
+        self.dataset_definition: Optional[DatasetDefinition] = None
 
         self.epoch = 0
         self.global_step = 0
@@ -83,6 +84,7 @@ class Trainer:
 
     def init(self) -> None:
         self._init_tcp_store()
+        self._init_dataset_definition()
         self._init_model()
         self._init_dataset()
         self._init_training_tools()
@@ -100,7 +102,22 @@ class Trainer:
             self._rank == 0,  # only rank 0 should be the server, others are clients
         )
 
+    def _init_dataset_definition(self) -> None:
+        """
+        we need to initialize this separately because we need
+        the number of classes for the dataset definition for model
+        initialization, but also need Sx, Sy for dataset initialization.
+        So we pull this out and execute it first.
+        """
+        self.dataset_definition = DatasetDefinition.from_yaml(
+            Path(self.config["dataset_descriptor_file"])
+        )
+        self.config["class_names"] = self.dataset_definition.classes
+
     def _init_model(self) -> None:
+        if self.dataset_definition is None:
+            raise RuntimeError("dataset definition not initialized")
+
         if (
             self.config["pretrained_path"] is None
             or self.config["pretrained_path"] == "none"
@@ -140,9 +157,11 @@ class Trainer:
     def _init_dataset(self) -> None:
         if self.Sx is None or self.Sy is None:
             raise RuntimeError("model not initialized")
+        elif self.dataset_definition is None:
+            raise RuntimeError("dataset definition not initialized")
 
         dataloaders = get_dataloader(
-            self.config["dataset_descriptor_file"],
+            self.dataset_definition,
             self.config["batch_size"],
             Sx=self.Sx,
             Sy=self.Sy,
@@ -151,7 +170,7 @@ class Trainer:
         )
 
         train_dataloader = dataloaders["train"]
-        # sneaky hack to replace non-existant datasets with emtpy list
+        # sneaky hack to replace non-existant datasets with empty list
         validate_dataloader: Union[DataLoader[Any], Collection] = dataloaders.get(
             "val", []
         )
@@ -478,6 +497,9 @@ class Trainer:
             precision,
             recall,
             calibration_error,
+            num_obj_missed_by_class,
+            num_obj_extra_by_class,
+            total_num_true_objects,
         ) = test_metrics.compute()
 
         mean_loss = test_loss / len(test_dataloader)  # type: ignore
@@ -495,6 +517,9 @@ class Trainer:
             precision,
             recall,
             calibration_error,
+            num_obj_missed_by_class,
+            num_obj_extra_by_class,
+            total_num_true_objects,
             config["class_names"],
         )
 
@@ -525,6 +550,9 @@ class Trainer:
         precision,
         recall,
         calibration_error,
+        num_obj_missed_by_class,
+        num_obj_extra_by_class,
+        total_num_true_objects,
         class_names,
     ):
         """
@@ -543,6 +571,9 @@ class Trainer:
         wandb.summary["test precision"] = precision
         wandb.summary["test recall"] = recall
         wandb.summary["calibration error"] = calibration_error
+        wandb.summary["num obj missed by class"] = num_obj_missed_by_class
+        wandb.summary["num obj extra by class"] = num_obj_extra_by_class
+        wandb.summary["total num true objects"] = total_num_true_objects
 
         wandb.log(
             {
@@ -585,7 +616,6 @@ def do_training(args) -> None:
         "model": args.model,
         "half": args.half,
         "image_shape": args.image_shape,
-        "class_names": YOGO_CLASS_ORDERING,
         "pretrained_path": args.from_pretrained,
         "normalize_images": args.normalize_images,
         "dataset_split_override": args.dataset_split_override,

@@ -61,7 +61,7 @@ class ImagePathDataset(ImageAndIdDataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, str]:
         image_path = self.image_paths[idx]
-        image = self.loader(image_path).to(torch.float16)
+        image = self.loader(image_path)
         image = self.transform(image)
         if self.normalize_images:
             image = image / 255

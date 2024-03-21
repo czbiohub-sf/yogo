@@ -9,7 +9,6 @@ from ruamel.yaml import YAML
 
 from torchvision.io import read_image, ImageReadMode
 
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.data.data_transforms import MultiArgSequential
 from yogo.data.dataset_definition_file import DatasetDefinition
 
@@ -33,7 +32,7 @@ def read_grayscale_robust(
     for i in range(retries):
         try:
             return read_image(str(img_path), ImageReadMode.GRAY)
-        except RuntimeError as e:
+        except Exception as e:
             warnings.warn(f"file {img_path} threw: {e}")
             if i == retries - 1:
                 warnings.warn(f"all attempts to read {img_path} failed")
@@ -75,7 +74,7 @@ def convert_dataset_definition_to_ultralytics_format(
     """
     dataset_definition = DatasetDefinition.from_yaml(dataset_definition_path)
 
-    classes = dataset_definition.classes or YOGO_CLASS_ORDERING
+    classes = dataset_definition.classes
 
     target_dir.mkdir(exist_ok=True, parents=True)
 

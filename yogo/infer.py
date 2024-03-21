@@ -17,7 +17,6 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import CenterCrop
 
 from yogo.model import YOGO
-from yogo.data import YOGO_CLASS_ORDERING
 from yogo.utils.argparsers import infer_parser
 from yogo.data.image_path_dataset import ZarrDataset, get_dataset, collate_fn
 from yogo.data.yogo_dataloader import choose_dataloader_num_workers
@@ -42,16 +41,7 @@ def save_predictions(
     batch_preds,
     obj_thresh=0.5,
     iou_thresh=0.5,
-    label: Optional[str] = None,
 ):
-    bs, pred_shape, Sy, Sx = batch_preds.shape
-
-    if label is not None:
-        label_idx = YOGO_CLASS_ORDERING.index(label)
-    else:
-        # var is not used
-        label_idx = None
-
     for fname, pred_slice in zip(fnames, batch_preds):
         preds = format_preds(
             pred_slice,
@@ -60,7 +50,7 @@ def save_predictions(
         )
 
         pred_string = "\n".join(
-            f"{argmax(pred[5:]) if label is None else label_idx} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
+            f"{argmax(pred[5:])} {pred[0]} {pred[1]} {pred[2]} {pred[3]}"
             for pred in preds
         )
         with open(fname, "w") as f:
@@ -77,8 +67,11 @@ def get_prediction_class_counts(
     """
     Count the number of predictions of each class, by argmaxing the class predictions
     """
-    tot_class_sum = torch.zeros(len(YOGO_CLASS_ORDERING), dtype=torch.long)
+    bs, pred_dim, Sy, Sx = batch_preds.shape
+    num_classes = pred_dim - 5
+    tot_class_sum = torch.zeros(num_classes, dtype=torch.long)
     heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
+
     for pred_slice in batch_preds:
         preds = format_preds(
             pred_slice,
@@ -87,10 +80,13 @@ def get_prediction_class_counts(
             min_class_confidence_threshold=min_class_confidence_threshold,
             heatmap_mask=heatmap_mask,
         )
+
         if preds.numel() == 0:
             continue  # ignore no predictions
+
         classes = preds[:, 5:]
         tot_class_sum += count_cells_for_formatted_preds(classes)
+
     return tot_class_sum
 
 
@@ -146,17 +142,18 @@ def write_metadata(metadata_path: Path, **kwargs):
 @torch.no_grad()
 def predict(
     path_to_pth: str,
+    *,
     path_to_images: Optional[Path] = None,
     path_to_zarr: Optional[Path] = None,
     output_dir: Optional[str] = None,
-    save_preds: bool = False,
     draw_boxes: bool = False,
+    save_preds: bool = False,
     save_npy: bool = False,
+    class_names: Optional[List[str]] = None,
     count_predictions: bool = False,
     batch_size: int = 64,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    label: Optional[str] = None,
     vertical_crop_height_px: Optional[int] = None,
     use_tqdm: bool = False,
     device: Optional[Union[str, torch.device]] = None,
@@ -164,6 +161,7 @@ def predict(
     requested_num_workers: Optional[int] = None,
     min_class_confidence_threshold: float = 0.0,
     heatmap_mask_path: Optional[Path] = None,
+    half: bool = False,
 ) -> Optional[torch.Tensor]:
     if save_preds and draw_boxes:
         raise ValueError(
@@ -202,7 +200,18 @@ def predict(
     img_in_w = int(model.img_size[1].item())  # type: ignore
 
     dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
-    model_jit = torch.jit.trace(model, dummy_input)
+    model_jit = torch.compile(model)
+
+    output_shape = model_jit(dummy_input).shape
+    num_classes = output_shape[1] - 5
+
+    if class_names is None:
+        class_names = [f"class {i}" for i in range(num_classes)]
+    else:
+        if len(class_names) != num_classes:
+            raise ValueError(
+                f"expected {num_classes} class names, got {len(class_names)}"
+            )
 
     image_dataset = get_dataset(
         path_to_images=path_to_images,
@@ -243,9 +252,8 @@ def predict(
 
     # this tensor can be really big, so only create it if we need it
     if not (draw_boxes or save_preds):
-        Sx, Sy = model.get_grid_size()
         results = torch.zeros(
-            (len(image_dataset), len(YOGO_CLASS_ORDERING) + 5, Sy, Sx)
+            (len(image_dataset), output_shape[1], output_shape[2], output_shape[3]),
         )
     if save_npy:
         np_results = []
@@ -266,7 +274,12 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
-        res = model_jit(img_batch.to(device))
+        with torch.amp.autocast(
+            enabled=half and str(device) != "cpu",
+            device_type=str(device),
+            dtype=torch.bfloat16,
+        ):
+            res = model_jit(img_batch.to(device))
 
         if draw_boxes:
             for img_idx in range(img_batch.shape[0]):
@@ -276,7 +289,7 @@ def predict(
                     obj_thresh=obj_thresh,
                     iou_thresh=iou_thresh,
                     min_class_confidence_threshold=min_class_confidence_threshold,
-                    labels=YOGO_CLASS_ORDERING,
+                    labels=class_names,
                     images_are_normalized=cfg["normalize_images"],
                 )
                 if output_dir is not None:
@@ -309,7 +322,6 @@ def predict(
                 res,
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
-                label=label,
             )
         elif save_npy:
             res = res.cpu().numpy()
@@ -341,7 +353,7 @@ def predict(
         print(
             list(
                 zip(
-                    YOGO_CLASS_ORDERING,
+                    class_names,
                     counts,
                     [0 if tot_cells == 0 else round(c / tot_cells, 4) for c in counts],
                 )
@@ -389,9 +401,10 @@ def do_infer(args):
         path_to_images=args.path_to_images,
         path_to_zarr=args.path_to_zarr,
         output_dir=args.output_dir,
+        draw_boxes=args.draw_boxes,
         save_preds=args.save_preds,
         save_npy=args.save_npy,
-        draw_boxes=args.draw_boxes,
+        class_names=args.class_names,
         obj_thresh=args.obj_thresh,
         iou_thresh=args.iou_thresh,
         batch_size=args.batch_size,
@@ -404,6 +417,7 @@ def do_infer(args):
         output_img_ftype=args.output_img_filetype,
         min_class_confidence_threshold=args.min_class_confidence_threshold,
         heatmap_mask_path=args.heatmap_mask_path,
+        half=args.half,
     )
 
 
