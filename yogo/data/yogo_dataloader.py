@@ -78,6 +78,7 @@ def get_datasets(
     Sx: int,
     Sy: int,
     normalize_images: bool = False,
+    background_img_shape: Tuple[int, int] = (772, 1032),
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> MutableMapping[str, Dataset[Any]]:
     """
@@ -144,6 +145,7 @@ def get_datasets(
             n=12,
             length=len(split_datasets["train"]) // 2,  # type: ignore
             blend_thumbnails=True,
+            background_img_shape=background_img_shape,
             thumbnail_sigma=2,
             normalize_images=normalize_images,
         )
@@ -192,6 +194,7 @@ def get_dataloader(
         Sx,
         Sy,
         normalize_images=normalize_images,
+        background_img_shape=image_shape or (772, 1032),
         split_fraction_override=split_fraction_override,
     )
 
