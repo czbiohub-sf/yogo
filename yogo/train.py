@@ -575,7 +575,7 @@ class Trainer:
         wandb.summary["num obj extra by class"] = num_obj_extra_by_class
         wandb.summary["total num true objects"] = total_num_true_objects
 
-        for i, cn in class_names:
+        for i, cn in enumerate(class_names):
             wandb.summary[f"test precision {cn}"] = precision[i].item()
             wandb.summary[f"test recall {cn}"] = recall[i].item()
 
