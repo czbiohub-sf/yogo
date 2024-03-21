@@ -568,12 +568,16 @@ class Trainer:
 
         wandb.summary["test loss"] = mean_test_loss
         wandb.summary["test mAP"] = mAP["map"]
-        wandb.summary["test precision"] = precision
-        wandb.summary["test recall"] = recall
+        wandb.summary["test precision"] = precision.mean()
+        wandb.summary["test recall"] = recall.mean()
         wandb.summary["calibration error"] = calibration_error
         wandb.summary["num obj missed by class"] = num_obj_missed_by_class
         wandb.summary["num obj extra by class"] = num_obj_extra_by_class
         wandb.summary["total num true objects"] = total_num_true_objects
+
+        for i, cn in class_names:
+            wandb.summary[f"test precision {cn}"] = precision[i]
+            wandb.summary[f"test recall {cn}"] = recall[i]
 
         wandb.log(
             {
