@@ -154,7 +154,7 @@ def predict(
     batch_size: int = 64,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    vertical_crop_height_px: Optional[int] = None,
+    vertical_crop_height: Optional[int] = None,
     use_tqdm: bool = False,
     device: Optional[Union[str, torch.device]] = None,
     output_img_ftype: Literal[".png", ".tif", ".tiff"] = ".png",
@@ -189,10 +189,14 @@ def predict(
     model.to(device)
 
     transforms: List[torch.nn.Module] = []
-    if vertical_crop_height_px:
-        crop = CenterCrop((vertical_crop_height_px, 1032))
+
+    img_h, img_w = model.img_size
+    if vertical_crop_height:
+        vertical_crop_height_px = round(vertical_crop_height * img_h)
+        crop = CenterCrop((vertical_crop_height_px, img_w))
         transforms.append(crop)
         model.resize_model(vertical_crop_height_px)
+        img_h = vertical_crop_height_px
 
     # these three lines are correctly typed; dunno how to convince mypy
     assert model.img_size.numel() == 2, f"YOGO model must be 2D, is {model.img_size}"  # type: ignore
@@ -257,9 +261,6 @@ def predict(
         )
     if save_npy:
         np_results = []
-        img_h: int = (
-            vertical_crop_height_px if vertical_crop_height_px is not None else 772
-        )
         heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
 
     file_iterator = enumerate(image_dataloader)
@@ -410,9 +411,7 @@ def do_infer(args):
         batch_size=args.batch_size,
         device=args.device,
         use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
-        vertical_crop_height_px=(
-            round(772 * args.crop_height) if args.crop_height is not None else None
-        ),
+        vertical_crop_height=args.crop_height,
         count_predictions=args.count,
         output_img_ftype=args.output_img_filetype,
         min_class_confidence_threshold=args.min_class_confidence_threshold,
