@@ -68,13 +68,17 @@ class Metrics:
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
+                # per-class
                 MulticlassPrecision(
                     num_classes=self.num_classes,
+                    average=None,
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
+                # per-class
                 MulticlassRecall(
                     num_classes=self.num_classes,
+                    average=None,
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
