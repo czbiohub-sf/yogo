@@ -8,7 +8,6 @@ import argparse
 import warnings
 
 import torch.multiprocessing as mp
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import Dataset, DataLoader
 
 from yogo.model import YOGO
@@ -24,6 +23,10 @@ from yogo.utils import get_free_port
 
 
 def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
+    torch.distributed.init_process_group(
+        backend="nccl", rank=rank, world_size=world_size
+    )
+
     y, cfg = YOGO.from_pth(args.pth_path, inference=False)
     y.to("cuda")
 
@@ -37,17 +40,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         normalize_images=cfg["normalize_images"],
     )
 
-    torch.distributed.init_process_group(
-        backend="nccl", rank=rank, world_size=world_size
-    )
-
     test_dataset: Dataset[ObjectDetectionDataset] = dataloaders["test"].dataset
-    DistributedSampler(
-        test_dataset,
-        rank=rank,
-        num_replicas=world_size,
-    )
-
     num_workers = choose_dataloader_num_workers(len(test_dataset))  # type: ignore
 
     test_dataloader = DataLoader(

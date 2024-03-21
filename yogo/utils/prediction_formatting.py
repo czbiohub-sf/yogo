@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from typing import (
     List,
     Tuple,
-    Optional,
     Literal,
+    Optional,
     get_args,
 )
 
@@ -106,7 +106,7 @@ def format_preds(
     if iou_thresh > 0:
         keep_idxs = ops.nms(
             nms_boxes,
-            preds[:, 4],
+            torch.max(preds[:, 5:], dim=1).values * preds[:, 4],
             iou_threshold=iou_thresh,
         )
         preds = preds[keep_idxs]
