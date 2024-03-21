@@ -278,6 +278,7 @@ class Trainer:
                 "epoch": self.epoch,
                 "step": self.global_step,
                 "normalize_images": self.config["normalize_images"],
+                "classes": self.config["class_names"],
                 "model_name": model_name,
                 "model_state_dict": deepcopy(state_dict),
                 "optimizer_state_dict": deepcopy(self.optimizer.state_dict()),
