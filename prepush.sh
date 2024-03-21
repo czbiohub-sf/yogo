@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 echo -e "\033[1mmypy...\033[0m"
-mypy .
+mypy yogo tests
 echo -e "\033[1mruff...\033[0m"
 ruff . --fix
 echo -e "\033[1mblack...\033[0m"
