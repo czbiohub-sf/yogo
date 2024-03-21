@@ -576,8 +576,8 @@ class Trainer:
         wandb.summary["total num true objects"] = total_num_true_objects
 
         for i, cn in class_names:
-            wandb.summary[f"test precision {cn}"] = precision[i]
-            wandb.summary[f"test recall {cn}"] = recall[i]
+            wandb.summary[f"test precision {cn}"] = precision[i].item()
+            wandb.summary[f"test recall {cn}"] = recall[i].item()
 
         wandb.log(
             {
