@@ -9,7 +9,9 @@ from functools import partial
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, Subset, random_split
 
-from typing import Any, List, Dict, Optional, MutableMapping, Iterable, Union
+from torchvision.transforms import Resize
+
+from typing import Any, List, Dict, Optional, Tuple, MutableMapping, Iterable, Union
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.utils import collate_batch_robust
@@ -181,6 +183,7 @@ def get_dataloader(
     Sx: int,
     Sy: int,
     training: bool = True,
+    image_shape: Optional[Tuple[int, int]] = None,
     normalize_images: bool = False,
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> Dict[str, DataLoader]:
@@ -217,12 +220,13 @@ def get_dataloader(
         if dataset_len == 0:
             continue
 
+        transforms = Resize(image_shape) if image_shape is not None else []
         augs = augmentations if designation == "train" else []
 
         d[designation] = _get_dataloader(
             dataset,
             batch_size=batch_size,
-            augmentations=augs,
+            augmentations=transforms + augs,
             rank=rank,
             world_size=world_size,
         )

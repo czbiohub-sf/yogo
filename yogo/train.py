@@ -165,6 +165,7 @@ class Trainer:
             self.config["batch_size"],
             Sx=self.Sx,
             Sy=self.Sy,
+            image_shape=self.config["image_shape"],
             normalize_images=self.config["normalize_images"],
             split_fraction_override=self.config["dataset_split_override"],
         )
