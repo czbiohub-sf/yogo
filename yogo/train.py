@@ -575,9 +575,13 @@ class Trainer:
         wandb.summary["num obj extra by class"] = num_obj_extra_by_class
         wandb.summary["total num true objects"] = total_num_true_objects
 
+        per_class_precision, per_class_recall = dict(), dict()
         for i, cn in enumerate(class_names):
-            wandb.summary[f"test precision {cn}"] = precision[i].item()
-            wandb.summary[f"test recall {cn}"] = recall[i].item()
+            per_class_precision[f"test precision {cn}"] = precision[i].item()
+            per_class_recall[f"test recall {cn}"] = recall[i].item()
+
+        wandb.summary["per-class precision"] = per_class_precision
+        wandb.summary["per-class recall"] = per_class_recall
 
         wandb.log(
             {
