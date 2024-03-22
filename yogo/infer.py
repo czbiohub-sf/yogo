@@ -330,7 +330,11 @@ def predict(
             for j in range(res.shape[0]):
                 img_index = (i * batch_size) + j
                 parsed = format_to_numpy(
-                    img_index, res[j, ...], img_h, 1032, heatmap_mask=heatmap_mask
+                    img_index,
+                    res[j, ...],
+                    img_h.item(),
+                    img_w.item(),
+                    heatmap_mask=heatmap_mask,
                 )
                 np_results.append(parsed)
         else:
