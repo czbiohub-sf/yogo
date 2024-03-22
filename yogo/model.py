@@ -122,6 +122,13 @@ class YOGO(nn.Module):
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
 
+        # be permissive of older pth files
+        if "is_rgb" not in params:
+            params["is_rgb"] = torch.tensor(False)
+
+        if "clip_value" not in params:
+            params["clip_value"] = torch.tensor(1.0)
+
         if "height_multiplier" not in params:
             params["height_multiplier"] = torch.tensor(1.0)
 
