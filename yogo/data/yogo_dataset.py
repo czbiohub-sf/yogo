@@ -233,10 +233,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     for ip in possible_image_paths
                     if (ip.exists() and is_valid_file(str(ip)))
                 )
+                image_paths.append(str(image_file_path))
+                label_paths.append(str(label_file_path))
             except StopIteration:
+                # image is missing
                 missing_images.append(str(label_file_path))
-            image_paths.append(str(image_file_path))
-            label_paths.append(str(label_file_path))
 
         if len(missing_images) > 0:
             if len(image_paths) < 3:
