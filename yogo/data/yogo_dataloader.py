@@ -9,7 +9,6 @@ from functools import partial
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, Subset, random_split
 
-from torchvision.transforms import Resize
 
 from typing import Any, List, Dict, Optional, Tuple, MutableMapping, Iterable, Union
 
@@ -78,8 +77,8 @@ def get_datasets(
     Sx: int,
     Sy: int,
     rgb: bool = False,
+    image_hw: Tuple[int, int] = (772, 1032),
     normalize_images: bool = False,
-    background_img_shape: Tuple[int, int] = (772, 1032),
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> MutableMapping[str, Dataset[Any]]:
     """
@@ -93,6 +92,7 @@ def get_datasets(
             dsp.label_path,
             Sx,
             Sy,
+            image_hw=image_hw,
             rgb=rgb,
             classes=dataset_definition.classes,
             normalize_images=normalize_images,
@@ -110,6 +110,7 @@ def get_datasets(
                 dsp.label_path,
                 Sx,
                 Sy,
+                image_hw=image_hw,
                 classes=dataset_definition.classes,
                 normalize_images=normalize_images,
             )
@@ -147,7 +148,7 @@ def get_datasets(
             n=12,
             length=len(split_datasets["train"]) // 2,  # type: ignore
             blend_thumbnails=True,
-            background_img_shape=background_img_shape,
+            background_img_shape=image_hw,
             thumbnail_sigma=2,
             normalize_images=normalize_images,
         )
@@ -187,7 +188,7 @@ def get_dataloader(
     Sx: int,
     Sy: int,
     training: bool = True,
-    image_shape: Optional[Tuple[int, int]] = None,
+    image_hw: Tuple[int, int] = (772, 1032),
     rgb: bool = False,
     normalize_images: bool = False,
     split_fraction_override: Optional[SplitFractions] = None,
@@ -197,8 +198,8 @@ def get_dataloader(
         Sx,
         Sy,
         rgb=rgb,
+        image_hw=image_hw,
         normalize_images=normalize_images,
-        background_img_shape=image_shape or (772, 1032),
         split_fraction_override=split_fraction_override,
     )
 
@@ -227,13 +228,12 @@ def get_dataloader(
         if dataset_len == 0:
             continue
 
-        transforms = Resize(image_shape) if image_shape is not None else []
         augs = augmentations if designation == "train" else []
 
         d[designation] = _get_dataloader(
             dataset,
             batch_size=batch_size,
-            augmentations=transforms + augs,
+            augmentations=augs,
             rank=rank,
             world_size=world_size,
         )

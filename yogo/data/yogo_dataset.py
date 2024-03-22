@@ -5,6 +5,7 @@ import numpy as np
 
 from torchvision import ops
 from torchvision import datasets
+from torchvision.transforms import Resize
 
 from pathlib import Path
 from functools import partial
@@ -139,10 +140,11 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Sx,
         Sy,
         classes: List[str],
+        image_hw: Tuple[int, int] = (772, 1032),
         rgb: bool = False,
         normalize_images: bool = False,
         loader=partial(read_grayscale_robust, retries=3, min_duration=0.1),
-        extensions: Optional[Tuple[str]] = ("png",),
+        extensions: Tuple[str, ...] = ("png", "jpg", "jpeg", "tif"),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,
         **kwargs,
@@ -155,6 +157,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.image_folder_path = image_folder_path
         self.label_folder_path = label_folder_path
         self.loader = partial(loader, rgb=rgb)
+        self.resize = Resize(image_hw, antialias=True)
         self.normalize_images = normalize_images
         self.notes_data: Optional[Dict[str, Any]] = None
 
@@ -243,7 +246,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     break
 
         if len(missing_images) > 0:
-            if len(image_paths) < 3:
+            if len(missing_images) < 5:
                 missing_subset = missing_images
                 list_message = " "
             else:
@@ -251,7 +254,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                 list_message = " a sample of "
 
             raise FileNotFoundError(
-                f"{len(missing_images)} images not found in {self.image_folder_path}; "
+                f"{'at least ' if len(missing_images) == 10 else ' '}{len(missing_images)}"
+                f"images not found in {self.image_folder_path}; "
                 f"({len(image_paths)} images were found). Here's{list_message}the list:\n"
                 f"{missing_subset}"
             )
@@ -266,7 +270,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         if maybe_image is None:
             return None
 
-        image = maybe_image
+        image = self.resize(maybe_image)
 
         labels = label_file_to_tensor(
             Path(label_path), self.Sx, self.Sy, self.classes, self.notes_data

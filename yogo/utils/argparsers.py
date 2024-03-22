@@ -196,11 +196,11 @@ def train_parser(parser=None):
         help="normalize images into [0,1] - overridden if loading from pth",
     )
     parser.add_argument(
-        "--image-shape",
+        "--image-hw",
         default=(772, 1032),
         nargs=2,
         type=int,
-        help="size of images for training (e.g. --image-shape 772 1032) (default: 772 1032)",
+        help="height and width of images for training (e.g. --image-hw 772 1032) (default: 772 1032)",
     )
     parser.add_argument(
         "--rgb-images",
