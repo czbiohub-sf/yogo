@@ -220,7 +220,7 @@ def train_parser(parser=None):
         "--half",
         default=False,
         action=boolean_action,
-        help="half precision (i.e. fp16) training. When true, try doubling your batch size to get best use of GPU. (default: False)",
+        help="half precision (i.e. fp16) training. When true, try doubling your batch size to get best use of GPU",
     )
     parser.add_argument(
         "--device",
@@ -286,13 +286,13 @@ def test_parser(parser=None):
         "--include-mAP",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help=("calculate mAP as well - just a bit slower (default: False)"),
+        help=("calculate mAP as well - just a bit slower"),
     )
     parser.add_argument(
         "--include-background",
         action=argparse.BooleanOptionalAction,
         default=False,
-        help=("include 'backround' in confusion matrix (default: False)"),
+        help=("include 'backround' in confusion matrix"),
     )
     parser.add_argument(
         "--note",
@@ -415,7 +415,7 @@ def infer_parser(parser=None):
         "--half",
         default=False,
         action=boolean_action,
-        help="half precision (i.e. fp16) inference (TODO compare prediction performance) (default: fp32)",
+        help="half precision (i.e. fp16) inference (TODO compare prediction performance)",
     )
     parser.add_argument(
         "--crop-height",
