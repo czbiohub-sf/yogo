@@ -216,7 +216,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # maps file name to a list of tuples of bounding boxes + classes
         image_paths: List[str] = []
         label_paths: List[str] = []
-        missing_images: List[Path] = []
+        missing_images: List[str] = []
         for label_file_path in self.label_folder_path.glob("*"):
             # ignore (*nix convention) hidden files
             if label_file_path.name.startswith("."):
