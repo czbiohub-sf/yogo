@@ -139,6 +139,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         Sx,
         Sy,
         classes: List[str],
+        rgb: bool = False,
         normalize_images: bool = False,
         loader=partial(read_grayscale_robust, retries=3, min_duration=0.1),
         extensions: Optional[Tuple[str]] = ("png",),
@@ -153,7 +154,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.classes = classes
         self.image_folder_path = image_folder_path
         self.label_folder_path = label_folder_path
-        self.loader = loader
+        self.loader = partial(loader, rgb=rgb)
         self.normalize_images = normalize_images
         self.notes_data: Optional[Dict[str, Any]] = None
 
@@ -215,6 +216,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         # maps file name to a list of tuples of bounding boxes + classes
         image_paths: List[str] = []
         label_paths: List[str] = []
+        missing_images: List[Path] = []
         for label_file_path in self.label_folder_path.glob("*"):
             # ignore (*nix convention) hidden files
             if label_file_path.name.startswith("."):
@@ -231,15 +233,24 @@ class ObjectDetectionDataset(datasets.VisionDataset):
                     for ip in possible_image_paths
                     if (ip.exists() and is_valid_file(str(ip)))
                 )
-            except StopIteration as e:
-                # raise exception here? logic being that we want to know very quickly that we don't have
-                # all the images we need. Open to changes, though.
-                raise FileNotFoundError(
-                    f"None of the following images exist: {possible_image_paths}"
-                ) from e
-
+            except StopIteration:
+                missing_images.append(str(label_file_path))
             image_paths.append(str(image_file_path))
             label_paths.append(str(label_file_path))
+
+        if len(missing_images) > 0:
+            if len(image_paths) < 3:
+                missing_subset = missing_images
+                list_message = " "
+            else:
+                missing_subset = missing_images[:3]
+                list_message = " a sample of "
+
+            raise FileNotFoundError(
+                f"{len(missing_images)} images not found in {self.image_folder_path}; "
+                f"({len(image_paths)} images were found). Here's{list_message}the list:\n"
+                f"{missing_subset}"
+            )
 
         return image_paths, label_paths
 

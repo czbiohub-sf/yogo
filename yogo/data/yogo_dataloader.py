@@ -77,6 +77,7 @@ def get_datasets(
     dataset_definition: DatasetDefinition,
     Sx: int,
     Sy: int,
+    rgb: bool = False,
     normalize_images: bool = False,
     background_img_shape: Tuple[int, int] = (772, 1032),
     split_fraction_override: Optional[SplitFractions] = None,
@@ -92,6 +93,7 @@ def get_datasets(
             dsp.label_path,
             Sx,
             Sy,
+            rgb=rgb,
             classes=dataset_definition.classes,
             normalize_images=normalize_images,
         )
@@ -186,6 +188,7 @@ def get_dataloader(
     Sy: int,
     training: bool = True,
     image_shape: Optional[Tuple[int, int]] = None,
+    rgb: bool = False,
     normalize_images: bool = False,
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> Dict[str, DataLoader]:
@@ -193,6 +196,7 @@ def get_dataloader(
         dataset_definition,
         Sx,
         Sy,
+        rgb=rgb,
         normalize_images=normalize_images,
         background_img_shape=image_shape or (772, 1032),
         split_fraction_override=split_fraction_override,

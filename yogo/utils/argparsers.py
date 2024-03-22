@@ -134,8 +134,8 @@ def train_parser(parser=None):
     )
     parser.add_argument(
         "-lr",
-        "--lr",
         "--learning-rate",
+        "--lr",
         type=unitary_float,
         help=f"learning rate for training (default: {df.LEARNING_RATE})",
         default=df.LEARNING_RATE,

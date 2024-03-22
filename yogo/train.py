@@ -166,6 +166,7 @@ class Trainer:
             Sx=self.Sx,
             Sy=self.Sy,
             image_shape=self.config["image_shape"],
+            rgb=self.config["rgb"],
             normalize_images=self.config["normalize_images"],
             split_fraction_override=self.config["dataset_split_override"],
         )
@@ -617,6 +618,7 @@ def do_training(args) -> None:
         "anchor_h": anchor_h,
         "model": args.model,
         "half": args.half,
+        "rgb": args.rgb_images,
         "image_shape": args.image_shape,
         "pretrained_path": args.from_pretrained,
         "normalize_images": args.normalize_images,
