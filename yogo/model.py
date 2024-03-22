@@ -7,7 +7,6 @@ from typing import Tuple, Optional, Union, Any, Dict
 from yogo.model_defns import ModelDefn, base_model, get_model_func
 
 
-# TODO find better location for this
 PathLike = Union[Path, str]
 
 
