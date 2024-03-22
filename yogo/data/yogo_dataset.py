@@ -238,6 +238,9 @@ class ObjectDetectionDataset(datasets.VisionDataset):
             except StopIteration:
                 # image is missing
                 missing_images.append(str(label_file_path))
+                if len(image_paths) > 10:
+                    # just give up!
+                    break
 
         if len(missing_images) > 0:
             if len(image_paths) < 3:
