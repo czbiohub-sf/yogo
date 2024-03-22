@@ -134,8 +134,8 @@ def train_parser(parser=None):
     )
     parser.add_argument(
         "-lr",
-        "--learning-rate",
         "--lr",
+        "--learning-rate",
         type=unitary_float,
         help=f"learning rate for training (default: {df.LEARNING_RATE})",
         default=df.LEARNING_RATE,
@@ -190,16 +190,10 @@ def train_parser(parser=None):
         default=df.HEALTHY_WEIGHT,
     )
     parser.add_argument(
-        "--no-classify",
-        default=False,
-        action=boolean_action,
-        help="turn off classification loss - good only for pretraining just a cell detector",
-    )
-    parser.add_argument(
         "--normalize-images",
         default=False,
         action=boolean_action,
-        help="normalize images into [0,1]",
+        help="normalize images into [0,1] - overridden if loading from pth",
     )
     parser.add_argument(
         "--image-shape",
@@ -207,6 +201,12 @@ def train_parser(parser=None):
         nargs=2,
         type=int,
         help="size of images for training (e.g. --image-shape 772 1032) (default: 772 1032)",
+    )
+    parser.add_argument(
+        "--rgb-images",
+        default=False,
+        action=boolean_action,
+        help="use RGB images instead of grayscale - overridden if loading from pth (defaults to grayscale)",
     )
     parser.add_argument(
         "--model",

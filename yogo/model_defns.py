@@ -3,7 +3,7 @@ from torch import nn
 from typing import Callable, Optional, Dict
 
 
-ModelDefn = Callable[[int], nn.Module]
+ModelDefn = Callable[[int, bool], nn.Module]
 
 MODELS: Dict[str, ModelDefn] = {}
 
@@ -28,9 +28,10 @@ def register_model(model_defn: ModelDefn) -> ModelDefn:
 
 
 @register_model
-def base_model(num_classes: int) -> nn.Module:
+def base_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 16, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
         nn.LeakyReLU(),
     )
@@ -77,9 +78,10 @@ def base_model(num_classes: int) -> nn.Module:
 
 
 @register_model
-def double_filters(num_classes: int) -> nn.Module:
+def double_filters(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 32, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 32, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(32),
         nn.LeakyReLU(),
     )
@@ -126,9 +128,10 @@ def double_filters(num_classes: int) -> nn.Module:
 
 
 @register_model
-def triple_filters(num_classes: int) -> nn.Module:
+def triple_filters(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 48, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 48, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(48),
         nn.LeakyReLU(),
     )
@@ -175,9 +178,10 @@ def triple_filters(num_classes: int) -> nn.Module:
 
 
 @register_model
-def half_filters(num_classes: int) -> nn.Module:
+def half_filters(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 8, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 8, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(8),
         nn.LeakyReLU(),
     )
@@ -224,9 +228,10 @@ def half_filters(num_classes: int) -> nn.Module:
 
 
 @register_model
-def quarter_filters(num_classes: int) -> nn.Module:
+def quarter_filters(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 4, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 4, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(4),
         nn.LeakyReLU(),
     )
@@ -273,9 +278,10 @@ def quarter_filters(num_classes: int) -> nn.Module:
 
 
 @register_model
-def depth_ver_0(num_classes: int) -> nn.Module:
+def depth_ver_0(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 32, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 32, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(32),
         nn.LeakyReLU(),
     )
@@ -299,9 +305,10 @@ def depth_ver_0(num_classes: int) -> nn.Module:
 
 
 @register_model
-def depth_ver_1(num_classes: int) -> nn.Module:
+def depth_ver_1(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 16, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
         nn.LeakyReLU(),
     )
@@ -336,14 +343,15 @@ def depth_ver_1(num_classes: int) -> nn.Module:
 
 
 @register_model
-def depth_ver_2(num_classes: int) -> nn.Module:
-    return base_model(num_classes)
+def depth_ver_2(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    return base_model(num_classes, rgb_input)
 
 
 @register_model
-def depth_ver_3(num_classes: int) -> nn.Module:
+def depth_ver_3(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 16, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
         nn.LeakyReLU(),
     )
@@ -401,9 +409,10 @@ def depth_ver_3(num_classes: int) -> nn.Module:
 
 
 @register_model
-def depth_ver_4(num_classes: int) -> nn.Module:
+def depth_ver_4(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 16, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
         nn.LeakyReLU(),
     )
@@ -471,16 +480,17 @@ def depth_ver_4(num_classes: int) -> nn.Module:
 
 
 @register_model
-def convnext_small(num_classes: int) -> nn.Module:
+def convnext_small(num_classes: int, rgb_input: bool = False) -> nn.Module:
     try:
         import timm
     except ImportError:
         raise ImportError("Please install timm to use convnext_small.")
 
+    input_channels = 3 if rgb_input else 1
     # timm is amazing
     # TODO is it better starting from pretrained? almost certianly yes
     model = timm.create_model(
-        "convnext_small", pretrained=False, num_classes=0, in_chans=1
+        "convnext_small", pretrained=False, num_classes=0, in_chans=input_channels
     )
 
     # we need to replace the last block of this model so the output

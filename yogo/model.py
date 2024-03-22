@@ -35,6 +35,7 @@ class YOGO(nn.Module):
         anchor_w: float,
         anchor_h: float,
         num_classes: int,
+        is_rgb: bool = False,
         inference: bool = False,
         tuning: bool = False,
         model_func: ModelDefn = base_model,
@@ -42,14 +43,17 @@ class YOGO(nn.Module):
         device: Union[torch.device, str] = "cpu",
     ):
         super().__init__()
+
         self.device = device
 
-        self.model = model_func(num_classes)
+        self.model = model_func(num_classes, is_rgb).to(device)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_h))
         self.register_buffer("num_classes", torch.tensor(num_classes))
+        self.register_buffer("is_rgb", torch.tensor(is_rgb))
+        self.register_buffer("clip_value", torch.tensor(clip_value))
 
         self.inference = inference
 

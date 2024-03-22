@@ -58,7 +58,6 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
 
     config = {
         "class_names": data_defn.classes,
-        "no_classify": False,
         "iou_weight": 1,
         "healthy_weight": 1,
         "no_obj_weight": 0.5,
