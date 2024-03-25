@@ -212,7 +212,7 @@ def draw_yogo_prediction(
     elif img.ndim == 2:
         img = img[None, ...]
     elif img.ndim == 3:
-        if img.shape[0] not in (1,3):
+        if img.shape[0] not in (1, 3):
             raise ValueError(
                 "img must be 2-dimensional (i.e. grayscale), "
                 "or 3-dimensional (1 or three input channels) "
