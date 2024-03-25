@@ -111,6 +111,7 @@ def get_datasets(
                 Sx,
                 Sy,
                 image_hw=image_hw,
+                rgb=rgb,
                 classes=dataset_definition.classes,
                 normalize_images=normalize_images,
             )
