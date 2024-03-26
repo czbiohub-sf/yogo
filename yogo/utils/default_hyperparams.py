@@ -1,3 +1,6 @@
+AREA_FILTER_THRESHOLD = 1200 / (772 * 1032)
+
+
 class DefaultHyperparams:
     EPOCHS = 64
     BATCH_SIZE = 64

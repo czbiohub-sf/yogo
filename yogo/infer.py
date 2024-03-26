@@ -39,12 +39,14 @@ def argmax(arr):
 def save_predictions(
     fnames,
     batch_preds,
+    area_thresh=0.0,
     obj_thresh=0.5,
     iou_thresh=0.5,
 ):
     for fname, pred_slice in zip(fnames, batch_preds):
         preds = format_preds(
             pred_slice,
+            area_thresh=area_thresh,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
         )
@@ -59,6 +61,7 @@ def save_predictions(
 
 def get_prediction_class_counts(
     batch_preds: torch.Tensor,
+    area_thresh=0.0,
     obj_thresh=0.5,
     iou_thresh=0.5,
     min_class_confidence_threshold: float = 0,
@@ -75,6 +78,7 @@ def get_prediction_class_counts(
     for pred_slice in batch_preds:
         preds = format_preds(
             pred_slice,
+            area_thresh=area_thresh,
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
             min_class_confidence_threshold=min_class_confidence_threshold,
@@ -152,6 +156,7 @@ def predict(
     class_names: Optional[List[str]] = None,
     count_predictions: bool = False,
     batch_size: int = 64,
+    area_thresh: int = 0.0,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
     vertical_crop_height_px: Optional[int] = None,
@@ -405,6 +410,7 @@ def do_infer(args):
         save_preds=args.save_preds,
         save_npy=args.save_npy,
         class_names=args.class_names,
+        area_thresh=args.area_thresh,
         obj_thresh=args.obj_thresh,
         iou_thresh=args.iou_thresh,
         batch_size=args.batch_size,

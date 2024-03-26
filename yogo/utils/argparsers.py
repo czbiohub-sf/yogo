@@ -430,6 +430,12 @@ def infer_parser(parser=None):
         help="filetype for output images (default: .png)",
     )
     parser.add_argument(
+        "--area-thresh",
+        type=uint,
+        default=0,
+        help="area threshold for predictions, in units of square px (default: 0)",
+    )
+    parser.add_argument(
         "--obj-thresh",
         type=unsigned_float,
         default=0.5,

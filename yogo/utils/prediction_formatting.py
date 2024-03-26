@@ -127,6 +127,9 @@ def format_to_numpy(
     img_w: int,
     np_dtype=np.float32,
     heatmap_mask: Optional[torch.Tensor] = None,
+    obj_thresh: float = 0.5,
+    iou_thresh: float = 0.5,
+    area_thresh: Optional[float] = None,
 ) -> npt.NDArray:
     """Function to parse a prediction tensor and save it in a numpy format
 
@@ -161,6 +164,9 @@ def format_to_numpy(
             torch.from_numpy(prediction_tensor),
             box_format="xyxy",
             heatmap_mask=heatmap_mask,
+            obj_thresh=obj_thresh,
+            iou_thresh=iou_thresh,
+            area_thresh=area_thresh,
         )
         .numpy()
         .T
