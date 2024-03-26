@@ -24,7 +24,6 @@ def format_preds(
     pred: torch.Tensor,
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
-    area_thresh: Optional[float] = None,
     box_format: BoxFormat = "cxcywh",
     heatmap_mask: Optional[torch.Tensor] = None,
     min_class_confidence_threshold: float = 0.0,
@@ -37,7 +36,6 @@ def format_preds(
     The heatmap mask is a true/false array of 'hot spots' in the dataset. This mask will have been created by running YOGO on this dataset once already
     and then applying thresholded on the heatmap that was generated.
 
-    area_thresh is the threshold for filtering out boxes that are too small (in units of pct of image).
     An OK lower bound is 1e-6
 
     For all thresholds, set to 0 to disable.
@@ -50,8 +48,6 @@ def format_preds(
         Objectness threshold
     iou_thresh: float = 0.5
         Intersection over union threshold (for non-maximal suppression (NMS))
-    area_thresh: Optional[float] = None
-        Optionally filter out prediction bounding boxes smaller than this area_thresh parameter
     box_format: BoxFormat = 'cxcywh'
         Bounding box format, defaults to (center x, center y, width, height). Can also be (top left x, top left y, bottom right x, bottom right y)
     heatmap_mask: Optional[torch.Tensor | np.ndarray]
@@ -86,13 +82,6 @@ def format_preds(
     # Filter for objectness first
     objectness_mask = (reformatted_preds[:, 4] > obj_thresh).bool()
     preds = reformatted_preds[objectness_mask]
-
-    if area_thresh is not None:
-        # filter on area (discard small bboxes)
-        areas = (Sx / Sy) * preds[:, 2] * preds[:, 3]
-        areas_mask = area_thresh <= areas
-
-        preds = preds[areas_mask]
 
     # if we have to convert box format to xyxy, do it to the tensor
     # and give nms a view of the original. Otherwise, just give nms
@@ -317,7 +306,6 @@ def format_preds_and_labels_v2(
         pred,
         obj_thresh=objectness_thresh,
         iou_thresh=0.5,
-        area_thresh=200 / (772 * 1032),
         box_format="xyxy",
         min_class_confidence_threshold=min_class_confidence_threshold,
     )
