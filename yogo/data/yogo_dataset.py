@@ -16,6 +16,7 @@ from yogo.data.utils import read_grayscale_robust
 LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 
 # Guess: 200 sq px is probably about OK
+# FIXME: hard-coded for YOGO
 AREA_FILTER_THRESHOLD = 200 / (772 * 1032)
 
 
