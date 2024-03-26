@@ -1,4 +1,5 @@
 import torch
+import warnings
 import numpy as np
 import numpy.typing as npt
 
@@ -407,6 +408,8 @@ def format_preds_and_labels(
             tensor of labels shape=[N, mask x y x y class]
         )
     """
+    warnings.warn("use format_preds_and_labels_v2 instead", DeprecationWarning)
+
     pred.squeeze_()
     label.squeeze_()
 
