@@ -284,7 +284,6 @@ class PredictionLabelMatch:
 def format_preds_and_labels_v2(
     pred: torch.Tensor,
     label: torch.Tensor,
-    use_IoU: bool = True,
     objectness_thresh: float = 0.5,
     min_class_confidence_threshold: float = 0.0,
 ) -> PredictionLabelMatch:
@@ -296,13 +295,7 @@ def format_preds_and_labels_v2(
     preds and labels are the batch label and prediction tensors, hot n' fresh from the model and dataloader!
     use_IoU is whether to use IoU instead of naive cell matching. More accurate, but slower.
     objectness_thresh is the "objectness" threshold, YOGO's confidence that there is a prediction in the given cell. Can
-        only be used with use_IoU == True
-
-    returns
-        tuple(
-            tensor of predictions shape=[N, x y x y objectness *classes],
-            tensor of labels shape=[N, mask x y x y class]
-        )
+    only be used with use_IoU == True
     """
     pred.squeeze_()
     label.squeeze_()
@@ -344,46 +337,28 @@ def format_preds_and_labels_v2(
     matched_preds = formatted_preds[col_idxs]
     matched_labels = formatted_labels[row_idxs]
 
-    # at this point, we have three cases
-    # 1: N == M - the number of predictions is equal to the number of labels.
-    # 2: N < M - the number of predictions is greater than the number of labels.
-    # 3: N > M - the number of predictions is less than the number of labels.
-    if N == M:
-        return PredictionLabelMatch(
-            preds=matched_preds,
-            labels=matched_labels,
-            missed_labels=None,
-            extra_predictions=None,
-        )
-    elif N < M:
-        all_pred_indices = torch.arange(M, dtype=torch.long)
-        unmatched_pred_indices = torch.tensor(
-            [i for i in all_pred_indices if i not in col_idxs],
-            dtype=torch.long,
-            device=formatted_preds.device,
-        )
-        extra_preds = formatted_preds[unmatched_pred_indices]
-        return PredictionLabelMatch(
-            preds=matched_preds,
-            labels=matched_labels,
-            missed_labels=None,
-            extra_predictions=extra_preds,
-        )
-    else:
-        all_label_indices = torch.arange(N, dtype=torch.long)
-        unmatched_label_indices = torch.tensor(
-            [i for i in all_label_indices if i not in row_idxs],
-            dtype=torch.long,
-            device=formatted_labels.device,
-        )
-        missed_labels = formatted_labels[unmatched_label_indices]
-        return PredictionLabelMatch(
-            preds=matched_preds,
-            labels=matched_labels,
-            missed_labels=missed_labels,
-            extra_predictions=None,
-        )
+    all_pred_indices = torch.arange(M, dtype=torch.long)
+    unmatched_pred_indices = torch.tensor(
+        [i for i in all_pred_indices if i not in col_idxs],
+        dtype=torch.long,
+        device=formatted_preds.device,
+    )
+    extra_preds = formatted_preds[unmatched_pred_indices]
 
+    all_label_indices = torch.arange(N, dtype=torch.long)
+    unmatched_label_indices = torch.tensor(
+        [i for i in all_label_indices if i not in row_idxs],
+        dtype=torch.long,
+        device=formatted_labels.device,
+    )
+    missed_labels = formatted_labels[unmatched_label_indices]
+
+    return PredictionLabelMatch(
+        preds=matched_preds,
+        labels=matched_labels,
+        missed_labels=missed_labels,
+        extra_predictions=extra_preds,
+    )
 
 def format_preds_and_labels(
     pred: torch.Tensor,
