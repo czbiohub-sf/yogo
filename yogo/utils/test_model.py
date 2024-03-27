@@ -66,6 +66,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         "half": True,
         "model": args.pth_path,
         "test_set": args.dataset_defn_path,
+        "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
     }
 
     if args.wandb or args.wandb_resume_id and rank == 0:
