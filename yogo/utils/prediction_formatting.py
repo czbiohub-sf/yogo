@@ -348,6 +348,7 @@ def format_preds_and_labels_v2(
         extra_predictions=extra_preds,
     )
 
+
 def format_preds_and_labels(
     pred: torch.Tensor,
     label: torch.Tensor,
