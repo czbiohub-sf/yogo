@@ -17,6 +17,7 @@ from yogo.data.utils import read_grayscale_robust
 LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
 
 # Guess: 200 sq px is probably about OK
+# FIXME: hard-coded for YOGO
 AREA_FILTER_THRESHOLD = 200 / (772 * 1032)
 
 
@@ -220,7 +221,8 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         image_paths: List[str] = []
         label_paths: List[str] = []
         missing_images: List[str] = []
-        for label_file_path in self.label_folder_path.glob("*"):
+
+        for label_file_path in self.label_folder_path.glob("*.txt"):
             # ignore (*nix convention) hidden files
             if label_file_path.name.startswith("."):
                 continue

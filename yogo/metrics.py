@@ -68,13 +68,17 @@ class Metrics:
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
+                # per-class
                 MulticlassPrecision(
                     num_classes=self.num_classes,
+                    average=None,
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
+                # per-class
                 MulticlassRecall(
                     num_classes=self.num_classes,
+                    average=None,
                     validate_args=False,
                     sync_on_compute=sync_on_compute,
                 ),
@@ -104,6 +108,7 @@ class Metrics:
         )
         self.total_num_true_objects = 0
 
+    @torch.no_grad()
     def update(self, preds, labels, use_IoU: bool = True):
         bs, pred_shape, Sy, Sx = preds.shape
         bs, label_shape, Sy, Sx = labels.shape
@@ -116,7 +121,7 @@ class Metrics:
                     use_IoU=use_IoU,
                     min_class_confidence_threshold=self.min_class_confidence_threshold,
                 )
-                for pred, label in zip(preds, labels)
+                for pred, label in zip(preds.detach(), labels.detach())
             ]
         )
 
@@ -151,6 +156,7 @@ class Metrics:
         self.confusion.update(fps[:, 5:].argmax(dim=1), fls[:, 5:].squeeze())
         self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
 
+    @torch.no_grad()
     def compute(self):
         pr_metrics = self.prediction_metrics.compute()
 
@@ -185,6 +191,7 @@ class Metrics:
         self.confusion.reset()
         self.prediction_metrics.reset()
 
+    @torch.no_grad()
     def forward(self, preds, labels):
         self.update(preds, labels)
         res = self.compute()
