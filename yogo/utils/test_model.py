@@ -69,7 +69,8 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
     }
 
-    if args.wandb or args.wandb_resume_id and rank == 0:
+    log_to_wandb = (args.wandb or args.wandb_resume_id) and rank == 0
+    if log_to_wandb:
         print("logging to wandb")
         wandb.init(
             project="yogo",
@@ -99,7 +100,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         include_background=args.include_background,
     )
 
-    if args.wandb or args.wandb_resume_id and rank == 0:
+    if log_to_wandb:
         Trainer._log_test_metrics(*test_metrics)  # type: ignore
 
     if args.dump_to_disk and rank == 0:

@@ -118,7 +118,6 @@ class Metrics:
                 format_preds_and_labels_v2(
                     pred,
                     label,
-                    use_IoU=use_IoU,
                     min_class_confidence_threshold=self.min_class_confidence_threshold,
                 )
                 for pred, label in zip(preds.detach(), labels.detach())
