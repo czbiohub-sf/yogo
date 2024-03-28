@@ -32,6 +32,42 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
 
     data_defn = DatasetDefinition.from_yaml(args.dataset_defn_path)
 
+    config = {
+        "class_names": data_defn.classes,
+        "no_classify": False,
+        "iou_weight": 1,
+        "healthy_weight": 1,
+        "no_obj_weight": 0.5,
+        "label_smoothing": 0.0001,
+        "half": True,
+        "model": args.pth_path,
+        "test_set": args.dataset_defn_path,
+        "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
+    }
+
+    log_to_wandb = (args.wandb or len(args.wandb_resume_id) > 0) and rank == 0
+
+    if log_to_wandb:
+        print("logging to wandb")
+        wandb.init(
+            project="yogo",
+            entity="bioengineering",
+            config=config,
+            id=args.wandb_resume_id,
+            resume="allow",
+            tags=args.tags,
+            notes=args.note,
+        )
+
+        if (wandb.run is not None) and wandb.run.offline:
+            warnings.warn(
+                "wandb run is offline - will not be logged "
+                "to wandb.ai but to the local disc"
+            )
+
+        assert wandb.run is not None
+        wandb.run.tags += type(wandb.run.tags)(["resumed for test"])
+
     dataloaders = get_dataloader(
         data_defn,
         64,
@@ -56,44 +92,9 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         multiprocessing_context="spawn" if num_workers > 0 else None,
     )
 
-    config = {
-        "class_names": data_defn.classes,
-        "no_classify": False,
-        "iou_weight": 1,
-        "healthy_weight": 1,
-        "no_obj_weight": 0.5,
-        "label_smoothing": 0.0001,
-        "half": True,
-        "model": args.pth_path,
-        "test_set": args.dataset_defn_path,
-        "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
-    }
-
-    log_to_wandb = (args.wandb or args.wandb_resume_id) and rank == 0
-    if log_to_wandb:
-        print("logging to wandb")
-        wandb.init(
-            project="yogo",
-            entity="bioengineering",
-            config=config,
-            id=args.wandb_resume_id,
-            resume="allow",
-            tags=args.tags,
-            notes=args.note,
-        )
-
-        if (wandb.run is not None) and wandb.run.offline:
-            warnings.warn(
-                "wandb run is offline - will not be logged "
-                "to wandb.ai but to the local disc"
-            )
-
-        assert wandb.run is not None
-        wandb.run.tags += type(wandb.run.tags)(["resumed for test"])
-
     test_metrics = Trainer.test(
         test_dataloader,
-        "cuda",
+        f"cuda:{rank}",
         config,
         y,
         include_mAP=args.include_mAP,

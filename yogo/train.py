@@ -356,7 +356,7 @@ class Trainer:
 
         if self._rank == 0 and test_metrics is not None:
             self._log_test_metrics(*test_metrics)
-        elif test_metrics is None:
+        elif self._rank == 0 and test_metrics is None:
             warnings.warn(
                 "no test metrics found - most likely test_dataloader is empty"
             )
@@ -446,6 +446,7 @@ class Trainer:
         device: Union[str, torch.device],
         config: WandbConfig,
         net: torch.nn.Module,
+        rank: int = 0,
         include_mAP: bool = True,
         include_background: bool = False,
     ) -> Optional[Tuple[Any, ...]]:
@@ -489,6 +490,10 @@ class Trainer:
             test_loss += loss
             test_metrics.update(outputs.detach(), labels.detach())
 
+        mean_loss = test_loss / len(test_dataloader)  # type: ignore
+        if isinstance(net, DDP):
+            torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
+
         (
             mAP,
             confusion_data,
@@ -502,16 +507,15 @@ class Trainer:
             total_num_true_objects,
         ) = test_metrics.compute()
 
-        mean_loss = test_loss / len(test_dataloader)  # type: ignore
-        if isinstance(net, DDP):
-            torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
-
         net.train(net_state)
+
+        if rank != 0:
+            return None
 
         return (
             mean_loss.item(),  # type: ignore
             mAP,
-            confusion_data,
+            test_metrics.get_wandb_confusion_matrix(confusion_data),
             accuracy,
             roc_curves,
             precision,
