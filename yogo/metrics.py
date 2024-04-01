@@ -1,6 +1,6 @@
 import torch
 
-from typing import Tuple, List, Dict
+from typing import Any, Tuple, List, Dict
 
 from torchmetrics import MetricCollection
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
@@ -31,6 +31,7 @@ class Metrics:
         include_mAP: bool = True,
         include_background: bool = True,
     ):
+        self.device = device
         self.classes = classes + (["background"] if include_background else [])
         self.num_classes = len(classes)
         self.min_class_confidence_threshold = min_class_confidence_threshold
@@ -106,7 +107,7 @@ class Metrics:
         self.num_obj_extra_by_class: torch.Tensor = torch.zeros(
             self.num_classes, dtype=torch.long, device="cpu"
         )
-        self.total_num_true_objects = 0
+        self.total_num_true_objects = torch.zeros(1, dtype=torch.long, device="cpu")
 
     @torch.no_grad()
     def update(self, preds, labels, use_IoU: bool = True):
@@ -118,7 +119,6 @@ class Metrics:
                 format_preds_and_labels_v2(
                     pred,
                     label,
-                    use_IoU=use_IoU,
                     min_class_confidence_threshold=self.min_class_confidence_threshold,
                 )
                 for pred, label in zip(preds.detach(), labels.detach())
@@ -157,7 +157,11 @@ class Metrics:
         self.prediction_metrics.update(fps[:, 5:], fls[:, 5:].squeeze().long())
 
     @torch.no_grad()
-    def compute(self):
+    def compute(self) -> Tuple[Any, ...]:
+        """We need to use rank here and exit early. The metrics sync on "compute",
+        but then for steps after that, we only want to return if we're rank 0 (since
+        that's synced to wandb).
+        """
         pr_metrics = self.prediction_metrics.compute()
 
         if self.include_mAP:
@@ -168,21 +172,24 @@ class Metrics:
             }
 
         confusion_metrics = self.confusion.compute()
-        confusion_matrix = get_wandb_confusion(
-            confusion_metrics, self.classes, "test confusion matrix"
-        )
 
         return (
             mAP_metrics,
-            confusion_matrix,
+            confusion_metrics,
             pr_metrics["MulticlassAccuracy"],
             pr_metrics["MulticlassROC"],
             pr_metrics["MulticlassPrecision"],
             pr_metrics["MulticlassRecall"],
             pr_metrics["MulticlassCalibrationError"].item(),
-            self.num_obj_missed_by_class,
-            self.num_obj_extra_by_class,
-            self.total_num_true_objects,
+            self.num_obj_missed_by_class.cpu(),
+            self.num_obj_extra_by_class.cpu(),
+            self.total_num_true_objects.cpu(),
+        )
+
+    @torch.no_grad()
+    def get_wandb_confusion_matrix(self, confusion_metrics):
+        return get_wandb_confusion(
+            confusion_metrics, self.classes, "test confusion matrix"
         )
 
     def reset(self):
