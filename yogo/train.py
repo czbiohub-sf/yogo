@@ -572,6 +572,7 @@ class Trainer:
 
         wandb.summary["test loss"] = mean_test_loss
         wandb.summary["test mAP"] = mAP["map"]
+        wandb.summary["test mAP (full)"] = mAP
         wandb.summary["test precision"] = precision.mean()
         wandb.summary["test recall"] = recall.mean()
         wandb.summary["calibration error"] = calibration_error

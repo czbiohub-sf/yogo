@@ -7,7 +7,6 @@ import pickle
 import argparse
 import warnings
 
-import torch.multiprocessing as mp
 from torch.utils.data import Dataset, DataLoader
 
 from yogo.model import YOGO
@@ -19,16 +18,13 @@ from yogo.data.yogo_dataloader import (
     get_dataloader,
     choose_dataloader_num_workers,
 )
-from yogo.utils import get_free_port
 
 
-def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
-    torch.distributed.init_process_group(
-        backend="nccl", rank=rank, world_size=world_size
-    )
+def test_model(args: argparse.Namespace) -> None:
+    device = "cuda"
 
     y, cfg = YOGO.from_pth(args.pth_path, inference=False)
-    y.to("cuda")
+    y.to(device)
 
     data_defn = DatasetDefinition.from_yaml(args.dataset_defn_path)
 
@@ -45,7 +41,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
         "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
     }
 
-    log_to_wandb = (args.wandb or len(args.wandb_resume_id) > 0) and rank == 0
+    log_to_wandb = args.wandb or len(args.wandb_resume_id) > 0
 
     if log_to_wandb:
         print("logging to wandb")
@@ -94,7 +90,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
 
     test_metrics = Trainer.test(
         test_dataloader,
-        f"cuda:{rank}",
+        device,
         config,
         y,
         include_mAP=args.include_mAP,
@@ -104,7 +100,7 @@ def test_model(rank: int, world_size: int, args: argparse.Namespace) -> None:
     if log_to_wandb:
         Trainer._log_test_metrics(*test_metrics)  # type: ignore
 
-    if args.dump_to_disk and rank == 0:
+    if args.dump_to_disk:
         pickle.dump(test_metrics, open("test_metrics.pkl", "wb"))
 
 
@@ -116,6 +112,4 @@ def do_model_test(args):
             "if cpu training is required, we can add it back"
         )
 
-    os.environ["MASTER_ADDR"] = "0.0.0.0"
-    os.environ["MASTER_PORT"] = str(get_free_port())
-    mp.spawn(test_model, args=(world_size, args), nprocs=world_size, join=True)
+    test_model(args)

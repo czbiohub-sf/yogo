@@ -173,11 +173,6 @@ class Metrics:
 
         confusion_metrics = self.confusion.compute()
 
-        # need to have tensors on gpu for distributed reduce
-        torch.distributed.all_reduce(self.num_obj_missed_by_class.to(self.device), op=torch.distributed.ReduceOp.SUM)  # type: ignore
-        torch.distributed.all_reduce(self.num_obj_extra_by_class.to(self.device), op=torch.distributed.ReduceOp.SUM)  # type: ignore
-        torch.distributed.all_reduce(self.total_num_true_objects.to(self.device), op=torch.distributed.ReduceOp.SUM)  # type: ignore
-
         return (
             mAP_metrics,
             confusion_metrics,
