@@ -14,7 +14,7 @@ from torchvision import transforms as T
 from torchvision.ops import box_iou
 from torchvision.transforms import functional as F
 
-from yogo.data.utils import read_grayscale_robust
+from yogo.data.utils import read_image_robust
 from yogo.data.yogo_dataset import format_labels_tensor
 
 
@@ -80,7 +80,7 @@ class BlobDataset(Dataset):
         self.Sy = Sy
         self.n = n
         self.length = length
-        self.loader = read_grayscale_robust
+        self.loader = read_image_robust
         self.blend_thumbnails = blend_thumbnails
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape

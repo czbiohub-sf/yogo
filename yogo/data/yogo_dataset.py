@@ -11,7 +11,7 @@ from pathlib import Path
 from functools import partial
 from typing import List, Dict, Union, Tuple, Optional, Callable, Any, cast
 
-from yogo.data.utils import read_grayscale_robust
+from yogo.data.utils import read_image_robust
 
 
 LABEL_TENSOR_PRED_DIM_SIZE = 1 + 4 + 1
@@ -144,7 +144,6 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         image_hw: Tuple[int, int] = (772, 1032),
         rgb: bool = False,
         normalize_images: bool = False,
-        loader=partial(read_grayscale_robust, retries=3, min_duration=0.1),
         extensions: Tuple[str, ...] = ("png", "jpg", "jpeg", "tif"),
         is_valid_file: Optional[Callable[[str], bool]] = None,
         *args,
@@ -157,7 +156,7 @@ class ObjectDetectionDataset(datasets.VisionDataset):
         self.classes = classes
         self.image_folder_path = image_folder_path
         self.label_folder_path = label_folder_path
-        self.loader = partial(loader, rgb=rgb)
+        self.loader = partial(read_image_robust, retries=3, min_duration=0.1, rgb=rgb)
         self.resize = Resize(image_hw, antialias=True)
         self.normalize_images = normalize_images
         self.notes_data: Optional[Dict[str, Any]] = None
