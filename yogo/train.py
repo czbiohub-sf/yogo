@@ -461,7 +461,7 @@ class Trainer:
         test_metrics = Metrics(
             classes=config["class_names"],
             device=str(device),
-            sync_on_compute=isinstance(net, DDP),
+            sync_on_compute=False,
             include_mAP=include_mAP,
             include_background=include_background,
         )
@@ -489,8 +489,6 @@ class Trainer:
             test_metrics.update(outputs.detach(), labels.detach())
 
         mean_loss = test_loss / len(test_dataloader)  # type: ignore
-        if isinstance(net, DDP):
-            torch.distributed.all_reduce(mean_loss, op=torch.distributed.ReduceOp.AVG)  # type: ignore
 
         (
             mAP,
