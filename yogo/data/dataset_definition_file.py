@@ -236,7 +236,7 @@ class DatasetDefinition:
         test_specs = DatasetDefinition._check_dataset_paths(test_specs)
         if "dataset_split_fractions" in data:
             split_fractions = SplitFractions.from_dict(
-                    data["dataset_split_fractions"], test_paths_present=test_paths_present
+                data["dataset_split_fractions"], test_paths_present=test_paths_present
             )
         else:
             split_fractions = SplitFractions.train_only()

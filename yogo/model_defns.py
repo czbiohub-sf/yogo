@@ -78,9 +78,10 @@ def base_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
 
 
 @register_model
-def silu_model(num_classes: int) -> nn.Module:
+def silu_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
-        nn.Conv2d(1, 16, 3, stride=2, padding=1, bias=False),
+        nn.Conv2d(input_channels, 16, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(16),
         nn.SiLU(inplace=True),
     )
@@ -127,7 +128,8 @@ def silu_model(num_classes: int) -> nn.Module:
 
 
 @register_model
-def double_filters(num_classes: int) -> nn.Module:
+def double_filters(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
         nn.Conv2d(input_channels, 32, 3, stride=2, padding=1, bias=False),
         nn.BatchNorm2d(32),
