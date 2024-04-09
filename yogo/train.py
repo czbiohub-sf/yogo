@@ -123,9 +123,10 @@ class Trainer:
             or self.config["pretrained_path"] == "none"
         ):
             net = YOGO(
-                img_size=self.config["image_shape"],
+                img_size=self.config["image_hw"],
                 anchor_w=self.config["anchor_w"],
                 anchor_h=self.config["anchor_h"],
+                is_rgb=self.config["rgb"],
                 num_classes=len(self.config["class_names"]),
                 model_func=get_model_func(self.config["model"]),
             ).to(self.device)
@@ -133,10 +134,10 @@ class Trainer:
         else:
             net, net_cfg = YOGO.from_pth(self.config["pretrained_path"])
 
-            if any(net.img_size.cpu().numpy() != self.config["image_shape"]):
+            if any(net.img_size.cpu().numpy() != self.config["image_hw"]):
                 raise RuntimeError(
                     "mismatch in pretrained network image resize shape and current resize shape: "
-                    f"pretrained network image_shape = {net.img_size}, requested image_shape = {self.config['image_shape']}"
+                    f"pretrained network image_hw = {net.img_size}, requested image_hw = {self.config['image_hw']}"
                 )
 
             net.to(self.device)
@@ -165,6 +166,8 @@ class Trainer:
             self.config["batch_size"],
             Sx=self.Sx,
             Sy=self.Sy,
+            image_hw=self.config["image_hw"],
+            rgb=self.config["rgb"],
             normalize_images=self.config["normalize_images"],
             split_fraction_override=self.config["dataset_split_override"],
         )
@@ -198,14 +201,10 @@ class Trainer:
         )
 
     def _init_training_tools(self) -> None:
-        # TODO generalize these class weights to n-classes (for other datasets)
-        class_weights = [self.config["healthy_weight"], 1, 1, 1, 1, 1, 1]
-
         self.Y_loss = YOGOLoss(
             no_obj_weight=self.config["no_obj_weight"],
             iou_weight=self.config["iou_weight"],
             label_smoothing=self.config["label_smoothing"],
-            class_weights=torch.tensor(class_weights),
         ).to(self.device)
 
         self.optimizer = AdamW(
@@ -277,6 +276,7 @@ class Trainer:
                 "epoch": self.epoch,
                 "step": self.global_step,
                 "normalize_images": self.config["normalize_images"],
+                "classes": self.config["class_names"],
                 "model_name": model_name,
                 "model_state_dict": deepcopy(state_dict),
                 "optimizer_state_dict": deepcopy(self.optimizer.state_dict()),
@@ -466,12 +466,10 @@ class Trainer:
             include_background=include_background,
         )
 
-        class_weights = [config["healthy_weight"], 1, 1, 1, 1, 1, 1]
         Y_loss = YOGOLoss(
             no_obj_weight=config["no_obj_weight"],
             iou_weight=config["iou_weight"],
             label_smoothing=config["label_smoothing"],
-            class_weights=torch.tensor(class_weights, dtype=torch.float32),
         ).to(device)
 
         test_loss = torch.zeros(1, device=device)
@@ -626,7 +624,8 @@ def do_training(args) -> None:
         "anchor_h": anchor_h,
         "model": args.model,
         "half": args.half,
-        "image_shape": args.image_shape,
+        "rgb": args.rgb_images,
+        "image_hw": args.image_hw,
         "pretrained_path": args.from_pretrained,
         "normalize_images": args.normalize_images,
         "dataset_split_override": args.dataset_split_override,

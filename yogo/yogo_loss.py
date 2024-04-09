@@ -1,6 +1,6 @@
 import torch
 
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 
 import torchvision.ops as ops
 
@@ -16,7 +16,6 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         iou_weight: float = 5.0,
         classify_weight: float = 1.0,
         label_smoothing: float = 0.01,
-        class_weights: Optional[torch.Tensor] = None,
     ) -> None:
         super().__init__()
 
@@ -26,7 +25,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
 
         self.mse = torch.nn.MSELoss(reduction="none")
         self.cel = torch.nn.CrossEntropyLoss(
-            weight=class_weights, reduction="none", label_smoothing=label_smoothing
+            reduction="none", label_smoothing=label_smoothing
         )
 
         self.device = "cpu"
@@ -43,7 +42,7 @@ class YOGOLoss(torch.nn.modules.loss._Loss):
         pred and label are both 4d. pred_batch has shape
         (
              batch size,
-             pred_dim,      (tx, ty, tw, th, to, c1, c2, c3, c4)
+             pred_dim,      (tx, ty, tw, th, to, c1, c2, c3, c4, ...)
              Sx,
              Sy
         )

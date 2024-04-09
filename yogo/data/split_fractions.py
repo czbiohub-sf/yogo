@@ -44,6 +44,10 @@ class SplitFractions:
         )
 
     @classmethod
+    def train_only(cls) -> "SplitFractions":
+        return cls(1, 0, None)
+
+    @classmethod
     def from_dict(
         cls, dct: Dict[str, float], test_paths_present: bool = True
     ) -> "SplitFractions":

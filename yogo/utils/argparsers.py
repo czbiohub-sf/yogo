@@ -190,23 +190,23 @@ def train_parser(parser=None):
         default=df.HEALTHY_WEIGHT,
     )
     parser.add_argument(
-        "--no-classify",
-        default=False,
-        action=boolean_action,
-        help="turn off classification loss - good only for pretraining just a cell detector",
-    )
-    parser.add_argument(
         "--normalize-images",
         default=False,
         action=boolean_action,
-        help="normalize images into [0,1]",
+        help="normalize images into [0,1] - overridden if loading from pth",
     )
     parser.add_argument(
-        "--image-shape",
+        "--image-hw",
         default=(772, 1032),
         nargs=2,
         type=int,
-        help="size of images for training (e.g. --image-shape 772 1032) (default: 772 1032)",
+        help="height and width of images for training (e.g. --image-hw 772 1032) (default: 772 1032)",
+    )
+    parser.add_argument(
+        "--rgb-images",
+        default=False,
+        action=boolean_action,
+        help="use RGB images instead of grayscale - overridden if loading from pth (defaults to grayscale)",
     )
     parser.add_argument(
         "--model",

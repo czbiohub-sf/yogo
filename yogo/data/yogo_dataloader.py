@@ -9,7 +9,8 @@ from functools import partial
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import Dataset, ConcatDataset, DataLoader, Subset, random_split
 
-from typing import Any, List, Dict, Optional, MutableMapping, Iterable, Union
+
+from typing import Any, List, Dict, Optional, Tuple, MutableMapping, Iterable, Union
 
 from yogo.data.blobgen import BlobDataset
 from yogo.data.utils import collate_batch_robust
@@ -75,6 +76,8 @@ def get_datasets(
     dataset_definition: DatasetDefinition,
     Sx: int,
     Sy: int,
+    rgb: bool = False,
+    image_hw: Tuple[int, int] = (772, 1032),
     normalize_images: bool = False,
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> MutableMapping[str, Dataset[Any]]:
@@ -89,6 +92,8 @@ def get_datasets(
             dsp.label_path,
             Sx,
             Sy,
+            image_hw=image_hw,
+            rgb=rgb,
             classes=dataset_definition.classes,
             normalize_images=normalize_images,
         )
@@ -105,6 +110,8 @@ def get_datasets(
                 dsp.label_path,
                 Sx,
                 Sy,
+                image_hw=image_hw,
+                rgb=rgb,
                 classes=dataset_definition.classes,
                 normalize_images=normalize_images,
             )
@@ -142,6 +149,7 @@ def get_datasets(
             n=12,
             length=len(split_datasets["train"]) // 2,  # type: ignore
             blend_thumbnails=True,
+            background_img_shape=image_hw,
             thumbnail_sigma=2,
             normalize_images=normalize_images,
         )
@@ -181,6 +189,8 @@ def get_dataloader(
     Sx: int,
     Sy: int,
     training: bool = True,
+    image_hw: Tuple[int, int] = (772, 1032),
+    rgb: bool = False,
     normalize_images: bool = False,
     split_fraction_override: Optional[SplitFractions] = None,
 ) -> Dict[str, DataLoader]:
@@ -188,6 +198,8 @@ def get_dataloader(
         dataset_definition,
         Sx,
         Sy,
+        rgb=rgb,
+        image_hw=image_hw,
         normalize_images=normalize_images,
         split_fraction_override=split_fraction_override,
     )

@@ -14,7 +14,7 @@ from typing import List, Union, Optional, Callable, Tuple, cast
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose
 
-from yogo.data.utils import read_grayscale
+from yogo.data.utils import read_image
 
 
 class ImageAndIdDataset(Dataset, Sized):
@@ -32,7 +32,7 @@ class ImagePathDataset(ImageAndIdDataset):
                 Union[str, Path],
             ],
             torch.Tensor,
-        ] = read_grayscale,
+        ] = read_image,
         normalize_images: bool = False,
     ):
         self.root = Path(root)

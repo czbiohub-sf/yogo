@@ -7,31 +7,36 @@ from pathlib import Path
 from typing import Union, Optional, Tuple, List
 from ruamel.yaml import YAML
 
-from torchvision.io import read_image, ImageReadMode
+from torchvision.io import read_image as read_image_torch, ImageReadMode
 
 from yogo.data.data_transforms import MultiArgSequential
 from yogo.data.dataset_definition_file import DatasetDefinition
 
 
-def read_grayscale(img_path: Union[str, Path]) -> torch.Tensor:
+def read_image(img_path: Union[str, Path], rgb: bool = False) -> torch.Tensor:
+    img_mode = ImageReadMode.RGB if rgb else ImageReadMode.GRAY
     try:
-        return read_image(str(img_path), ImageReadMode.GRAY)
+        return read_image_torch(str(img_path), img_mode)
     except RuntimeError as e:
         raise RuntimeError(f"file {img_path} threw: {e}") from e
 
 
-def read_grayscale_robust(
-    img_path: Union[str, Path], retries: int = 3, min_duration: float = 0.1
+def read_image_robust(
+    img_path: Union[str, Path],
+    retries: int = 3,
+    min_duration: float = 0.1,
+    rgb: bool = False,
 ) -> Optional[torch.Tensor]:
     """
-    Attempts to read an image file in grayscale mode with retry logic.
+    Attempts to read an image file with retry logic.
 
-    This function tries to read an image in grayscale mode with a specified number of retries. If all attempts fail,
+    This function tries to read an image with a specified number of retries. If all attempts fail,
     it logs a warning and returns None.
     """
+    img_mode = ImageReadMode.RGB if rgb else ImageReadMode.GRAY
     for i in range(retries):
         try:
-            return read_image(str(img_path), ImageReadMode.GRAY)
+            return read_image_torch(str(img_path), img_mode)
         except Exception as e:
             warnings.warn(f"file {img_path} threw: {e}")
             if i == retries - 1:

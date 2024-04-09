@@ -188,7 +188,7 @@ def draw_yogo_prediction(
     """Given an image and a prediction, return a PIL Image with bounding boxes
 
     args:
-        img: 2d torch.Tensor of shape (h, w) or (1, h, w). We will `torch.uint8` your tensor!
+        img: 2d or 3d torch.Tensor of shape (h, w), (1, h, w), or (3, h, w). We will `torch.uint8` your tensor!
         prediction: torch.tensor of shape (pred_dim, Sy, Sx) or (1, pred_dim, Sy, Sx)
         obj_thresh: objectness threshold
         iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
@@ -203,18 +203,28 @@ def draw_yogo_prediction(
 
     img = img.to(torch.uint8)
 
-    if img.ndim != 2:
+    if img.ndim not in (2, 3):
         raise ValueError(
             "img must be 2-dimensional (i.e. grayscale), "
+            "or 3-dimensional (1 or three input channels) "
             f"but has {img.ndim} dimensions"
         )
+    elif img.ndim == 2:
+        img = img[None, ...]
+    elif img.ndim == 3:
+        if img.shape[0] not in (1, 3):
+            raise ValueError(
+                "img must be 2-dimensional (i.e. grayscale), "
+                "or 3-dimensional (1 or three input channels) "
+                f"but has {img.ndim} dimensions"
+            )
     elif prediction.ndim != 3:
         raise ValueError(
             "prediction must be 'unbatched' (i.e. shape (pred_dim, Sy, Sx) or "
             f"(1, pred_dim, Sy, Sx)) - got shape {prediction.shape} "
         )
 
-    img_h, img_w = img.shape
+    num_channels, img_h, img_w = img.shape
 
     formatted_rects: Union[torch.Tensor, List] = _format_tensor_for_rects(
         prediction,
@@ -225,7 +235,7 @@ def draw_yogo_prediction(
         min_class_confidence_threshold=min_class_confidence_threshold,
     )
 
-    pil_img = transforms.ToPILImage()(img[None, ...])
+    pil_img = transforms.ToPILImage()(img)
 
     rgb = PIL.Image.new("RGBA", pil_img.size)
     rgb.paste(pil_img)

@@ -191,6 +191,10 @@ class DatasetDefinition:
     def test_dataset_paths(self) -> List[LiteralSpecification]:
         return list(self._test_dataset_paths)
 
+    @property
+    def all_dataset_paths(self) -> List[LiteralSpecification]:
+        return list(self._dataset_paths | self._test_dataset_paths)
+
     @classmethod
     def from_yaml(cls, path: Path) -> "DatasetDefinition":
         """
@@ -230,15 +234,19 @@ class DatasetDefinition:
 
         dataset_specs = DatasetDefinition._check_dataset_paths(dataset_specs)
         test_specs = DatasetDefinition._check_dataset_paths(test_specs)
+        if "dataset_split_fractions" in data:
+            split_fractions = SplitFractions.from_dict(
+                data["dataset_split_fractions"], test_paths_present=test_paths_present
+            )
+        else:
+            split_fractions = SplitFractions.train_only()
 
         return cls(
             _dataset_paths=dataset_specs,
             _test_dataset_paths=test_specs,
             classes=classes,
             thumbnail_augmentation=DatasetDefinition._load_thumbnails(classes, data),
-            split_fractions=SplitFractions.from_dict(
-                data["dataset_split_fractions"], test_paths_present=test_paths_present
-            ),
+            split_fractions=split_fractions,
         )
 
     def __add__(self, other: "DatasetDefinition") -> "DatasetDefinition":

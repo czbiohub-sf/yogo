@@ -7,7 +7,6 @@ from typing import Tuple, Optional, Union, Any, Dict
 from yogo.model_defns import ModelDefn, base_model, get_model_func
 
 
-# TODO find better location for this
 PathLike = Union[Path, str]
 
 
@@ -35,6 +34,7 @@ class YOGO(nn.Module):
         anchor_w: float,
         anchor_h: float,
         num_classes: int,
+        is_rgb: bool = False,
         inference: bool = False,
         tuning: bool = False,
         model_func: ModelDefn = base_model,
@@ -42,14 +42,17 @@ class YOGO(nn.Module):
         device: Union[torch.device, str] = "cpu",
     ):
         super().__init__()
+
         self.device = device
 
-        self.model = model_func(num_classes)
+        self.model = model_func(num_classes, is_rgb).to(device)
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_h))
         self.register_buffer("num_classes", torch.tensor(num_classes))
+        self.register_buffer("is_rgb", torch.tensor(is_rgb))
+        self.register_buffer("clip_value", torch.tensor(clip_value))
 
         self.inference = inference
 
@@ -111,12 +114,20 @@ class YOGO(nn.Module):
         global_step = loaded_pth.get("step", 0)
         model_version = loaded_pth.get("model_version", None)
         normalize_images = loaded_pth.get("normalize_images", False)
+        class_names = loaded_pth.get("class_names", None)
 
         params = loaded_pth["model_state_dict"]
         img_size = params["img_size"]
         anchor_w = params["anchor_w"]
         anchor_h = params["anchor_h"]
         num_classes = params["num_classes"]
+
+        # be permissive of older pth files
+        if "is_rgb" not in params:
+            params["is_rgb"] = torch.tensor(False)
+
+        if "clip_value" not in params:
+            params["clip_value"] = torch.tensor(1.0)
 
         if "height_multiplier" not in params:
             params["height_multiplier"] = torch.tensor(1.0)
@@ -139,6 +150,7 @@ class YOGO(nn.Module):
         return model, {
             "step": global_step,
             "normalize_images": normalize_images,
+            "class_names": class_names,
         }
 
     def to(self, device, *args, **kwargs):
