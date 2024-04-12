@@ -190,12 +190,12 @@ def predict(
 
     transforms: List[torch.nn.Module] = []
 
-    img_h, img_w = model.img_size
+    img_h, img_w = model.get_img_size()
     if vertical_crop_height:
-        vertical_crop_height_px = round(vertical_crop_height * img_h)
+        vertical_crop_height_px = (vertical_crop_height * img_h).round()
         crop = CenterCrop((vertical_crop_height_px, img_w))
         transforms.append(crop)
-        model.resize_model(vertical_crop_height_px)
+        model.resize_model(int(vertical_crop_height_px.item()))
         img_h = vertical_crop_height_px
 
     # these three lines are correctly typed; dunno how to convince mypy
@@ -332,8 +332,8 @@ def predict(
                 parsed = format_to_numpy(
                     img_index,
                     res[j, ...],
-                    img_h.item(),
-                    img_w.item(),
+                    int(img_h.item()),
+                    int(img_w.item()),
                     heatmap_mask=heatmap_mask,
                 )
                 np_results.append(parsed)

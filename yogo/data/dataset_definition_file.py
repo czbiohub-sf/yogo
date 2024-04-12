@@ -114,7 +114,7 @@ class LiteralSpecification:
     label_path: Path
 
     @classmethod
-    def from_dict(self, dct: Dict[str, str]) -> "LiteralSpecification":
+    def from_dict(cls, dct: Dict[str, str]) -> "LiteralSpecification":
         if len(dct) != 2:
             raise InvalidDatasetDefinitionFile(
                 f"LiteralSpecification must have two keys; found {len(dct)}"
@@ -406,8 +406,7 @@ class DatasetDefinition:
                 )
 
         # walrus operator :=
-        duplicates = literal_defns & exclude_specs
-        if duplicates:
+        if duplicates := literal_defns & exclude_specs:
             raise InvalidDatasetDefinitionFile(
                 "duplicate literal definition found in exclude paths!\n"
                 f"duplicates are: {duplicates}"
@@ -417,9 +416,7 @@ class DatasetDefinition:
 
     @staticmethod
     def _check_for_non_disjoint_sets(s1: Set, s2: Set) -> None:
-        # walrus :=
-        intersection = s1 & s2
-        if intersection:
+        if intersection := s1 & s2:
             # duplicate literal definitions, or one of the literal definitions that we found
             # is in the exclude set. Report them!
             raise InvalidDatasetDefinitionFile(

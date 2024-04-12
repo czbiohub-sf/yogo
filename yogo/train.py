@@ -220,6 +220,8 @@ class Trainer:
         )
 
     def _init_wandb(self) -> None:
+        # TODO it would be cool to generalize the run logger out
+        # of just W&B. I wonder if there's a lib for smth like this?
         if self._rank != 0:
             return
 
