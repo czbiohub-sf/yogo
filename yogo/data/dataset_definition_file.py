@@ -260,7 +260,6 @@ class DatasetDefinition:
                 "cannot concatenate two dataset definitions with different classes"
             )
         elif self.thumbnail_augmentation != other.thumbnail_augmentation:
-            # TODO I'm not sure how equating dicts works here
             raise ValueError(
                 "cannot concatenate two dataset definitions with different thumbnail augmentation"
             )
@@ -428,19 +427,19 @@ class DatasetDefinition:
     def _load_thumbnails(
         classes: List[str], yaml_data: Dict[str, Any]
     ) -> Optional[Dict[str, Path]]:
-        if "thumbnail_agumentation" in yaml_data:
-            class_to_thumbnails = yaml_data["thumbnail_agumentation"]
+        if "thumbnail_augmentation" in yaml_data:
+            class_to_thumbnails = yaml_data["thumbnail_augmentation"]
 
             if not isinstance(class_to_thumbnails, dict):
                 raise InvalidDatasetDefinitionFile(
-                    "thumbnail_agumentation must map class names to paths to thumbnail "
+                    "thumbnail_augmentation must map class names to paths to thumbnail "
                     "directories (e.g. `misc: /path/to/thumbnails/misc`)"
                 )
 
             for k in class_to_thumbnails:
                 if k not in classes:
                     raise InvalidDatasetDefinitionFile(
-                        f"thumbnail_agumentation class {k} is not a valid class name"
+                        f"thumbnail_augmentation class {k} is not a valid class name"
                     )
 
             return class_to_thumbnails

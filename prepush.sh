@@ -7,4 +7,4 @@ ruff . --fix
 echo -e "\033[1mblack...\033[0m"
 black .
 echo -e "\033[1mtesting...\033[0m"
-pytest -q tests/
+pytest -q tests/*.py

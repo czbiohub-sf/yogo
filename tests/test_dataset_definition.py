@@ -2,6 +2,7 @@ import pytest
 
 from pathlib import Path
 
+from yogo.data.split_fractions import SplitFractions
 from yogo.data.dataset_definition_file import (
     DatasetDefinition,
     InvalidDatasetDefinitionFile,
@@ -145,3 +146,13 @@ def test_recursive_defn_class_mismatch() -> None:
     """
     with pytest.raises(InvalidDatasetDefinitionFile):
         DatasetDefinition.from_yaml(DEFNS_PATH / "recursive_class_mismatch.yml")
+
+
+def test_no_dataset_splits() -> None:
+    d = DatasetDefinition.from_yaml(DEFNS_PATH / "no_split.yml")
+    assert d.split_fractions == SplitFractions(train=1, val=0, test=None)
+
+
+def test_no_dataset_splits_no_test_split() -> None:
+    d = DatasetDefinition.from_yaml(DEFNS_PATH / "no_split_no_test.yml")
+    assert d.split_fractions == SplitFractions(train=1, val=0, test=None)
