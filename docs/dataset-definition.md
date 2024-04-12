@@ -148,5 +148,6 @@ thumbnail_augmentation:
   cats: /folder/of/thumbnails/cats
   dogs: /folder/of/thumbnails/dogs
 ```
+Thumbnails from these folders will be randomly pasted onto a white background and those images will be used for training.
 
 [^1]: We require every label-file to have an image-file associated with it, but not the other way around. Why? Because this way, we are able to label a subset of a folder of images and go ahead and train on the labelled subset, without having to copy the labelled images to another directory.
