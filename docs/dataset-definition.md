@@ -150,4 +150,22 @@ thumbnail_augmentation:
 ```
 Thumbnails from these folders will be randomly pasted onto a white background and those images will be used for training.
 
+## Loading and using the dataset definition file
+
+Almost all of the time, you will not need to manually import the dataset definition files. However, if you want to load the dataset definition files in Python, this section will give a couple pointers for getting started.
+
+Dataset definition files are loaded into the `DatasetDefinition` class (from [`yogo.data.dataset_definition_file`](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/dataset_definition_file.py)).
+
+``` python
+from yogo.data.dataset_definition_file import DatasetDefinition
+
+defn = DatasetDefinition.from_yaml('path/to/defn.yml')
+
+print(defn.dataset_paths)
+print(defn.test_dataset_paths)
+print(defn.all_dataset_paths)
+print(defn.split_fractions)
+print(defn.classes)
+```
+
 [^1]: We require every label-file to have an image-file associated with it, but not the other way around. Why? Because this way, we are able to label a subset of a folder of images and go ahead and train on the labelled subset, without having to copy the labelled images to another directory.
