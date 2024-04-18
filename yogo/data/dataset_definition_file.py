@@ -426,7 +426,7 @@ class DatasetDefinition:
     @staticmethod
     def _load_thumbnails(
         classes: List[str], yaml_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Path]]:
+    ) -> Optional[Dict[str, Path | List[Path]]]:
         if "thumbnail_augmentation" in yaml_data:
             class_to_thumbnails = yaml_data["thumbnail_augmentation"]
 
@@ -441,6 +441,10 @@ class DatasetDefinition:
                     raise InvalidDatasetDefinitionFile(
                         f"thumbnail_augmentation class {k} is not a valid class name"
                     )
+
+            for k, v in class_to_thumbnails.items():
+                if not isinstance(v, list):
+                    class_to_thumbnails[k] = [Path(v)]
 
             return class_to_thumbnails
 

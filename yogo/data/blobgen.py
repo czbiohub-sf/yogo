@@ -67,14 +67,15 @@ class BlobDataset(Dataset):
     ):
         super().__init__()
 
-        self.thumbnail_dir_paths: Dict[int, List[PathLike]] = {
+        self.thumbnail_dir_paths: Dict[int, List[Path]] = {
             self._convert_label(k, classes): [Path(vv) for vv in v]
             for k, v in thumbnail_dir_paths.items()
         }
 
-        for thp in self.thumbnail_dir_paths.values():
-            if not thp.exists():
-                raise FileNotFoundError(f"{str(thp)} does not exist")
+        for thumbnail_dir_list in self.thumbnail_dir_paths.values():
+            for thumbnail_dir in thumbnail_dir_list:
+                if not Path(thumbnail_dir).exists():
+                    raise FileNotFoundError(f"{str(thumbnail_dir)} does not exist")
 
         self.Sx = Sx
         self.Sy = Sy
@@ -111,19 +112,17 @@ class BlobDataset(Dataset):
     def get_thumbnail_paths(
         self, dir_paths: Dict[int, List[Path]]
     ) -> Tuple[np.ndarray, np.ndarray]:
-        for ddir in dir_paths.values():
-            if not ddir.exists():
-                raise FileNotFoundError(f"{str(ddir)} does not exist")
+        cls_path_pairs = []
+        for cls, list_of_data_dir in dir_paths.items():
+            for data_dir in list_of_data_dir:
+                if not data_dir.exists():
+                    raise FileNotFoundError(f"{str(data_dir)} does not exist")
 
-            is_empty = len(ddir.glob("*.png")) == 0
-            if is_empty:
-                raise FileNotFoundError(f"{str(ddir)} is empty")
+                is_empty = not any(data_dir.glob("*.png"))
+                if is_empty:
+                    raise FileNotFoundError(f"{str(data_dir)} is empty")
 
-        cls_path_pairs = [
-            (cls, fp) for cls, list_of_data_dirs in dir_paths.items()
-            for data_dir in list_of_data_dirs
-            for fp in data_dir.rglob("*.png")
-        ]
+                cls_path_pairs.extend([(cls, fp) for fp in data_dir.glob("*.png")])
 
         classes, paths = zip(*cls_path_pairs)
         return np.array(classes), np.array(paths).astype(np.unicode_)
