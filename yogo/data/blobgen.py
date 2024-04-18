@@ -6,6 +6,7 @@ import torch
 import numpy as np
 
 from pathlib import Path
+from functools import reduce
 from typing import Union, Tuple, List, Optional, Dict, Mapping
 
 from torch.utils.data import Dataset
@@ -139,8 +140,11 @@ class BlobDataset(Dataset):
                 self.classes[choices], self.thumbnail_paths[choices]
             )
         ]
+
         return [
-            (class_, img) for (class_, img) in class_thumbnail_pairs if img is not None
+            (class_, img)
+            for (class_, img) in class_thumbnail_pairs
+            if img is not None and reduce(lambda x, y: x * y, img.shape) > 500
         ]
 
     def get_background_shade(
@@ -260,7 +264,14 @@ class BlobDataset(Dataset):
         coords = []
         classes = []
         for class_, thumbnail in class_thumbnail_pairs:
+            cp = thumbnail.clone()
+
             thumbnail = xforms(thumbnail).squeeze()
+
+            if thumbnail.ndim == 1:
+                raise ValueError(
+                    f"thumbnail must have at least 2 dimensions - thumbnail shape is {thumbnail.shape} was {cp.shape}"
+                )
 
             h, w = thumbnail.shape
 
