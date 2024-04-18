@@ -119,10 +119,8 @@ class BlobDataset(Dataset):
                     raise FileNotFoundError(f"{str(data_dir)} does not exist")
 
                 is_empty = not any(data_dir.glob("*.png"))
-                if is_empty:
-                    raise FileNotFoundError(f"{str(data_dir)} is empty")
-
-                cls_path_pairs.extend([(cls, fp) for fp in data_dir.glob("*.png")])
+                if not is_empty:
+                    cls_path_pairs.extend([(cls, fp) for fp in data_dir.glob("*.png")])
 
         classes, paths = zip(*cls_path_pairs)
         return np.array(classes), np.array(paths).astype(np.unicode_)
