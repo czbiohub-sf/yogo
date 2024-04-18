@@ -120,7 +120,13 @@ class BlobDataset(Dataset):
 
                 is_empty = not any(data_dir.glob("*.png"))
                 if not is_empty:
-                    cls_path_pairs.extend([(cls, fp) for fp in data_dir.glob("*.png")])
+                    cls_path_pairs.extend(
+                        [
+                            (cls, fp)
+                            for fp in data_dir.glob("*.png")
+                            if not fp.name.startswith(".")
+                        ]
+                    )
 
         classes, paths = zip(*cls_path_pairs)
         return np.array(classes), np.array(paths).astype(np.unicode_)
@@ -250,10 +256,6 @@ class BlobDataset(Dataset):
             T.RandomVerticalFlip(),
             RandomRescale((0.5, min(max_scale, 1.5))),
         )
-
-        # xforms = torch.jit.script(xforms)
-        # TODO: Why does the above cause the following?
-        # UserWarning: operator() profile_node %342 : int = prim::profile_ivalue(%out_dtype.1) does not have profile information
 
         coords = []
         classes = []
