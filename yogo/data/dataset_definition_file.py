@@ -180,7 +180,7 @@ class DatasetDefinition:
     _test_dataset_paths: Set[LiteralSpecification]
 
     classes: List[str]
-    thumbnail_augmentation: Optional[Dict[str, Path]]
+    thumbnail_augmentation: Optional[Dict[str, Path | list[Path]]]
     split_fractions: SplitFractions
 
     @property

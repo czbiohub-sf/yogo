@@ -54,7 +54,7 @@ PathLike = Union[str, Path]
 class BlobDataset(Dataset):
     def __init__(
         self,
-        thumbnail_dir_paths: Mapping[Union[str, int], PathLike],
+        thumbnail_dir_paths: Mapping[Union[str, int], List[PathLike]],
         Sx: int,
         Sy: int,
         classes: List[str],
@@ -67,8 +67,8 @@ class BlobDataset(Dataset):
     ):
         super().__init__()
 
-        self.thumbnail_dir_paths: Dict[int, Path] = {
-            self._convert_label(k, classes): Path(v)
+        self.thumbnail_dir_paths: Dict[int, List[PathLike]] = {
+            self._convert_label(k, classes): [Path(vv) for vv in v]
             for k, v in thumbnail_dir_paths.items()
         }
 
@@ -109,18 +109,20 @@ class BlobDataset(Dataset):
         return self.length
 
     def get_thumbnail_paths(
-        self, dir_paths: Dict[int, Path]
+        self, dir_paths: Dict[int, List[Path]]
     ) -> Tuple[np.ndarray, np.ndarray]:
         for ddir in dir_paths.values():
             if not ddir.exists():
                 raise FileNotFoundError(f"{str(ddir)} does not exist")
 
-            is_empty = not any(ddir.iterdir())
+            is_empty = len(ddir.glob("*.png")) == 0
             if is_empty:
                 raise FileNotFoundError(f"{str(ddir)} is empty")
 
         cls_path_pairs = [
-            (cls, fp) for cls, dp in dir_paths.items() for fp in dp.rglob("*.png")
+            (cls, fp) for cls, list_of_data_dirs in dir_paths.items()
+            for data_dir in list_of_data_dirs
+            for fp in data_dir.rglob("*.png")
         ]
 
         classes, paths = zip(*cls_path_pairs)
