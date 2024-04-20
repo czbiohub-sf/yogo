@@ -430,7 +430,7 @@ class Trainer:
                 model_name=(
                     wandb.run.name if wandb.run is not None else "recent_run_best"
                 ),
-                model_version=self.config["model"],
+                model_version=self.net.model.__name__,
             )
         else:
             self.checkpoint(
@@ -438,7 +438,7 @@ class Trainer:
                 model_name=(
                     wandb.run.name if wandb.run is not None else "recent_run_latest"
                 ),
-                model_version=self.config["model"],
+                model_version=self.net.model.__name__,
             )
 
     @staticmethod
