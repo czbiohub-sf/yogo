@@ -265,13 +265,14 @@ class Trainer:
         self,
         filename: Union[str, Path],
         model_name: str,
-        model_version: Optional[str] = None,
         **kwargs,
     ) -> None:
         if isinstance(self.net, DDP):
             state_dict = self.net.module.state_dict()
+            model_version = self.net.module.model.__name__
         else:
             state_dict = self.net.state_dict()
+            model_version = self.net.model.__name__
 
         torch.save(
             {
@@ -430,7 +431,6 @@ class Trainer:
                 model_name=(
                     wandb.run.name if wandb.run is not None else "recent_run_best"
                 ),
-                model_version=self.net.model.__name__,
             )
         else:
             self.checkpoint(
@@ -438,7 +438,6 @@ class Trainer:
                 model_name=(
                     wandb.run.name if wandb.run is not None else "recent_run_latest"
                 ),
-                model_version=self.net.model.__name__,
             )
 
     @staticmethod
