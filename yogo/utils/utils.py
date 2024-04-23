@@ -194,7 +194,7 @@ def draw_yogo_prediction(
         iou_thresh: IoU threshold for non-maximal supression (i.e. removal of doubled bboxes)
         labels: list of label names for displaying
     """
-    img, prediction = img.squeeze(), prediction.squeeze()
+    img, prediction = img.clone().squeeze(), prediction.clone().squeeze()
 
     # NOTE I dont know how I feel about this - perhaps it is better to accept
     # only u8s in range [0,255]
