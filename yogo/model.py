@@ -76,6 +76,7 @@ class YOGO(nn.Module):
 
         # multiplier for height - req'd when resizing model post-training
         self.register_buffer("height_multiplier", torch.tensor(1.0))
+        self.register_buffer("width_multiplier", torch.tensor(1.0))
 
         # fine tuning. If you `.eval()` the model anyways, this
         # is not necessary
@@ -131,6 +132,9 @@ class YOGO(nn.Module):
 
         if "height_multiplier" not in params:
             params["height_multiplier"] = torch.tensor(1.0)
+
+        if "width_multiplier" not in params:
+            params["width_multiplier"] = torch.tensor(1.0)
 
         model = cls(
             (img_size[0], img_size[1]),
@@ -242,7 +246,9 @@ class YOGO(nn.Module):
         # int(h.item())
         return int(Sx), int(Sy)
 
-    def resize_model(self, img_height: int) -> None:
+    def resize_model(
+        self, img_height: Optional[int] = None, img_width: Optional[int] = None
+    ) -> None:
         """
         for YOGO's specific application of counting cells as they flow
         past a FOV, it is useful to take a crop of the images in order
@@ -251,7 +257,7 @@ class YOGO(nn.Module):
         of the full 772 pixel height, and is standard for our uses.
         """
         org_img_height, org_img_width = (int(d) for d in self.get_img_size())
-        crop_size = (img_height, org_img_width)
+        crop_size = (img_height or org_img_height, img_width or org_img_width)
         Sx, Sy = self.get_grid_size(crop_size)
         self.Sx, self.Sy = Sx, Sy
         _Cxs = torch.linspace(0, 1 - 1 / Sx, Sx, device=self.device).expand(Sy, -1)
@@ -262,7 +268,10 @@ class YOGO(nn.Module):
             .expand(Sy, Sx)
         )
         self.register_buffer(
-            "height_multiplier", torch.tensor(org_img_height / img_height)
+            "height_multiplier", torch.tensor(org_img_height / crop_size[0])
+        )
+        self.register_buffer(
+            "width_multiplier", torch.tensor(org_img_width / crop_size[1])
         )
         self.register_buffer("img_size", torch.tensor(crop_size))
         self.register_buffer("_Cxs", _Cxs.clone())
@@ -300,7 +309,11 @@ class YOGO(nn.Module):
             (
                 ((1 / Sx) * torch.sigmoid(x[:, 0, :, :]) + self._Cxs)[:, None, :, :],
                 ((1 / Sy) * torch.sigmoid(x[:, 1, :, :]) + self._Cys)[:, None, :, :],
-                self.anchor_w * torch.exp(clamped_whs[:, 0:1, :, :]),
+                (
+                    self.anchor_w
+                    * torch.exp(clamped_whs[:, 0:1, :, :])
+                    * self.width_multiplier
+                ),
                 (
                     self.anchor_h
                     * torch.exp(clamped_whs[:, 1:2, :, :])
