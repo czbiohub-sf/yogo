@@ -243,7 +243,7 @@ def draw_yogo_prediction(
 
     for r in formatted_rects:
         r = list(r)
-        label = labels[int(r[4])] if labels is not None else str(r[4])
+        label = labels[int(r[4].item())] if labels is not None else str(r[4].item())
         draw.rectangle(r[:4], outline=bbox_colour(label))
         draw.text((r[0], r[1]), label, (0, 0, 0, 255))
 
