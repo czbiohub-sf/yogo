@@ -351,7 +351,11 @@ def infer_parser(parser=None):
     )
     data_source = parser.add_mutually_exclusive_group(required=True)
     data_source.add_argument(
-        "--path-to-images", "--path-to-image", type=Path, default=None, help="path to image or images"
+        "--path-to-images",
+        "--path-to-image",
+        type=Path,
+        default=None,
+        help="path to image or images",
     )
     data_source.add_argument(
         "--path-to-zarr", type=Path, default=None, help="path to zarr file"
