@@ -149,11 +149,10 @@ def get_datasets(
             Sx=Sx,
             Sy=Sy,
             classes=dataset_definition.classes,
-            n=12,
-            length=len(split_datasets["train"]),  # type: ignore
-            blend_thumbnails=True,
+            n=75,
+            length=2 * len(split_datasets["train"]),  # type: ignore
+            blend_thumbnails=False,
             background_img_shape=image_hw,
-            thumbnail_sigma=2,
             normalize_images=normalize_images,
         )
         split_datasets["train"] = ConcatDataset([split_datasets["train"], bd])
