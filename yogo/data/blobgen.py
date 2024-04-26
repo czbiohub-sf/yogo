@@ -13,40 +13,9 @@ from torch.utils.data import Dataset
 
 from torchvision import transforms as T
 from torchvision.ops import box_iou
-from torchvision.transforms import functional as F
 
 from yogo.data.utils import read_image_robust
 from yogo.data.yogo_dataset import format_labels_tensor
-
-
-class RandomRescale(torch.nn.Module):
-    def __init__(
-        self,
-        scale: Tuple[int, int],
-        interpolation=F.InterpolationMode.BILINEAR,
-        antialias=True,
-    ):
-        super().__init__()
-
-        self.scale = scale
-
-        self.interpolation = interpolation
-        self.antialias = antialias
-
-    def forward(self, img: torch.Tensor):
-        img_size = torch.tensor(img.shape[-2:])
-        scale = (torch.rand(1) * (self.scale[1] - self.scale[0]) + self.scale[0]).item()
-        new_img_shape = [int(v) for v in img_size * scale]
-        return F.resize(
-            img,
-            size=new_img_shape,
-            interpolation=self.interpolation,
-            antialias=self.antialias,
-        )
-
-    def __repr__(self) -> str:
-        detail = f"(scale={self.scale}, interpolation={self.interpolation.value}, max_size={self.max_size}, antialias={self.antialias})"
-        return f"{self.__class__.__name__}{detail}"
 
 
 PathLike = Union[str, Path]
@@ -239,12 +208,6 @@ class BlobDataset(Dataset):
             .to(torch.uint8)
         )
 
-        max_size = min(
-            self.background_img_shape[0] // 4,
-            self.background_img_shape[1] // 4,
-        )
-        max_scale = max_size / min(min(t.shape[-2:]) for t in thumbnails)
-
         if self.blend_thumbnails:
             [
                 self.blend_thumbnail(
@@ -258,7 +221,6 @@ class BlobDataset(Dataset):
         xforms = torch.nn.Sequential(
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            RandomRescale((0.5, min(max_scale, 1.5))),
         )
 
         coords = []
