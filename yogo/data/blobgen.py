@@ -5,9 +5,10 @@ import math
 import torch
 import numpy as np
 
+from tqdm import tqdm
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from typing import Union, Tuple, List, Optional, Dict, Mapping
+from typing import Union, Tuple, List, Optional, Dict, Mapping, cast
 
 from torch.utils.data import Dataset
 
@@ -56,15 +57,52 @@ class BlobDataset(Dataset):
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
         self.normalize_images = normalize_images
-        self.classes, self.thumbnail_paths = self.get_thumbnail_paths(
+        self.area_threshold: int = 500
+
+        self.classes, thumbnail_paths = self.get_thumbnail_paths(
             self.thumbnail_dir_paths
         )
-        self.tpe = ThreadPoolExecutor()
 
         if len(self.thumbnail_dir_paths) == 0:
             raise FileNotFoundError(
                 f"no thumbnails found in any of {(str(tdp) for tdp in self.thumbnail_dir_paths)}"
             )
+
+        self.thumbnail_tensor, self.thumbnail_dims = self.load_thumbnails(
+            thumbnail_paths
+        )
+        self.num_thumbnails = len(self.thumbnail_tensor)
+
+    def load_thumbnails(
+        self, thumbnail_paths: Tuple[Path, ...]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Returns a tensor of thumbnails and their dimensions"""
+        with ThreadPoolExecutor() as e:
+            thumbnail_list = list(
+                filter(
+                    lambda x: x is not None and x.shape[1] * x.shape[2] > self.area_threshold,
+                    tqdm(
+                        e.map(self.loader, thumbnail_paths),
+                        total=len(thumbnail_paths),
+                        desc="loading thumbnails",
+                    )
+                )
+            )
+
+        thumbnail_dims = torch.tensor(
+            [thumbnail.squeeze().shape for thumbnail in thumbnail_list], dtype=torch.int
+        )
+
+        max_h, max_w = thumbnail_dims.max(0)[0]
+
+        full_thumbnails = torch.zeros(
+            (len(thumbnail_list), 1, max_h, max_w), dtype=torch.uint8
+        )
+
+        for i, (thumbnail, (h, w)) in enumerate(zip(thumbnail_list, thumbnail_dims)):
+            full_thumbnails[i, :, :h, :w] = thumbnail
+
+        return full_thumbnails, thumbnail_dims
 
     def _convert_label(self, label: Union[str, int], classes: List[str]) -> int:
         if isinstance(label, int):
@@ -82,8 +120,8 @@ class BlobDataset(Dataset):
 
     def get_thumbnail_paths(
         self, dir_paths: Dict[int, List[Path]]
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        cls_path_pairs = []
+    ) -> Tuple[np.ndarray, tuple[Path, ...]]:
+        cls_path_pairs: List[Tuple[int, Path]] = []
         for cls, list_of_data_dir in dir_paths.items():
             for data_dir in list_of_data_dir:
                 if not data_dir.exists():
@@ -100,17 +138,22 @@ class BlobDataset(Dataset):
                     )
 
         classes, paths = zip(*cls_path_pairs)
-        return np.array(classes), np.array(paths).astype(np.unicode_)
+        return np.array(classes), paths
 
     def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
-        choices = np.random.randint(0, len(self.thumbnail_paths), size=n)
-        imgs = self.tpe.map(self.loader, self.thumbnail_paths[choices])
+        choices = np.random.randint(0, self.num_thumbnails, size=n)
+        imgs = [
+            self.thumbnail_tensor[
+                i, :, : self.thumbnail_dims[i, 0], : self.thumbnail_dims[i, 1]
+            ]
+            for i in choices
+        ]
         class_thumbnail_pairs = zip(self.classes[choices], imgs)
 
         return [
             (class_, img)
             for (class_, img) in class_thumbnail_pairs
-            if img is not None and (img.shape[0] * img.shape[1] * img.shape[2]) > 500
+            if (img.shape[0] * img.shape[1] * img.shape[2]) > 500
         ]
 
     def get_background_shade(
