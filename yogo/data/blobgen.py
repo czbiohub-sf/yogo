@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from pathlib import Path
-from functools import reduce
+from concurrent.futures import ThreadPoolExecutor
 from typing import Union, Tuple, List, Optional, Dict, Mapping
 
 from torch.utils.data import Dataset
@@ -59,6 +59,7 @@ class BlobDataset(Dataset):
         self.classes, self.thumbnail_paths = self.get_thumbnail_paths(
             self.thumbnail_dir_paths
         )
+        self.tpe = ThreadPoolExecutor()
 
         if len(self.thumbnail_dir_paths) == 0:
             raise FileNotFoundError(
@@ -103,17 +104,13 @@ class BlobDataset(Dataset):
 
     def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
         choices = np.random.randint(0, len(self.thumbnail_paths), size=n)
-        class_thumbnail_pairs = [
-            (class_, self.loader(fp_encoded))
-            for class_, fp_encoded in zip(
-                self.classes[choices], self.thumbnail_paths[choices]
-            )
-        ]
+        imgs = self.tpe.map(self.loader, self.thumbnail_paths[choices])
+        class_thumbnail_pairs = zip(self.classes[choices], imgs)
 
         return [
             (class_, img)
             for (class_, img) in class_thumbnail_pairs
-            if img is not None and reduce(lambda x, y: x * y, img.shape) > 500
+            if img is not None and (img.shape[0] * img.shape[1] * img.shape[2]) > 500
         ]
 
     def get_background_shade(
