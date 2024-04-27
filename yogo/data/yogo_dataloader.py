@@ -137,8 +137,6 @@ def get_datasets(
                 full_dataset, dataset_definition.split_fractions
             )
 
-    # hardcode the blob agumentation for now
-    # this should be moved into the dataset description file
     if dataset_definition.thumbnail_augmentation is not None:
         for k, v in dataset_definition.thumbnail_augmentation.items():
             if not isinstance(v, list):
@@ -149,8 +147,8 @@ def get_datasets(
             Sx=Sx,
             Sy=Sy,
             classes=dataset_definition.classes,
-            n=75,
-            length=2 * len(split_datasets["train"]),  # type: ignore
+            n=100,
+            length=len(split_datasets["train"]),  # type: ignore
             blend_thumbnails=False,
             background_img_shape=image_hw,
             normalize_images=normalize_images,
