@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from typing import Union, Tuple, List, Optional, Dict, Mapping, cast
+from typing import Union, Tuple, List, Optional, Dict, Mapping
 
 from torch.utils.data import Dataset
 
@@ -80,12 +80,13 @@ class BlobDataset(Dataset):
         with ThreadPoolExecutor() as e:
             thumbnail_list = list(
                 filter(
-                    lambda x: x is not None and x.shape[1] * x.shape[2] > self.area_threshold,
+                    lambda x: x is not None
+                    and x.shape[1] * x.shape[2] > self.area_threshold,
                     tqdm(
                         e.map(self.loader, thumbnail_paths),
                         total=len(thumbnail_paths),
                         desc="loading thumbnails",
-                    )
+                    ),
                 )
             )
 
