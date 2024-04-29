@@ -137,20 +137,20 @@ def get_datasets(
                 full_dataset, dataset_definition.split_fractions
             )
 
-    # hardcode the blob agumentation for now
-    # this should be moved into the dataset description file
     if dataset_definition.thumbnail_augmentation is not None:
-        # some issue w/ Dict v Mapping TODO come back to this
+        for k, v in dataset_definition.thumbnail_augmentation.items():
+            if not isinstance(v, list):
+                dataset_definition.thumbnail_augmentation[k] = [v]
+
         bd = BlobDataset(
             dataset_definition.thumbnail_augmentation,  # type: ignore
             Sx=Sx,
             Sy=Sy,
             classes=dataset_definition.classes,
-            n=12,
+            n=100,
             length=len(split_datasets["train"]) // 2,  # type: ignore
-            blend_thumbnails=True,
+            blend_thumbnails=False,
             background_img_shape=image_hw,
-            thumbnail_sigma=2,
             normalize_images=normalize_images,
         )
         split_datasets["train"] = ConcatDataset([split_datasets["train"], bd])

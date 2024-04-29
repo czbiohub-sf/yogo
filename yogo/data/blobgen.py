@@ -5,47 +5,18 @@ import math
 import torch
 import numpy as np
 
+from tqdm import tqdm
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from typing import Union, Tuple, List, Optional, Dict, Mapping
 
 from torch.utils.data import Dataset
 
 from torchvision import transforms as T
 from torchvision.ops import box_iou
-from torchvision.transforms import functional as F
 
 from yogo.data.utils import read_image_robust
 from yogo.data.yogo_dataset import format_labels_tensor
-
-
-class RandomRescale(torch.nn.Module):
-    def __init__(
-        self,
-        scale: Tuple[int, int],
-        interpolation=F.InterpolationMode.BILINEAR,
-        antialias=True,
-    ):
-        super().__init__()
-
-        self.scale = scale
-
-        self.interpolation = interpolation
-        self.antialias = antialias
-
-    def forward(self, img: torch.Tensor):
-        img_size = torch.tensor(img.shape[-2:])
-        scale = (torch.rand(1) * (self.scale[1] - self.scale[0]) + self.scale[0]).item()
-        new_img_shape = [int(v) for v in img_size * scale]
-        return F.resize(
-            img,
-            size=new_img_shape,
-            interpolation=self.interpolation,
-            antialias=self.antialias,
-        )
-
-    def __repr__(self) -> str:
-        detail = f"(scale={self.scale}, interpolation={self.interpolation.value}, max_size={self.max_size}, antialias={self.antialias})"
-        return f"{self.__class__.__name__}{detail}"
 
 
 PathLike = Union[str, Path]
@@ -54,7 +25,7 @@ PathLike = Union[str, Path]
 class BlobDataset(Dataset):
     def __init__(
         self,
-        thumbnail_dir_paths: Mapping[Union[str, int], PathLike],
+        thumbnail_dir_paths: Mapping[Union[str, int], List[PathLike]],
         Sx: int,
         Sy: int,
         classes: List[str],
@@ -67,14 +38,15 @@ class BlobDataset(Dataset):
     ):
         super().__init__()
 
-        self.thumbnail_dir_paths: Dict[int, Path] = {
-            self._convert_label(k, classes): Path(v)
+        self.thumbnail_dir_paths: Dict[int, List[Path]] = {
+            self._convert_label(k, classes): [Path(vv) for vv in v]
             for k, v in thumbnail_dir_paths.items()
         }
 
-        for thp in self.thumbnail_dir_paths.values():
-            if not thp.exists():
-                raise FileNotFoundError(f"{str(thp)} does not exist")
+        for thumbnail_dir_list in self.thumbnail_dir_paths.values():
+            for thumbnail_dir in thumbnail_dir_list:
+                if not Path(thumbnail_dir).exists():
+                    raise FileNotFoundError(f"{str(thumbnail_dir)} does not exist")
 
         self.Sx = Sx
         self.Sy = Sy
@@ -85,7 +57,9 @@ class BlobDataset(Dataset):
         self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
         self.normalize_images = normalize_images
-        self.classes, self.thumbnail_paths = self.get_thumbnail_paths(
+        self.area_threshold: int = 500
+
+        self.classes, thumbnail_paths = self.get_thumbnail_paths(
             self.thumbnail_dir_paths
         )
 
@@ -93,6 +67,43 @@ class BlobDataset(Dataset):
             raise FileNotFoundError(
                 f"no thumbnails found in any of {(str(tdp) for tdp in self.thumbnail_dir_paths)}"
             )
+
+        self.thumbnail_tensor, self.thumbnail_dims = self.load_thumbnails(
+            thumbnail_paths
+        )
+        self.num_thumbnails = len(self.thumbnail_tensor)
+
+    def load_thumbnails(
+        self, thumbnail_paths: Tuple[Path, ...]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Returns a tensor of thumbnails and their dimensions"""
+        with ThreadPoolExecutor() as e:
+            thumbnail_list = list(
+                filter(
+                    lambda x: x is not None
+                    and x.shape[1] * x.shape[2] > self.area_threshold,
+                    tqdm(
+                        e.map(self.loader, thumbnail_paths),
+                        total=len(thumbnail_paths),
+                        desc="loading thumbnails",
+                    ),
+                )
+            )
+
+        thumbnail_dims = torch.tensor(
+            [thumbnail.squeeze().shape for thumbnail in thumbnail_list], dtype=torch.int
+        )
+
+        max_h, max_w = thumbnail_dims.max(0)[0]
+
+        full_thumbnails = torch.zeros(
+            (len(thumbnail_list), 1, max_h, max_w), dtype=torch.uint8
+        )
+
+        for i, (thumbnail, (h, w)) in enumerate(zip(thumbnail_list, thumbnail_dims)):
+            full_thumbnails[i, :, :h, :w] = thumbnail
+
+        return full_thumbnails, thumbnail_dims
 
     def _convert_label(self, label: Union[str, int], classes: List[str]) -> int:
         if isinstance(label, int):
@@ -109,33 +120,41 @@ class BlobDataset(Dataset):
         return self.length
 
     def get_thumbnail_paths(
-        self, dir_paths: Dict[int, Path]
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        for ddir in dir_paths.values():
-            if not ddir.exists():
-                raise FileNotFoundError(f"{str(ddir)} does not exist")
+        self, dir_paths: Dict[int, List[Path]]
+    ) -> Tuple[np.ndarray, Tuple[Path, ...]]:
+        cls_path_pairs: List[Tuple[int, Path]] = []
+        for cls, list_of_data_dir in dir_paths.items():
+            for data_dir in list_of_data_dir:
+                if not data_dir.exists():
+                    raise FileNotFoundError(f"{str(data_dir)} does not exist")
 
-            is_empty = not any(ddir.iterdir())
-            if is_empty:
-                raise FileNotFoundError(f"{str(ddir)} is empty")
-
-        cls_path_pairs = [
-            (cls, fp) for cls, dp in dir_paths.items() for fp in dp.rglob("*.png")
-        ]
+                is_empty = not any(data_dir.glob("*.png"))
+                if not is_empty:
+                    cls_path_pairs.extend(
+                        [
+                            (cls, fp)
+                            for fp in data_dir.glob("*.png")
+                            if not fp.name.startswith(".")
+                        ]
+                    )
 
         classes, paths = zip(*cls_path_pairs)
-        return np.array(classes), np.array(paths).astype(np.unicode_)
+        return np.array(classes), paths
 
     def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
-        choices = np.random.randint(0, len(self.thumbnail_paths), size=n)
-        class_thumbnail_pairs = [
-            (class_, self.loader(fp_encoded))
-            for class_, fp_encoded in zip(
-                self.classes[choices], self.thumbnail_paths[choices]
-            )
+        choices = np.random.randint(0, self.num_thumbnails, size=n)
+        imgs = [
+            self.thumbnail_tensor[
+                i, :, : self.thumbnail_dims[i, 0], : self.thumbnail_dims[i, 1]
+            ]
+            for i in choices
         ]
+        class_thumbnail_pairs = zip(self.classes[choices], imgs)
+
         return [
-            (class_, img) for (class_, img) in class_thumbnail_pairs if img is not None
+            (class_, img)
+            for (class_, img) in class_thumbnail_pairs
+            if (img.shape[0] * img.shape[1] * img.shape[2]) > 500
         ]
 
     def get_background_shade(
@@ -230,12 +249,6 @@ class BlobDataset(Dataset):
             .to(torch.uint8)
         )
 
-        max_size = min(
-            self.background_img_shape[0] // 4,
-            self.background_img_shape[1] // 4,
-        )
-        max_scale = max_size / min(min(t.shape[-2:]) for t in thumbnails)
-
         if self.blend_thumbnails:
             [
                 self.blend_thumbnail(
@@ -249,17 +262,19 @@ class BlobDataset(Dataset):
         xforms = torch.nn.Sequential(
             T.RandomHorizontalFlip(),
             T.RandomVerticalFlip(),
-            RandomRescale((0.5, min(max_scale, 1.5))),
         )
-
-        # xforms = torch.jit.script(xforms)
-        # TODO: Why does the above cause the following?
-        # UserWarning: operator() profile_node %342 : int = prim::profile_ivalue(%out_dtype.1) does not have profile information
 
         coords = []
         classes = []
         for class_, thumbnail in class_thumbnail_pairs:
+            cp = thumbnail.clone()
+
             thumbnail = xforms(thumbnail).squeeze()
+
+            if thumbnail.ndim == 1:
+                raise ValueError(
+                    f"thumbnail must have at least 2 dimensions - thumbnail shape is {thumbnail.shape} was {cp.shape}"
+                )
 
             h, w = thumbnail.shape
 

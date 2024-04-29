@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from ruamel.yaml import YAML
 from dataclasses import dataclass
-from typing import Any, Set, List, Dict, Tuple, Optional
+from typing import Any, Set, List, Dict, Tuple, Union, Optional
 
 from yogo.data.split_fractions import SplitFractions
 
@@ -180,7 +180,7 @@ class DatasetDefinition:
     _test_dataset_paths: Set[LiteralSpecification]
 
     classes: List[str]
-    thumbnail_augmentation: Optional[Dict[str, Path]]
+    thumbnail_augmentation: Optional[Dict[str, Union[Path, List[Path]]]]
     split_fractions: SplitFractions
 
     @property
@@ -426,7 +426,7 @@ class DatasetDefinition:
     @staticmethod
     def _load_thumbnails(
         classes: List[str], yaml_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Path]]:
+    ) -> Optional[Dict[str, Union[Path, List[Path]]]]:
         if "thumbnail_augmentation" in yaml_data:
             class_to_thumbnails = yaml_data["thumbnail_augmentation"]
 
@@ -441,6 +441,10 @@ class DatasetDefinition:
                     raise InvalidDatasetDefinitionFile(
                         f"thumbnail_augmentation class {k} is not a valid class name"
                     )
+
+            for k, v in class_to_thumbnails.items():
+                if not isinstance(v, list):
+                    class_to_thumbnails[k] = [Path(v)]
 
             return class_to_thumbnails
 
