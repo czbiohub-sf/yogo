@@ -148,7 +148,7 @@ def get_datasets(
             Sy=Sy,
             classes=dataset_definition.classes,
             n=100,
-            length=len(split_datasets["train"]),  # type: ignore
+            length=len(split_datasets["train"]) // 2,  # type: ignore
             blend_thumbnails=False,
             background_img_shape=image_hw,
             normalize_images=normalize_images,
