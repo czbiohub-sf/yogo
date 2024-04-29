@@ -121,7 +121,7 @@ class BlobDataset(Dataset):
 
     def get_thumbnail_paths(
         self, dir_paths: Dict[int, List[Path]]
-    ) -> Tuple[np.ndarray, tuple[Path, ...]]:
+    ) -> Tuple[np.ndarray, Tuple[Path, ...]]:
         cls_path_pairs: List[Tuple[int, Path]] = []
         for cls, list_of_data_dir in dir_paths.items():
             for data_dir in list_of_data_dir:
