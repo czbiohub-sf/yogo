@@ -8,6 +8,13 @@ There are three components to running YOGO:
 - Loading images
 - Processing the output
 
+## Prologue
+
+```python3
+>>> from typing import List, Tuple, cast
+>>> import torch
+```
+
 ## Creating the model
 
 ```python3

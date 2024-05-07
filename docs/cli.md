@@ -8,17 +8,19 @@ First, what can you do with the cli?
 
 ```console
 $ yogo --help
-usage: yogo [-h] {train,export,infer} ...
+usage: yogo [-h] {train,test,export,infer} ...
 
 what can yogo do for you today?
 
 positional arguments:
-  {train,export,infer}  here is what you can do
+  {train,test,export,infer}
+                        here is what you can do
     train               train a model
+    test                test a model
     export              export a model
     infer               infer images using a model
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
 ```
 
@@ -30,11 +32,12 @@ This is what you need most of the time. It lets you run YOGO on a dataset from t
 
 ```console
 $ yogo infer --help
-usage: yogo infer [-h] [--output-dir OUTPUT_DIR] [--draw-boxes | --no-draw-boxes] [--save-preds | --no-save-preds]
-                  [--save-npy | --no-save-npy] [--count | --no-count] [--batch-size BATCH_SIZE] [--device [DEVICE]]
-                  [--crop-height CROP_HEIGHT] [--output-img-filetype {.png,.tif,.tiff}] [--obj-thresh OBJ_THRESH]
-                  [--iou-thresh IOU_THRESH] [--min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD]
-                  [--heatmap-mask-path HEATMAP_MASK_PATH] (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO_ZARR)
+usage: yogo infer [-h] (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO_ZARR) [--output-dir OUTPUT_DIR]
+                  [--draw-boxes | --no-draw-boxes] [--save-preds | --no-save-preds] [--save-npy | --no-save-npy]
+                  [--class-names [CLASS_NAMES ...]] [--count | --no-count] [--batch-size BATCH_SIZE] [--device [DEVICE]]
+                  [--half | --no-half] [--crop-height CROP_HEIGHT] [--output-img-filetype {.png,.tif,.tiff}]
+                  [--obj-thresh OBJ_THRESH] [--iou-thresh IOU_THRESH]
+                  [--min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD] [--heatmap-mask-path HEATMAP_MASK_PATH]
                   pth_path
 
 positional arguments:
@@ -42,6 +45,10 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+  --path-to-images PATH_TO_IMAGES, --path-to-image PATH_TO_IMAGES
+                        path to image or images
+  --path-to-zarr PATH_TO_ZARR
+                        path to zarr file
   --output-dir OUTPUT_DIR
                         path to directory for results, either --draw-boxes or --save-preds
   --draw-boxes, --no-draw-boxes
@@ -49,12 +56,15 @@ options:
   --save-preds, --no-save-preds
                         save predictions in YOGO label format - requires `--output-dir` to be set (default: False)
   --save-npy, --no-save-npy
-                        Parse and save predictions in the same format as on scope - requires `--output-dir` to be set (default:
-                        False)
+                        Parse and save predictions in the same format as on scope - requires `--output-dir` to be set
+                        (default: False)
+  --class-names [CLASS_NAMES ...]
+                        list of class names - will default to integers if not provided
   --count, --no-count   display the final predicted counts per-class (default: False)
   --batch-size BATCH_SIZE
                         batch size for inference (default: 64)
   --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'
+  --half, --no-half     half precision (i.e. fp16) inference (TODO compare prediction performance) (default: False)
   --crop-height CROP_HEIGHT
                         crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)
   --output-img-filetype {.png,.tif,.tiff}
@@ -64,14 +74,10 @@ options:
   --iou-thresh IOU_THRESH
                         intersection over union threshold for predictions (default: 0.5)
   --min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD
-                        minimum confidence for a class to be considered - i.e. the max confidence must be greater than this value
-                        (default: 0.0)
+                        minimum confidence for a class to be considered - i.e. the max confidence must be greater than this
+                        value (default: 0.0)
   --heatmap-mask-path HEATMAP_MASK_PATH
                         path to heatmap mask for the run (default: None)
-  --path-to-images PATH_TO_IMAGES
-                        path to image or images
-  --path-to-zarr PATH_TO_ZARR
-                        path to zarr file
 ```
 
 There are actually two required arguments here:
@@ -86,13 +92,15 @@ There are a *lot* of options here. At the most basic level, `yogo train path/to/
 
 ```console
 $ yogo train --help
-usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED] [-bs BATCH_SIZE] [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR]
+usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED]
+                  [--dataset-split-override DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE]
+                  [-bs BATCH_SIZE] [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR]
                   [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY] [--epochs EPOCHS] [--no-obj-weight NO_OBJ_WEIGHT]
                   [--iou-weight IOU_WEIGHT] [--classify-weight CLASSIFY_WEIGHT] [--healthy-weight HEALTHY_WEIGHT]
-                  [--no-classify | --no-no-classify] [--normalize-images | --no-normalize-images]
-                  [--image-shape IMAGE_SHAPE IMAGE_SHAPE]
-                  [--model [{base_model,smaller_funkier,even_smaller_funkier,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized,convnext_small}]]
-                  [--half | --no-half] [--device [DEVICE]] [--note NOTE] [--name NAME] [--tag TAG]
+                  [--normalize-images | --no-normalize-images] [--image-hw IMAGE_HW IMAGE_HW]
+                  [--rgb-images | --no-rgb-images]
+                  [--model [{base_model,silu_model,double_filters,triple_filters,half_filters,quarter_filters,depth_ver_0,depth_ver_1,depth_ver_2,depth_ver_3,depth_ver_4,convnext_small}]]
+                  [--half | --no-half] [--device [DEVICE]] [--note NOTE] [--name NAME] [--tags [TAGS ...]]
                   dataset_descriptor_file
 
 positional arguments:
@@ -103,6 +111,10 @@ options:
   -h, --help            show this help message and exit
   --from-pretrained FROM_PRETRAINED
                         start training from the provided pth file
+  --dataset-split-override DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE
+                        override dataset split fractions, in 'train val test' order - e.g. '0.7 0.2 0.1' will set 70 percent
+                        of all data to training, 20 percent to validation, and 10 percent to test. All of the data, including
+                        paths specified in 'test_paths', will be randomly assigned to training, validation, and test.
   -bs BATCH_SIZE, --batch-size BATCH_SIZE
                         batch size for training (default: 64)
   -lr LEARNING_RATE, --learning-rate LEARNING_RATE, --lr LEARNING_RATE
@@ -122,20 +134,22 @@ options:
                         weight for the classification loss (default: 1.0)
   --healthy-weight HEALTHY_WEIGHT
                         weight for healthy class, between 0 and 1 (default: 1.0)
-  --no-classify, --no-no-classify
-                        turn off classification loss - good only for pretraining just a cell detector (default: False)
   --normalize-images, --no-normalize-images
-                        normalize images into [0,1] (default: False)
-  --image-shape IMAGE_SHAPE IMAGE_SHAPE
-                        size of images for training (e.g. --image-shape 772 1032) (default: 772 1032)
-  --model [{base_model,smaller_funkier,even_smaller_funkier,model_no_dropout,model_smaller_SxSy,model_big_simple,model_big_residual,model_big_normalized,model_big_heavy_normalized,convnext_small}]
+                        normalize images into [0,1] - overridden if loading from pth (default: False)
+  --image-hw IMAGE_HW IMAGE_HW
+                        height and width of images for training (e.g. --image-hw 772 1032) (default: 772 1032)
+  --rgb-images, --no-rgb-images
+                        use RGB images instead of grayscale - overridden if loading from pth (defaults to grayscale)
+                        (default: False)
+  --model [{base_model,silu_model,double_filters,triple_filters,half_filters,quarter_filters,depth_ver_0,depth_ver_1,depth_ver_2,depth_ver_3,depth_ver_4,convnext_small}]
                         model version to use - do not use with --from-pretrained, as we use the pretrained model
-  --half, --no-half     half precision (i.e. fp16) training. When true, try doubling your batch size to get best use of GPU.
-                        (default: False) (default: False)
+  --half, --no-half     half precision (i.e. fp16) training. When true, try doubling your batch size to get best use of GPU
+                        (default: False)
   --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'
   --note NOTE           note for the run (e.g. 'run on a TI-82')
   --name NAME           name for the run (e.g. 'ti-82_run')
-  --tag TAG             tag for the run (e.g. 'test')
+  --tags [TAGS ...]     tags for the run (e.g. '--tags test fine-tune')
+
 ```
 
 There are a lot of options. Here are some recipes:
@@ -187,3 +201,34 @@ options:
   --simplify, --no-simplify
                         attempt to simplify the onnx model (default: True)
 ```
+
+## `yogo test`
+
+Need to test a model against some dataset? This will test the given YOGO pth file against the given dataset definition file's test set. Useful for running tests on a model checkpoint where that training run failed, e.g. due to hitting time limits.
+
+```console
+$ yogo test --help
+usage: yogo test [-h] [--wandb | --no-wandb] [--wandb-resume-id WANDB_RESUME_ID] [--dump-to-disk | --no-dump-to-disk]
+                 [--include-mAP | --no-include-mAP] [--include-background | --no-include-background] [--note NOTE]
+                 [--tags [TAGS ...]]
+                 pth_path dataset_defn_path
+
+positional arguments:
+  pth_path
+  dataset_defn_path
+
+options:
+  -h, --help            show this help message and exit
+  --wandb, --no-wandb   log to wandb - this will create a new run. If neither this nor --wandb-resume-id are provided, the
+                        run will be saved to a new folder (default: False)
+  --wandb-resume-id WANDB_RESUME_ID
+                        wandb run id - this will essentially append the results to an existing run, given by this run id
+  --dump-to-disk, --no-dump-to-disk
+                        dump results to disk as a pkl file (default: False)
+  --include-mAP, --no-include-mAP
+                        calculate mAP as well - just a bit slower (default: False)
+  --include-background, --no-include-background
+                        include 'backround' in confusion matrix (default: False)
+  --note NOTE           note for the run (e.g. 'run on a TI-82')
+  --tags [TAGS ...]     tags for the run (e.g. '--tags test fine-tune')
+  ```
