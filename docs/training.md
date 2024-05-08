@@ -6,22 +6,15 @@ Finally, look at the [cli guide](https://github.com/czbiohub-sf/yogo/blob/main/d
 
 ## Dataset Definition
 
-The `dataset_defn.yml` file provides data definitions, guiding the dataloader on splitting data for testing, validation, and training. A detailed explanation is in [dataset-definition.md](dataset-definition.md).
+The `dataset_defn.yml` file provides data definitions, guiding the dataloader on splitting data for testing, validation, and training. A detailed explanation is in [dataset-definition.md](dataset-definition.md). The dataset definition files are in [this repo](https://github.com/czbiohub-sf/lfm-dataset-definitions?tab=readme-ov-file), which is in this location on bruno: ` .../LFM_scope/biohub-labels/dataset_defs`.
 
-Dataset files and labels are in:
+Training is split into pre-training and fine-tuning. Pre-training is first completed on YOGO-labelled data, and fine-tuning is completed on human-labelled data.
 
-```
-.../LFM_scope/biohub-labels
-```
+Here are dataset definition files:
 
-Common files include:
+- **Pre-training:** `pre-training/yogo_parasite_data_with_tests.yml.yml` : Contains YOGO and hand-labelled test data. Most of the time, use existing pretrained models like "expert-night-1797" or "rare-valley-1798".
 
-- **Pre-training:**
-    - `pre-training/yogo_parasite_data_with_tests.yml` : Contains YOGO and hand-labelled test data. Most of the time, use existing pretrained models like "expert-night-1797" or "rare-valley-1798".
-
-- **Human Labels:**
-    - `human-labels/all-labelled-data-test.yml` : Only hand-labelled data.
-    - `human-labels/all-labelled-data-test-good-healthy.yml` : Hand-labelled data and healthy YOGO labels. Parasite classes are marked as healthy.
+- **Fine-tuning:** `fine-tuning/all-dataset-subsets.yml` : Only hand-labelled data.
 
 The last two files are often used for training. Add new data to them as needed.
 
