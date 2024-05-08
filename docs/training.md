@@ -55,7 +55,7 @@ Though our pre-training dataset is quite large so we can train on fewer epochs -
 $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml" --epochs 16 --lr 0.0005 --normalize-images
 ```
 
-<figure class="image">
+<figure class="image" align="center">
   <img src="imgs/pretrain_loss_plot.png" alt="diverging_loss" width="320"/>
   <figcaption><i>training loss for pre-training, showing divergence of validation loss (orange)</i></figcaption>
 </figure>
@@ -63,6 +63,7 @@ $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yog
 
 A couple notes:
 
+- Model weights are initialized from random weights
 - `--lr` is the learning rate - default is 3e-4, but increasing it a little to 5e-4 seemed to do well for pre-training.
 - `--epochs` is the number of times that we train over the data.
 - `--normalize-images` is a flag to normalize images into the range `[0,1]` before being fed to YOGO. Good for stabilization during training, and it's a very common practice for image data.
@@ -75,5 +76,8 @@ This will create a `trained_models` directory in YOGO directory, and put your mo
 More training! Again, the defaults are good for most training. Here is a training run w/ the default hyperparameters.
 
 ```bash
-$ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/fine-tuning/all-dataset-subsets.yml" --from-pretrained trained_models/chaos-cat-0727/best.pth
+$ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/fine-tuning/all-dataset-subsets.yml" \
+    --from-pretrained trained_models/chaos-cat-0727/best.pth
 ```
+
+The `--from-pretrained` flag tells YOGO to use the model in `trained_models/chaos-cat-0727/best.pth` to start training from there. There are
