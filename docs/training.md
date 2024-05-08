@@ -36,6 +36,7 @@ We use [Weights and Biases](https://wandb.ai/) to track training runs. We'll nee
 Here, I'll show several examples of training runs. We'll assume you've already `cd`d into `yogo`. It'd also be good to brush up on the `yogo train` section of the [cli guide](https://github.com/czbiohub-sf/yogo/blob/main/docs/cli.md#yogo-train).
 
 For a quick prelim, we'll set `DDF_PATHS` to the location of the dataset definition files. It is not necessary to do this, but it is useful for this guide to save space. In practice, I didn't do this.
+
 ```bash
 $ export DDF_PATHS="/hpc/projects/group.bioengineering/LFM_scope/biohub-labels/dataset_defs/"
 ```
@@ -51,7 +52,7 @@ $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yog
 Though our pre-training dataset is quite large so we can train on fewer epochs - plus our validation loss diverges from training loss fairly quickly - ![diverging_loss](../imgs/pretrain_loss_plot.png):
 
 ```bash
-$ yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml" --epochs 16 --lr 0.0005 --normalize-images
+$ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml" --epochs 16 --lr 0.0005 --normalize-images
 ```
 
 A couple notes:
@@ -60,4 +61,13 @@ A couple notes:
 - `--epochs` is the number of times that we train over the data.
 - `--normalize-images` is a flag to normalize images into the range `[0,1]` before being fed to YOGO. Good for stabilization during training, and it's a very common practice for image data.
 
-This will create a `trained_models` directory in YOGO
+This will create a `trained_models` directory in YOGO directory, and put your model there. The model name is created by W&B, and you should see some text in stdout stating what it is. The model checkpoints will be in `trained_models` - so if W&B's RNG chooses `chaos-cat-0727`, the checkpoints (`best.pth` and `last.pth`) will be in `trained_models/chaos-cat-0727`. We use these for fine-tuning.
+
+
+## Fine-tuning
+
+More training! Again, the defaults are good for most training. Here is a training run w/ the default hyperparameters.
+
+```bash
+$ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/fine-tuning/all-dataset-subsets.yml" --from-pretrained trained_models/chaos-cat-0727/best.pth
+```
