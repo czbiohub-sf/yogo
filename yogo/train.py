@@ -253,7 +253,10 @@ class Trainer:
         if wandb.run is not None:
             model_save_dir = trained_model_dir / wandb.run.name
         else:
-            model_save_dir = trained_model_dir / f"unnamed_run_{torch.randint(10000, size=(1,)).item()}"
+            model_save_dir = (
+                trained_model_dir
+                / f"unnamed_run_{torch.randint(10000, size=(1,)).item()}"
+            )
 
         model_save_dir.mkdir(exist_ok=True, parents=True)
         self.model_save_dir = model_save_dir
