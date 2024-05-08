@@ -48,10 +48,16 @@ The default hyperparameters are good for most training. We tend to change them a
 $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml"
 ```
 
-Though our pre-training dataset is quite large so we can train on fewer epochs (plus our validation loss diverges from training loss fairly quickly[^1]).
+Though our pre-training dataset is quite large so we can train on fewer epochs - plus our validation loss diverges from training loss fairly quickly - ![diverging_loss](../imgs/pretrain_loss_plot.png):
 
 ```bash
-$ yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml" --epochs 16 --no-obj-weight 1 --lr 0.0005 --normalize-images
+$ yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml" --epochs 16 --lr 0.0005 --normalize-images
 ```
 
-[^1]: ![diverging_loss](../imgs/pretrain_loss_plot.png)
+A couple notes:
+
+- `--lr` is the learning rate - default is 3e-4, but increasing it a little to 5e-4 seemed to do well for pre-training.
+- `--epochs` is the number of times that we train over the data.
+- `--normalize-images` is a flag to normalize images into the range `[0,1]` before being fed to YOGO. Good for stabilization during training, and it's a very common practice for image data.
+
+This will create a `trained_models` directory in YOGO
