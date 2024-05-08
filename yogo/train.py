@@ -249,12 +249,11 @@ class Trainer:
             allow_val_change=True,
         )
 
+        trained_model_dir = Path(f"{__file__}").parent.parent / "trained_models"
         if wandb.run is not None:
-            model_save_dir = Path(f"trained_models/{wandb.run.name}")
+            model_save_dir = trained_model_dir / wandb.run.name
         else:
-            model_save_dir = Path(
-                f"trained_models/unnamed_run_{torch.randint(100, size=(1,)).item()}"
-            )
+            model_save_dir = trained_model_dir / f"unnamed_run_{torch.randint(10000, size=(1,)).item()}"
 
         model_save_dir.mkdir(exist_ok=True, parents=True)
         self.model_save_dir = model_save_dir
