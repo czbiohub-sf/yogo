@@ -48,7 +48,10 @@ The default hyperparameters are good for most training. We tend to change them a
 $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml"
 ```
 
-Though our pre-training dataset is quite large so we can train on fewer epochs (plus our validation loss diverges from training loss fairly quickly
+Though our pre-training dataset is quite large so we can train on fewer epochs (plus our validation loss diverges from training loss fairly quickly[^1]).
 
 ```bash
 $ yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml" --epochs 16 --no-obj-weight 1 --lr 0.0005 --normalize-images
+```
+
+[^1]: ![diverging_loss](../imgs/pretrain_loss_plot.png)
