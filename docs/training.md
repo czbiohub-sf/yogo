@@ -49,11 +49,17 @@ The default hyperparameters are good for most training. We tend to change them a
 $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml"
 ```
 
-Though our pre-training dataset is quite large so we can train on fewer epochs - plus our validation loss diverges from training loss fairly quickly[^1]:
+Though our pre-training dataset is quite large so we can train on fewer epochs - plus our validation loss diverges from training loss fairly quickly:
 
 ```bash
 $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/pre-training/yogo_parasite_data_with_tests.yml" --epochs 16 --lr 0.0005 --normalize-images
 ```
+
+<figure class="image">
+  <img src="imgs/pretrain_loss_plot.png" alt="diverging_loss" width="320"/>
+  <figcaption><i>training loss for pre-training, showing divergence of validation loss (orange)</i></figcaption>
+</figure>
+
 
 A couple notes:
 
@@ -71,6 +77,3 @@ More training! Again, the defaults are good for most training. Here is a trainin
 ```bash
 $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/fine-tuning/all-dataset-subsets.yml" --from-pretrained trained_models/chaos-cat-0727/best.pth
 ```
-
-
-[^1]: ![diverging_loss](imgs/pretrain_loss_plot.png)
