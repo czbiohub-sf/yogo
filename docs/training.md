@@ -66,7 +66,7 @@ A couple notes:
 - Model weights are initialized from random weights
 - `--lr` is the learning rate - default is 3e-4, but increasing it a little to 5e-4 seemed to do well for pre-training.
 - `--epochs` is the number of times that we train over the data.
-- `--normalize-images` is a flag to normalize images into the range `[0,1]` before being fed to YOGO. Good for stabilization during training, and it's a very common practice for image data.
+- `--normalize-images` is a flag to normalize images into the range `[0,1]` before being fed to YOGO. Good for stabilization during training, and it's a very common practice for image data. At export time, [we add a layer to normalize images if needed](https://github.com/czbiohub-sf/yogo/blob/37e4f5f363b10253418b613c3e76fc65b8b0a90c/yogo/utils/export_model.py#L30-L48) so `ulc-malaria-scope` is none-the-wiser.
 
 This will create a `trained_models` directory in YOGO directory, and put your model there. The model name is created by W&B, and you should see some text in stdout stating what it is. The model checkpoints will be in `trained_models` - so if W&B's RNG chooses `chaos-cat-0727`, the checkpoints (`best.pth` and `last.pth`) will be in `trained_models/chaos-cat-0727`. We use these for fine-tuning.
 
@@ -80,4 +80,6 @@ $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/fine-tuning/all-
     --from-pretrained trained_models/chaos-cat-0727/best.pth
 ```
 
-The `--from-pretrained` flag tells YOGO to use the model in `trained_models/chaos-cat-0727/best.pth` to start training from there. There are
+The `--from-pretrained` flag tells YOGO to use the model in `trained_models/chaos-cat-0727/best.pth` to start training from there. Some notes:
+
+- if `--normalize-images`, `--rgb-images`, or `--model` were used for pre-training, those options pass forward to fine-tuning - therefore you don't have to set them again, they'll just be ignored
