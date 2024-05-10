@@ -80,6 +80,21 @@ $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/fine-tuning/all-
     --from-pretrained trained_models/chaos-cat-0727/best.pth
 ```
 
-The `--from-pretrained` flag tells YOGO to use the model in `trained_models/chaos-cat-0727/best.pth` to start training from there. Some notes:
+The `--from-pretrained` flag tells YOGO to start training from the model in `trained_models/chaos-cat-0727/best.pth`. Some notes:
 
 - if `--normalize-images`, `--rgb-images`, or `--model` were used for pre-training, those options pass forward to fine-tuning - therefore you don't have to set them again, they'll just be ignored
+
+By tuning hyperparameters, we can do better. Here's the hyperparameters for `still-voice-4405`:
+
+```bash
+$ sbatch scripts/submit_cmd_multi_gpu.sh yogo train ../dataset_defs/human-labels/all-dataset-subsets.yml \
+    --epochs 256 --iou-weight 1 --classify-weight 10 --label-smoothing 0.0005 --learning-rate 3e-4 \
+    --lr-decay-factor 3 --from-pretrained trained_models/earthy-elevator-1890/best.pth \
+    --weight-decay 0.0001930025077473428
+```
+
+- A large number of epochs helps
+- iou-weight and classify-weight are important hyperparameters. They weight the importance of IOU loss and classification loss, with a higher number meaning that errors are penalized more.
+- [label smoothing](https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) (some potentially interesting papers: https://arxiv.org/pdf/1906.02629, https://arxiv.org/pdf/2011.12562)
+- `--lr-decay-factor` - we decay our learning rate by a cosine function, and this defines how low the function goes. See [CosineAnnealingLR](https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html)
+- `--weight-decay` - see [AdamW](https://pytorch.org/docs/stable/generated/torch.optim.AdamW.html)
