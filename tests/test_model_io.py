@@ -22,7 +22,7 @@ def test_model_io_basic(tmpdir):
     "shouldn't throw an error"
     y = YOGO(img_size=(772, 1032), anchor_w=0.05, anchor_h=0.05, num_classes=7)
     checkpoint(tmpdir / "test.pth", y, 0, 0)
-    z = YOGO.from_pth(tmpdir / "test.pth")
+    z, _ = YOGO.from_pth(tmpdir / "test.pth")
     assert y.img_size == z.img_size
     assert y.anchor_w == z.anchor_w
     assert y.anchor_h == z.anchor_h

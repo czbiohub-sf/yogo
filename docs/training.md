@@ -82,4 +82,4 @@ $ sbatch scripts/submit_cmd_multi_gpu.sh yogo train "$DDF_PATHS/fine-tuning/all-
 
 The `--from-pretrained` flag tells YOGO to use the model in `trained_models/chaos-cat-0727/best.pth` to start training from there. Some notes:
 
-- if `--normalize-images`, `--rgb-images`, or `--model` were used for pre-training, those options pass forward to fine-tuning - therefore you don't have to set them again, they'll just be ignored
+- if `--normalize-images`, `--rgb-images`, or `--model` were used for pre-training, those options pass forward to fine-tuning - therefore you don't have to set them again, they'll just be ignored[^1]
