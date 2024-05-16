@@ -1,6 +1,6 @@
 # you only glance once
 
-A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for speed on slow hardware and simple object detection problems.
+A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for speed on slow hardware and simple object detection problems. Designed for the Remoscope project, by the Bioengineering team at the [Chan-Zuckerberg Biohub SF](https://www.czbiohub.org/sf/).
 
 ```console
 $ yogo train path/to/dataset-definition-file.yml  # train your model!
