@@ -1,7 +1,5 @@
 #! /usr/bin/env python3
 
-
-import math
 import torch
 import numpy as np
 
@@ -23,19 +21,29 @@ PathLike = Union[str, Path]
 
 
 class BlobDataset(Dataset):
+    """ Generates fake images from "thumbnails", which are crops of objects to be detected.
+    """
     def __init__(
         self,
         thumbnail_dir_paths: Mapping[Union[str, int], List[PathLike]],
         Sx: int,
         Sy: int,
         classes: List[str],
-        n: int = 4,
+        n: int = 50,
         length: int = 1000,
         background_img_shape: Tuple[int, int] = (772, 1032),
-        blend_thumbnails: bool = False,
-        thumbnail_sigma: float = 1.0,
         normalize_images: bool = False,
     ):
+        """
+        thumbnail_dir_paths: a mapping from class (whether by class name or by class idx)
+                             to a list of directories containing thumbnails for that class
+        Sx, Sy: grid dimensions
+        classes: list of classes
+        n: number of thumbnails per class
+        length: "length" of dataset
+        background_img_shape: shape of background image
+        normalize_images: whether to normalize images into [0,1]
+        """
         super().__init__()
 
         self.thumbnail_dir_paths: Dict[int, List[Path]] = {
@@ -53,8 +61,6 @@ class BlobDataset(Dataset):
         self.n = n
         self.length = length
         self.loader = read_image_robust
-        self.blend_thumbnails = blend_thumbnails
-        self.thumbnail_sigma = thumbnail_sigma
         self.background_img_shape = background_img_shape
         self.normalize_images = normalize_images
         self.area_threshold: int = 500
@@ -122,6 +128,7 @@ class BlobDataset(Dataset):
     def get_thumbnail_paths(
         self, dir_paths: Dict[int, List[Path]]
     ) -> Tuple[np.ndarray, Tuple[Path, ...]]:
+        "traverses down the directories and returns a list of paths to each thumbnail"
         cls_path_pairs: List[Tuple[int, Path]] = []
         for cls, list_of_data_dir in dir_paths.items():
             for data_dir in list_of_data_dir:
@@ -142,6 +149,7 @@ class BlobDataset(Dataset):
         return np.array(classes), paths
 
     def get_random_thumbnails(self, n: int = 1) -> List[Tuple[int, torch.Tensor]]:
+        "Returns a list of random thumbnails and their labels"
         choices = np.random.randint(0, self.num_thumbnails, size=n)
         imgs = [
             self.thumbnail_tensor[
@@ -197,41 +205,6 @@ class BlobDataset(Dataset):
             num_tries -= 1
         return None
 
-    def gaussian_kernel(self, thumbnail, thumbnail_sigma):
-        def gaussian(x, mu=0.0, sigma=1.0):
-            return torch.exp(-((x - mu) ** 2) / (2 * sigma**2)) / (
-                sigma * math.sqrt(2 * math.pi)
-            )
-
-        w = torch.linspace(-1, 1, thumbnail.shape[1])
-        h = torch.linspace(-1, 1, thumbnail.shape[0])
-
-        w_gaussian = gaussian(w, sigma=thumbnail_sigma)
-        h_gaussian = gaussian(h, sigma=thumbnail_sigma)
-
-        kernel = torch.sqrt(h_gaussian[:, None] * w_gaussian[None, :])
-        kernel = (kernel - kernel.min()) * (1 / (kernel.max() - kernel.min()))
-
-        return kernel
-
-    def square_kernel(self, thumbnail):
-        "not as good as gaussian kernel"
-        hs = torch.linspace(-1, 1, thumbnail.shape[0])
-        ws = torch.linspace(-1, 1, thumbnail.shape[1])
-        kernel = torch.sqrt(hs[:, None] ** 2 * ws[None, :] ** 2)
-        kernel = torch.where(kernel < 0.5, 0, kernel)
-        kernel = (kernel - kernel.min()) * (1 / (kernel.max() - kernel.min()))
-        kernel = 1 - kernel
-
-        return kernel
-
-    def blend_thumbnail(
-        self, bg_shade: int, thumbnail: torch.Tensor, thumbnail_sigma: float = 1.0
-    ) -> torch.Tensor:
-        """Michelle's Idea"""
-        kernel = self.gaussian_kernel(thumbnail, thumbnail_sigma)
-        return bg_shade * (1 - kernel) + thumbnail * kernel
-
     def __getitem__(self, idx):
         if idx >= self.length:
             raise IndexError(f"index {idx} is out of bounds for length {self.length}")
@@ -248,16 +221,6 @@ class BlobDataset(Dataset):
             .fill_(mean_background)
             .to(torch.uint8)
         )
-
-        if self.blend_thumbnails:
-            [
-                self.blend_thumbnail(
-                    mean_background,
-                    thumbnail.squeeze(),
-                    thumbnail_sigma=self.thumbnail_sigma,
-                ).unsqueeze(0)
-                for thumbnail in thumbnails
-            ]
 
         xforms = torch.nn.Sequential(
             T.RandomHorizontalFlip(),

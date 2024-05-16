@@ -23,6 +23,10 @@ class ImageAndIdDataset(Dataset, Sized):
 
 
 class ImagePathDataset(ImageAndIdDataset):
+    """
+    Dataset for loading images from a directory. The "__getitem__" method
+    returns a tuple of (image, image_path).
+    """
     def __init__(
         self,
         root: Union[str, Path],
@@ -76,9 +80,12 @@ class ZarrDataset(ImageAndIdDataset):
         image_transforms: List[nn.Module] = [],
         normalize_images: bool = False,
     ):
-        """Note
+        """
+        Dataset for loading images from a zarr array. The "__getitem__" method
+        returns a tuple of (image, image_path), where image_path is created from
+        the _image_name_from_idx method.
 
-        zip files can be corrupted easily, so be aware that this
+        Note: zip files can be corrupted easily, so be aware that this
         may run into some zarr corruption issues. ImagePathDataset
         is pretty failsafe
         """
