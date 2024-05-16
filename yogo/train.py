@@ -312,7 +312,7 @@ class Trainer:
                 self.optimizer.zero_grad(set_to_none=True)
 
                 with torch.cuda.amp.autocast(
-                    dtype=torch.float16,
+                    dtype=torch.bfloat16,
                     enabled=self.config["half"],
                 ):
                     outputs = self.net(imgs)
@@ -386,7 +386,7 @@ class Trainer:
             labels = labels.to(device, non_blocking=True)
 
             with torch.cuda.amp.autocast(
-                dtype=torch.float16,
+                dtype=torch.bfloat16,
                 enabled=self.config["half"],
             ):
                 outputs = self.net(imgs)
@@ -482,7 +482,7 @@ class Trainer:
             labels = labels.to(device, non_blocking=False)
 
             with torch.cuda.amp.autocast(
-                dtype=torch.float16,
+                dtype=torch.bfloat16,
                 enabled=config["half"],
             ):
                 outputs = net(imgs)
