@@ -250,7 +250,7 @@ def draw_yogo_prediction(
     return rgb
 
 
-def choose_device():
+def choose_device() -> torch.device:
     if torch.cuda.is_available():
         return torch.device("cuda")
     elif torch.backends.mps.is_available():

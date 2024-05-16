@@ -9,7 +9,7 @@ import warnings
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Any, Tuple, Optional, Collection, Callable, Dict, Union
+from typing import Any, Tuple, Optional, Collection, Union
 
 import torch.multiprocessing as mp
 
@@ -42,12 +42,14 @@ WandbConfig: TypeAlias = dict
 
 
 class Trainer:
+    """
+    Simple trainer class. `train_from_ddp` is the main entry point to training, though
+    almost entirely, use the CLI to train.
+    """
+
     def __init__(
         self,
         config: WandbConfig,
-        dataset_init_function: Optional[
-            Callable[[], Dict[str, Union[DataLoader[Any], Collection]]]
-        ] = None,
         _rank: int = 0,
         _world_size: int = 1,
     ) -> None:
@@ -255,7 +257,7 @@ class Trainer:
         else:
             model_save_dir = (
                 trained_model_dir
-                / f"unnamed_run_{torch.randint(10000, size=(1,)).item()}"
+                / f"run_{torch.randint(100000000, size=(1,)).item():08}"
             )
 
         model_save_dir.mkdir(exist_ok=True, parents=True)

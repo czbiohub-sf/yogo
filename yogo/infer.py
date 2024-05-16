@@ -182,7 +182,7 @@ def predict(
             "filetype; got {output_img_ftype}"
         )
 
-    device = device or choose_device()
+    device = torch.device(device or choose_device())
 
     model, cfg = YOGO.from_pth(Path(path_to_pth), inference=True)
     model.eval()
@@ -275,9 +275,9 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
-        with torch.amp.autocast(
+        with torch.autocast(
             enabled=half and str(device) != "cpu",
-            device_type=str(device),
+            device_type=device.type,
             dtype=torch.bfloat16,
         ):
             res = model_jit(img_batch.to(device))

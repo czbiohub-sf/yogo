@@ -6,6 +6,11 @@ class InvalidSplitFraction(Exception):
 
 
 class SplitFractions:
+    """
+    Fraction of data to be used for training, validation, and testing. This class basically
+    just provides `from_<type>` methods.
+    """
+
     def __init__(self, train: float, val: float, test: Optional[float]) -> None:
         self.train: float = train
         self.val: float = val
