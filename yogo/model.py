@@ -30,6 +30,7 @@ class YOGO(nn.Module):
         self.device = device
 
         self.model = model_func(num_classes, is_rgb).to(device)
+        self.model_version = model_func.__name__
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
