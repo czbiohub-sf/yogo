@@ -27,6 +27,7 @@ class ImagePathDataset(ImageAndIdDataset):
     Dataset for loading images from a directory. The "__getitem__" method
     returns a tuple of (image, image_path).
     """
+
     def __init__(
         self,
         root: Union[str, Path],

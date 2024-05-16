@@ -21,8 +21,8 @@ PathLike = Union[str, Path]
 
 
 class BlobDataset(Dataset):
-    """ Generates fake images from "thumbnails", which are crops of objects to be detected.
-    """
+    """Generates fake images from "thumbnails", which are crops of objects to be detected."""
+
     def __init__(
         self,
         thumbnail_dir_paths: Mapping[Union[str, int], List[PathLike]],
