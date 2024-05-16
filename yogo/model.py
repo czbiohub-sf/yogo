@@ -18,6 +18,7 @@ class YOGO(nn.Module):
         anchor_h: float,
         num_classes: int,
         is_rgb: bool = False,
+        normalize_images: bool = False,
         inference: bool = False,
         tuning: bool = False,
         model_func: ModelDefn = base_model,
@@ -29,13 +30,15 @@ class YOGO(nn.Module):
         self.device = device
 
         self.model = model_func(num_classes, is_rgb).to(device)
+        self.model_version = model_func.__name__
 
         self.register_buffer("img_size", torch.tensor(img_size))
         self.register_buffer("anchor_w", torch.tensor(anchor_w))
         self.register_buffer("anchor_h", torch.tensor(anchor_h))
         self.register_buffer("num_classes", torch.tensor(num_classes))
-        self.register_buffer("is_rgb", torch.tensor(is_rgb))
         self.register_buffer("clip_value", torch.tensor(clip_value))
+        self.register_buffer("is_rgb", torch.tensor(is_rgb))
+        self.register_buffer("normalize_images", torch.tensor(normalize_images))
 
         self.inference = inference
 
@@ -97,7 +100,6 @@ class YOGO(nn.Module):
 
         global_step = loaded_pth.get("step", 0)
         model_version = loaded_pth.get("model_version", None)
-        normalize_images = loaded_pth.get("normalize_images", False)
         class_names = loaded_pth.get("class_names", None)
 
         params = loaded_pth["model_state_dict"]
@@ -119,6 +121,9 @@ class YOGO(nn.Module):
         if "width_multiplier" not in params:
             params["width_multiplier"] = torch.tensor(1.0)
 
+        if "normalize_images" not in params:
+            params["normalize_images"] = loaded_pth.get("normalize_images", False)
+
         model = cls(
             (img_size[0], img_size[1]),
             anchor_w.item(),
@@ -136,7 +141,6 @@ class YOGO(nn.Module):
 
         return model, {
             "step": global_step,
-            "normalize_images": normalize_images,
             "class_names": class_names,
         }
 

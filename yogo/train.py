@@ -273,10 +273,10 @@ class Trainer:
     ) -> None:
         if isinstance(self.net, DDP):
             state_dict = self.net.module.state_dict()
-            model_version = self.net.module.model.__name__
+            model_version = self.net.module.model_version
         else:
             state_dict = self.net.state_dict()
-            model_version = self.net.model.__name__
+            model_version = self.net.model_version
 
         torch.save(
             {

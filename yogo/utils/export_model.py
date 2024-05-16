@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import warnings
 import subprocess
 
 import onnx
@@ -7,6 +8,8 @@ import onnxsim
 import onnxruntime
 
 import torch
+
+from torch.jit import TracerWarning
 
 import numpy as np
 
@@ -34,7 +37,6 @@ class YOGOWrap(YOGO):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.normalize_images = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # we get either raw uint8 tensors or float tensors
@@ -42,8 +44,21 @@ class YOGOWrap(YOGO):
             x.unsqueeze_(0)
 
         x = x.float()
-        if self.normalize_images:
-            x /= 255.0
+
+        # when tracing a wrapped module like this, we get this error:
+        #
+        # "TracerWarning: Converting a tensor to a Python boolean might
+        #  cause the trace to be incorrect. We can't record the data flow
+        #  of Python values, so this value will be treated as a constant
+        #  in the future. This means that the trace might not generalize to
+        #  other inputs!"
+        #
+        # Since `normalize_images` doesn't change at all after initialization,
+        # we can happily ignore this warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=TracerWarning)
+            if self.normalize_images:
+                x /= 255.0
 
         return super().forward(x)
 
@@ -58,12 +73,10 @@ def do_export(args):
 
     # the original model
     net, cfg = YOGO.from_pth(pth_filename, inference=True)
-    net.normalize_images = cfg["normalize_images"]
     net.eval()
 
     # the wrapped model, that we'll export
     net_wrap, cfg = YOGOWrap.from_pth(pth_filename, inference=True)
-    net_wrap.normalize_images = cfg["normalize_images"]
     net_wrap.eval()
 
     img_h, img_w = net.img_size

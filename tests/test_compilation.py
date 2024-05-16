@@ -37,7 +37,10 @@ def setup_yogo():
 
 @pytest.mark.parametrize(
     "name, normalize_images",
-    [("normalize_images", True), ("no_normalize_images", False)],
+    [
+        ("normalize_images", torch.tensor(True)),
+        ("no_normalize_images", torch.tensor(False)),
+    ],
 )
 @torch.no_grad()
 def test_yogo_wrap(setup_yogo, name, normalize_images):
@@ -54,7 +57,10 @@ def test_yogo_wrap(setup_yogo, name, normalize_images):
 
 @pytest.mark.parametrize(
     "name, normalize_images",
-    [("normalize_images", True), ("no_normalize_images", False)],
+    [
+        ("normalize_images", torch.tensor(True)),
+        ("no_normalize_images", torch.tensor(False)),
+    ],
 )
 @torch.no_grad()
 def test_torch_trace(setup_yogo, name, normalize_images):
@@ -75,7 +81,10 @@ def test_torch_trace(setup_yogo, name, normalize_images):
 
 @pytest.mark.parametrize(
     "name, normalize_images",
-    [("normalize_images", True), ("no_normalize_images", False)],
+    [
+        ("normalize_images", torch.tensor(True)),
+        ("no_normalize_images", torch.tensor(False)),
+    ],
 )
 @torch.no_grad()
 def test_onnx_export(setup_yogo, name, normalize_images):
