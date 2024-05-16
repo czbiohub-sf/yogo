@@ -9,7 +9,7 @@ import warnings
 from pathlib import Path
 from copy import deepcopy
 from typing_extensions import TypeAlias
-from typing import Any, Tuple, Optional, Collection, Callable, Dict, Union
+from typing import Any, Tuple, Optional, Collection, Union
 
 import torch.multiprocessing as mp
 
@@ -46,6 +46,7 @@ class Trainer:
     Simple trainer class. `train_from_ddp` is the main entry point to training, though
     almost entirely, use the CLI to train.
     """
+
     def __init__(
         self,
         config: WandbConfig,
