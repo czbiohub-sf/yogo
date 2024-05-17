@@ -231,6 +231,8 @@ class Trainer:
         wandb.init(
             id=run_id,
             config=self.config,
+            entity=self.config["wandb_entity"],
+            project=self.config["wandb_project"],
             name=self.config["name"],
             notes=self.config["note"],
             tags=self.config["tags"],
@@ -639,6 +641,8 @@ def do_training(args) -> None:
         "name": args.name,
         "note": args.note,
         "tags": args.tags,
+        "wandb_entity": args.wandb_entity,
+        "wandb_project": args.wandb_project,
     }
 
     world_size = torch.cuda.device_count()
