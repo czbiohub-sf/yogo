@@ -46,8 +46,6 @@ def test_model(args: argparse.Namespace) -> None:
     if log_to_wandb:
         print("logging to wandb")
         wandb.init(
-            project="yogo",
-            entity="bioengineering",
             config=config,
             id=args.wandb_resume_id,
             resume="allow",

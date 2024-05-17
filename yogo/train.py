@@ -230,8 +230,6 @@ class Trainer:
         run_id = wandb.util.generate_id()
         wandb.init(
             id=run_id,
-            project="yogo",
-            entity="bioengineering",
             config=self.config,
             name=self.config["name"],
             notes=self.config["note"],
