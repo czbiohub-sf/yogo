@@ -454,10 +454,4 @@ def infer_parser(parser=None):
             "max confidence must be greater than this value (default: 0.0)"
         ),
     )
-    parser.add_argument(
-        "--heatmap-mask-path",
-        type=Path,
-        default=None,
-        help="path to heatmap mask for the run (default: None)",
-    )
     return parser

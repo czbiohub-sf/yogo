@@ -37,7 +37,6 @@ usage: yogo infer [-h] (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO
                   [--class-names [CLASS_NAMES ...]] [--count | --no-count] [--batch-size BATCH_SIZE] [--device [DEVICE]]
                   [--half | --no-half] [--crop-height CROP_HEIGHT] [--output-img-filetype {.png,.tif,.tiff}]
                   [--obj-thresh OBJ_THRESH] [--iou-thresh IOU_THRESH]
-                  [--min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD] [--heatmap-mask-path HEATMAP_MASK_PATH]
                   pth_path
 
 positional arguments:
@@ -76,8 +75,6 @@ options:
   --min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD
                         minimum confidence for a class to be considered - i.e. the max confidence must be greater than this
                         value (default: 0.0)
-  --heatmap-mask-path HEATMAP_MASK_PATH
-                        path to heatmap mask for the run (default: None)
 ```
 
 There are actually two required arguments here:
