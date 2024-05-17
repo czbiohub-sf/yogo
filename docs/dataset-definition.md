@@ -2,8 +2,6 @@
 
 I wanted a simple way to represent an object detection dataset for data that is distributed over a file system, without having to copy files or create symlinks, as is common in other image-based deep learning repositories. It is similar to [Ultralytic's dataset definition](https://docs.ultralytics.com/datasets/detect/), except ours is more general, and has a couple features that are very nice to have.
 
-Here is the dataset definition file repo for reference: https://github.com/czbiohub-sf/lfm-dataset-definitions
-
 ## Basic dataset definition
 
 A "dataset definition" is composed of one or more individual sets, where each set is just an `image_path` to a folder of images, and a `label_path` to a folder of (`.txt`) labels. For each label file in the `label_path` folder, there should be an image file in `image_path`. The should have the same name, except for the extension - so, for label file `img_1729.txt`, there should be a `img_1729.png` (or `.jpg` or whatever) image file in the `image_path` directory[^1].
