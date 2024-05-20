@@ -221,7 +221,7 @@ def predict(
         path_to_images=path_to_images,
         path_to_zarr=path_to_zarr,
         image_transforms=transforms,
-        normalize_images=cfg["normalize_images"],
+        normalize_images=model.normalize_images,
     )
 
     if isinstance(image_dataset, ZarrDataset):
@@ -291,7 +291,7 @@ def predict(
                     iou_thresh=iou_thresh,
                     min_class_confidence_threshold=min_class_confidence_threshold,
                     labels=class_names,
-                    images_are_normalized=cfg["normalize_images"],
+                    images_are_normalized=model.normalize_images,
                 )
                 if output_dir is not None:
                     out_fname = (
