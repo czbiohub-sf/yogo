@@ -1,3 +1,4 @@
+import os
 import argparse
 
 from pathlib import Path
@@ -247,6 +248,18 @@ def train_parser(parser=None):
         help="tags for the run (e.g. '--tags test fine-tune')",
         default=None,
     )
+    parser.add_argument(
+        "--wandb-entity",
+        type=str,
+        default=os.getenv("wandb_entity"),
+        help="wandb entity - defaults to the environment variable WANDB_ENTITY",
+    )
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default=os.getenv("wandb_project"),
+        help="wandb entity - defaults to the environment variable WANDB_PROJECT",
+    )
     return parser
 
 
@@ -266,6 +279,18 @@ def test_parser(parser=None):
             "log to wandb - this will create a new run. If neither this nor "
             "--wandb-resume-id are provided, the run will be saved to a new folder"
         ),
+    )
+    parser.add_argument(
+        "--wandb-entity",
+        type=str,
+        default=os.getenv("WANDB_ENTITY"),
+        help="wandb entity - defaults to the environment variable WANDB_ENTITY",
+    )
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default=os.getenv("WANDB_PROJECT"),
+        help="wandb entity - defaults to the environment variable WANDB_PROJECT",
     )
     parser.add_argument(
         "--wandb-resume-id",
