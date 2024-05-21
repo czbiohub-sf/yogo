@@ -168,7 +168,9 @@ def _format_tensor_for_rects(
 
 
 def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]:
-    hue = label_index / num_classes  # if we don't like the look of a class, add a constant and mod 1
+    hue = (
+        label_index / num_classes
+    )  # if we don't like the look of a class, add a constant and mod 1
     lightness = 0.5
     saturation = 1.0
     r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
