@@ -193,7 +193,7 @@ def predict(
     img_h, img_w = model.get_img_size()
     if vertical_crop_height:
         vertical_crop_height_px = (vertical_crop_height * img_h).round()
-        crop = CenterCrop((vertical_crop_height_px, img_w))
+        crop = CenterCrop((int(vertical_crop_height_px.item()), int(img_w.item())))
         transforms.append(crop)
         model.resize_model(int(vertical_crop_height_px.item()))
         img_h = vertical_crop_height_px
