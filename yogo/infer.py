@@ -360,7 +360,6 @@ def predict(
             min_class_confidence_threshold=min_class_confidence_threshold,
             heatmap_mask_path=heatmap_mask_path,
         ).tolist()
-        tot_cells = sum(counts)
         print(
             list(
                 zip(
