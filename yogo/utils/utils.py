@@ -3,6 +3,7 @@
 import time
 import torch
 import socket
+import colorsys
 
 from contextlib import contextmanager
 
@@ -166,14 +167,12 @@ def _format_tensor_for_rects(
     return formatted_rects
 
 
-def bbox_colour(label: str, opacity: float = 1.0) -> Tuple[int, int, int, int]:
-    if not (0 <= opacity <= 1):
-        raise ValueError(f"opacity must be between 0 and 1, got {opacity}")
-    if label in ("healthy", "0"):
-        return (0, 255, 0, int(opacity * 255))
-    elif label in ("misc", "6"):
-        return (0, 0, 0, int(opacity * 255))
-    return (255, 0, 0, int(opacity * 255))
+def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]:
+    hue = label_index / num_classes
+    lightness = 0.5
+    saturation = 1.0
+    r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+    return int(r * 255), int(g * 255), int(b * 255), 255
 
 
 def draw_yogo_prediction(
@@ -243,9 +242,12 @@ def draw_yogo_prediction(
 
     for r in formatted_rects:
         r = list(r)
-        label = labels[int(r[4].item())] if labels is not None else str(r[4].item())
-        draw.rectangle(r[:4], outline=bbox_colour(label))
-        draw.text((r[0], r[1]), label, (0, 0, 0, 255))
+        label_idx = int(r[4].item())
+        label = labels[label_idx] if labels is not None else str(label_idx)
+        draw.rectangle(
+            r[:4], outline=bbox_colour(label_idx, num_classes=num_channels - 5)
+        )
+        draw.text((r[0], r[1]), label, (0, 0, 0, 255), font_size=18)
 
     return rgb
 

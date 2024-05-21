@@ -213,9 +213,7 @@ def predict(
     output_shape = model_jit(dummy_input).shape
     num_classes = output_shape[1] - 5
 
-    if class_names is None:
-        class_names = [f"class {i}" for i in range(num_classes)]
-    else:
+    if class_names is not None:
         if len(class_names) != num_classes:
             raise ValueError(
                 f"expected {num_classes} class names, got {len(class_names)}"
@@ -353,6 +351,8 @@ def predict(
     pbar.close()
 
     if count_predictions:
+        class_names = class_names or [f"class {i}" for i in range(num_classes)]
+
         counts = get_prediction_class_counts(
             results,
             obj_thresh=obj_thresh,
