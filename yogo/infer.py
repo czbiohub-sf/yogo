@@ -204,7 +204,11 @@ def predict(
     img_in_w = int(model.img_size[1].item())  # type: ignore
 
     dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
-    model_jit = torch.compile(model)
+
+    if device.type == "cuda":
+        model_jit = torch.compile(model)
+    else:
+        model_jit = model
 
     output_shape = model_jit(dummy_input).shape
     num_classes = output_shape[1] - 5
@@ -275,9 +279,11 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
+        # gross! device-type is checked even if enabled=False, which means we
+        # have to just tell autocast that device type is always cuda.
         with torch.autocast(
-            enabled=half and str(device) != "cpu",
-            device_type=device.type,
+            enabled=half and device.type == "cuda",
+            device_type="cuda",
             dtype=torch.bfloat16,
         ):
             res = model_jit(img_batch.to(device))
