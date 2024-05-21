@@ -366,7 +366,6 @@ def predict(
                 zip(
                     class_names,
                     counts,
-                    [0 if tot_cells == 0 else round(c / tot_cells, 4) for c in counts],
                 )
             )
         )
