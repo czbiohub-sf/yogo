@@ -139,6 +139,34 @@ def write_metadata(metadata_path: Path, **kwargs):
         json.dump(kwargs, f, indent=4)
 
 
+from torch import nn
+
+class ImageQuarterCropper(nn.Module):
+    """
+    crop input images to a quarter of their original size
+    if crop_index == 0, then it will crop the top quarter
+    if crop_index == 1, then it will crop the second quarter
+    if crop_index == 2, then it will crop the third quarter
+    if crop_index == 3, then it will crop the bottom quarter
+    """
+    def __init__(self, crop_height, crop_index: int):
+        self.crop_height = crop_height
+        self.crop_index = crop_index
+        super().__init__()
+
+    def forward(self, x):
+        if self.crop_index == 0:
+            return x[..., 0:self.crop_height, :]
+        if self.crop_index == 1:
+            return x[..., self.crop_height:2*self.crop_height, :]
+        if self.crop_index == 2:
+            return x[..., 2*self.crop_height:3*self.crop_height, :]
+        if self.crop_index == 3:
+            return x[..., 3*self.crop_height:, :]
+
+
+
+
 @torch.no_grad()
 def predict(
     path_to_pth: str,
@@ -193,7 +221,8 @@ def predict(
     img_h, img_w = model.get_img_size()
     if vertical_crop_height:
         vertical_crop_height_px = (vertical_crop_height * img_h).round()
-        crop = CenterCrop((int(vertical_crop_height_px.item()), int(img_w.item())))
+        # crop = CenterCrop((int(vertical_crop_height_px.item()), int(img_w.item())))
+        crop = ImageQuarterCropper(int(vertical_crop_height_px.item()), 3)
         transforms.append(crop)
         model.resize_model(int(vertical_crop_height_px.item()))
         img_h = vertical_crop_height_px
