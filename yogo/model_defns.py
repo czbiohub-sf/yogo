@@ -78,6 +78,167 @@ def base_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
 
 
 @register_model
+def deeper_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(input_channels, 16, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(16),
+        nn.LeakyReLU(),
+    )
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(16, 32, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
+    )
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(32, 64, 3, stride=2, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
+    )
+    conv_block_4 = nn.Sequential(
+        nn.Conv2d(64, 128, 3, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.15),
+    )
+    conv_block_5 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_6 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_7 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1, stride=2, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_8 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_9 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        conv_block_2,
+        conv_block_3,
+        conv_block_4,
+        conv_block_5,
+        conv_block_6,
+        conv_block_7,
+        conv_block_8,
+        conv_block_9,
+    )
+
+@register_model
+def larger_kernels_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(input_channels, 16, 7, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(16),
+        nn.LeakyReLU(),
+    )
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(16, 32, 5, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
+    )
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(32, 64, 7, stride=2, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
+    )
+    conv_block_4 = nn.Sequential(
+        nn.Conv2d(64, 128, 5, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.15),
+    )
+    conv_block_5 = nn.Sequential(
+        nn.Conv2d(128, 128, 7, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_6 = nn.Sequential(
+        nn.Conv2d(128, 128, 5, padding=1, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_7 = nn.Sequential(
+        nn.Conv2d(128, 128, 3, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_8 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        conv_block_2,
+        conv_block_3,
+        conv_block_4,
+        conv_block_5,
+        conv_block_6,
+        conv_block_7,
+        conv_block_8,
+    )
+
+
+@register_model
+def deeper_larger_kernels_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
+    input_channels = 3 if rgb_input else 1
+    conv_block_1 = nn.Sequential(
+        nn.Conv2d(input_channels, 16, 7, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(16),
+        nn.LeakyReLU(),
+    )
+    conv_block_2 = nn.Sequential(
+        nn.Conv2d(16, 32, 5, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.05),
+    )
+    conv_block_3 = nn.Sequential(
+        nn.Conv2d(32, 64, 7, stride=2, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.1),
+    )
+    conv_block_4 = nn.Sequential(
+        nn.Conv2d(64, 128, 5, padding=1),
+        nn.LeakyReLU(),
+        nn.Dropout2d(p=0.15),
+    )
+    conv_block_5 = nn.Sequential(
+        nn.Conv2d(128, 128, 7, stride=2, padding=1, bias=False),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_6 = nn.Sequential(
+        nn.Conv2d(128, 128, 5, padding=1, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_7 = nn.Sequential(
+        nn.Conv2d(128, 128, 7, padding=1, stride=2, bias=True),
+        nn.BatchNorm2d(128),
+        nn.LeakyReLU(),
+    )
+    conv_block_8 = nn.Sequential(
+        nn.Conv2d(128, 128, 5, padding=1),
+        nn.LeakyReLU(),
+    )
+    conv_block_9 = nn.Conv2d(128, 5 + num_classes, 1)
+    return nn.Sequential(
+        conv_block_1,
+        conv_block_2,
+        conv_block_3,
+        conv_block_4,
+        conv_block_5,
+        conv_block_6,
+        conv_block_7,
+        conv_block_8,
+        conv_block_9,
+    )
+
+
+@register_model
 def silu_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
     input_channels = 3 if rgb_input else 1
     conv_block_1 = nn.Sequential(
