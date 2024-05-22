@@ -396,8 +396,7 @@ def predict(
     pbar.close()
 
     if count_predictions:
-        print(list(zip(class_names, map(int, tot_counts))))
-
+        print(list(zip(class_names or range(num_classes), map(int, tot_counts))))
 
     # Save the numpy array
     if save_npy:
