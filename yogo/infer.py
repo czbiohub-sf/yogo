@@ -168,6 +168,32 @@ def predict(
     This is a bit of a gargantuan function. It handles `yogo infer` as well as
     general inference using YOGO. It can be used directly, but most of the time
     is invoked through the CLI.
+
+    Mostly, see `yogo infer --help` for the help. Here is a recapitulation (plus
+    some extras):
+
+        path_to_pth: path to .pth file defining the model
+        path_to_images: path to image or images; if path_to_images is not None, path_to_zarr must be None
+        path_to_zarr: path to zarr file; if path_to_zarr is not None, path_to_images must be None
+        output_dir: directory to save predictions or draw-boxes in YOGO format
+        output_img_ftype: output image filetype for bounding boxes
+        draw_boxes: whether to draw boxes in YOGO format
+        save_preds: whether to save predictions in YOGO format
+        save_npy: whether to save predictions in .npy format
+        class_names: list of class names
+        count_predictions: whether to count the number of predictions
+        batch_size: batch size
+        obj_thresh: object threshold
+        iou_thresh: iou threshold
+        vertical_crop_height: vertical crop height
+        use_tqdm: whether to use tqdm
+        device: device to run infer on
+        requested_num_workers: number of workers to use
+        min_class_confidence_threshold: minimum confidence threshold for class
+        heatmap_mask_path: path to heatmap mask
+        half: whether to use half precision
+        return_full_predictions: whether to return full predictions; useful for getting YOGO predictions
+                                 from python
     """
     if save_preds and draw_boxes:
         raise ValueError(
