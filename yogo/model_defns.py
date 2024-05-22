@@ -132,6 +132,7 @@ def deeper_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
         conv_block_9,
     )
 
+
 @register_model
 def larger_kernels_model(num_classes: int, rgb_input: bool = False) -> nn.Module:
     input_channels = 3 if rgb_input else 1
