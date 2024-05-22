@@ -386,12 +386,6 @@ def infer_parser(parser=None):
         "--path-to-zarr", type=Path, default=None, help="path to zarr file"
     )
     parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=None,
-        help="path to directory for results, either --draw-boxes or --save-preds",
-    )
-    parser.add_argument(
         "--draw-boxes",
         help="plot and either save (if --output-dir is set) or show each image",
         action=boolean_action,
@@ -416,17 +410,23 @@ def infer_parser(parser=None):
         default=False,
     )
     parser.add_argument(
+        "--count",
+        action=boolean_action,
+        default=False,
+        help="display the final predicted counts per-class",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="path to directory for results, either --draw-boxes or --save-preds",
+    )
+    parser.add_argument(
         "--class-names",
         help="list of class names - will default to integers if not provided",
         type=str,
         nargs="*",
         default=None,
-    )
-    parser.add_argument(
-        "--count",
-        action=boolean_action,
-        default=False,
-        help="display the final predicted counts per-class",
     )
     parser.add_argument(
         "--batch-size",

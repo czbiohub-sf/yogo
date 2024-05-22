@@ -162,7 +162,39 @@ def predict(
     min_class_confidence_threshold: float = 0.0,
     heatmap_mask_path: Optional[Path] = None,
     half: bool = False,
+    return_full_predictions: bool = False,
 ) -> Optional[torch.Tensor]:
+    """
+    This is a bit of a gargantuan function. It handles `yogo infer` as well as
+    general inference using YOGO. It can be used directly, but most of the time
+    is invoked through the CLI.
+
+    Mostly, see `yogo infer --help` for the help. Here is a recapitulation (plus
+    some extras):
+
+        path_to_pth: path to .pth file defining the model
+        path_to_images: path to image or images; if path_to_images is not None, path_to_zarr must be None
+        path_to_zarr: path to zarr file; if path_to_zarr is not None, path_to_images must be None
+        output_dir: directory to save predictions or draw-boxes in YOGO format
+        output_img_ftype: output image filetype for bounding boxes
+        draw_boxes: whether to draw boxes in YOGO format
+        save_preds: whether to save predictions in YOGO format
+        save_npy: whether to save predictions in .npy format
+        class_names: list of class names
+        count_predictions: whether to count the number of predictions
+        batch_size: batch size
+        obj_thresh: object threshold
+        iou_thresh: iou threshold
+        vertical_crop_height: vertical crop height
+        use_tqdm: whether to use tqdm
+        device: device to run infer on
+        requested_num_workers: number of workers to use
+        min_class_confidence_threshold: minimum confidence threshold for class
+        heatmap_mask_path: path to heatmap mask
+        half: whether to use half precision
+        return_full_predictions: whether to return full predictions; useful for getting YOGO predictions
+                                 from python
+    """
     if save_preds and draw_boxes:
         raise ValueError(
             "cannot save predictions in YOGO format and draw_boxes at the same time"
@@ -257,13 +289,17 @@ def predict(
     )
 
     # this tensor can be really big, so only create it if we need it
-    if not (draw_boxes or save_preds):
+    if return_full_predictions:
         results = torch.zeros(
             (len(image_dataset), output_shape[1], output_shape[2], output_shape[3]),
         )
+
     if save_npy:
         np_results = []
         heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
+
+    if count_predictions:
+        tot_counts = torch.zeros((num_classes,))
 
     file_iterator = enumerate(image_dataloader)
     while True:
@@ -313,8 +349,7 @@ def predict(
 
                 plt.clf()
                 plt.close()
-
-        elif save_preds:
+        if save_preds:
             assert (
                 output_dir is not None
             ), "output_dir must not be None if save_preds is True"
@@ -328,7 +363,7 @@ def predict(
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
             )
-        elif save_npy:
+        if save_npy:
             res = res.cpu().numpy()
 
             for j in range(res.shape[0]):
@@ -341,9 +376,19 @@ def predict(
                     heatmap_mask=heatmap_mask,
                 )
                 np_results.append(parsed)
-        else:
-            # sometimes we return a number of images less than the batch size,
-            # namely when len(image_dataset) % batch_size != 0
+
+        if count_predictions:
+            tot_counts += get_prediction_class_counts(
+                res,
+                obj_thresh=obj_thresh,
+                iou_thresh=iou_thresh,
+                min_class_confidence_threshold=min_class_confidence_threshold,
+                heatmap_mask_path=heatmap_mask_path,
+            )
+
+        # sometimes we return a number of images less than the batch size,
+        # namely when len(image_dataset) % batch_size != 0
+        if return_full_predictions:
             results[i * batch_size : i * batch_size + res.shape[0], ...] = res
 
         pbar.update(res.shape[0])
@@ -351,23 +396,8 @@ def predict(
     pbar.close()
 
     if count_predictions:
-        class_names = class_names or [f"class {i}" for i in range(num_classes)]
+        print(list(zip(class_names, map(int, tot_counts))))
 
-        counts = get_prediction_class_counts(
-            results,
-            obj_thresh=obj_thresh,
-            iou_thresh=iou_thresh,
-            min_class_confidence_threshold=min_class_confidence_threshold,
-            heatmap_mask_path=heatmap_mask_path,
-        ).tolist()
-        print(
-            list(
-                zip(
-                    class_names,
-                    counts,
-                )
-            )
-        )
 
     # Save the numpy array
     if save_npy:
@@ -398,7 +428,7 @@ def predict(
             write_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-    if not (draw_boxes or save_preds):
+    if return_full_predictions:
         return results
 
     return None
