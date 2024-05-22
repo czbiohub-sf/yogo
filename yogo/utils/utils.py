@@ -249,9 +249,7 @@ def draw_yogo_prediction(
         r = list(r)
         label_idx = int(r[4].item())
         label = labels[label_idx] if labels is not None else str(label_idx)
-        draw.rectangle(
-            r[:4], outline=bbox_colour(i, num_classes=num_channels - 5)
-        )
+        draw.rectangle(r[:4], outline=bbox_colour(i, num_classes=num_channels - 5))
         draw.text((r[0], r[1]), label, (0, 0, 0, 255), font_size=16)
 
     return rgb
