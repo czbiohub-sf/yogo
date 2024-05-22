@@ -448,7 +448,7 @@ def do_infer(args):
         iou_thresh=args.iou_thresh,
         batch_size=args.batch_size,
         device=args.device,
-        use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
+        use_tqdm=args.use_tqdm,
         vertical_crop_height=args.crop_height,
         count_predictions=args.count,
         output_img_ftype=args.output_img_filetype,

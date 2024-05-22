@@ -480,4 +480,10 @@ def infer_parser(parser=None):
         default=None,
         help="path to heatmap mask for the run (default: None)",
     )
+    parser.add_argument(
+        "--use-tqdm",
+        action=boolean_action,
+        default=True,
+        help="use tqdm progress bar",
+    )
     return parser
