@@ -3,10 +3,7 @@ import argparse
 
 from pathlib import Path
 
-from yogo.model_defns import MODELS
 from yogo.data.split_fractions import SplitFractions
-from yogo.utils.default_hyperparams import DefaultHyperparams as df
-
 
 try:
     boolean_action = argparse.BooleanOptionalAction  # type: ignore
@@ -99,6 +96,10 @@ def global_parser():
 
 
 def train_parser(parser=None):
+    # lazy-import
+    from yogo.model_defns import MODELS
+    from yogo.utils.default_hyperparams import DefaultHyperparams as df
+
     if parser is None:
         parser = argparse.ArgumentParser(
             description="commence a training run", allow_abbrev=False
