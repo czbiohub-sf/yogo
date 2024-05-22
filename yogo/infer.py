@@ -245,9 +245,7 @@ def predict(
     output_shape = model_jit(dummy_input).shape
     num_classes = output_shape[1] - 5
 
-    if class_names is None:
-        class_names = [f"class {i}" for i in range(num_classes)]
-    else:
+    if class_names is not None:
         if len(class_names) != num_classes:
             raise ValueError(
                 f"expected {num_classes} class names, got {len(class_names)}"
@@ -398,7 +396,7 @@ def predict(
     pbar.close()
 
     if count_predictions:
-        print(list(zip(class_names, map(int, tot_counts))))
+        print(list(zip(class_names or range(num_classes), map(int, tot_counts))))
 
     # Save the numpy array
     if save_npy:
