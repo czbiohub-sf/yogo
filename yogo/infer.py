@@ -238,6 +238,7 @@ def predict(
     dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
 
     if device.type == "cuda":
+        # TODO expand accepted device types!
         model_jit = torch.compile(model)
     else:
         model_jit = model
@@ -379,7 +380,7 @@ def predict(
 
         if count_predictions:
             tot_counts += get_prediction_class_counts(
-                res,
+                res.cpu(),
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
                 min_class_confidence_threshold=min_class_confidence_threshold,
