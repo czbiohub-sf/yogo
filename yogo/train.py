@@ -533,7 +533,6 @@ class Trainer:
         required_test_keys = (
             "class_names",
             "iou_weight",
-            "healthy_weight",
             "no_obj_weight",
             "label_smoothing",
             "half",
@@ -619,7 +618,6 @@ def do_training(args) -> None:
         "iou_weight": args.iou_weight,
         "no_obj_weight": args.no_obj_weight,
         "classify_weight": args.classify_weight,
-        "healthy_weight": args.healthy_weight,
         "tcp_store_port": str(get_free_port()),
         "master_port": str(get_free_port()),
         "epochs": args.epochs,

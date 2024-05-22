@@ -32,7 +32,6 @@ def test_model(args: argparse.Namespace) -> None:
         "class_names": data_defn.classes,
         "no_classify": False,
         "iou_weight": 1,
-        "healthy_weight": 1,
         "no_obj_weight": 0.5,
         "label_smoothing": 0.0001,
         "half": True,
