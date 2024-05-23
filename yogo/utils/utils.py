@@ -171,7 +171,7 @@ def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]
     # if we don't like the look of a class, modify the rate factor and constant factor
     # if we really want to get fancy, we can try getting a deterministic num_classes
     # points in L*a*b* space that evenly distributes the classes, and convert back to RGB
-    rate_factor, constant_factor = 4 / 3, 0
+    rate_factor, constant_factor = 5 / 3, 0
     hue = (label_index / num_classes * rate_factor + constant_factor) % 1
 
     lightness, saturation = 0.5, 1.0
@@ -252,7 +252,7 @@ def draw_yogo_prediction(
         draw.rectangle(
             r[:4], outline=bbox_colour(label_idx, num_classes=num_channels - 5)
         )
-        draw.text((r[0], r[1]), label, (0, 0, 0, 255), font_size=18)
+        draw.text((r[0], r[1]), label, (0, 0, 0, 255), font_size=16)
 
     return rgb
 
