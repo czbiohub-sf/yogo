@@ -1,11 +1,9 @@
+import os
 import argparse
 
 from pathlib import Path
 
-from yogo.model_defns import MODELS
 from yogo.data.split_fractions import SplitFractions
-from yogo.utils.default_hyperparams import DefaultHyperparams as df
-
 
 try:
     boolean_action = argparse.BooleanOptionalAction  # type: ignore
@@ -98,6 +96,10 @@ def global_parser():
 
 
 def train_parser(parser=None):
+    # lazy-import
+    from yogo.model_defns import MODELS
+    from yogo.utils.default_hyperparams import DefaultHyperparams as df
+
     if parser is None:
         parser = argparse.ArgumentParser(
             description="commence a training run", allow_abbrev=False
@@ -184,12 +186,6 @@ def train_parser(parser=None):
         default=df.CLASSIFY_WEIGHT,
     )
     parser.add_argument(
-        "--healthy-weight",
-        type=unitary_float,
-        help=f"weight for healthy class, between 0 and 1 (default: {df.HEALTHY_WEIGHT})",
-        default=df.HEALTHY_WEIGHT,
-    )
-    parser.add_argument(
         "--normalize-images",
         default=False,
         action=boolean_action,
@@ -247,6 +243,18 @@ def train_parser(parser=None):
         help="tags for the run (e.g. '--tags test fine-tune')",
         default=None,
     )
+    parser.add_argument(
+        "--wandb-entity",
+        type=str,
+        default=os.getenv("wandb_entity"),
+        help="wandb entity - defaults to the environment variable WANDB_ENTITY",
+    )
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default=os.getenv("wandb_project"),
+        help="wandb entity - defaults to the environment variable WANDB_PROJECT",
+    )
     return parser
 
 
@@ -266,6 +274,18 @@ def test_parser(parser=None):
             "log to wandb - this will create a new run. If neither this nor "
             "--wandb-resume-id are provided, the run will be saved to a new folder"
         ),
+    )
+    parser.add_argument(
+        "--wandb-entity",
+        type=str,
+        default=os.getenv("WANDB_ENTITY"),
+        help="wandb entity - defaults to the environment variable WANDB_ENTITY",
+    )
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default=os.getenv("WANDB_PROJECT"),
+        help="wandb entity - defaults to the environment variable WANDB_PROJECT",
     )
     parser.add_argument(
         "--wandb-resume-id",
@@ -361,12 +381,6 @@ def infer_parser(parser=None):
         "--path-to-zarr", type=Path, default=None, help="path to zarr file"
     )
     parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=None,
-        help="path to directory for results, either --draw-boxes or --save-preds",
-    )
-    parser.add_argument(
         "--draw-boxes",
         help="plot and either save (if --output-dir is set) or show each image",
         action=boolean_action,
@@ -391,17 +405,23 @@ def infer_parser(parser=None):
         default=False,
     )
     parser.add_argument(
+        "--count",
+        action=boolean_action,
+        default=False,
+        help="display the final predicted counts per-class",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="path to directory for results, either --draw-boxes or --save-preds",
+    )
+    parser.add_argument(
         "--class-names",
         help="list of class names - will default to integers if not provided",
         type=str,
         nargs="*",
         default=None,
-    )
-    parser.add_argument(
-        "--count",
-        action=boolean_action,
-        default=False,
-        help="display the final predicted counts per-class",
     )
     parser.add_argument(
         "--batch-size",
@@ -454,4 +474,19 @@ def infer_parser(parser=None):
             "max confidence must be greater than this value (default: 0.0)"
         ),
     )
+<<<<<<< remove-heatmap-masking
+=======
+    parser.add_argument(
+        "--heatmap-mask-path",
+        type=Path,
+        default=None,
+        help="path to heatmap mask for the run (default: None)",
+    )
+    parser.add_argument(
+        "--use-tqdm",
+        action=boolean_action,
+        default=True,
+        help="use tqdm progress bar",
+    )
+>>>>>>> main
     return parser

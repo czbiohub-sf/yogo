@@ -144,7 +144,8 @@ class Trainer:
 
             net.to(self.device)
             self.global_step = net_cfg["step"]
-            self.config["normalize_images"] = net_cfg["normalize_images"]
+            self.config["normalize_images"] = net.normalize_images
+            self.config["model"] = net.model_version
 
         self.Sx, self.Sy = net.get_grid_size()
 
@@ -231,6 +232,8 @@ class Trainer:
         wandb.init(
             id=run_id,
             config=self.config,
+            entity=self.config["wandb_entity"],
+            project=self.config["wandb_project"],
             name=self.config["name"],
             notes=self.config["note"],
             tags=self.config["tags"],
@@ -531,7 +534,6 @@ class Trainer:
         required_test_keys = (
             "class_names",
             "iou_weight",
-            "healthy_weight",
             "no_obj_weight",
             "label_smoothing",
             "half",
@@ -617,7 +619,6 @@ def do_training(args) -> None:
         "iou_weight": args.iou_weight,
         "no_obj_weight": args.no_obj_weight,
         "classify_weight": args.classify_weight,
-        "healthy_weight": args.healthy_weight,
         "tcp_store_port": str(get_free_port()),
         "master_port": str(get_free_port()),
         "epochs": args.epochs,
@@ -639,6 +640,8 @@ def do_training(args) -> None:
         "name": args.name,
         "note": args.note,
         "tags": args.tags,
+        "wandb_entity": args.wandb_entity,
+        "wandb_project": args.wandb_project,
     }
 
     world_size = torch.cuda.device_count()

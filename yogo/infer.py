@@ -158,7 +158,39 @@ def predict(
     requested_num_workers: Optional[int] = None,
     min_class_confidence_threshold: float = 0.0,
     half: bool = False,
+    return_full_predictions: bool = False,
 ) -> Optional[torch.Tensor]:
+    """
+    This is a bit of a gargantuan function. It handles `yogo infer` as well as
+    general inference using YOGO. It can be used directly, but most of the time
+    is invoked through the CLI.
+
+    Mostly, see `yogo infer --help` for the help. Here is a recapitulation (plus
+    some extras):
+
+        path_to_pth: path to .pth file defining the model
+        path_to_images: path to image or images; if path_to_images is not None, path_to_zarr must be None
+        path_to_zarr: path to zarr file; if path_to_zarr is not None, path_to_images must be None
+        output_dir: directory to save predictions or draw-boxes in YOGO format
+        output_img_ftype: output image filetype for bounding boxes
+        draw_boxes: whether to draw boxes in YOGO format
+        save_preds: whether to save predictions in YOGO format
+        save_npy: whether to save predictions in .npy format
+        class_names: list of class names
+        count_predictions: whether to count the number of predictions
+        batch_size: batch size
+        obj_thresh: object threshold
+        iou_thresh: iou threshold
+        vertical_crop_height: vertical crop height
+        use_tqdm: whether to use tqdm
+        device: device to run infer on
+        requested_num_workers: number of workers to use
+        min_class_confidence_threshold: minimum confidence threshold for class
+        heatmap_mask_path: path to heatmap mask
+        half: whether to use half precision
+        return_full_predictions: whether to return full predictions; useful for getting YOGO predictions
+                                 from python
+    """
     if save_preds and draw_boxes:
         raise ValueError(
             "cannot save predictions in YOGO format and draw_boxes at the same time"
@@ -189,7 +221,7 @@ def predict(
     img_h, img_w = model.get_img_size()
     if vertical_crop_height:
         vertical_crop_height_px = (vertical_crop_height * img_h).round()
-        crop = CenterCrop((vertical_crop_height_px, img_w))
+        crop = CenterCrop((int(vertical_crop_height_px.item()), int(img_w.item())))
         transforms.append(crop)
         model.resize_model(int(vertical_crop_height_px.item()))
         img_h = vertical_crop_height_px
@@ -200,14 +232,17 @@ def predict(
     img_in_w = int(model.img_size[1].item())  # type: ignore
 
     dummy_input = torch.randint(0, 256, (1, 1, img_in_h, img_in_w), device=device)
-    model_jit = torch.compile(model)
+
+    if device.type == "cuda":
+        # TODO expand accepted device types!
+        model_jit = torch.compile(model)
+    else:
+        model_jit = model
 
     output_shape = model_jit(dummy_input).shape
     num_classes = output_shape[1] - 5
 
-    if class_names is None:
-        class_names = [f"class {i}" for i in range(num_classes)]
-    else:
+    if class_names is not None:
         if len(class_names) != num_classes:
             raise ValueError(
                 f"expected {num_classes} class names, got {len(class_names)}"
@@ -217,7 +252,7 @@ def predict(
         path_to_images=path_to_images,
         path_to_zarr=path_to_zarr,
         image_transforms=transforms,
-        normalize_images=cfg["normalize_images"],
+        normalize_images=bool(model.normalize_images),
     )
 
     if isinstance(image_dataset, ZarrDataset):
@@ -251,12 +286,16 @@ def predict(
     )
 
     # this tensor can be really big, so only create it if we need it
-    if not (draw_boxes or save_preds):
+    if return_full_predictions:
         results = torch.zeros(
             (len(image_dataset), output_shape[1], output_shape[2], output_shape[3]),
         )
+
     if save_npy:
         np_results = []
+
+    if count_predictions:
+        tot_counts = torch.zeros((num_classes,))
 
     file_iterator = enumerate(image_dataloader)
     while True:
@@ -270,9 +309,11 @@ def predict(
             warnings.warn(f"got error {e}; continuing")
             continue
 
+        # gross! device-type is checked even if enabled=False, which means we
+        # have to just tell autocast that device type is always cuda.
         with torch.autocast(
-            enabled=half and str(device) != "cpu",
-            device_type=device.type,
+            enabled=half and device.type == "cuda",
+            device_type="cuda",
             dtype=torch.bfloat16,
         ):
             res = model_jit(img_batch.to(device))
@@ -286,7 +327,7 @@ def predict(
                     iou_thresh=iou_thresh,
                     min_class_confidence_threshold=min_class_confidence_threshold,
                     labels=class_names,
-                    images_are_normalized=cfg["normalize_images"],
+                    images_are_normalized=model.normalize_images,
                 )
                 if output_dir is not None:
                     out_fname = (
@@ -304,8 +345,7 @@ def predict(
 
                 plt.clf()
                 plt.close()
-
-        elif save_preds:
+        if save_preds:
             assert (
                 output_dir is not None
             ), "output_dir must not be None if save_preds is True"
@@ -319,7 +359,7 @@ def predict(
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
             )
-        elif save_npy:
+        if save_npy:
             res = res.cpu().numpy()
 
             for j in range(res.shape[0]):
@@ -331,9 +371,19 @@ def predict(
                     int(img_w.item()),
                 )
                 np_results.append(parsed)
-        else:
-            # sometimes we return a number of images less than the batch size,
-            # namely when len(image_dataset) % batch_size != 0
+
+        if count_predictions:
+            tot_counts += get_prediction_class_counts(
+                res.cpu(),
+                obj_thresh=obj_thresh,
+                iou_thresh=iou_thresh,
+                min_class_confidence_threshold=min_class_confidence_threshold,
+                heatmap_mask_path=heatmap_mask_path,
+            )
+
+        # sometimes we return a number of images less than the batch size,
+        # namely when len(image_dataset) % batch_size != 0
+        if return_full_predictions:
             results[i * batch_size : i * batch_size + res.shape[0], ...] = res
 
         pbar.update(res.shape[0])
@@ -341,6 +391,7 @@ def predict(
     pbar.close()
 
     if count_predictions:
+<<<<<<< remove-heatmap-masking
         counts = get_prediction_class_counts(
             results,
             obj_thresh=obj_thresh,
@@ -357,6 +408,9 @@ def predict(
                 )
             )
         )
+=======
+        print(list(zip(class_names or range(num_classes), map(int, tot_counts))))
+>>>>>>> main
 
     # Save the numpy array
     if save_npy:
@@ -384,7 +438,7 @@ def predict(
             write_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-    if not (draw_boxes or save_preds):
+    if return_full_predictions:
         return results
 
     return None
@@ -404,7 +458,7 @@ def do_infer(args):
         iou_thresh=args.iou_thresh,
         batch_size=args.batch_size,
         device=args.device,
-        use_tqdm=(args.output_dir is not None or args.draw_boxes or args.count),
+        use_tqdm=args.use_tqdm,
         vertical_crop_height=args.crop_height,
         count_predictions=args.count,
         output_img_ftype=args.output_img_filetype,

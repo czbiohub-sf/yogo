@@ -11,6 +11,7 @@ from .utils import (
 from .prediction_formatting import (
     format_preds,
     format_preds_and_labels,
+    format_preds_and_labels_v2,
     format_to_numpy,
 )
 
@@ -24,6 +25,7 @@ __all__ = (
     "draw_yogo_prediction",
     "format_preds",
     "format_preds_and_labels",
+    "format_preds_and_labels_v2",
     "choose_device",
     "format_to_numpy",
 )

@@ -122,7 +122,8 @@ class YOGO(nn.Module):
             params["width_multiplier"] = torch.tensor(1.0)
 
         if "normalize_images" not in params:
-            params["normalize_images"] = loaded_pth.get("normalize_images", False)
+            normalize_images = loaded_pth.get("normalize_images", False)
+            params["normalize_images"] = torch.tensor(normalize_images)
 
         model = cls(
             (img_size[0], img_size[1]),

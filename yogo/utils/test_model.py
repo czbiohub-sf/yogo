@@ -32,7 +32,6 @@ def test_model(args: argparse.Namespace) -> None:
         "class_names": data_defn.classes,
         "no_classify": False,
         "iou_weight": 1,
-        "healthy_weight": 1,
         "no_obj_weight": 0.5,
         "label_smoothing": 0.0001,
         "half": True,
@@ -47,6 +46,8 @@ def test_model(args: argparse.Namespace) -> None:
         print("logging to wandb")
         wandb.init(
             config=config,
+            entity=args.wandb_entity,
+            project=args.wandb_project,
             id=args.wandb_resume_id,
             resume="allow",
             tags=args.tags,

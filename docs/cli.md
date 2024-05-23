@@ -31,12 +31,20 @@ This is what you need most of the time. It lets you run YOGO on a dataset from t
 `yogo infer` will also automatically use a GPU if it can, and this will be way faster than running YOGO on a CPU.
 
 ```console
-$ yogo infer --help
-usage: yogo infer [-h] (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO_ZARR) [--output-dir OUTPUT_DIR]
+$ | yogo infer --help
+usage: yogo infer [-h] (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO_ZARR)
                   [--draw-boxes | --no-draw-boxes] [--save-preds | --no-save-preds] [--save-npy | --no-save-npy]
+<<<<<<< remove-heatmap-masking
                   [--class-names [CLASS_NAMES ...]] [--count | --no-count] [--batch-size BATCH_SIZE] [--device [DEVICE]]
                   [--half | --no-half] [--crop-height CROP_HEIGHT] [--output-img-filetype {.png,.tif,.tiff}]
                   [--obj-thresh OBJ_THRESH] [--iou-thresh IOU_THRESH]
+=======
+                  [--count | --no-count] [--output-dir OUTPUT_DIR] [--class-names [CLASS_NAMES ...]]
+                  [--batch-size BATCH_SIZE] [--device [DEVICE]] [--half | --no-half] [--crop-height CROP_HEIGHT]
+                  [--output-img-filetype {.png,.tif,.tiff}] [--obj-thresh OBJ_THRESH] [--iou-thresh IOU_THRESH]
+                  [--min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD]
+                  [--heatmap-mask-path HEATMAP_MASK_PATH]
+>>>>>>> main
                   pth_path
 
 positional arguments:
@@ -48,21 +56,22 @@ options:
                         path to image or images
   --path-to-zarr PATH_TO_ZARR
                         path to zarr file
-  --output-dir OUTPUT_DIR
-                        path to directory for results, either --draw-boxes or --save-preds
   --draw-boxes, --no-draw-boxes
                         plot and either save (if --output-dir is set) or show each image (default: False)
   --save-preds, --no-save-preds
                         save predictions in YOGO label format - requires `--output-dir` to be set (default: False)
   --save-npy, --no-save-npy
-                        Parse and save predictions in the same format as on scope - requires `--output-dir` to be set
-                        (default: False)
+                        Parse and save predictions in the same format as on scope - requires `--output-dir` to be
+                        set (default: False)
+  --count, --no-count   display the final predicted counts per-class (default: False)
+  --output-dir OUTPUT_DIR
+                        path to directory for results, either --draw-boxes or --save-preds
   --class-names [CLASS_NAMES ...]
                         list of class names - will default to integers if not provided
-  --count, --no-count   display the final predicted counts per-class (default: False)
   --batch-size BATCH_SIZE
                         batch size for inference (default: 64)
-  --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'
+  --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on
+                        'cpu'
   --half, --no-half     half precision (i.e. fp16) inference (TODO compare prediction performance) (default: False)
   --crop-height CROP_HEIGHT
                         crop image verically - '-c 0.25' will crop images to (round(0.25 * height), width)
@@ -73,8 +82,15 @@ options:
   --iou-thresh IOU_THRESH
                         intersection over union threshold for predictions (default: 0.5)
   --min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD
+<<<<<<< remove-heatmap-masking
                         minimum confidence for a class to be considered - i.e. the max confidence must be greater than this
                         value (default: 0.0)
+=======
+                        minimum confidence for a class to be considered - i.e. the max confidence must be greater
+                        than this value (default: 0.0)
+  --heatmap-mask-path HEATMAP_MASK_PATH
+                        path to heatmap mask for the run (default: None)
+>>>>>>> main
 ```
 
 There are actually two required arguments here:
@@ -92,12 +108,13 @@ $ yogo train --help
 usage: yogo train [-h] [--from-pretrained FROM_PRETRAINED]
                   [--dataset-split-override DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE]
                   [-bs BATCH_SIZE] [-lr LEARNING_RATE] [--lr-decay-factor LR_DECAY_FACTOR]
-                  [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY] [--epochs EPOCHS] [--no-obj-weight NO_OBJ_WEIGHT]
-                  [--iou-weight IOU_WEIGHT] [--classify-weight CLASSIFY_WEIGHT] [--healthy-weight HEALTHY_WEIGHT]
+                  [--label-smoothing LABEL_SMOOTHING] [-wd WEIGHT_DECAY] [--epochs EPOCHS]
+                  [--no-obj-weight NO_OBJ_WEIGHT] [--iou-weight IOU_WEIGHT] [--classify-weight CLASSIFY_WEIGHT]
                   [--normalize-images | --no-normalize-images] [--image-hw IMAGE_HW IMAGE_HW]
                   [--rgb-images | --no-rgb-images]
                   [--model [{base_model,silu_model,double_filters,triple_filters,half_filters,quarter_filters,depth_ver_0,depth_ver_1,depth_ver_2,depth_ver_3,depth_ver_4,convnext_small}]]
                   [--half | --no-half] [--device [DEVICE]] [--note NOTE] [--name NAME] [--tags [TAGS ...]]
+                  [--wandb-entity WANDB_ENTITY] [--wandb-project WANDB_PROJECT]
                   dataset_descriptor_file
 
 positional arguments:
@@ -109,15 +126,17 @@ options:
   --from-pretrained FROM_PRETRAINED
                         start training from the provided pth file
   --dataset-split-override DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE DATASET_SPLIT_OVERRIDE
-                        override dataset split fractions, in 'train val test' order - e.g. '0.7 0.2 0.1' will set 70 percent
-                        of all data to training, 20 percent to validation, and 10 percent to test. All of the data, including
-                        paths specified in 'test_paths', will be randomly assigned to training, validation, and test.
+                        override dataset split fractions, in 'train val test' order - e.g. '0.7 0.2 0.1' will set 70
+                        percent of all data to training, 20 percent to validation, and 10 percent to test. All of
+                        the data, including paths specified in 'test_paths', will be randomly assigned to training,
+                        validation, and test.
   -bs BATCH_SIZE, --batch-size BATCH_SIZE
                         batch size for training (default: 64)
   -lr LEARNING_RATE, --learning-rate LEARNING_RATE, --lr LEARNING_RATE
                         learning rate for training (default: 0.0003)
   --lr-decay-factor LR_DECAY_FACTOR
-                        factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default: 10)
+                        factor by which to decay lr - e.g. '2' will give a final learning rate of `lr` / 2 (default:
+                        10)
   --label-smoothing LABEL_SMOOTHING
                         label smoothing (default: 0.01)
   -wd WEIGHT_DECAY, --weight-decay WEIGHT_DECAY
@@ -129,8 +148,6 @@ options:
                         weight for the iou loss (default: 5.0)
   --classify-weight CLASSIFY_WEIGHT
                         weight for the classification loss (default: 1.0)
-  --healthy-weight HEALTHY_WEIGHT
-                        weight for healthy class, between 0 and 1 (default: 1.0)
   --normalize-images, --no-normalize-images
                         normalize images into [0,1] - overridden if loading from pth (default: False)
   --image-hw IMAGE_HW IMAGE_HW
@@ -140,13 +157,17 @@ options:
                         (default: False)
   --model [{base_model,silu_model,double_filters,triple_filters,half_filters,quarter_filters,depth_ver_0,depth_ver_1,depth_ver_2,depth_ver_3,depth_ver_4,convnext_small}]
                         model version to use - do not use with --from-pretrained, as we use the pretrained model
-  --half, --no-half     half precision (i.e. fp16) training. When true, try doubling your batch size to get best use of GPU
-                        (default: False)
-  --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on 'cpu'
+  --half, --no-half     half precision (i.e. fp16) training. When true, try doubling your batch size to get best use
+                        of GPU (default: False)
+  --device [DEVICE]     set a device for the run - if not specified, we will try to use 'cuda', and fallback on
+                        'cpu'
   --note NOTE           note for the run (e.g. 'run on a TI-82')
   --name NAME           name for the run (e.g. 'ti-82_run')
   --tags [TAGS ...]     tags for the run (e.g. '--tags test fine-tune')
-
+  --wandb-entity WANDB_ENTITY
+                        wandb entity - defaults to the environment variable WANDB_ENTITY
+  --wandb-project WANDB_PROJECT
+                        wandb entity - defaults to the environment variable WANDB_PROJECT
 ```
 
 There are a lot of options. Here are some recipes:
@@ -184,7 +205,8 @@ This tool is for exporting a `.pth` file to `.onnx` and OpenVino's [IR](https://
 
 ```console
 $ yogo export --help
-usage: yogo export [-h] [--crop-height CROP_HEIGHT] [--output-filename OUTPUT_FILENAME] [--simplify | --no-simplify] input
+usage: yogo export [-h] [--crop-height CROP_HEIGHT] [--output-filename OUTPUT_FILENAME] [--simplify | --no-simplify]
+                   input
 
 positional arguments:
   input                 path to input pth file
@@ -204,8 +226,9 @@ options:
 Need to test a model against some dataset? This will test the given YOGO pth file against the given dataset definition file's test set. Useful for running tests on a model checkpoint where that training run failed, e.g. due to hitting time limits.
 
 ```console
-$ yogo test --help
-usage: yogo test [-h] [--wandb | --no-wandb] [--wandb-resume-id WANDB_RESUME_ID] [--dump-to-disk | --no-dump-to-disk]
+$ | yogo test --help
+usage: yogo test [-h] [--wandb | --no-wandb] [--wandb-entity WANDB_ENTITY] [--wandb-project WANDB_PROJECT]
+                 [--wandb-resume-id WANDB_RESUME_ID] [--dump-to-disk | --no-dump-to-disk]
                  [--include-mAP | --no-include-mAP] [--include-background | --no-include-background] [--note NOTE]
                  [--tags [TAGS ...]]
                  pth_path dataset_defn_path
@@ -216,10 +239,15 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  --wandb, --no-wandb   log to wandb - this will create a new run. If neither this nor --wandb-resume-id are provided, the
-                        run will be saved to a new folder (default: False)
+  --wandb, --no-wandb   log to wandb - this will create a new run. If neither this nor --wandb-resume-id are
+                        provided, the run will be saved to a new folder (default: False)
+  --wandb-entity WANDB_ENTITY
+                        wandb entity - defaults to the environment variable WANDB_ENTITY
+  --wandb-project WANDB_PROJECT
+                        wandb entity - defaults to the environment variable WANDB_PROJECT
   --wandb-resume-id WANDB_RESUME_ID
-                        wandb run id - this will essentially append the results to an existing run, given by this run id
+                        wandb run id - this will essentially append the results to an existing run, given by this
+                        run id
   --dump-to-disk, --no-dump-to-disk
                         dump results to disk as a pkl file (default: False)
   --include-mAP, --no-include-mAP
@@ -228,4 +256,8 @@ options:
                         include 'backround' in confusion matrix (default: False)
   --note NOTE           note for the run (e.g. 'run on a TI-82')
   --tags [TAGS ...]     tags for the run (e.g. '--tags test fine-tune')
+<<<<<<< remove-heatmap-masking
   ```
+=======
+```
+>>>>>>> main
