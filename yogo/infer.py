@@ -186,7 +186,6 @@ def predict(
         device: device to run infer on
         requested_num_workers: number of workers to use
         min_class_confidence_threshold: minimum confidence threshold for class
-        heatmap_mask_path: path to heatmap mask
         half: whether to use half precision
         return_full_predictions: whether to return full predictions; useful for getting YOGO predictions
                                  from python
@@ -378,7 +377,6 @@ def predict(
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
                 min_class_confidence_threshold=min_class_confidence_threshold,
-                heatmap_mask_path=heatmap_mask_path,
             )
 
         # sometimes we return a number of images less than the batch size,
@@ -391,26 +389,7 @@ def predict(
     pbar.close()
 
     if count_predictions:
-<<<<<<< remove-heatmap-masking
-        counts = get_prediction_class_counts(
-            results,
-            obj_thresh=obj_thresh,
-            iou_thresh=iou_thresh,
-            min_class_confidence_threshold=min_class_confidence_threshold,
-        ).tolist()
-        tot_cells = sum(counts)
-        print(
-            list(
-                zip(
-                    class_names,
-                    counts,
-                    [0 if tot_cells == 0 else round(c / tot_cells, 4) for c in counts],
-                )
-            )
-        )
-=======
         print(list(zip(class_names or range(num_classes), map(int, tot_counts))))
->>>>>>> main
 
     # Save the numpy array
     if save_npy:

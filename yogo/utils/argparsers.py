@@ -474,8 +474,6 @@ def infer_parser(parser=None):
             "max confidence must be greater than this value (default: 0.0)"
         ),
     )
-<<<<<<< remove-heatmap-masking
-=======
     parser.add_argument(
         "--heatmap-mask-path",
         type=Path,
@@ -488,5 +486,4 @@ def infer_parser(parser=None):
         default=True,
         help="use tqdm progress bar",
     )
->>>>>>> main
     return parser
