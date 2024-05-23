@@ -256,7 +256,7 @@ def predict(
         path_to_images=path_to_images,
         path_to_zarr=path_to_zarr,
         image_transforms=transforms,
-        normalize_images=model.normalize_images,
+        normalize_images=bool(model.normalize_images),
     )
 
     if isinstance(image_dataset, ZarrDataset):
