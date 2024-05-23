@@ -145,6 +145,7 @@ class Trainer:
             net.to(self.device)
             self.global_step = net_cfg["step"]
             self.config["normalize_images"] = net.normalize_images
+            self.config["model"] = net.model_version
 
         self.Sx, self.Sy = net.get_grid_size()
 
