@@ -25,16 +25,11 @@ def format_preds(
     obj_thresh: float = 0.5,
     iou_thresh: float = 0.5,
     box_format: BoxFormat = "cxcywh",
-    heatmap_mask: Optional[torch.Tensor] = None,
     min_class_confidence_threshold: float = 0.0,
 ) -> torch.Tensor:
     """
     formats pred, prediction tensor straight from YOGO, into [N,pred_shape], after applying NMS,
     and, thresholding objectness, and filtering thin boxes. box_format specifies the returned box format.
-
-    If heatmap_mask is provided, then the raw prediction's objectness scores for each of the heatmap's classes are set to zero wherever the heatmap mask is true.
-    The heatmap mask is a true/false array of 'hot spots' in the dataset. This mask will have been created by running YOGO on this dataset once already
-    and then applying thresholded on the heatmap that was generated.
 
     An OK lower bound is 1e-6
 
@@ -50,8 +45,6 @@ def format_preds(
         Intersection over union threshold (for non-maximal suppression (NMS))
     box_format: BoxFormat = 'cxcywh'
         Bounding box format, defaults to (center x, center y, width, height). Can also be (top left x, top left y, bottom right x, bottom right y)
-    heatmap_mask: Optional[torch.Tensor | np.ndarray]
-        sx * sy * num_classes shaped array, containing heatmap masks.
     min_class_confidence_threshold: float = 0.0
         filters out all predictions with a maximum confidence less than this threshold
     """
@@ -67,15 +60,6 @@ def format_preds(
         )
 
     pred_shape, Sy, Sx = pred.shape
-
-    if heatmap_mask is not None:
-        # Only mask rings/trophs/schizonts/gametocytes
-        # We mask classes by position since some areas of a chip can preferentially
-        # predict certain classes incorrectly while predicting other classes correctly.
-        # Indices for the above in the heatmap are: 1, 2, 3, 4
-        idxs = [1, 2, 3, 4]
-        for idx in idxs:
-            pred[5 + idx, :, :][heatmap_mask[:, :, idx]] = 0
 
     reformatted_preds = pred.view(pred_shape, Sx * Sy).T
 
@@ -115,7 +99,6 @@ def format_to_numpy(
     img_h: int,
     img_w: int,
     np_dtype=np.float32,
-    heatmap_mask: Optional[torch.Tensor] = None,
 ) -> npt.NDArray:
     """Function to parse a prediction tensor and save it in a numpy format
 
@@ -126,7 +109,6 @@ def format_to_numpy(
     img_h: int
     img_w: int
     np_dtype: np.dtype
-    heatmap_mask: Optional[torch.Tensor] = None
 
     Returns
     -------
@@ -149,7 +131,6 @@ def format_to_numpy(
         format_preds(
             torch.from_numpy(prediction_tensor),
             box_format="xyxy",
-            heatmap_mask=heatmap_mask,
         )
         .numpy()
         .T

@@ -62,7 +62,6 @@ def get_prediction_class_counts(
     obj_thresh=0.5,
     iou_thresh=0.5,
     min_class_confidence_threshold: float = 0,
-    heatmap_mask_path: Optional[Path] = None,
 ) -> torch.Tensor:
     """
     Count the number of predictions of each class, by argmaxing the class predictions
@@ -70,7 +69,6 @@ def get_prediction_class_counts(
     bs, pred_dim, Sy, Sx = batch_preds.shape
     num_classes = pred_dim - 5
     tot_class_sum = torch.zeros(num_classes, dtype=torch.long)
-    heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
 
     for pred_slice in batch_preds:
         preds = format_preds(
@@ -78,7 +76,6 @@ def get_prediction_class_counts(
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
             min_class_confidence_threshold=min_class_confidence_threshold,
-            heatmap_mask=heatmap_mask,
         )
 
         if preds.numel() == 0:
@@ -160,7 +157,6 @@ def predict(
     output_img_ftype: Literal[".png", ".tif", ".tiff"] = ".png",
     requested_num_workers: Optional[int] = None,
     min_class_confidence_threshold: float = 0.0,
-    heatmap_mask_path: Optional[Path] = None,
     half: bool = False,
     return_full_predictions: bool = False,
 ) -> Optional[torch.Tensor]:
@@ -190,7 +186,6 @@ def predict(
         device: device to run infer on
         requested_num_workers: number of workers to use
         min_class_confidence_threshold: minimum confidence threshold for class
-        heatmap_mask_path: path to heatmap mask
         half: whether to use half precision
         return_full_predictions: whether to return full predictions; useful for getting YOGO predictions
                                  from python
@@ -297,7 +292,6 @@ def predict(
 
     if save_npy:
         np_results = []
-        heatmap_mask = None if heatmap_mask_path is None else np.load(heatmap_mask_path)
 
     if count_predictions:
         tot_counts = torch.zeros((num_classes,))
@@ -374,7 +368,6 @@ def predict(
                     res[j, ...],
                     int(img_h.item()),
                     int(img_w.item()),
-                    heatmap_mask=heatmap_mask,
                 )
                 np_results.append(parsed)
 
@@ -384,7 +377,6 @@ def predict(
                 obj_thresh=obj_thresh,
                 iou_thresh=iou_thresh,
                 min_class_confidence_threshold=min_class_confidence_threshold,
-                heatmap_mask_path=heatmap_mask_path,
             )
 
         # sometimes we return a number of images less than the batch size,
@@ -421,9 +413,6 @@ def predict(
             model_name=get_model_name_from_pth(path_to_pth),
             obj_thresh=obj_thresh,
             iou_thresh=iou_thresh,
-            heatmap_mask_path=(
-                str(heatmap_mask_path) if heatmap_mask_path is not None else None
-            ),
             vertical_crop_height_px=img_h.item(),
             write_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
@@ -453,7 +442,6 @@ def do_infer(args):
         count_predictions=args.count,
         output_img_ftype=args.output_img_filetype,
         min_class_confidence_threshold=args.min_class_confidence_threshold,
-        heatmap_mask_path=args.heatmap_mask_path,
         half=args.half,
     )
 

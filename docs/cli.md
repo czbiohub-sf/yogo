@@ -34,11 +34,17 @@ This is what you need most of the time. It lets you run YOGO on a dataset from t
 $ | yogo infer --help
 usage: yogo infer [-h] (--path-to-images PATH_TO_IMAGES | --path-to-zarr PATH_TO_ZARR)
                   [--draw-boxes | --no-draw-boxes] [--save-preds | --no-save-preds] [--save-npy | --no-save-npy]
+<<<<<<< remove-heatmap-masking
+                  [--class-names [CLASS_NAMES ...]] [--count | --no-count] [--batch-size BATCH_SIZE] [--device [DEVICE]]
+                  [--half | --no-half] [--crop-height CROP_HEIGHT] [--output-img-filetype {.png,.tif,.tiff}]
+                  [--obj-thresh OBJ_THRESH] [--iou-thresh IOU_THRESH]
+=======
                   [--count | --no-count] [--output-dir OUTPUT_DIR] [--class-names [CLASS_NAMES ...]]
                   [--batch-size BATCH_SIZE] [--device [DEVICE]] [--half | --no-half] [--crop-height CROP_HEIGHT]
                   [--output-img-filetype {.png,.tif,.tiff}] [--obj-thresh OBJ_THRESH] [--iou-thresh IOU_THRESH]
                   [--min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD]
                   [--heatmap-mask-path HEATMAP_MASK_PATH]
+>>>>>>> main
                   pth_path
 
 positional arguments:
@@ -76,10 +82,15 @@ options:
   --iou-thresh IOU_THRESH
                         intersection over union threshold for predictions (default: 0.5)
   --min-class-confidence-threshold MIN_CLASS_CONFIDENCE_THRESHOLD
+<<<<<<< remove-heatmap-masking
+                        minimum confidence for a class to be considered - i.e. the max confidence must be greater than this
+                        value (default: 0.0)
+=======
                         minimum confidence for a class to be considered - i.e. the max confidence must be greater
                         than this value (default: 0.0)
   --heatmap-mask-path HEATMAP_MASK_PATH
                         path to heatmap mask for the run (default: None)
+>>>>>>> main
 ```
 
 There are actually two required arguments here:
@@ -245,4 +256,8 @@ options:
                         include 'backround' in confusion matrix (default: False)
   --note NOTE           note for the run (e.g. 'run on a TI-82')
   --tags [TAGS ...]     tags for the run (e.g. '--tags test fine-tune')
+<<<<<<< remove-heatmap-masking
+  ```
+=======
 ```
+>>>>>>> main
