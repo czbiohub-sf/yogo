@@ -30,3 +30,9 @@ Documentation for YOGO. If you want documentation in a specific area, [let me kn
 - [dataset-definition.md](docs/dataset-definition.md) defines the dataset description files, the files YOGO uses to define datasets for training
 
 Also, see my talk discussing how we interpret parasite classifications from YOGO prediction tensors [here](https://drive.google.com/file/d/1S5UZEGtEtVwHKBzKIGvCUJlRAFgw-b9H/view) (start around 24:00)
+
+## Contributing Guidelines
+
+Please run `./prepush.sh` before pushing. It runs [`mypy`](https://mypy-lang.org/), [`ruff`](https://docs.astral.sh/ruff/), [`black`](https://github.com/psf/black) and [`pytest`](https://docs.pytest.org/en/8.2.x/).
+
+When creating issues or pull requests, please be detailed. What exact commands were you running on what computer to get your issue? What exactly does your PR contribute and why is it necessary?
