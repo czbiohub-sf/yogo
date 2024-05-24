@@ -124,7 +124,7 @@ def format_to_numpy(
         8-14 pred_probs (NUM_CLASSES x N)
 
     Where the width of the array (N) is the total number of objects detected
-    in the dataset (i.e all the RBCs + WBCs + misc).
+    in the dataset.
     """
 
     filtered_pred = (
