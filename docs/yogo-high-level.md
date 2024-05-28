@@ -12,11 +12,11 @@ This document will discuss the YOGO architecture in increasing scales of complex
 
 ## On Diagnosing Malaria
 
-Our specific application of diagnosing malaria is a much simpler problem (in terms of object detection) than typical object detection problems, due to the *low number of classes* and *uniform sizes of all objects*. Most object detectors are designed to perform well on large and varied datasets such as MS COCO, which has 80 classes with objects varying in size, shape, and position within the image.
+YOGO was developed to detect malaria parasites in blood, in realtime, on limited hardware. Our specific application is simpler than typical object detection problems, due to the *low number of classes* and *uniform sizes of all objects*. Most object detectors are designed to perform well on large and varied datasets such as MS COCO, which has 80 classes with objects varying in size, shape, and position within the image.
 
-For example, below is an image of malarial blood that we run on our scopes (40x magnification):
+In contrast, our original application deals with only seven object classes and a uniform (white) background. The following is a label-free image from the remoscope of cultured plasmodium falciparum:
 
-<img alt="malarial blood" src="imgs/img_of_blood.png" width="800">
+<img alt="plasmodium falciparum-infected blood" src="imgs/img_of_blood.png" width="800">
 
 *(A lot of features in this image: blood cells, platlets, toner blobs, and a stuck cell! Also, some ring parasites)*
 
@@ -36,9 +36,9 @@ The YOGO architecture is a fairly vanilla convolutional neural network (CNN). It
 
 ### Level 2 - Network Structure
 
-See the [model file](../src/yogo/model.py) for reference from here on.
+See the [model file](../yogo/model.py) for reference from here on.
 
-There are many little variations of the model, (see [`model_funcs.py`](../src/yogo/model_funcs.py) for more more architectures), but they all have a similar structure: a "backbone", which are all of the convolutional layers *except* for the final layer, and the "head", which is the final layer[^1]. 
+There are many little variations of the model, (see [`model_funcs.py`](../yogo/model_funcs.py) for more more architectures), but they all have a similar structure: a "backbone", which are all of the convolutional layers *except* for the final layer, and the "head", which is the final layer[^1]. 
 
 You can imagine[^2] that the job of the backbone is to get the input image(s) into an abstract representation of the image (i.e. cells and their locations, cell types, e.t.c.), and the head is to turn the representation into a concrete prediction - specifically, a grid of "cells" that represent rectangular areas on the original image. Each of these "cells" predict whether or not there is a center of an object in that cell, along with the (potential) object bounding box and classification. The grid, and the values per grid-cell is our prediction tensor.
 
@@ -66,9 +66,9 @@ For the bounding box prediction, we predict the center of the box ($x_c$ and $y_
 
 I hope that the above has struck the balance between being as short as possible while explaining the main concepts of YOGO, but as always, there is more to understand. Here are next steps for understanding the codebase (which is just reading the code!).
 
-- The [loss function](../src/yogo/yogo_loss.py) is arguably the most important part of the project, as it is what *gives meaning to the network's output*.
-- The [training loop](../src/yogo/train.py) is pretty much just boiler plate, and is a bit ugly, but it is useful to read nonetheless. Unfortunately, I (Axel) am the only one on the Weights and Biases team (due to cost-saving initiatives). If it is ever necessary, Rafael is the one to talk to to get on the W&B team, but do know that each seat is ~$600 per year.
-- The [`ObjectDetectionDataset` class and data loaders](../src/yogo/dataloader.py) have the code to format the labels into something that we can use in training. It could also be cleaned up, but it is not too bad, and may be helpful for understanding YOGO.
+- The [loss function](../yogo/yogo_loss.py) is arguably the most important part of the project, as it is what *gives meaning to the network's output*.
+- The [training loop](../yogo/train.py) is pretty much just boiler plate, and is a bit ugly, but it is useful to read nonetheless. 
+- The [`ObjectDetectionDataset` class and data loaders](../yogo/dataloader.py) have the code to format the labels into something that we can use in training. It could also be cleaned up, but it is not too bad, and may be helpful for understanding YOGO.
 
 I apologize for a lack of comments. I'll happily answer any clarifications that you ask, as I love talking about this, and I love making my code bases better.
 
