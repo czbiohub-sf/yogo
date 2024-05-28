@@ -1,6 +1,8 @@
 # you only glance once
 
-A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for inference speed on simple object detection problems. Designed by the bioengineering team at the [Chan-Zuckerberg Biohub SF](https://www.czbiohub.org/sf/).
+A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for inference speed on simple object detection problems. Designed for the [remoscope project](https://www.czbiohub.org/life-science/seeing-malaria-in-a-new-light/) by the bioengineering team at the [Chan-Zuckerberg Biohub SF](https://www.czbiohub.org/sf/). 
+
+Our yogo manuscript is currently in preparation - stay tuned!
 
 ## Install
 
