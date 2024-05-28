@@ -109,7 +109,7 @@ def do_model_test(args):
     if world_size == 0:
         raise RuntimeError(
             "at least 1 gpu is required for testing (otherwise it's painfully slow); "
-            "if cpu training is required, we can add it back"
+            "if cpu testing is required, we can add it back"
         )
 
     test_model(args)
