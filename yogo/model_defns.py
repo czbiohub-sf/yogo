@@ -14,8 +14,10 @@ def get_model_func(model_name: Optional[str]) -> ModelDefn:
 
     try:
         return MODELS[model_name]
-    except KeyError:
-        return base_model
+    except KeyError as e:
+        raise ValueError(
+            f"can't find model {model_name} - double check the model exists"
+        ) from e
 
 
 def register_model(model_defn: ModelDefn) -> ModelDefn:
