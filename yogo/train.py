@@ -230,6 +230,7 @@ class Trainer:
 
         run_id = wandb.util.generate_id()
         wandb.init(
+            anonymous="allow",
             id=run_id,
             config=self.config,
             entity=self.config["wandb_entity"],

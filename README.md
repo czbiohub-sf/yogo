@@ -1,6 +1,6 @@
 # you only glance once
 
-A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for inference speed on simple object detection problems. Designed for the [remoscope project](https://www.czbiohub.org/life-science/seeing-malaria-in-a-new-light/) by the bioengineering team at the [Chan-Zuckerberg Biohub SF](https://www.czbiohub.org/sf/). 
+A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for inference speed on simple object detection problems. Designed for the [remoscope project](https://www.czbiohub.org/life-science/seeing-malaria-in-a-new-light/) by the bioengineering team at the [Chan-Zuckerberg Biohub SF](https://www.czbiohub.org/sf/).
 
 Our yogo manuscript is currently in preparation - stay tuned!
 
@@ -21,7 +21,7 @@ $ yogo test path/to/model.pth path/to/dataset-definition-file. # test your model
 $ yogo --help  # all the other details are here :)
 ```
 
-We're using [Weights and Biases](http://wandb.ai) for run tracking. Start with W&B [here](https://docs.wandb.ai/quickstart).
+We're using [Weights and Biases](http://wandb.ai) for run tracking. But, note that you do not need a W&B account to run anything! Runs that are started without an account are logged to an anonymous page. If you do decide to start with W&B, look [here](https://docs.wandb.ai/quickstart). Anonymous runs can be [claimed later](https://docs.wandb.ai/guides/app/features/anon#:~:text=If%20there's%20no%20account%2C%20we,be%20available%20for%207%20days.).
 
 > [!NOTE]
 > Openvino and M1s do not play together very well. If exporting to Openvino's format, it's best to use a VM or Docker.
