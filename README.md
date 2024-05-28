@@ -10,7 +10,9 @@ Our yogo manuscript is currently in preparation - stay tuned!
 python3 -m pip install -e .
 ```
 
+
 ## Basic usage
+
 ```console
 $ yogo train path/to/dataset-definition-file.yml  # train your model!
 $ yogo infer path/to/model.pth  # use your model!
@@ -19,10 +21,14 @@ $ yogo test path/to/model.pth path/to/dataset-definition-file. # test your model
 $ yogo --help  # all the other details are here :)
 ```
 
+We're using [Weights and Biases](http://wandb.ai) for run tracking.
+
 > [!NOTE]
 > Openvino and M1s do not play together very well. If exporting to Openvino's format, it's best to use a VM or Docker.
 
+
 ## Docs
+
 Documentation for YOGO. If you want documentation in a specific area, [let us know](https://github.com/czbiohub-sf/yogo/issues/new)!
 
 - [recipes.md](docs/recipes.md) has the basics of using YOGO in your own code
