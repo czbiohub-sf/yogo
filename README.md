@@ -21,7 +21,7 @@ $ yogo test path/to/model.pth path/to/dataset-definition-file. # test your model
 $ yogo --help  # all the other details are here :)
 ```
 
-We're using [Weights and Biases](http://wandb.ai) for run tracking.
+We're using [Weights and Biases](http://wandb.ai) for run tracking. Start with W&B [here](https://docs.wandb.ai/quickstart).
 
 > [!NOTE]
 > Openvino and M1s do not play together very well. If exporting to Openvino's format, it's best to use a VM or Docker.
