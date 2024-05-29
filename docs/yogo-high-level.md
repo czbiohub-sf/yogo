@@ -38,7 +38,7 @@ The YOGO architecture is a fairly vanilla convolutional neural network (CNN). It
 
 See the [model file](../yogo/model.py) for reference from here on.
 
-There are many little variations of the model, (see [`model_funcs.py`](../yogo/model_funcs.py) for more more architectures), but they all have a similar structure: a "backbone", which are all of the convolutional layers *except* for the final layer, and the "head", which is the final layer[^1]. 
+There are many little variations of the model, (see [`model_defns.py`](../yogo/model_defns.py) for more more architectures), but they all have a similar structure: a "backbone", which are all of the convolutional layers *except* for the final layer, and the "head", which is the final layer[^1].
 
 You can imagine[^2] that the job of the backbone is to get the input image(s) into an abstract representation of the image (i.e. cells and their locations, cell types, e.t.c.), and the head is to turn the representation into a concrete prediction - specifically, a grid of "cells" that represent rectangular areas on the original image. Each of these "cells" predict whether or not there is a center of an object in that cell, along with the (potential) object bounding box and classification. The grid, and the values per grid-cell is our prediction tensor.
 
@@ -67,8 +67,8 @@ For the bounding box prediction, we predict the center of the box ($x_c$ and $y_
 I hope that the above has struck the balance between being as short as possible while explaining the main concepts of YOGO, but as always, there is more to understand. Here are next steps for understanding the codebase (which is just reading the code!).
 
 - The [loss function](../yogo/yogo_loss.py) is arguably the most important part of the project, as it is what *gives meaning to the network's output*.
-- The [training loop](../yogo/train.py) is pretty much just boiler plate, and is a bit ugly, but it is useful to read nonetheless. 
-- The [`ObjectDetectionDataset` class and data loaders](../yogo/dataloader.py) have the code to format the labels into something that we can use in training. It could also be cleaned up, but it is not too bad, and may be helpful for understanding YOGO.
+- The [training loop](../yogo/train.py) is pretty much just boiler plate, and is a bit ugly, but it is useful to read nonetheless.
+- The `ObjectDetectionDataset` [class](../yogo/data/yogo_dataset.py) and [data loader](../yogo/data/yogo_dataloader.py) have the code to format the labels into something that we can use in training. It could also be cleaned up, but it is not too bad, and may be helpful for understanding YOGO.
 
 I apologize for a lack of comments. I'll happily answer any clarifications that you ask, as I love talking about this, and I love making my code bases better.
 
@@ -79,7 +79,7 @@ I apologize for a lack of comments. I'll happily answer any clarifications that 
 ## Great related sources
 
 - [YOLO](https://arxiv.org/abs/1506.02640), [YOLO 9000](https://arxiv.org/abs/1612.08242), and [YOLOv3](https://arxiv.org/abs/1804.02767) are the seminal papers written primarily by Joseph Redmon and Ali Farhadi, and they should be considered **required reading** to understand YOLO / YOGO. They are very well written!
-- [This is a great explanation of YOLO](https://www.jeremyjordan.me/object-detection-one-stage/). It will be good for comparing / contrasting with YOGO, and will have some supplemental specifics 
+- [This is a great explanation of YOLO](https://www.jeremyjordan.me/object-detection-one-stage/). It will be good for comparing / contrasting with YOGO, and will have some supplemental specifics
 
 ## Footnotes
 
