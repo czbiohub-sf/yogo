@@ -3,6 +3,7 @@
 
 __pycache__
 slurm-outputs
+trained_models
 
 *.bin
 *.xml
