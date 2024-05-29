@@ -1,27 +1,17 @@
 .python-version
+.vscode
 
-wandb
-trained_models
 __pycache__
-slurm*
+slurm-outputs
 
 *.bin
 *.xml
 *.npy
 
-chrome_profile.json
-profile.txt
-notes/profile_results
+wandb
 
-notes/trace2html
-
-dataset_defs
-
-*tasks.json
-training_profile.json
-.vscode
-
-*.json.gz
 yogo.egg-info
 poetry.lock
-temp_output
+
+.DS_Store
+._.DS_Store
