@@ -23,6 +23,8 @@ $ yogo --help  # all the other details are here :)
 
 We're using [Weights and Biases](http://wandb.ai) for run tracking. But, note that you do not need a W&B account to run anything! Runs that are started without an account are logged to an anonymous page. If you do decide to start with W&B, look [here](https://docs.wandb.ai/quickstart). Anonymous runs can be [claimed later](https://docs.wandb.ai/guides/app/features/anon).
 
+Further, we currently only support GPU training, since we use Torch's Distributed Data Parallel.
+
 > [!NOTE]
 > Openvino and M1s do not play together very well. If exporting to Openvino's format, it's best to use a VM or Docker.
 
