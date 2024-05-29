@@ -30,9 +30,8 @@ There are three components to running YOGO:
 
 # `Y` is the YOGO model, and cfg is a configuration for the model.
 >>> print(cfg)
-{'step': 107250, 'normalize_images': False}
+{'step': 397888, 'class_names': None}
 # you can probably ignore `step` which is just the number of steps that the model was trained for.
-# if `normalize_images` is True, you must rescale the input images into the range [0,1].
 ```
 
 ## Loading images
