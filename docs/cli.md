@@ -1,8 +1,8 @@
 # `yogo`
 
-This will show the basics on how to use YOGO from your command line interface. I suggest you use `yogo --help` liberally - the docs there should give you a better idea of how to use the tool! If it's unclear, [let me know](https://github.com/czbiohub-sf/yogo/issues/new) and I will change the docs here or in the `cli` tool.
+This will show the basics on how to use YOGO from your command line interface. Use `yogo --help` liberally - that should give you a better idea of how to use the tool. If it's unclear, [let us know](https://github.com/czbiohub-sf/yogo/issues/new) and we will change the docs here or in the `cli` tool.
 
-I will not go through every option for each command here, but I'll point out major themes.
+This document will point out major themes.
 
 First, what can you do with the cli?
 
@@ -205,7 +205,7 @@ Training data is logged to Weights and Biases. For W&B specifically,
 $ yogo train path/to/ddf.yml --note "my first training!" --tag "test training run" --name "i dont use this option frequently"
 ```
 
-You can normalize input images to the network with `--normalize-images`, though I haven't found that it makes much of a difference.
+You can normalize input images to the network with `--normalize-images`.
 ```console
 $ yogo train path/to/ddf.yml --normalize-images
 ```
@@ -215,7 +215,7 @@ You can also train the network on bounding boxes only with `--no-classify`. This
 $ yogo train path/to/ddf.yml --no-classify
 ```
 
-And finally, you can train with a different model architecture with `--model`. The model definitions are from [`model_defns.py`](https://github.com/czbiohub-sf/yogo/blob/main/yogo/model_defns.py). Though,I find that the default model tends to do better. Perhaps this is because I've spend a lot of time optimizing hyperparameters for it?
+And finally, you can train with a different model architecture with `--model`. The model definitions are from [`model_defns.py`](https://github.com/czbiohub-sf/yogo/blob/main/yogo/model_defns.py). 
 ```console
 $ yogo train path/to/ddf.yml --model model_big_simple
 ```

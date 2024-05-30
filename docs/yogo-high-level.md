@@ -64,17 +64,11 @@ For the bounding box prediction, we predict the center of the box ($x_c$ and $y_
 
 ## Conclusion: Next Steps for Understanding the Code
 
-I hope that the above has struck the balance between being as short as possible while explaining the main concepts of YOGO, but as always, there is more to understand. Here are next steps for understanding the codebase (which is just reading the code!).
+Reading the code is the best method.
 
 - The [loss function](../yogo/yogo_loss.py) is arguably the most important part of the project, as it is what *gives meaning to the network's output*.
 - The [training loop](../yogo/train.py) is pretty much just boiler plate, and is a bit ugly, but it is useful to read nonetheless.
 - The `ObjectDetectionDataset` [class](../yogo/data/yogo_dataset.py) and [data loader](../yogo/data/yogo_dataloader.py) have the code to format the labels into something that we can use in training. It could also be cleaned up, but it is not too bad, and may be helpful for understanding YOGO.
-
-I apologize for a lack of comments. I'll happily answer any clarifications that you ask, as I love talking about this, and I love making my code bases better.
-
-## DOCS TODO
-
-- Explain YOLO, how YOGO differs from YOLO, and why the differences make YOGO faster than YOLO
 
 ## Great related sources
 

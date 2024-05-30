@@ -1,6 +1,6 @@
 # Dataset Definition Files
 
-I wanted a simple way to represent an object detection dataset for data that is distributed over a file system, without having to copy files or create symlinks, as is common in other image-based deep learning repositories. It is similar to [Ultralytic's dataset definition](https://docs.ultralytics.com/datasets/detect/), except ours is more general, and has a couple features that are very nice to have.
+We needed a simple way to represent an object detection dataset for data that is distributed over a file system, without having to copy files or create symlinks, as is common in other image-based deep learning repositories. It is similar to [Ultralytic's dataset definition](https://docs.ultralytics.com/datasets/detect/), except ours is more general, and has a couple features that are very nice to have.
 
 ## Basic dataset definition
 

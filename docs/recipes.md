@@ -36,7 +36,7 @@ There are three components to running YOGO:
 
 ## Loading images
 
-There are many ways to load images, and YOGO may have some tools to make that easy. You will have to consider the performance regime under which you are running YOGO to make the right choice. Here is what I would do for some cases:
+There are many ways to load images, and YOGO may have some tools to make that easy. You will have to consider the performance regime under which you are running YOGO to make the right choice. Here are some options:
 
 #### Running a single image from disk
 
@@ -72,11 +72,11 @@ Note that you can also use `PIL`, or `opencv`, or whatever other package that yo
 
 #### Running many images from disk
 
-When running many images from disk, most likely you want to run them quickly. In this case, you want to load / preprocess images in the background and collate them into a batch before you feed it to YOGO. I suggest using a PyTorch [Dataset](https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset) and [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader). Implementing a dataset for your needs is very easy, and the PyTorch dataloader is very easy to tune to your needs. You may also be able to use one that I've already written if your use case is one of these:
+When running many images from disk, most likely you want to run them quickly. In this case, you want to load / preprocess images in the background and collate them into a batch before you feed it to YOGO. PyTorch's [Dataset](https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset) and [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader) are great. Implementing a dataset for your needs is very easy, and the PyTorch dataloader is very easy to tune to your needs. You may also be able to use one that I've already written if your use case is one of these:
 
 - [Loading images and image paths (`image_path_dataset.py`)](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/image_path_dataset.py)
 
-`ImagePathDataset` will load and return the image and path to the image. The image path can be useful, so we include it here. Of course, you can also just ignore it if you only want images. Also note the creation of the `DataLoader`. It's very short, and tuning it to your system can speed up inference by a huge amount. I highly suggest you read the `DataLoader` documentation.
+`ImagePathDataset` will load and return the image and path to the image. The image path can be useful, so we include it here. Of course, you can also just ignore it if you only want images. Also note the creation of the `DataLoader`. It's very short, and tuning it to your system can speed up inference by a huge amount.
 
 - [Loading images and labels (`yogo_dataset.py`)](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/yogo_dataset.py)
 
@@ -112,8 +112,7 @@ Taking the dataset from `image_path_dataset.py`, create your dataset and dataloa
 
 >>> torch.set_grad_enabled(False)
 
-# GPUs makes inference *way* faster. I am not going to get into many details here,
-# but I'll cover 95% of the use cases w/ these examples
+# GPUs makes inference *way* faster. Here are some basic use-cases.
 >>> device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # it is good to select device-agnostic code like this
 >>> Y.to(device)  # put YOGO on the GPU! many errors will occur from forgetting to do this
 
@@ -137,8 +136,6 @@ torch.Size([1, 12, 97, 129])
 # out[:, j, :, :] is the 'prediction' dimension; out[:, :4, :, :] is [xc, yc, w, h], out[:, 4, :, :] is objectness, and out[:, 5:, :, :] is the class prediction
 # out[:, :, k, l] is the grid dimension
 ```
-
-See [docs/yogo-high-level.md](yogo-high-level.md) for a little bit about the output tensor, or the latter [slides](https://docs.google.com/presentation/d/1p9k6aFVJeEl7MH0iic_kju4Ub_uUJPdb6UqJvk63rAM/edit?usp=sharing) for a presentation I gave on YOGO.
 
 Note that this output is entirely unprocessed. If you want to filter for objectness or area, apply Non-Maximal Supression (NMS), and format the tensor into a simpler format, use [`format_preds`](https://github.com/czbiohub-sf/yogo/blob/c4d4388983968bbef5decca00aad9aecdb33362b/yogo/utils/utils.py#L132). If you want to compare this output to a label tensor, you can use [`format_preds_and_labels`](https://github.com/czbiohub-sf/yogo/blob/d628a614674a40a5349498a5fad5e3abecfe0a67/yogo/utils/utils.py#L195).
 

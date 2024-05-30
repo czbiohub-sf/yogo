@@ -230,8 +230,6 @@ class YOGO(nn.Module):
 
         Sy = h.item()
         Sx = w.item()
-        # type checker is unhappy if I `h.int().item()` instead of
-        # int(h.item())
         return int(Sx), int(Sy)
 
     def resize_model(
