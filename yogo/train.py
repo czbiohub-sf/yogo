@@ -228,7 +228,6 @@ class Trainer:
 
         run_id = wandb.util.generate_id()
         wandb.init(
-            anonymous="allow",
             id=run_id,
             config=self.config,
             entity=self.config["wandb_entity"],
@@ -649,6 +648,8 @@ def do_training(args) -> None:
             "at least 1 gpu is required for training; if cpu training "
             "is required, we can add it back"
         )
+
+    wandb.login()
 
     mp.spawn(
         Trainer.train_from_ddp, args=(world_size, config), nprocs=world_size, join=True

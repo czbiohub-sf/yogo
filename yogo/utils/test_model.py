@@ -45,7 +45,6 @@ def test_model(args: argparse.Namespace) -> None:
     if log_to_wandb:
         print("logging to wandb")
         wandb.init(
-            anonymous="allow",
             config=config,
             entity=args.wandb_entity,
             project=args.wandb_project,
@@ -111,5 +110,7 @@ def do_model_test(args):
             "at least 1 gpu is required for testing (otherwise it's painfully slow); "
             "if cpu testing is required, we can add it back"
         )
+
+    wandb.login()
 
     test_model(args)
