@@ -81,6 +81,6 @@ Reading the code is the best method.
 
 [^2]: Interpretability of neural networks is still a very young field, and in general, we don't have a good idea of how exactly they work as they do, so use this only as a flawed mental model.
 
-[^3]: Notice how much finer the grid cells are compared to the blood cells. In fact, the grid that we use is actually way finer! The "fineness" of the grid, the relatively large size of blood cells, and the assumption that blood cells are not stacked on-top of eachother allows us to make the major simplifications that make YOGO different from YOLO. Also note that the size of the grid is another hyperparameter to tune. Here it is the grid for the base model at commit [62b31ab](https://github.com/czbiohub/yogo/commit/62b31ab11fbe7d1ea56f0ed7856a68f1df336b3e):
+[^3]: Notice how much finer the grid cells are compared to the blood cells. In fact, the grid that we use is actually way finer! The "fineness" of the grid, the relatively large size of blood cells, and the assumption that blood cells are not stacked on-top of each other allows us to make the major simplifications that make YOGO different from YOLO. Also note that the size of the grid is another hyperparameter to tune. Here it is the grid for the base model at commit [62b31ab](https://github.com/czbiohub/yogo/commit/62b31ab11fbe7d1ea56f0ed7856a68f1df336b3e):
 
 <img src="imgs/grid_fine.png" width="800">

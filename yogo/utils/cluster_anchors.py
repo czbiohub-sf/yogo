@@ -125,7 +125,7 @@ def k_means(data: CornerBox, k=3) -> CornerBox:
 
 def _calculate_best_anchor(data: CenterBox) -> Tuple[float, float]:
     def centered_wh_iou(b1: CenterBox, b2: CenterBox):
-        "get iou, assuming b1 and b2 are centerd on eachother"
+        "get iou, assuming b1 and b2 are centerd on each other"
         intr = np.minimum(b1[..., 2], b2[..., 2]) * np.minimum(b1[..., 3], b2[..., 3])
         area1 = b1[..., 2] * b1[..., 3]
         area2 = b2[..., 2] * b2[..., 3]
