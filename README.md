@@ -26,7 +26,7 @@ We're using [Weights and Biases](http://wandb.ai) for run tracking. But, note th
 Further, we currently only support GPU training, since we use Torch's Distributed Data Parallel.
 
 > [!NOTE]
-> Openvino and M1s do not play together very well. If exporting to Openvino's format, it's best to use a VM or Docker.
+> Installing Openvino on Apple Silicon is a little involved. [Here is Openvino's guide to installation](https://github.com/openvinotoolkit/openvino/blob/master/docs/dev/build_mac_arm.md). You can also use a Linux VM or Docker.
 
 
 ## Docs
