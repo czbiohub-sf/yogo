@@ -72,7 +72,7 @@ Note that you can also use `PIL`, or `opencv`, or whatever other package that yo
 
 #### Running many images from disk
 
-When running many images from disk, most likely you want to run them quickly. In this case, you want to load / preprocess images in the background and collate them into a batch before you feed it to YOGO. PyTorch's [Dataset](https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset) and [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader) are great. Implementing a dataset for your needs is very easy, and the PyTorch dataloader is very easy to tune to your needs. You may also be able to use one that I've already written if your use case is one of these:
+When running many images from disk, most likely you want to run them quickly. In this case, you want to load / preprocess images in the background and collate them into a batch before you feed it to YOGO. PyTorch's [Dataset](https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset) and [DataLoader](https://pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader) are great. Implementing a dataset for your needs is very easy, and the PyTorch dataloader is very easy to tune to your needs. You may also be able to use one of the following:
 
 - [Loading images and image paths (`image_path_dataset.py`)](https://github.com/czbiohub-sf/yogo/blob/main/yogo/data/image_path_dataset.py)
 
