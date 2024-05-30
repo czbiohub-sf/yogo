@@ -27,12 +27,9 @@ from yogo.data.data_transforms import (
 
 def guess_suggested_num_workers() -> Optional[int]:
     """
-    It turns out that it is tricky to figure out the number of CPUs across different
-    computers. I kept on getting warnings that I was provisioning too many, even though
-    I was trying to provision mp.cpu_count() workers.
-
-    So, I just copied the code from Pytorch, figuring that they knew how to get it. It's
-    not as easy as I thought it'd be. Funky funky funky
+    It turns out that it is tricky to figure out the number of CPUs across
+    different computers. The snippet for suggested number of workers is
+    copied from PyTorch.
 
     https://github.com/pytorch/pytorch/blob/ \
             1f845d589885311447e6021def9da2463c8a989e/ \

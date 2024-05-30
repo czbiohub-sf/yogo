@@ -72,7 +72,7 @@ def convert_dataset_definition_to_ultralytics_format(
     to our data in the target directory.
 
     note: this function is somewhat hacky currently, and is not expected to be used
-    frequently. Ask Axel and he'll help run it.
+    frequently.
 
     reference:
     https://docs.ultralytics.com/yolov5/tutorials/train_custom_data/#22-create-labels

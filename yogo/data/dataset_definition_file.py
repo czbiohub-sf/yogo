@@ -12,8 +12,7 @@ from yogo.data.split_fractions import SplitFractions
 Specification
 -----------------
 
-Here are many examples: https://github.com/czbiohub-sf/lfm-dataset-definitions/
-
+See in-depth docs here: https://github.com/czbiohub-sf/yogo/blob/main/docs/dataset-definition.md
 
 Required Fields
 ---------------

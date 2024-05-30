@@ -256,9 +256,9 @@ def predict(
 
     if isinstance(image_dataset, ZarrDataset):
         warnings.warn(
-            "there is some bug with multiprocessed reading "
-            "of a zarr array that I haven't figured out yet. "
-            "We have to fix the number of dataloader workers "
+            "There is some bug with multiprocessed reading "
+            "of a zarr array that hasn't yet been squashed. "
+            "The number of dataloader workers must be fixed "
             "to 0, so this will probably be slow. It will be "
             "much faster to use --path-to-images instead."
         )

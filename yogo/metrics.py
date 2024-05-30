@@ -94,8 +94,8 @@ class Metrics:
         self.prediction_metrics.to(device)
 
         # We get some strange 'device-side assert error' when
-        # calling unique() on a cuda tensor. So, I've explicitly
-        # sent the relevant tensors to cpu. I've left the copy to
+        # calling unique() on a cuda tensor. So, we've explicitly
+        # sent the relevant tensors to cpu. We've left the copy to
         # cpu explicit so we can easily come back later once we've
         # figured out the bug.
 

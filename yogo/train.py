@@ -223,8 +223,6 @@ class Trainer:
         )
 
     def _init_wandb(self) -> None:
-        # TODO it would be cool to generalize the run logger out
-        # of just W&B. I wonder if there's a lib for smth like this?
         if self._rank != 0:
             return
 
@@ -650,6 +648,8 @@ def do_training(args) -> None:
             "at least 1 gpu is required for training; if cpu training "
             "is required, we can add it back"
         )
+
+    wandb.login()
 
     mp.spawn(
         Trainer.train_from_ddp, args=(world_size, config), nprocs=world_size, join=True

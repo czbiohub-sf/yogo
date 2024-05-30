@@ -54,3 +54,4 @@ def test_model_io_different_model_version(tmpdir):
     checkpoint(tmpdir / "test.pth", y, 0, 0)
     z, _ = YOGO.from_pth(tmpdir / "test.pth")
     check_model_equality(y, z)
+    assert y.model_version == "silu_model"
