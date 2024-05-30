@@ -310,9 +310,8 @@ def predict(
 
         # gross! device-type is checked even if enabled=False, which means we
         # have to just tell autocast that device type is always cuda.
-        with torch.autocast(
+        with torch.cuda.amp.autocast(
             enabled=half and device.type == "cuda",
-            device_type="cuda",
             dtype=torch.bfloat16,
         ):
             res = model_jit(img_batch.to(device))
