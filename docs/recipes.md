@@ -139,7 +139,7 @@ torch.Size([1, 12, 97, 129])
 
 Note that this output is entirely unprocessed. If you want to filter for objectness or area, apply Non-Maximal Supression (NMS), and format the tensor into a simpler format, use [`format_preds`](https://github.com/czbiohub-sf/yogo/blob/c4d4388983968bbef5decca00aad9aecdb33362b/yogo/utils/utils.py#L132). If you want to compare this output to a label tensor, you can use [`format_preds_and_labels`](https://github.com/czbiohub-sf/yogo/blob/d628a614674a40a5349498a5fad5e3abecfe0a67/yogo/utils/utils.py#L195).
 
-This will apply objectness thresholding (filtering out predictions were YOGO doesn't think there is a cell), area thresholding (filtering out small bboxes), NMS (removes double bounding boxes), and will also convert the bounding boxes to `xyxy` (top left and bottom right) format.
+This will apply objectness thresholding (filtering out predictions where YOGO doesn't think there is a cell), area thresholding (filtering out small bboxes), NMS (removes double bounding boxes), and will also convert the bounding boxes to `xyxy` (top left and bottom right) format.
 
 
 ## Footnotes
