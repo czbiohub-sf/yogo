@@ -6,5 +6,3 @@ Documentation for YOGO. If you want documentation in a specific area, [let me kn
 - [cli.md](cli.md) is a short guide on how to use YOGO from the command line (via `yogo`)
 - [yogo-high-level.md](yogo-high-level.md) is a high level guide of the YOGO architecture
 - [dataset-definition.md](dataset-definition.md) defines the dataset description files, the files YOGO uses to define datasets for training
-
-Also, see my talk discussing how we interpret parasite classifications from YOGO prediction tensors [here](https://drive.google.com/file/d/1S5UZEGtEtVwHKBzKIGvCUJlRAFgw-b9H/view) (start around 24:00)
