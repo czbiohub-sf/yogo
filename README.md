@@ -38,7 +38,6 @@ Documentation for YOGO. If you want documentation in a specific area, [let us kn
 - [recipes.md](docs/recipes.md) has the basics of using YOGO in your own code
 - [cli.md](docs/cli.md) is a short guide on how to use YOGO from the command line (via `yogo`)
 - [yogo-high-level.md](docs/yogo-high-level.md) is a high level guide of the YOGO architecture
-- [training.md](docs/training.md) has some basic information about training YOGO
 - [dataset-definition.md](docs/dataset-definition.md) defines the dataset description files, the files YOGO uses to define datasets for training
 
 
