@@ -1,6 +1,6 @@
 # YOGO Docs
 
-Documentation for YOGO. If you want documentation in a specific area, [let me know](https://github.com/czbiohub-sf/yogo/issues/new)!
+Documentation for YOGO. If you want documentation in a specific area, [let us know](https://github.com/czbiohub-sf/yogo/issues/new)!
 
 - [recipes.md](recipes.md) has the basics of using YOGO in your own code
 - [cli.md](cli.md) is a short guide on how to use YOGO from the command line (via `yogo`)
