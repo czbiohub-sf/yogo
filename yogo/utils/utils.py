@@ -168,16 +168,32 @@ def _format_tensor_for_rects(
 
 
 def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]:
-    # if we don't like the look of a class, modify the rate factor and constant factor
-    # if we really want to get fancy, we can try getting a deterministic num_classes
-    # points in L*a*b* space that evenly distributes the classes, and convert back to RGB
-    rate_factor, constant_factor = 5 / 3, 0
-    hue = (label_index / num_classes * rate_factor + constant_factor) % 1
+    # uses default colours if the num_classes is not too large
+    # automatically generates colors otherwise
 
-    lightness, saturation = 0.5, 1.0
-    r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+    default_colours = [
+        (22, 135, 14, 255), # healthy
+        (253, 128, 33, 255), # ring
+        (186, 0, 0, 255), # troph
+        (211, 28, 187, 255), # schizont
+        (0, 13, 255, 255), # gametocyte
+        (245, 215, 63, 255), # WBC
+        (88, 35, 20, 255), # misc
+    ]
 
-    return int(r * 255), int(g * 255), int(b * 255), 255
+    if num_classes > len(default_colours):
+        # if we don't like the look of an auto-generated class color, modify the rate factor and constant factor
+        # if we really want to get fancy, we can try getting a deterministic num_classes
+        # points in L*a*b* space that evenly distributes the classes, and convert back to RGB
+        rate_factor, constant_factor = 5 / 3, 0
+        hue = (label_index / num_classes * rate_factor + constant_factor) % 1
+
+        lightness, saturation = 0.5, 1.0
+        r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+
+        return int(r * 255), int(g * 255), int(b * 255), 255
+    else:
+        return default_colours[label_index]
 
 
 def draw_yogo_prediction(
