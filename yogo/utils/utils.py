@@ -173,12 +173,12 @@ def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]
 
     default_colours = [
         (22, 135, 14, 255), # healthy
-        (255, 0, 0, 255), # ring
         (255, 178, 245, 255), # troph
-        (145, 91, 255, 255), # schizont
-        (0, 191, 255, 255), # gametocyte
+        (255, 0, 0, 255), # ring
         (0, 255, 0, 255), # WBC
         (245, 215, 63, 255), # misc
+        (145, 91, 255, 255), # schizont
+        (0, 191, 255, 255), # gametocyte
     ]
 
     # default_colours = [
