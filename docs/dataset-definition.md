@@ -63,7 +63,7 @@ dataset_split_fractions:
 ...
 ```
 
-A random 80% of the image/label pairs will be assigned to train, 10% to val, 10% to test. If you would like to explicitly define the test dataset, you can use `test_dataset_paths`:
+A random 80% of the image/label pairs will be assigned to train, 10% to val, 10% to test. If you would like to explicitly define the test dataset, you can use `test_paths`:
 
 ```yaml
 ...
@@ -75,13 +75,13 @@ dataset_paths:
     image_path: /path/to/images2/
     label_path: /path/to/labels2/
 
-test_dataset_paths:
+test_paths:
   set3:
     image_path: /path/to/images3/
     label_path: /path/to/labels3/
 ```
 
-The above definition assigns all of the data in `dataset_paths` to the train dataset, and all the data in `test_dataset_paths` to the test dataset. To randomly split some percent of the training dataset for testing, use `dataset_split_fractions` again:
+The above definition assigns all of the data in `dataset_paths` to the train dataset, and all the data in `test_paths` to the test dataset. To randomly split some percent of the training dataset for testing, use `dataset_split_fractions` again:
 
 ```yaml
 ...
@@ -97,13 +97,13 @@ dataset_paths:
     image_path: /path/to/images2/
     label_path: /path/to/labels2/
 
-test_dataset_paths:
+test_paths:
   set3:
     image_path: /path/to/images3/
     label_path: /path/to/labels3/
 ```
 
-Note that when `test_dataset_paths` is present, the `test` key in `dataset_split_fractions` is invalid.
+Note that when `test_paths` is present, the `test` key in `dataset_split_fractions` is invalid.
 
 
 ## Nice features
@@ -134,9 +134,9 @@ dataset_paths:
   set3:
     defn_path: ../path/to/defn2.yml  # recursive paths work here too
 
-# if defn1.yml uses `test_dataset_paths`, to incorporate the test paths from
+# if defn1.yml uses `test_paths`, to incorporate the test paths from
 # defn1.yml, you need to also include it like so:
-test_dataset_paths:
+test_paths:
   set2:
     defn_path: /path/to/defn1.yml
 ```
@@ -162,7 +162,7 @@ from yogo.data.dataset_definition_file import DatasetDefinition
 defn = DatasetDefinition.from_yaml('path/to/defn.yml')
 
 print(defn.dataset_paths)
-print(defn.test_dataset_paths)
+print(defn.test_paths)
 print(defn.all_dataset_paths)
 print(defn.split_fractions)
 print(defn.classes)
