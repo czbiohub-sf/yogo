@@ -40,7 +40,7 @@ def test_model(args: argparse.Namespace) -> None:
         "slurm-job-id": os.getenv("SLURM_JOB_ID", default=None),
     }
 
-    log_to_wandb = args.wandb or len(args.wandb_resume_id) > 0
+    log_to_wandb = args.wandb or (args.wandb_resume_id is not None)
 
     if log_to_wandb:
         print("logging to wandb")
