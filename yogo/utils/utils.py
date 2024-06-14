@@ -171,14 +171,27 @@ def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]
     # uses default colours if the num_classes is not too large
     # automatically generates colors otherwise
 
+    def hex_to_rgb(value):
+        value = value.lstrip('#')
+        lv = len(value)
+        return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
+
     default_colours = [
-        (22, 135, 14, 255), # healthy
-        (255, 178, 245, 255), # troph
-        (255, 0, 0, 255), # ring
-        (0, 255, 0, 255), # WBC
-        (245, 215, 63, 255), # misc
-        (145, 91, 255, 255), # schizont
-        (0, 191, 255, 255), # gametocyte
+        hex_to_rgb('006717'), # healthy
+        hex_to_rgb('4FD3FF'), # ring
+        hex_to_rgb('0D00FF'), # troph
+        hex_to_rgb('D00000'), # schizont 
+        hex_to_rgb('F082EC'), # gametocyte
+        hex_to_rgb('00FF00'), # WBC
+        hex_to_rgb('FFEC3D'), # misc
+        # (22, 135, 14, 255), # healthy
+        # (255, 178, 245, 255), # troph
+        # (255, 0, 0, 255), # ring
+        # (0, 255, 0, 255), # WBC
+        # (245, 215, 63, 255), # misc
+        # (145, 91, 255, 255), # schizont
+        # (0, 191, 255, 255), # gametocyte
     ]
 
     # default_colours = [
