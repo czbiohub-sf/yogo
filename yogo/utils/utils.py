@@ -179,12 +179,12 @@ def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]
 
     default_colours = [
         hex_to_rgb('006717'), # healthy
-        hex_to_rgb('4FD3FF'), # ring
         hex_to_rgb('0D00FF'), # troph
-        hex_to_rgb('D00000'), # schizont 
-        hex_to_rgb('F082EC'), # gametocyte
+        hex_to_rgb('4FD3FF'), # ring
         hex_to_rgb('00FF00'), # WBC
         hex_to_rgb('FFEC3D'), # misc
+        hex_to_rgb('D00000'), # schizont 
+        hex_to_rgb('F082EC'), # gametocyte
         # (22, 135, 14, 255), # healthy
         # (255, 178, 245, 255), # troph
         # (255, 0, 0, 255), # ring
