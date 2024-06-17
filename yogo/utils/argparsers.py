@@ -269,7 +269,7 @@ def test_parser(parser=None):
     parser.add_argument(
         "--wandb",
         action=argparse.BooleanOptionalAction,
-        default=False,
+        default=True,
         help=(
             "log to wandb - this will create a new run. If neither this nor "
             "--wandb-resume-id are provided, the run will be saved to a new folder"
