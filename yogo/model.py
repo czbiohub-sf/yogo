@@ -143,7 +143,6 @@ class YOGO(nn.Module):
         return model, {
             "step": global_step,
             "class_names": class_names,
-            "normalize_images": params["normalize_images"],
         }
 
     def to(self, device, *args, **kwargs):
