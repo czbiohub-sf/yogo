@@ -82,6 +82,7 @@ class Metrics:
                     num_classes=self.num_classes,
                     average=None,
                     validate_args=False,
+                    thresholds=500,
                     sync_on_compute=sync_on_compute,
                 ),
                 MulticlassCalibrationError(
