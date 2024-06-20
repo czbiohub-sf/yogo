@@ -1,0 +1,34 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: yogo
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Axel
+    family-names: Jacobsen
+    email: axelnjacobsen@gmail.com
+    orcid: 'https://orcid.org/0009-0006-5056-3065'
+  - given-names: Paul Martin
+    family-names: Lebel
+    email: paul.lebel@czbiohub.org
+    name-particle: Paul
+    affiliation: Chan Zuckerberg Biohub SF
+    orcid: 'https://orcid.org/0000-0003-4569-1493'
+  - given-names: Aditi
+    family-names: Saxena
+    email: aditisaxena2000@gmail.com
+    orcid: 'https://orcid.org/0000-0001-5736-5180'
+  - given-names: Ilakkiyan
+    family-names: Jeyakumar
+    email: ilakkiyan.jeyakumar@czbiohub.org
+    affiliation: Chan Zuckerberg Biohub SF
+    orcid: 'https://orcid.org/0000-0002-6973-9167'
+  - given-names: Rafael
+    family-names: Gomez-Sjoberg
+    email: rafael.gomez@czbiohub.org
+    affiliation: Chan Zuckerberg Biohub SF
+    orcid: 'https://orcid.org/0000-0001-8017-9669'
