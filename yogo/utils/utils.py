@@ -167,24 +167,31 @@ def _format_tensor_for_rects(
     return formatted_rects
 
 
-def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]:
-    # uses default colours if the num_classes is not too large
-    # automatically generates colors otherwise
+def bbox_colour(
+    label_index: int,
+    num_classes: int,
+    use_default: bool = True,
+) -> Tuple[int, int, int, int]:
+    # unless otherwise specified, use default colours if the num_classes is not too large
+    if use_default and num_classes <= len(default_colours):
 
-    def hex_to_rgb(value):
-        return tuple(int(value[i : i + 2], 16) for i in range(0, 6, 2))
+        def hex_to_rgb(value):
+            return tuple(int(value[i : i + 2], 16) for i in range(0, 6, 2))
 
-    default_colours = [
-        hex_to_rgb("006717"),  # healthy
-        hex_to_rgb("4FD3FF"),  # ring
-        hex_to_rgb("0D00FF"),  # troph
-        hex_to_rgb("D00000"),  # schizont
-        hex_to_rgb("F082EC"),  # gametocyte
-        hex_to_rgb("00FF00"),  # WBC
-        hex_to_rgb("FFEC3D"),  # misc
-    ]
+        default_colours = [
+            hex_to_rgb("006717"),
+            hex_to_rgb("4FD3FF"),
+            hex_to_rgb("0D00FF"),
+            hex_to_rgb("D00000"),
+            hex_to_rgb("F082EC"),
+            hex_to_rgb("00FF00"),
+            hex_to_rgb("FFEC3D"),
+        ]
 
-    if num_classes > len(default_colours):
+        return default_colours[label_index]
+
+    # automatically generates colours otherwise
+    else:
         # if we don't like the look of an auto-generated class color, modify the rate factor and constant factor
         # if we really want to get fancy, we can try getting a deterministic num_classes
         # points in L*a*b* space that evenly distributes the classes, and convert back to RGB
@@ -195,8 +202,6 @@ def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]
         r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
 
         return int(r * 255), int(g * 255), int(b * 255), 255
-    else:
-        return default_colours[label_index]
 
 
 def draw_yogo_prediction(
