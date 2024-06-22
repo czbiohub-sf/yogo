@@ -649,7 +649,7 @@ def do_training(args) -> None:
             "is required, we can add it back"
         )
 
-    wandb.login()
+    wandb.login(anonymous="allow")
 
     mp.spawn(
         Trainer.train_from_ddp, args=(world_size, config), nprocs=world_size, join=True
