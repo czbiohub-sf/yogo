@@ -111,6 +111,6 @@ def do_model_test(args):
             "if cpu testing is required, we can add it back"
         )
 
-    wandb.login()
+    wandb.login(anonymous="allow")
 
     test_model(args)
