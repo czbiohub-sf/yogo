@@ -1,6 +1,6 @@
 [project]
 name = "yogo"
-version = "1.0.0"
+version = "1.0.1"
 description = "The \"you only glance once\" object detection model"
 authors = [
   {name = "Axel Jacobsen", email="axelnj44@gmail.com"},
