@@ -9,9 +9,14 @@ Our yogo manuscript is currently in preparation - stay tuned!
 With Python versions >= 3.9 and < 3.11, you can install yogo with `pip`
 
 ```console
-python3 -m pip install -e .
+python3 -m pip install -e yogo
 ```
 
+For developing YOGO, clone the repo and then run
+
+```console
+python3 -m pip install -e ".[dev]"
+```
 
 ## Basic usage
 
