@@ -172,22 +172,22 @@ def bbox_colour(
     num_classes: int,
     use_default: bool = True,
 ) -> Tuple[int, int, int, int]:
-    # unless otherwise specified, use default colours if the num_classes is not too large
+
+    def hex_to_rgb(value):
+        return tuple(int(value[i : i + 2], 16) for i in range(0, 6, 2))
+
+    default_colours = [
+        hex_to_rgb("006717"),
+        hex_to_rgb("4FD3FF"),
+        hex_to_rgb("0D00FF"),
+        hex_to_rgb("D00000"),
+        hex_to_rgb("F082EC"),
+        hex_to_rgb("00FF00"),
+        hex_to_rgb("FFEC3D"),
+    ]
+
+    # unless otherwise specified, use default colours if num_classes is not too large
     if use_default and num_classes <= len(default_colours):
-
-        def hex_to_rgb(value):
-            return tuple(int(value[i : i + 2], 16) for i in range(0, 6, 2))
-
-        default_colours = [
-            hex_to_rgb("006717"),
-            hex_to_rgb("4FD3FF"),
-            hex_to_rgb("0D00FF"),
-            hex_to_rgb("D00000"),
-            hex_to_rgb("F082EC"),
-            hex_to_rgb("00FF00"),
-            hex_to_rgb("FFEC3D"),
-        ]
-
         return default_colours[label_index]
 
     # automatically generates colours otherwise
