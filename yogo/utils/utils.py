@@ -201,7 +201,7 @@ def bbox_colour(
         lightness, saturation = 0.5, 1.0
         r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
 
-        return int(r * 255), int(g * 255), int(b * 255), 255
+        return int(r * 255), int(g * 255), int(b * 255)
 
 
 def draw_yogo_prediction(
