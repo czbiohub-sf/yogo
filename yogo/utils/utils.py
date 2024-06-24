@@ -172,7 +172,6 @@ def bbox_colour(
     num_classes: int,
     use_default: bool = True,
 ) -> Tuple[int, int, int, int]:
-
     def hex_to_rgb(value):
         return tuple(int(value[i : i + 2], 16) for i in range(0, 6, 2))
 
