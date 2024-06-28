@@ -167,17 +167,40 @@ def _format_tensor_for_rects(
     return formatted_rects
 
 
-def bbox_colour(label_index: int, num_classes: int) -> Tuple[int, int, int, int]:
-    # if we don't like the look of a class, modify the rate factor and constant factor
-    # if we really want to get fancy, we can try getting a deterministic num_classes
-    # points in L*a*b* space that evenly distributes the classes, and convert back to RGB
-    rate_factor, constant_factor = 5 / 3, 0
-    hue = (label_index / num_classes * rate_factor + constant_factor) % 1
+def bbox_colour(
+    label_index: int,
+    num_classes: int,
+    use_default: bool = True,
+) -> Tuple[int, int, int]:
+    def hex_to_rgb(value):
+        return tuple(int(value[i : i + 2], 16) for i in range(0, 6, 2))
 
-    lightness, saturation = 0.5, 1.0
-    r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+    default_colours = [
+        hex_to_rgb("006717"),
+        hex_to_rgb("4FD3FF"),
+        hex_to_rgb("0D00FF"),
+        hex_to_rgb("D00000"),
+        hex_to_rgb("F082EC"),
+        hex_to_rgb("00FF00"),
+        hex_to_rgb("FFEC3D"),
+    ]
 
-    return int(r * 255), int(g * 255), int(b * 255), 255
+    # unless otherwise specified, use default colours if num_classes is not too large
+    if use_default and num_classes <= len(default_colours):
+        return default_colours[label_index]
+
+    # automatically generates colours otherwise
+    else:
+        # if we don't like the look of an auto-generated class color, modify the rate factor and constant factor
+        # if we really want to get fancy, we can try getting a deterministic num_classes
+        # points in L*a*b* space that evenly distributes the classes, and convert back to RGB
+        rate_factor, constant_factor = 5 / 3, 0
+        hue = (label_index / num_classes * rate_factor + constant_factor) % 1
+
+        lightness, saturation = 0.5, 1.0
+        r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+
+        return int(r * 255), int(g * 255), int(b * 255)
 
 
 def draw_yogo_prediction(
@@ -248,7 +271,7 @@ def draw_yogo_prediction(
         label_idx = int(r[4].item())
         label = labels[label_idx] if labels is not None else str(label_idx)
         draw.rectangle(
-            r[:4], outline=bbox_colour(label_idx, num_classes=num_channels - 5)
+            r[:4], outline=bbox_colour(label_idx, num_classes=num_channels - 5), width=2
         )
         draw.text((r[0], r[1]), label, (0, 0, 0, 255), font_size=16)
 

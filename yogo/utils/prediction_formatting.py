@@ -183,7 +183,6 @@ class PredictionLabelMatch:
     def concat(
         preds_and_labels: List["PredictionLabelMatch"],
     ) -> "PredictionLabelMatch":
-
         missed_labels_ = [
             p.missed_labels for p in preds_and_labels if p.missed_labels is not None
         ]
