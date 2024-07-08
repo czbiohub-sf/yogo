@@ -1,7 +1,7 @@
 # you only glance once
 ![License](https://img.shields.io/badge/license-BSD--3--Clause-green)
 ![PyPI version](https://img.shields.io/pypi/v/yogo)
-![Downloads](https://img.shields.io/github/downloads/czbiohub-sf/yogo/total)
+[![Downloads](https://pepy.tech/badge/yogo)](https://pepy.tech/project/yogo)
 
 A version of the [YOLO architecture (versions 1 through 3)](https://pjreddie.com/darknet/yolo/), optimized for inference speed on simple object detection problems. Designed for the [remoscope project](https://www.czbiohub.org/life-science/seeing-malaria-in-a-new-light/) by the bioengineering team at the [Chan-Zuckerberg Biohub SF](https://www.czbiohub.org/sf/).
 
