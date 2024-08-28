@@ -68,7 +68,7 @@ def test_model(args: argparse.Namespace) -> None:
         64,
         y.get_grid_size()[0],
         y.get_grid_size()[1],
-        normalize_images=cfg["normalize_images"],
+        normalize_images=y.normalize_images,
     )
 
     test_dataset: Dataset[ObjectDetectionDataset] = dataloaders["test"].dataset
